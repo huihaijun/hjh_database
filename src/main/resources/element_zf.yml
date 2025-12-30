@@ -1,0 +1,40 @@
+skills:
+  METAL:
+    name: "星云术"
+    message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &6星云术&f！"
+    levels:
+      1:
+        cooldown: 2.0
+        damage_percent: 2.5
+        range: 3.0
+        lingli_add: 1.0
+        max_targets: 1
+        effect_radius: 3.0  # 【新增】1级半径小
+      2:
+        cooldown: 2.0
+        damage_percent: 3.0
+        range: 5.0
+        lingli_add: 2.0
+        max_targets: 3
+        effect_radius: 4.0  # 【新增】范围变大
+      3:
+        cooldown: 2.0
+        damage_percent: 3.5
+        range: 7.0
+        lingli_add: 3.0
+        max_targets: 6
+        effect_radius: 5.0  # 【新增】
+      4:
+        cooldown: 2.0
+        damage_percent: 4.0
+        range: 9.0
+        lingli_add: 4.0
+        max_targets: 10
+        effect_radius: 6.0  # 【新增】
+      5:
+        cooldown: 2.0
+        damage_percent: 4.5
+        range: 11.0
+        lingli_add: 5.0
+        max_targets: 15
+        effect_radius: 7.0  # 【新增】最大半径5格

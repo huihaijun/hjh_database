@@ -1,0 +1,52 @@
+armors:
+  # === 战士新手套 ===
+  novice_helmet:
+    display: "&a新手头盔"
+    material: LEATHER_HELMET
+    lore:
+      - "&7坚固的皮革制成"
+      - "&7需要等级: 1"
+      - "&7职业限制: 战士"
+    req_job: 0
+    req_lv: 1
+    stats:
+      max_health: 5.0
+      armor: 1.0
+
+  novice_chestplate:
+    display: "&a新手胸甲"
+    material: LEATHER_CHESTPLATE
+    lore:
+      - "&7提供基础防护"
+      - "&7需要等级: 1"
+    req_job: 0
+    req_lv: 1
+    stats:
+      max_health: 10.0
+      armor: 3.0
+      knock_back_res: 0.1 # 10% 抗击退
+
+  novice_leggings:
+    display: "&a新手护腿"
+    material: LEATHER_LEGGINGS
+    lore:
+      - "&7护膝很重要"
+      - "&7需要等级: 1"
+    req_job: 0
+    req_lv: 1
+    stats:
+      max_health: 5.0
+      armor: 2.0
+
+  novice_boots:
+    display: "&a新手靴子"
+    material: LEATHER_BOOTS
+    lore:
+      - "&7跑得快一点"
+      - "&7需要等级: 1"
+    req_job: 0
+    req_lv: 1
+    stats:
+      max_health: 5.0
+      armor: 1.0
+      speed: 0.05

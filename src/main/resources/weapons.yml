@@ -1,0 +1,95 @@
+# 武器系统配置文件
+# slot说明: 
+# 0-8: 快捷栏 1-9 格 (0是第一格)
+# 40: 副手 (Offhand)
+# -1: 任意位置 (如果你需要的话)
+
+weapons:
+  # === 战士武器示例 ===
+  novice_sword:
+    display: "&6&l新手铁剑"
+    material: WOODEN_SWORD
+    lore:
+      - "&7战士专用，现在测试伤害为：15点"
+      - "&7需要等级: 1"
+      - "&e放在快捷栏第一格激活"
+    # 激活要求
+    req_job: 0  # 战士
+    req_lv: 1
+    activate_slot: 0  # 必须放在快捷栏第一格
+    # 【新增字段】
+    active_lore_line: "&c请放在快捷栏第一格激活" # 自定义未激活时的提示
+    # 属性加成
+    stats:
+      attack: 15.0      # 只有手持时生效
+      attack_speed: 1.6 # 只有手持时生效
+      max_health: 10.0  # 只要在第一格就生效
+      armor: 2.0
+
+  baoji_jian:
+    display: "&6&l测试暴击剑"
+    material: DIAMOND_SWORD
+    lore:
+      - "&7战士专用，现在测试伤害为：15点"
+      - "&7需要等级: 1测试用，暴击率为80%"
+      - "&e放在快捷栏第一格激活"
+    # 激活要求
+    req_job: 0  # 战士
+    req_lv: 1
+    activate_slot: 0  # 必须放在快捷栏第一格
+    # 【新增字段】
+    active_lore_line: "&c请放在快捷栏第一格激活" # 自定义未激活时的提示
+    # 属性加成
+    stats:
+      attack: 10.0      # 只有手持时生效
+      attack_speed: 1.6 # 只有手持时生效
+      crit_chance: 0.8  # 代表 80% 暴击率
+
+  # === 弓箭手武器示例 ===
+  novice_bow:
+    display: "&a&l新手长弓"
+    material: BOW
+    lore:
+      - "&7弓箭手专用"
+      - "&7需要等级: 5"
+      - "&e放在快捷栏第一格激活"
+    req_job: 1 # 弓箭手
+    req_lv: 5
+    activate_slot: 0
+    stats:
+      archer_damage: 20.0 # 远程伤害
+      speed: 0.05
+
+  baojiceshi_bow:
+    display: "&a&l暴击测试弩"
+    material: CROSSBOW
+    lore:
+      - "&7弓箭手专用，测试暴击率用的80%"
+      - "&7需要等级: 5"
+      - "&e放在快捷栏第一格激活"
+    req_job: 1 # 弓箭手
+    req_lv: 5
+    activate_slot: 0
+    stats:
+      archer_damage: 10.0 # 远程伤害
+      speed: 0.1
+      crit_chance: 0.8  # 代表 80% 暴击率
+
+  # === 术士武器示例 ===
+  furnace_1:
+    display: "&a&l初级术法炉"
+    material: CARROT_ON_A_STICK
+    # 【新增】自定义材质数据
+    custom_model_data: 1
+    lore:
+      - "&7&o术士专用法器"
+      - "&7&o一条测试的lore"
+      - "&7&o需要等级: 1"
+    # 激活要求
+    req_job: 2  # 假设术士 ID 是 2
+    req_lv: 1
+    activate_slot: 40  # 40 代表副手 (Offhand)
+    active_lore_line: "&c请放在副手激活"
+    stats:
+      zf_str: 10.0      # 增加阵法强度
+      max_health: 5.0

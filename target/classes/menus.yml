@@ -1,0 +1,24 @@
+# menus.yml
+gui:
+  title: "&6&l天机令"
+  size: 54
+  items:
+    personal_info:
+      slot: 13
+      material: PLAYER_HEAD
+      name: "&6&l个人信息"
+      lore:
+        - "&7----------------"
+        - "&f玩家: &e%player_name%"
+        - "&f职业: &b%job%"
+        - "&f种族: &d%race%"
+        - "&7----------------"
+        - "%main_stat_line%"
+        - "&f抗击退: &b%knock_back_res%"
+        - "&f冷却缩减: &b%CoolReduce%"
+        - "&f暴击率: &b%crit_chance%"
+        - "&f生命: &b%current_health% / %max_health%"
+        - "&f护甲: &b%armor%"
+        - "&f灵力: &b%lingli%"
+        - "&f财产: &b%money%"
+        - "&7----------------"

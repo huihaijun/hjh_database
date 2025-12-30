@@ -1,0 +1,45 @@
+# 锻造系统核心配置
+
+# 1. 分类定义 (解决屏障显示未分类的问题)
+categories:
+  weapon:
+    name: "§c§l武器锻造"
+    icon: IRON_SWORD
+    lore:
+      - "§7打造强力的攻击武器"
+      - "§e点击查看配方"
+  armor:
+    name: "§b§l防具锻造"
+    icon: DIAMOND_CHESTPLATE
+    lore:
+      - "§7打造坚固的护甲"
+  artifact:
+    name: "§d§l法宝/饰品"
+    icon: TOTEM_OF_UNDYING
+    lore:
+      - "§7特殊的辅助装备"
+  misc:
+    name: "§a§l杂项/材料"
+    icon: STICK
+    lore:
+      - "§7基础材料处理"
+
+# 2. 界面布局配置 (UI)
+gui:
+  # 锻造界面的标题
+  title: "锻造台"
+
+  # 槽位映射 (根据你的要求：横向排布)
+  # 假设这是一个 5行 (45格) 的界面
+  # 输入槽位 (5个材料)
+  input_slots: [11, 12, 13, 14, 15]
+
+  # 结果槽位 (成品展示)
+  result_slot: 24
+
+  # 按钮位置
+  start_btn_slot: 31  # 点击开始锻造
+  return_btn_slot: 49 # 返回按钮
+
+  # 装饰板 (比如黑玻璃) 填充其余位置
+  fill_material: BLACK_STAINED_GLASS_PANE

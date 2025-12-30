@@ -1,0 +1,36 @@
+name: hjh_database
+version: '${project.version}'
+main: com.hjh_database.Hjh_database
+api-version: '1.20'
+commands:
+  hjhstats:
+    description: 查看属性
+    usage: /hjhstats
+  hjhweapon:
+    description: 武器管理指令
+    usage: /hjhweapon
+    permission: hjh.op
+  hjhadmin:
+    description: 管理员修改职业/种族
+    usage: /hjhadmin <job|race> <player> <value>
+    permission: hjh.admin
+  testmob:
+    description: 生成测伤怪物
+    usage: /testmob <血量> [护甲]
+    permission: hjh.op
+  zfset:
+    description: 阵法系统管理员指令
+    permission: hjh.admin
+    usage:
+      /zfset setlevel <player> <type> <level>
+  hjh:
+    description: 画江湖核心资源指令
+    usage: /hjh <subcommand>
+    permission:
+      hjh.admin
+  # === 【新增】锻造系统指令 ===
+  hjhdz:
+    description: 锻造系统核心指令
+    usage: /hjhdz <station|player|edit|reload>
+    permission: hjh.admin
+    permission-message: §c你没有权限执行此操作。

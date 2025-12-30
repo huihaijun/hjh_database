@@ -1,0 +1,41 @@
+# 配方 ID
+excalibur:
+  # 结果物品 (Bukkit 序列化格式)
+  result:
+    ==: org.bukkit.inventory.ItemStack
+    v: 3465
+    type: DIAMOND_SWORD
+    meta:
+      ==: ItemMeta
+      meta-type: UNSPECIFIC
+      display-name: "§6誓约胜利之剑"
+      lore:
+        - "§7传说中的圣剑"
+        - "§e攻击力: 999"
+
+  # 限制条件
+  req_job: 0
+  req_level: 5
+  req_license: 1
+  exp_reward: 100
+
+  # 合成表 (九宫格 1-9)
+  ingredients:
+    # 第 2 格 (例如放个铁块)
+    2:
+      ==: org.bukkit.inventory.ItemStack
+      v: 3465
+      type: IRON_BLOCK
+
+    # 第 5 格 (中间放钻石)
+    5:
+      ==: org.bukkit.inventory.ItemStack
+      v: 3465
+      type: DIAMOND
+      amount: 1
+
+    # 第 8 格 (下面放木棍)
+    8:
+      ==: org.bukkit.inventory.ItemStack
+      v: 3465
+      type: STICK

@@ -1,0 +1,15 @@
+# 这里的 key "weapon_new_sword" 就是物品的 ID
+novice_sword:
+  material: IRON_SWORD
+  name: "&f新手铁剑*测试"
+  # 这里对应资源包里 item/iron_sword.json 里的 predicate {"custom_model_data": 1001}
+  lore:
+    - "&7这是一把普通的铁剑"
+    - "&7攻击力: 5"
+
+weapon_god_blade:
+  material: DIAMOND_SWORD
+  name: "&6&l屠龙宝刀"
+  custom_model_data: 2050
+  lore:
+    - "&e点击即送！"
