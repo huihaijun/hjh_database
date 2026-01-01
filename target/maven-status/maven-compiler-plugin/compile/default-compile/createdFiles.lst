@@ -1,5 +1,6 @@
 com\hjh_database\command\StatsCommand.class
 com\hjh_database\skill\element_zf\impl\MetalSkill.class
+com\hjh_database\skill\weapon\job_1\NoviceBowSkill$StarArrowTask.class
 com\hjh_database\listener\MenuListener.class
 com\hjh_database\weapon\WeaponManager$WeaponData.class
 com\hjh_database\resource\ResourceItem.class
@@ -8,7 +9,10 @@ com\hjh_database\command\TestMobCommand.class
 com\hjh_database\dz\gui\RecipeEditorGui.class
 com\hjh_database\skill\element_zf\impl\WaterSkill.class
 com\hjh_database\api\HjhAPI.class
+com\hjh_database\listener\WeaponSkillListener.class
+com\hjh_database\skill\weapon\WeaponSkillManager$1.class
 com\hjh_database\listener\MenuListener$1.class
+com\hjh_database\skill\weapon\job_1\NoviceBowSkill.class
 com\hjh_database\dz\data\DzPlayerData.class
 com\hjh_database\listener\CombatListener.class
 com\hjh_database\resource\ResourceListener.class
@@ -28,6 +32,7 @@ com\hjh_database\util\DzUtil.class
 com\hjh_database\dz\manager\RecipeManager.class
 com\hjh_database\command\WeaponCommand.class
 com\hjh_database\skill\element_zf\impl\EarthSkill$1.class
+com\hjh_database\skill\weapon\job_0\NoviceSwordSkill.class
 com\hjh_database\Hjh_database.class
 com\hjh_database\skill\element_zf\ElementSkill.class
 com\hjh_database\weapon\ArmorManager$ArmorData.class
@@ -35,8 +40,10 @@ com\hjh_database\skill\element_zf\ElementZfManager.class
 com\hjh_database\listener\PlayerListener.class
 com\hjh_database\dz\gui\AdminCategoryGui.class
 com\hjh_database\dz\gui\RecipeCraftingGui.class
+com\hjh_database\skill\weapon\WeaponSkillManager.class
 com\hjh_database\dz\gui\PlayerRecipeListGui.class
 com\hjh_database\data\PlayerData.class
+com\hjh_database\skill\weapon\WeaponSkill.class
 com\hjh_database\command\ResourceReloadCommand.class
 com\hjh_database\data\PlayerManager.class
 com\hjh_database\command\ZfCommand.class

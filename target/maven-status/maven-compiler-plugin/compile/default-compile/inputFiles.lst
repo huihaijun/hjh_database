@@ -3,6 +3,7 @@ E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\elem
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\element_zf\impl\EarthSkill.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\manager\RecipeManager.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\command\DzCommand.java
+E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\weapon\job_0\NoviceSwordSkill.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\util\ItemUtil.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\util\DzUtil.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\data\PlayerManager.java
@@ -11,6 +12,7 @@ E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\listene
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\element_zf\impl\WoodSkill.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\listener\PlayerListener.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\resource\ResourceItem.java
+E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\weapon\WeaponSkillListener.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\listener\CombatListener.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\gui\RecipePreviewGui.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\command\TestMobCommand.java
@@ -29,9 +31,12 @@ E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\resource\R
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\data\DzPlayerData.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\gui\AdminCategoryGui.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\element_zf\impl\FireSkill.java
+E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\weapon\job_1\NoviceBowSkill.java
+E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\weapon\WeaponSkill.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\weapon\WeaponManager.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\dz\gui\RecipeEditorGui.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\command\AdminCommand.java
+E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\weapon\WeaponSkillManager.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\skill\element_zf\ElementSkill.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\Hjh_database.java
 E:\mc 1.9\HJH\programming\hjh_database\src\main\java\com\hjh_database\command\StatsCommand.java

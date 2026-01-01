@@ -11,9 +11,11 @@ import com.hjh_database.dz.manager.RecipeManager;
 import com.hjh_database.listener.CombatListener;
 import com.hjh_database.listener.MenuListener;
 import com.hjh_database.listener.PlayerListener;
+import com.hjh_database.listener.WeaponSkillListener;
 import com.hjh_database.resource.ResourceListener;
 import com.hjh_database.resource.ResourceManager;
 import com.hjh_database.skill.element_zf.ElementZfManager;
+import com.hjh_database.skill.weapon.WeaponSkillManager;
 import com.hjh_database.ui.MenuManager;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
@@ -27,6 +29,9 @@ public final class Hjh_database extends JavaPlugin {
     private com.hjh_database.skill.element_zf.ElementZfManager elementZfManager;
     private ResourceManager resourceManager;
     private RecipeManager recipeManager; // 1. 声明变量
+
+    // 在主类中添加
+    private WeaponSkillManager weaponSkillManager;
 
 
     @Override
@@ -60,6 +65,11 @@ public final class Hjh_database extends JavaPlugin {
 
         // 2. 初始化配方管理器 (一定要在 onEnable 里)
         this.recipeManager = new RecipeManager(this);
+
+        // 初始化技能管理器
+        this.weaponSkillManager = new WeaponSkillManager(this);
+        // 注册监听器
+        getServer().getPluginManager().registerEvents(new WeaponSkillListener(this), this);
 
 
         // 3. 注册事件监听
@@ -161,4 +171,7 @@ public final class Hjh_database extends JavaPlugin {
         return recipeManager;
     }
 
+    public WeaponSkillManager getWeaponSkillManager() {
+        return weaponSkillManager;
+    }
 }

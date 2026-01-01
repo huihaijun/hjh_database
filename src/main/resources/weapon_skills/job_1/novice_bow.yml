@@ -1,0 +1,14 @@
+# 武器ID: novice_bow 的技能配置
+active:
+  enable: true
+  message: "&a&l武器技【双星箭】发动！"
+  cooldown: 8.0
+
+  # === 技能参数 ===
+  damage_percent: 2.0  # 200% 远程伤害
+  flight_speed: 1.2    # 星箭飞行速度
+  flight_duration: 3.0 # 最长飞行时间(秒)
+  detect_radius: 5.0   # 飞行中索敌半径
+
+passive:
+  enable: false

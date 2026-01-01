@@ -1,7 +1,7 @@
 skills:
   METAL:
     name: "星云术"
-    message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &6星云术&f！"
+    message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &e星云术&f！"
     levels:
       1:
         cooldown: 2.0
@@ -42,7 +42,7 @@ skills:
   # === 【新增】木元素配置 ===
   WOOD:
     name: "汲魂术"
-    message: "&a%player% &f炼化了 &a木元素&f，释放了法术 —— &2汲魂术&f！"
+    message: "&e%player% &f炼化了 &a木元素&f，释放了法术 —— &a汲魂术&f！"
     levels:
       1:
         cooldown: 5.0        # 冷却时间
@@ -77,7 +77,7 @@ skills:
   # === 【新增】水元素配置 ===
   WATER:
     name: "霜冻术"
-    message: "&a%player% &f炼化了 &9水元素&f，释放了法术 —— &b霜冻术&f！"
+    message: "&e%player% &f炼化了 &9水元素&f，释放了法术 —— &9霜冻术&f！"
     levels:
       1:
         cooldown: 6.0         # 冷却 6秒
@@ -117,7 +117,7 @@ skills:
   # === 【新增】火元素配置 ===
   FIRE:
     name: "流火术"
-    message: "&a%player% &f炼化了 &c火元素&f，释放了法术 —— &c流火术&f！"
+    message: "&e%player% &f炼化了 &c火元素&f，释放了法术 —— &c流火术&f！"
     levels:
       1:
         cooldown: 4.0         # 冷却时间
@@ -153,7 +153,7 @@ skills:
   # === 【新增】土元素配置 ===
   EARTH:
     name: "裂地术"
-    message: ""
+    message: "&e%player% &f炼化了 &6土元素&f，释放了法术 —— &6裂地术&f！"
     levels:
       1:
         cooldown: 15.0        # 控制技能冷却长一点

@@ -177,6 +177,7 @@ public class PlayerManager {
         data.setKnockBackRes(0.0);
         data.setSpeed(0.2);
         data.setCritChance(0.0);
+        data.setCoolReduce(0.0);
 
         // 2. 获取各模块加成 (保持原有的 Map 计算逻辑)
         Map<String, Double> bonuses = new HashMap<>();
@@ -195,6 +196,7 @@ public class PlayerManager {
         data.setArmor(data.getArmor() + bonuses.getOrDefault("armor", 0.0));
         data.setKnockBackRes(data.getKnockBackRes() + bonuses.getOrDefault("knock_back_res", 0.0));
         data.setCritChance(data.getCritChance() + bonuses.getOrDefault("crit_chance", 0.0));
+        data.setCoolReduce(data.getCoolReduce() + bonuses.getOrDefault("cool_reduce",0.0));
 
         // === 灵力计算逻辑 (保持原样) ===
         // 公式：50 + (等级 * 3)
@@ -204,6 +206,12 @@ public class PlayerManager {
         if (baseLingli > 300.0) {
             baseLingli = 300.0;
         }
+
+        // === 【核心修改】保存冷却缩减 (限制最高 50%) ===
+        double coolReduce = data.getCoolReduce();
+        if (coolReduce > 0.5) coolReduce = 0.5;
+        data.setCoolReduce(coolReduce);
+
 
         // 获取装备提供的额外灵力
         double equipLingli = bonuses.getOrDefault("lingli", 0.0);

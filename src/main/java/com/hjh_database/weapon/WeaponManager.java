@@ -32,6 +32,10 @@ public class WeaponManager {
         reload();
     }
 
+    public WeaponData getWeaponData(String id) {
+        return loadedWeapons.get(id);
+    }
+
     public void reload() {
         loadedWeapons.clear();
         file = new File(plugin.getDataFolder(), "weapons.yml");
@@ -231,7 +235,7 @@ public class WeaponManager {
         public int reqJob;
         public int reqLv;
         public int activateSlot;
-        String activeLoreLine;
+        public String activeLoreLine;
         public Map<String, Double> stats = new HashMap<>();
 
         public WeaponData(String id, ConfigurationSection sec) {

@@ -71,10 +71,18 @@ public class CombatListener implements Listener {
             }
         }
 
+        // === 【核心修复步骤 A】 检测是否为物理技能伤害 ===
+        // 如果怪物身上带有 hjh_physical_skill 标签，说明这是由 WeaponSkill 造成的伤害
+        // 我们必须跳过 "攻击者逻辑" (防止重算伤害)，但保留 "受击者逻辑" (计算护甲)
+        boolean isSkillDamage = event.getEntity().hasMetadata("hjh_physical_skill");
+        // 【修复核心】检测完之后，必须立即移除标签！
+        // 否则这只怪物这辈子都会被视为"正在受技能伤害"，导致后续普攻无法计算数值
+        if (isSkillDamage) {
+            event.getEntity().removeMetadata("hjh_physical_skill", plugin);
+        }
         double damage = event.getDamage();
-
-        // 1. 攻击者逻辑
-        if (event instanceof EntityDamageByEntityEvent evt) {
+        // 1. 攻击者逻辑 (仅当不是技能伤害时执行)
+        if (!isSkillDamage && event instanceof EntityDamageByEntityEvent evt) {
             if (evt.getDamager() instanceof Player attacker) {
 
                 // === 【修复核心】 近战武器槽位限制检查 ===
