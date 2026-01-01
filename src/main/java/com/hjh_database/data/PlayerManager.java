@@ -5,9 +5,12 @@ import com.hjh_database.weapon.ArmorManager;
 import com.hjh_database.weapon.WeaponManager;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import com.hjh_database.dz.data.DzPlayerData;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,10 +23,83 @@ public class PlayerManager {
     private final WeaponManager weaponManager;
     private final ArmorManager armorManager;
 
+    // 【新增】等级配置文件对象
+    private File levelsFile;
+    private YamlConfiguration levelsConfig;
+
     public PlayerManager(Hjh_database plugin) {
         this.plugin = plugin;
         this.weaponManager = new WeaponManager(plugin);
         this.armorManager = new ArmorManager(plugin);
+        // 【新增】初始化时加载等级配置
+        loadLevelConfig();
+    }
+
+    // 【新增】加载 levels.yml
+    public void loadLevelConfig() {
+        levelsFile = new File(plugin.getDataFolder(), "levels.yml");
+        if (!levelsFile.exists()) {
+            plugin.saveResource("levels.yml", false);
+        }
+        levelsConfig = YamlConfiguration.loadConfiguration(levelsFile);
+    }
+
+    // 【新增】获取怪物经验配置
+    public int getMobExp() {
+        return levelsConfig.getInt("mobs.panling_monster_exp", 20);
+    }
+
+    // 【新增】计算升级所需经验
+    public int getMaxExpRequired(int currentLevel) {
+        ConfigurationSection stages = levelsConfig.getConfigurationSection("level_stages");
+        if (stages != null) {
+            for (String key : stages.getKeys(false)) {
+                ConfigurationSection stage = stages.getConfigurationSection(key);
+                int min = stage.getInt("min_level");
+                int max = stage.getInt("max_level");
+                if (currentLevel >= min && currentLevel <= max) {
+                    int base = stage.getInt("base");
+                    int multiplier = stage.getInt("multiplier");
+                    return base + (currentLevel * multiplier);
+                }
+            }
+        }
+        return 100 + (currentLevel * 50); // 默认公式
+    }
+
+    // 【新增】核心：给予经验
+    public void giveExp(Player player, int amount) {
+        PlayerData data = getData(player.getUniqueId());
+        if (data == null) return;
+
+        int currentExp = data.getExp();
+        int maxExp = getMaxExpRequired(data.getLv());
+
+        currentExp += amount;
+        boolean leveledUp = false;
+
+        // 循环升级逻辑
+        while (currentExp >= maxExp) {
+            currentExp -= maxExp;
+            data.setLv(data.getLv() + 1);
+            maxExp = getMaxExpRequired(data.getLv());
+            leveledUp = true;
+
+            player.sendMessage("§a§l[升级] §e你的等级提升到了 " + data.getLv() + " 级！");
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+        }
+
+        data.setExp(currentExp);
+
+        // 刷新属性（因为升级了，且需要同步经验条）
+        updateStats(player);
+
+        // 升级保存
+        if (leveledUp) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                plugin.getDatabaseManager().savePlayer(data);
+            });
+        }
     }
 
     public WeaponManager getWeaponManager() { return weaponManager; }
@@ -45,7 +121,7 @@ public class PlayerManager {
                     }
                     dataCache.put(player.getUniqueId(), data);
 
-                    // 同步锻造数据
+                    // 同步锻造数据 (保持原样)
                     DzPlayerData dzData = new DzPlayerData(player.getUniqueId(), player.getName());
                     dzData.setForgeLevel(data.getForgeLevel());
                     dzData.setForgeExp(data.getForgeExp());
@@ -92,7 +168,7 @@ public class PlayerManager {
         PlayerData data = dataCache.get(player.getUniqueId());
         if (data == null) return;
 
-        // 1. 重置基础属性
+        // 1. 重置基础属性 (保持原样)
         data.setMaxHealth(20.0);
         data.setAttack(0.0);
         data.setArcherDamage(0.0);
@@ -102,7 +178,7 @@ public class PlayerManager {
         data.setSpeed(0.2);
         data.setCritChance(0.0);
 
-        // 2. 获取各模块加成 (武器 + 防具)
+        // 2. 获取各模块加成 (保持原有的 Map 计算逻辑)
         Map<String, Double> bonuses = new HashMap<>();
 
         Map<String, Double> weaponStats = weaponManager.calculateWeaponStats(player, data);
@@ -111,7 +187,7 @@ public class PlayerManager {
         Map<String, Double> armorStats = armorManager.calculateArmorStats(player, data);
         armorStats.forEach((k, v) -> bonuses.merge(k, v, Double::sum));
 
-        // 3. 应用加成
+        // 3. 应用加成 (保持原样)
         data.setMaxHealth(data.getMaxHealth() + bonuses.getOrDefault("max_health", 0.0));
         data.setAttack(data.getAttack() + bonuses.getOrDefault("attack", 0.0));
         data.setArcherDamage(data.getArcherDamage() + bonuses.getOrDefault("archer_damage", 0.0));
@@ -120,7 +196,7 @@ public class PlayerManager {
         data.setKnockBackRes(data.getKnockBackRes() + bonuses.getOrDefault("knock_back_res", 0.0));
         data.setCritChance(data.getCritChance() + bonuses.getOrDefault("crit_chance", 0.0));
 
-        // === 【核心修改】 灵力计算逻辑 ===
+        // === 灵力计算逻辑 (保持原样) ===
         // 公式：50 + (等级 * 3)
         double baseLingli = 50.0 + (data.getLv() * 3.0);
 
@@ -136,7 +212,7 @@ public class PlayerManager {
         // 设置总灵力上限 (基础 + 装备)
         data.setMaxLingli(baseLingli + equipLingli);
 
-        // 如果当前灵力超过了上限，则修正为上限 (防止换装备后蓝量溢出)
+        // 如果当前灵力超过了上限，则修正为上限
         if (data.getLingli() > data.getMaxLingli()) {
             data.setLingli(data.getMaxLingli());
         }
@@ -159,6 +235,7 @@ public class PlayerManager {
     }
 
     private void syncToVanilla(Player player, PlayerData data) {
+        // (保持原有的属性同步)
         double maxHp = Math.max(1.0, data.getMaxHealth());
         if (player.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
             player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(maxHp);
@@ -181,5 +258,19 @@ public class PlayerManager {
                 player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS).removeModifier(modifier);
             }
         }
+
+        // === 【新增】同步等级和经验条到原版界面 ===
+        player.setLevel(data.getLv());
+
+        int currentExp = data.getExp();
+        int maxExp = getMaxExpRequired(data.getLv());
+        // 计算百分比 0.0 - 1.0
+        float progress = 0.0f;
+        if (maxExp > 0) {
+            progress = (float) currentExp / (float) maxExp;
+        }
+        // 限制进度条范围，防止客户端显示鬼畜
+        progress = Math.min(0.999f, Math.max(0.0f, progress));
+        player.setExp(progress);
     }
 }

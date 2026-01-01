@@ -6,13 +6,16 @@ com\hjh_database\resource\ResourceItem.class
 com\hjh_database\dz\listener\StationListener.class
 com\hjh_database\command\TestMobCommand.class
 com\hjh_database\dz\gui\RecipeEditorGui.class
+com\hjh_database\skill\element_zf\impl\WaterSkill.class
 com\hjh_database\api\HjhAPI.class
 com\hjh_database\listener\MenuListener$1.class
 com\hjh_database\dz\data\DzPlayerData.class
 com\hjh_database\listener\CombatListener.class
 com\hjh_database\resource\ResourceListener.class
 com\hjh_database\dz\gui\CategoryGui.class
+com\hjh_database\skill\element_zf\impl\WoodSkill.class
 com\hjh_database\command\AdminCommand.class
+com\hjh_database\skill\element_zf\impl\EarthSkill.class
 com\hjh_database\skill\element_zf\impl\MetalSkill$1.class
 com\hjh_database\dz\data\DzRecipe.class
 com\hjh_database\weapon\WeaponManager.class
@@ -24,6 +27,7 @@ com\hjh_database\util\ItemUtil.class
 com\hjh_database\util\DzUtil.class
 com\hjh_database\dz\manager\RecipeManager.class
 com\hjh_database\command\WeaponCommand.class
+com\hjh_database\skill\element_zf\impl\EarthSkill$1.class
 com\hjh_database\Hjh_database.class
 com\hjh_database\skill\element_zf\ElementSkill.class
 com\hjh_database\weapon\ArmorManager$ArmorData.class
@@ -36,8 +40,10 @@ com\hjh_database\data\PlayerData.class
 com\hjh_database\command\ResourceReloadCommand.class
 com\hjh_database\data\PlayerManager.class
 com\hjh_database\command\ZfCommand.class
+com\hjh_database\skill\element_zf\impl\FireSkill$1.class
 com\hjh_database\listener\SpellListener.class
 com\hjh_database\data\DatabaseManager.class
 com\hjh_database\dz\gui\RecipePreviewGui.class
 com\hjh_database\ui\MenuManager.class
 com\hjh_database\ui\MenuManager$ElementType.class
+com\hjh_database\skill\element_zf\impl\FireSkill.class

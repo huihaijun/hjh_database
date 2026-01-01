@@ -1,0 +1,33 @@
+# 经验系统配置
+
+# 怪物经验设置
+mobs:
+  # 当怪物同时拥有 "panling" 和 "monster" 标签时给予的经验
+  panling_monster_exp: 20
+  # 其他普通怪物的经验 (可选)
+  default_exp: 1
+
+# 升级经验公式设置
+# 逻辑: 每一级所需经验 = 基础值 + (当前等级 * 系数)
+# 你可以定义多个阶段，实现非线性增长
+level_stages:
+  # 1-10级: 比如 1级需要 100 + 1*50 = 150
+  stage_1:
+    min_level: 1
+    max_level: 10
+    base: 100
+    multiplier: 50
+
+  # 11-20级: 难度提升，系数变大
+  stage_2:
+    min_level: 11
+    max_level: 20
+    base: 1000
+    multiplier: 100
+
+  # 21级以上: 只有基础值，没有系数增长 (示例)
+  stage_3:
+    min_level: 21
+    max_level: 100
+    base: 5000
+    multiplier: 200

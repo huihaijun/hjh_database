@@ -93,3 +93,21 @@ weapons:
     stats:
       zf_str: 10.0      # 增加阵法强度
       max_health: 5.0
+
+  furnace_test:
+    display: "&c测试神鼎"
+    material: CARROT_ON_A_STICK
+    # 【新增】自定义材质数据
+    custom_model_data: 6
+    lore:
+      - "&7&o来测试这个等级和我现在的ok了吗"
+      - "&7&o伤害特别高，50的阵法强度"
+      - "&7&o需要等级: 90"
+    # 激活要求
+    req_job: 2  # 假设术士 ID 是 2
+    req_lv: 90
+    activate_slot: 40  # 40 代表副手 (Offhand)
+    active_lore_line: "&c请放在副手激活"
+    stats:
+      zf_str: 50.0      # 增加阵法强度
+      max_health: 5.0

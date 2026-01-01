@@ -64,6 +64,9 @@ public class PlayerData {
     private Integer forgeExp = 0;
     private Integer forgeLicense = 0;
 
+    // 【新增】当前经验值
+    private int exp = 0;
+
     public PlayerData(UUID uuid, String playerName) {
         this.uuid = uuid;
         this.playerName = playerName;
@@ -174,4 +177,8 @@ public class PlayerData {
     public double getVal(Double val) {
         return val == null ? 0.0 : val;
     }
+
+    public int getExp() { return exp; }
+    public void setExp(int exp) { this.exp = exp; }
+
 }

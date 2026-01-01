@@ -12,6 +12,8 @@ gui:
         - "&f玩家: &e%player_name%"
         - "&f职业: &b%job%"
         - "&f种族: &d%race%"
+        - "&f等级: &e%lv% &7(%exp% / %max_exp%)"
+        # =======================
         - "&7----------------"
         - "%main_stat_line%"
         - "&f抗击退: &b%knock_back_res%"

@@ -2,7 +2,9 @@ package com.hjh_database.listener;
 
 import com.hjh_database.Hjh_database;
 import com.hjh_database.data.PlayerData;
-import com.hjh_database.weapon.WeaponManager; // 引入 WeaponManager
+import com.hjh_database.weapon.WeaponManager;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.CommandSender;
@@ -16,7 +18,6 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.potion.PotionEffectType;
 
 public class CombatListener implements Listener {
     private final Hjh_database plugin;
@@ -163,6 +164,14 @@ public class CombatListener implements Listener {
                         armor = victim.getPersistentDataContainer().get(armorKey, PersistentDataType.DOUBLE);
                     }
                 }
+
+                // === 【核心修改】检测法术伤害标记 ===
+                if (victim.hasMetadata("hjh_magic_damage")) {
+                    armor = 0.0; // 如果是法术伤害，无视护甲
+                    // TODO: 这里以后可以添加 victimMagicResist (法抗) 的逻辑
+                }
+                // ==============================
+
                 if (armor < 0) armor = 0;
                 double multiplier = 50.0 / (50.0 + armor);
                 damage = damage * multiplier;
@@ -190,11 +199,32 @@ public class CombatListener implements Listener {
         }
     }
 
-    // 复活逻辑 (保持原样)
+    // 复活逻辑 (已合并经验获取逻辑)
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
 
+        // === 1. 【新增】经验获取逻辑 ===
+        // 注意：测伤人偶(TEST_DUMMY_TAG)虽然也有panling标签，但不能给经验，否则会无限刷
+        Player killer = entity.getKiller();
+        if (killer != null && !entity.getScoreboardTags().contains(TEST_DUMMY_TAG)) {
+            // 检查标签：同时拥有 panling 和 monster
+            if (entity.getScoreboardTags().contains("panling") &&
+                    entity.getScoreboardTags().contains("monster")) {
+
+                // 从 PlayerManager 获取配置的经验值
+                int expAmount = plugin.getPlayerManager().getMobExp();
+
+                // 给予经验 (会自动处理升级)
+                plugin.getPlayerManager().giveExp(killer, expAmount);
+
+                // 动作栏提示 (比聊天栏更清爽)
+                killer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+                        new TextComponent("§e+ " + expAmount + " 经验"));
+            }
+        }
+
+        // === 2. 测伤人偶复活逻辑 (保持原样) ===
         if (entity.getScoreboardTags().contains(TEST_DUMMY_TAG)) {
             event.getDrops().clear();
             event.setDroppedExp(0);
@@ -256,5 +286,4 @@ public class CombatListener implements Listener {
             player.sendMessage(ChatColor.RED + "只有 [弓箭手] 才能使用弓弩！");
         }
     }
-
 }

@@ -19,302 +19,404 @@ public class DatabaseManager {
     public DatabaseManager(Hjh_database plugin) {
         this.plugin = plugin;
         connect();
-        createTable();      // 主数据表 (player_data)
-        createBankTable();  // 仓库表 (player_elementbank)
-        createSkillTable(); // 技能表 (player_element_zf_lvl)
-        createForgeTable(); // 锻造表 (player_dzlv)
+
+        // 1. 建表 (针对新服)
+        createTable();
+        createBankTable();
+        createSkillTable();
+        createForgeTable();
+
+        // 2. 【核心修复】自动补全旧表缺失的字段 (使用你正确的列名)
+        updateTables();
     }
 
     private void connect() {
         HikariConfig config = new HikariConfig();
-        // 你的数据库配置
-        config.setJdbcUrl("jdbc:mysql://localhost:3306/hjh_rpg?useSSL=false&characterEncoding=utf8");
-        config.setUsername("root");
-        config.setPassword("root");
+        // 读取 config.yml 配置
+        String host = plugin.getConfig().getString("database.host", "localhost");
+        String port = plugin.getConfig().getString("database.port", "3306");
+        String dbName = plugin.getConfig().getString("database.name", "hjh_rpg");
+        String user = plugin.getConfig().getString("database.user", "root");
+        String pass = plugin.getConfig().getString("database.password", "root");
+
+        config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&characterEncoding=utf8");
+        config.setUsername(user);
+        config.setPassword(pass);
+
+        // 连接池配置
         config.setMaximumPoolSize(10);
         config.setMinimumIdle(5);
         config.setConnectionTimeout(30000);
-        this.dataSource = new HikariDataSource(config);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
+
+        dataSource = new HikariDataSource(config);
+        plugin.getLogger().info("数据库连接成功！");
     }
 
     public void close() {
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
-        }
+        if (dataSource != null) dataSource.close();
     }
 
-    public HikariDataSource getDataSource() {
-        return dataSource;
-    }
+    // === 自动检测并补全字段 (关键修复) ===
+    private void updateTables() {
+        plugin.getLogger().info("正在检查数据库表结构...");
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
 
-    // --- 建表逻辑 ---
+            // 1. 修复 player_data (补全 exp 和 player_name)
+            safeAddColumn(stmt, "player_data", "exp", "INT DEFAULT 0");
+            safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)");
 
-    private void createTable() {
-        // 【修改】在末尾添加了 crit_chance 字段
-        String sql = "CREATE TABLE IF NOT EXISTS player_data (" +
-                "uuid VARCHAR(36) PRIMARY KEY, " +
-                "player_name VARCHAR(16), " +
-                "lv INT, job INT, race INT, " +
-                "attack DOUBLE, archer_damage DOUBLE, armor DOUBLE, speed DOUBLE, " +
-                "max_health DOUBLE, current_health DOUBLE, toughness DOUBLE, " +
-                "knock_back_res DOUBLE, attack_speed DOUBLE, " +
-                "zf_str DOUBLE, cool_reduce DOUBLE, lingli DOUBLE, jhq DOUBLE, money DOUBLE, " +
-                "crit_chance DOUBLE DEFAULT 0" + // 新增
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            // 2. 修复 player_element_zf_lvl (使用正确的列名: metal, wood...)
+            safeAddColumn(stmt, "player_element_zf_lvl", "player_name", "VARCHAR(16)");
+            safeAddColumn(stmt, "player_element_zf_lvl", "metal", "INT DEFAULT 0"); // 之前错写成 metal_lvl
+            safeAddColumn(stmt, "player_element_zf_lvl", "wood", "INT DEFAULT 0");
+            safeAddColumn(stmt, "player_element_zf_lvl", "water", "INT DEFAULT 0");
+            safeAddColumn(stmt, "player_element_zf_lvl", "fire", "INT DEFAULT 0");
+            safeAddColumn(stmt, "player_element_zf_lvl", "earth", "INT DEFAULT 0");
+
+            // 3. 修复 player_dzlv (锻造表)
+            safeAddColumn(stmt, "player_dzlv", "player_name", "VARCHAR(16)");
+            safeAddColumn(stmt, "player_dzlv", "forge_level", "INT DEFAULT 1");
+            safeAddColumn(stmt, "player_dzlv", "forge_exp", "INT DEFAULT 0");
+            safeAddColumn(stmt, "player_dzlv", "forge_license", "INT DEFAULT 0");
+
+            // 4. 修复 player_elementbank (仓库表)
+            safeAddColumn(stmt, "player_elementbank", "player_name", "VARCHAR(16)");
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    private void safeAddColumn(Statement stmt, String table, String column, String type) {
+        try {
+            stmt.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
+            plugin.getLogger().info(">> [自动修复] 已为表 " + table + " 添加字段: " + column);
+        } catch (SQLException e) {
+            // 忽略字段已存在的错误
+        }
+    }
+
+    // === 建表逻辑 (确保列名正确) ===
+
+    private void createTable() {
+        // 主数据表：加入 exp
+        String sql = "CREATE TABLE IF NOT EXISTS player_data (" +
+                "uuid VARCHAR(36) PRIMARY KEY, " +
+                "player_name VARCHAR(16), " +
+                "lv INT DEFAULT 1, " +
+                "exp INT DEFAULT 0, " + // 新增
+                "job INT, " +
+                "race INT, " +
+                "attack DOUBLE DEFAULT 0, " +
+                "archer_damage DOUBLE DEFAULT 0, " +
+                "armor DOUBLE DEFAULT 0, " +
+                "speed DOUBLE DEFAULT 0.2, " +
+                "max_health DOUBLE DEFAULT 20.0, " +
+                "current_health DOUBLE DEFAULT 20.0, " +
+                "toughness DOUBLE DEFAULT 0, " +
+                "knock_back_res DOUBLE DEFAULT 0, " +
+                "attack_speed DOUBLE DEFAULT 4.0, " +
+                "crit_chance DOUBLE DEFAULT 0, " +
+                "zf_str DOUBLE DEFAULT 0, " +
+                "cool_reduce DOUBLE DEFAULT 0, " +
+                "lingli DOUBLE DEFAULT 0" +
+                ");";
+        executeSql(sql);
     }
 
     private void createBankTable() {
         String sql = "CREATE TABLE IF NOT EXISTS player_elementbank (" +
                 "uuid VARCHAR(36) PRIMARY KEY, " +
-                "metal INT DEFAULT 0, wood INT DEFAULT 0, water INT DEFAULT 0, " +
-                "fire INT DEFAULT 0, earth INT DEFAULT 0, relive_stone INT DEFAULT 0" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+                "player_name VARCHAR(16), " +
+                "metal INT DEFAULT 0, " +
+                "wood INT DEFAULT 0, " +
+                "water INT DEFAULT 0, " +
+                "fire INT DEFAULT 0, " +
+                "earth INT DEFAULT 0, " +
+                "relive_stone INT DEFAULT 0" +
+                ");";
+        executeSql(sql);
     }
 
     private void createSkillTable() {
+        // 技能表：列名改回 metal, wood, ...
         String sql = "CREATE TABLE IF NOT EXISTS player_element_zf_lvl (" +
                 "uuid VARCHAR(36) PRIMARY KEY, " +
-                "player_name VARCHAR(32), " +
-                "metal INT DEFAULT 0, wood INT DEFAULT 0, water INT DEFAULT 0, " +
-                "fire INT DEFAULT 0, earth INT DEFAULT 0" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+                "player_name VARCHAR(16), " +
+                "metal INT DEFAULT 0, " +
+                "wood INT DEFAULT 0, " +
+                "water INT DEFAULT 0, " +
+                "fire INT DEFAULT 0, " +
+                "earth INT DEFAULT 0" +
+                ");";
+        executeSql(sql);
     }
 
     private void createForgeTable() {
         String sql = "CREATE TABLE IF NOT EXISTS player_dzlv (" +
                 "uuid VARCHAR(36) PRIMARY KEY, " +
-                "player_name VARCHAR(32), " +
+                "player_name VARCHAR(16), " +
                 "forge_level INT DEFAULT 1, " +
                 "forge_exp INT DEFAULT 0, " +
                 "forge_license INT DEFAULT 0" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+                ");";
+        executeSql(sql);
+    }
+
+    private void executeSql(String sql) {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {
-            plugin.getLogger().severe("创建锻造表失败: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // --- 数据加载 ---
-
-    public CompletableFuture<PlayerData> loadPlayer(UUID uuid, String playerName) {
-        return CompletableFuture.supplyAsync(() -> {
-            PlayerData data = null;
-
-            String selectMain = "SELECT * FROM player_data WHERE uuid=?";
-            String selectBank = "SELECT * FROM player_elementbank WHERE uuid=?";
-            String selectSkills = "SELECT * FROM player_element_zf_lvl WHERE uuid=?";
-            String selectForge = "SELECT * FROM player_dzlv WHERE uuid=?";
-
-            try (Connection conn = dataSource.getConnection()) {
-
-                // 1. 加载主表 (player_data)
-                try (PreparedStatement ps = conn.prepareStatement(selectMain)) {
-                    ps.setString(1, uuid.toString());
-                    ResultSet rs = ps.executeQuery();
-                    if (rs.next()) {
-                        data = new PlayerData(uuid, playerName);
-                        data.setLv(rs.getInt("lv"));
-                        data.setJob((Integer) rs.getObject("job"));
-                        data.setRace((Integer) rs.getObject("race"));
-                        data.setAttack(rs.getDouble("attack"));
-                        data.setArcherDamage(rs.getDouble("archer_damage"));
-                        data.setArmor(rs.getDouble("armor"));
-                        data.setSpeed(rs.getDouble("speed"));
-                        data.setMaxHealth(rs.getDouble("max_health"));
-                        data.setCurrentHealth(rs.getDouble("current_health"));
-                        data.setToughness(rs.getDouble("toughness"));
-                        data.setKnockBackRes(rs.getDouble("knock_back_res"));
-                        data.setAttackSpeed(rs.getDouble("attack_speed"));
-                        data.setZfStr(rs.getDouble("zf_str"));
-                        data.setCoolReduce(rs.getDouble("cool_reduce"));
-                        data.setLingli(rs.getDouble("lingli"));
-                        data.setJhq(rs.getDouble("jhq"));
-                        data.setMoney(rs.getDouble("money"));
-
-                        // 【新增】读取暴击率
-                        // 使用 try-catch 兼容旧数据库结构，防止报错（虽然建议你跑 SQL ALTER 命令）
-                        try {
-                            data.setCritChance(rs.getDouble("crit_chance"));
-                        } catch (SQLException ex) {
-                            data.setCritChance(0.0);
-                        }
-                    }
-                }
-
-                if (data == null) {
-                    return null;
-                }
-
-                // 2. 加载仓库 (player_elementbank)
-                try (PreparedStatement ps = conn.prepareStatement(selectBank)) {
-                    ps.setString(1, uuid.toString());
-                    ResultSet rs = ps.executeQuery();
-                    if (rs.next()) {
-                        data.setMetal(rs.getInt("metal"));
-                        data.setWood(rs.getInt("wood"));
-                        data.setWater(rs.getInt("water"));
-                        data.setFire(rs.getInt("fire"));
-                        data.setEarth(rs.getInt("earth"));
-                        data.setReliveStone(rs.getInt("relive_stone"));
-                    }
-                }
-
-                // 3. 加载技能等级 (player_element_zf_lvl)
-                try (PreparedStatement ps = conn.prepareStatement(selectSkills)) {
-                    ps.setString(1, uuid.toString());
-                    ResultSet rs = ps.executeQuery();
-                    if (rs.next()) {
-                        if (data.getElementLevels() == null && data.getJob() != null && data.getJob() == 2) {
-                            data.setJob(2);
-                        }
-                        data.setElementLevel("METAL", rs.getInt("metal"));
-                        data.setElementLevel("WOOD", rs.getInt("wood"));
-                        data.setElementLevel("WATER", rs.getInt("water"));
-                        data.setElementLevel("FIRE", rs.getInt("fire"));
-                        data.setElementLevel("EARTH", rs.getInt("earth"));
-                    }
-                }
-
-                // 4. 加载锻造数据 (player_dzlv)
-                try (PreparedStatement ps = conn.prepareStatement(selectForge)) {
-                    ps.setString(1, uuid.toString());
-                    ResultSet rs = ps.executeQuery();
-                    if (rs.next()) {
-                        data.setForgeLevel(rs.getInt("forge_level"));
-                        data.setForgeExp(rs.getInt("forge_exp"));
-                        data.setForgeLicense(rs.getInt("forge_license"));
-                    } else {
-                        data.setForgeLevel(1);
-                        data.setForgeExp(0);
-                        data.setForgeLicense(0);
-                    }
-                }
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            return data;
-        });
-    }
+    // === 存取逻辑 ===
 
     public void savePlayer(PlayerData data) {
-        CompletableFuture.runAsync(() -> savePlayerSync(data));
-    }
+        // 1. player_data: 加入 exp
+        String updateMain = "UPDATE player_data SET player_name=?, lv=?, exp=?, job=?, race=?, attack=?, archer_damage=?, armor=?, speed=?, max_health=?, current_health=?, toughness=?, knock_back_res=?, attack_speed=?, crit_chance=?, zf_str=?, cool_reduce=?, lingli=? WHERE uuid=?";
+        String insertMain = "INSERT INTO player_data (player_name, lv, exp, job, race, attack, archer_damage, armor, speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance, zf_str, cool_reduce, lingli, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    // --- 数据保存 ---
+        // 2. player_elementbank: 保持不变
+        String updateBank = "UPDATE player_elementbank SET player_name=?, metal=?, wood=?, water=?, fire=?, earth=?, relive_stone=? WHERE uuid=?";
+        String insertBank = "INSERT INTO player_elementbank (player_name, metal, wood, water, fire, earth, relive_stone, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-    public void savePlayerSync(PlayerData data) {
-        // 【修改】在 SQL 中加入了 crit_chance=?
-        String updateMain = "UPDATE player_data SET " +
-                "lv=?, job=?, race=?, " +
-                "attack=?, archer_damage=?, armor=?, speed=?, max_health=?, current_health=?, " +
-                "toughness=?, knock_back_res=?, attack_speed=?, " +
-                "zf_str=?, cool_reduce=?, lingli=?, jhq=?, money=?, crit_chance=? " + // 这里加了
-                "WHERE uuid=?";
+        // 3. player_element_zf_lvl: 改回正确列名 (metal, wood...)
+        String updateSkills = "UPDATE player_element_zf_lvl SET player_name=?, metal=?, wood=?, water=?, fire=?, earth=? WHERE uuid=?";
+        String insertSkills = "INSERT INTO player_element_zf_lvl (player_name, metal, wood, water, fire, earth, uuid) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        String updateBank = "INSERT INTO player_elementbank (uuid, metal, wood, water, fire, earth, relive_stone) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE " +
-                "metal=VALUES(metal), wood=VALUES(wood), water=VALUES(water), " +
-                "fire=VALUES(fire), earth=VALUES(earth), relive_stone=VALUES(relive_stone)";
-
-        String updateSkills = "INSERT INTO player_element_zf_lvl (uuid, player_name, metal, wood, water, fire, earth) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE " +
-                "player_name=VALUES(player_name), metal=VALUES(metal), wood=VALUES(wood), water=VALUES(water), fire=VALUES(fire), earth=VALUES(earth)";
-
-        String updateForge = "INSERT INTO player_dzlv (uuid, player_name, forge_level, forge_exp, forge_license) " +
-                "VALUES (?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE " +
-                "player_name=VALUES(player_name), forge_level=VALUES(forge_level), " +
-                "forge_exp=VALUES(forge_exp), forge_license=VALUES(forge_license)";
+        // 4. player_dzlv: 保持不变
+        String updateForge = "UPDATE player_dzlv SET player_name=?, forge_level=?, forge_exp=?, forge_license=? WHERE uuid=?";
+        String insertForge = "INSERT INTO player_dzlv (player_name, forge_level, forge_exp, forge_license, uuid) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = dataSource.getConnection()) {
-            // 1. 保存主表 (player_data)
+            // 保存主数据
             try (PreparedStatement ps = conn.prepareStatement(updateMain)) {
-                ps.setInt(1, data.getLv());
-                ps.setObject(2, data.getJob());
-                ps.setObject(3, data.getRace());
-                ps.setDouble(4, data.getVal(data.getAttack()));
-                ps.setDouble(5, data.getVal(data.getArcherDamage()));
-                ps.setDouble(6, data.getVal(data.getArmor()));
-                ps.setDouble(7, data.getVal(data.getSpeed()));
-                ps.setDouble(8, data.getVal(data.getMaxHealth()));
-                ps.setDouble(9, data.getVal(data.getCurrentHealth()));
-                ps.setDouble(10, data.getVal(data.getToughness()));
-                ps.setDouble(11, data.getVal(data.getKnockBackRes()));
-                ps.setDouble(12, data.getVal(data.getAttackSpeed()));
-                ps.setDouble(13, data.getVal(data.getZfStr()));
-                ps.setDouble(14, data.getVal(data.getCoolReduce()));
-                ps.setDouble(15, data.getVal(data.getLingli()));
-                ps.setDouble(16, data.getVal(data.getJhq()));
-                ps.setDouble(17, data.getVal(data.getMoney()));
-
-                // 【新增】设置暴击率参数
-                ps.setDouble(18, data.getVal(data.getCritChance()));
-
-                // UUID 是第 19 个参数
+                ps.setString(1, data.getPlayerName());
+                ps.setInt(2, data.getLv());
+                ps.setInt(3, data.getExp()); // exp
+                ps.setObject(4, data.getJob());
+                ps.setObject(5, data.getRace());
+                ps.setDouble(6, data.getAttack());
+                ps.setDouble(7, data.getArcherDamage());
+                ps.setDouble(8, data.getArmor());
+                ps.setDouble(9, data.getSpeed());
+                ps.setDouble(10, data.getMaxHealth());
+                ps.setDouble(11, data.getCurrentHealth());
+                ps.setDouble(12, data.getToughness());
+                ps.setDouble(13, data.getKnockBackRes());
+                ps.setDouble(14, data.getAttackSpeed());
+                ps.setDouble(15, data.getCritChance());
+                ps.setDouble(16, data.getZfStr());
+                ps.setDouble(17, data.getCoolReduce());
+                ps.setDouble(18, data.getLingli());
                 ps.setString(19, data.getUuid().toString());
 
-                ps.executeUpdate();
+                if (ps.executeUpdate() == 0) {
+                    try (PreparedStatement insertPs = conn.prepareStatement(insertMain)) {
+                        insertPs.setString(1, data.getPlayerName());
+                        insertPs.setInt(2, data.getLv());
+                        insertPs.setInt(3, data.getExp()); // exp
+                        insertPs.setObject(4, data.getJob());
+                        insertPs.setObject(5, data.getRace());
+                        insertPs.setDouble(6, data.getAttack());
+                        insertPs.setDouble(7, data.getArcherDamage());
+                        insertPs.setDouble(8, data.getArmor());
+                        insertPs.setDouble(9, data.getSpeed());
+                        insertPs.setDouble(10, data.getMaxHealth());
+                        insertPs.setDouble(11, data.getCurrentHealth());
+                        insertPs.setDouble(12, data.getToughness());
+                        insertPs.setDouble(13, data.getKnockBackRes());
+                        insertPs.setDouble(14, data.getAttackSpeed());
+                        insertPs.setDouble(15, data.getCritChance());
+                        insertPs.setDouble(16, data.getZfStr());
+                        insertPs.setDouble(17, data.getCoolReduce());
+                        insertPs.setDouble(18, data.getLingli());
+                        insertPs.setString(19, data.getUuid().toString());
+                        insertPs.executeUpdate();
+                    }
+                }
             }
 
-            // 2. 保存仓库表 (player_elementbank)
-            try (PreparedStatement ps = conn.prepareStatement(updateBank)) {
-                ps.setString(1, data.getUuid().toString());
-                ps.setInt(2, data.getMetal());
-                ps.setInt(3, data.getWood());
-                ps.setInt(4, data.getWater());
-                ps.setInt(5, data.getFire());
-                ps.setInt(6, data.getEarth());
-                ps.setInt(7, data.getReliveStone());
-                ps.executeUpdate();
-            }
-
-            // 3. 保存技能表 (player_element_zf_lvl)
-            if (data.getElementLevels() != null) {
-                try (PreparedStatement ps = conn.prepareStatement(updateSkills)) {
-                    ps.setString(1, data.getUuid().toString());
-                    ps.setString(2, data.getPlayerName());
-                    ps.setInt(3, data.getElementLevel("METAL"));
-                    ps.setInt(4, data.getElementLevel("WOOD"));
-                    ps.setInt(5, data.getElementLevel("WATER"));
-                    ps.setInt(6, data.getElementLevel("FIRE"));
-                    ps.setInt(7, data.getElementLevel("EARTH"));
+            // 保存仓库
+            if (checkExists(conn, "player_elementbank", data.getUuid())) {
+                try (PreparedStatement ps = conn.prepareStatement(updateBank)) {
+                    ps.setString(1, data.getPlayerName());
+                    ps.setInt(2, data.getMetal());
+                    ps.setInt(3, data.getWood());
+                    ps.setInt(4, data.getWater());
+                    ps.setInt(5, data.getFire());
+                    ps.setInt(6, data.getEarth());
+                    ps.setInt(7, data.getReliveStone());
+                    ps.setString(8, data.getUuid().toString());
+                    ps.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement ps = conn.prepareStatement(insertBank)) {
+                    ps.setString(1, data.getPlayerName());
+                    ps.setInt(2, data.getMetal());
+                    ps.setInt(3, data.getWood());
+                    ps.setInt(4, data.getWater());
+                    ps.setInt(5, data.getFire());
+                    ps.setInt(6, data.getEarth());
+                    ps.setInt(7, data.getReliveStone());
+                    ps.setString(8, data.getUuid().toString());
                     ps.executeUpdate();
                 }
             }
 
-            // 4. 保存锻造表 (player_dzlv)
-            try (PreparedStatement ps = conn.prepareStatement(updateForge)) {
-                ps.setString(1, data.getUuid().toString());
-                ps.setString(2, data.getPlayerName());
-                ps.setInt(3, data.getForgeLevel());
-                ps.setInt(4, data.getForgeExp());
-                ps.setInt(5, data.getForgeLicense());
-                ps.executeUpdate();
+            // 保存技能表 (使用 correct column names: metal, wood...)
+            if (data.getElementLevels() != null) {
+                if (checkExists(conn, "player_element_zf_lvl", data.getUuid())) {
+                    try (PreparedStatement ps = conn.prepareStatement(updateSkills)) {
+                        ps.setString(1, data.getPlayerName());
+                        ps.setInt(2, data.getElementLevel("METAL"));
+                        ps.setInt(3, data.getElementLevel("WOOD"));
+                        ps.setInt(4, data.getElementLevel("WATER"));
+                        ps.setInt(5, data.getElementLevel("FIRE"));
+                        ps.setInt(6, data.getElementLevel("EARTH"));
+                        ps.setString(7, data.getUuid().toString());
+                        ps.executeUpdate();
+                    }
+                } else {
+                    try (PreparedStatement ps = conn.prepareStatement(insertSkills)) {
+                        ps.setString(1, data.getPlayerName());
+                        ps.setInt(2, data.getElementLevel("METAL"));
+                        ps.setInt(3, data.getElementLevel("WOOD"));
+                        ps.setInt(4, data.getElementLevel("WATER"));
+                        ps.setInt(5, data.getElementLevel("FIRE"));
+                        ps.setInt(6, data.getElementLevel("EARTH"));
+                        ps.setString(7, data.getUuid().toString());
+                        ps.executeUpdate();
+                    }
+                }
+            }
+
+            // 保存锻造
+            if (checkExists(conn, "player_dzlv", data.getUuid())) {
+                try (PreparedStatement ps = conn.prepareStatement(updateForge)) {
+                    ps.setString(1, data.getPlayerName());
+                    ps.setInt(2, data.getForgeLevel());
+                    ps.setInt(3, data.getForgeExp());
+                    ps.setInt(4, data.getForgeLicense());
+                    ps.setString(5, data.getUuid().toString());
+                    ps.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement ps = conn.prepareStatement(insertForge)) {
+                    ps.setString(1, data.getPlayerName());
+                    ps.setInt(2, data.getForgeLevel());
+                    ps.setInt(3, data.getForgeExp());
+                    ps.setInt(4, data.getForgeLicense());
+                    ps.setString(5, data.getUuid().toString());
+                    ps.executeUpdate();
+                }
             }
 
         } catch (SQLException e) {
             plugin.getLogger().severe("保存玩家数据失败: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private boolean checkExists(Connection conn, String table, UUID uuid) throws SQLException {
+        String sql = "SELECT 1 FROM " + table + " WHERE uuid = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uuid.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public CompletableFuture<PlayerData> loadPlayer(UUID uuid, String playerName) {
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerData data = new PlayerData(uuid, playerName);
+            String sqlMain = "SELECT * FROM player_data WHERE uuid = ?";
+            String sqlBank = "SELECT * FROM player_elementbank WHERE uuid = ?";
+            String sqlSkills = "SELECT * FROM player_element_zf_lvl WHERE uuid = ?";
+            String sqlForge = "SELECT * FROM player_dzlv WHERE uuid = ?";
+
+            try (Connection conn = dataSource.getConnection()) {
+                // 1. 加载主数据
+                try (PreparedStatement ps = conn.prepareStatement(sqlMain)) {
+                    ps.setString(1, uuid.toString());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            data.setLv(rs.getInt("lv"));
+                            data.setExp(rs.getInt("exp")); // 读取 exp
+                            int job = rs.getInt("job");
+                            if (!rs.wasNull()) data.setJob(job);
+                            int race = rs.getInt("race");
+                            if (!rs.wasNull()) data.setRace(race);
+                            data.setAttack(rs.getDouble("attack"));
+                            data.setArcherDamage(rs.getDouble("archer_damage"));
+                            data.setArmor(rs.getDouble("armor"));
+                            data.setSpeed(rs.getDouble("speed"));
+                            data.setMaxHealth(rs.getDouble("max_health"));
+                            data.setCurrentHealth(rs.getDouble("current_health"));
+                            data.setToughness(rs.getDouble("toughness"));
+                            data.setKnockBackRes(rs.getDouble("knock_back_res"));
+                            data.setAttackSpeed(rs.getDouble("attack_speed"));
+                            data.setCritChance(rs.getDouble("crit_chance"));
+                            data.setZfStr(rs.getDouble("zf_str"));
+                            data.setCoolReduce(rs.getDouble("cool_reduce"));
+                            data.setLingli(rs.getDouble("lingli"));
+                        }
+                    }
+                }
+
+                // 2. 加载仓库
+                try (PreparedStatement ps = conn.prepareStatement(sqlBank)) {
+                    ps.setString(1, uuid.toString());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            data.setMetal(rs.getInt("metal"));
+                            data.setWood(rs.getInt("wood"));
+                            data.setWater(rs.getInt("water"));
+                            data.setFire(rs.getInt("fire"));
+                            data.setEarth(rs.getInt("earth"));
+                            data.setReliveStone(rs.getInt("relive_stone"));
+                        }
+                    }
+                }
+
+                // 3. 加载技能 (使用正确列名: metal, wood...)
+                try (PreparedStatement ps = conn.prepareStatement(sqlSkills)) {
+                    ps.setString(1, uuid.toString());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            try { data.setElementLevel("METAL", rs.getInt("metal")); } catch (Exception e) {}
+                            try { data.setElementLevel("WOOD", rs.getInt("wood")); } catch (Exception e) {}
+                            try { data.setElementLevel("WATER", rs.getInt("water")); } catch (Exception e) {}
+                            try { data.setElementLevel("FIRE", rs.getInt("fire")); } catch (Exception e) {}
+                            try { data.setElementLevel("EARTH", rs.getInt("earth")); } catch (Exception e) {}
+                        }
+                    }
+                }
+
+                // 4. 加载锻造
+                try (PreparedStatement ps = conn.prepareStatement(sqlForge)) {
+                    ps.setString(1, uuid.toString());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            try { data.setForgeLevel(rs.getInt("forge_level")); } catch (Exception e) {}
+                            try { data.setForgeExp(rs.getInt("forge_exp")); } catch (Exception e) {}
+                            try { data.setForgeLicense(rs.getInt("forge_license")); } catch (Exception e) {}
+                        }
+                    }
+                }
+
+            } catch (SQLException e) {
+                plugin.getLogger().severe("加载玩家数据失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+            return data;
+        });
     }
 }

@@ -10,6 +10,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -49,9 +50,9 @@ public class MetalSkill implements ElementSkill {
         plugin.getDatabaseManager().savePlayer(data);
 
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GOLD + "当前灵力值: " + String.format("%.1f", data.getLingli())));
-        if (!msg.isEmpty()) {
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.getName())));
-        }
+//        if (!msg.isEmpty()) {
+//            player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.getName())));
+//        }
 
         // 4. 计算目标位置 (星云中心)
         Location hitLoc = getHitLocation(player, range);
@@ -78,8 +79,18 @@ public class MetalSkill implements ElementSkill {
 
         // 造成伤害
         double damage = data.getZfStr() * damagePercent;
+
         for (LivingEntity victim : victims) {
+            // === 【核心修改】 法术伤害逻辑 ===
+            // 1. 贴标签：告诉 CombatListener 这是法术伤害，请无视护甲
+            victim.setMetadata("hjh_magic_damage", new FixedMetadataValue(plugin, true));
+
+            // 2. 造成伤害
             victim.damage(damage, player);
+
+            // 3. 撕标签：防止影响后续的普通攻击
+            victim.removeMetadata("hjh_magic_damage", plugin);
+            // ==============================
         }
 
         // 6. 播放星云爆炸特效

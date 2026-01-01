@@ -236,6 +236,22 @@ public class MenuManager {
         text = text.replace("%player_name%", player.getName());
         text = text.replace("%lv%", String.valueOf(data.getLv()));
 
+        // 【新增】经验相关占位符 (仅在此处插入逻辑，不动其他代码)
+        if (text.contains("%exp%") || text.contains("%max_exp%")) {
+            int currentExp = data.getExp(); // 需确保 PlayerData 中有 getExp()
+            // 调用 PlayerManager 获取配置中的升级经验
+            int maxExp = plugin.getPlayerManager().getMaxExpRequired(data.getLv());
+
+            text = text.replace("%exp%", String.valueOf(currentExp));
+            text = text.replace("%max_exp%", String.valueOf(maxExp));
+
+            // 百分比显示
+            if (text.contains("%exp_percent%")) {
+                int percent = maxExp > 0 ? (int) (((double) currentExp / maxExp) * 100) : 0;
+                text = text.replace("%exp_percent%", percent + "%");
+            }
+        }
+
         // 职业映射
         String jobName = "无";
         Integer job = data.getJob();
