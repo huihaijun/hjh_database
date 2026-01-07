@@ -178,6 +178,10 @@ public class PlayerManager {
         data.setSpeed(0.2);
         data.setCritChance(0.0);
         data.setCoolReduce(0.0);
+        data.setTotalRarity(0);
+
+        // ★【新增】重置总分 和 清空明细列表 (必须加这句！)
+        data.getRarityDetails().clear();
 
         // 2. 获取各模块加成 (保持原有的 Map 计算逻辑)
         Map<String, Double> bonuses = new HashMap<>();
@@ -187,6 +191,11 @@ public class PlayerManager {
 
         Map<String, Double> armorStats = armorManager.calculateArmorStats(player, data);
         armorStats.forEach((k, v) -> bonuses.merge(k, v, Double::sum));
+
+        // ★ 在这里加上这段代码：从 Map 中提取总稀有度并保存
+        if (bonuses.containsKey("total_rarity")) {
+            data.setTotalRarity(bonuses.get("total_rarity").intValue());
+        }
 
         // 3. 应用加成 (保持原样)
         data.setMaxHealth(data.getMaxHealth() + bonuses.getOrDefault("max_health", 0.0));
@@ -281,4 +290,14 @@ public class PlayerManager {
         progress = Math.min(0.999f, Math.max(0.0f, progress));
         player.setExp(progress);
     }
+
+    /**
+     * 【新增】获取玩家数据对象
+     * 供外部系统（如开物术、菜单等）调用
+     */
+    public PlayerData getPlayerData(Player player) {
+        if (player == null) return null;
+        return dataCache.get(player.getUniqueId());
+    }
+
 }

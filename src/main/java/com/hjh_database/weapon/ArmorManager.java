@@ -54,10 +54,11 @@ public class ArmorManager {
      * 显示是否已激活或条件不符
      */
     public void refreshPlayerArmors(Player player) {
+        // 引用包路径可能需要根据你的实际情况调整，保持你原有的即可
         PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
         if (data == null) return;
 
-        // 获取玩家身上的装备内容 (Boots, Leggings, Chestplate, Helmet)
+        // 获取玩家身上的装备内容
         ItemStack[] armorContents = player.getInventory().getArmorContents();
         boolean changed = false;
 
@@ -66,16 +67,17 @@ public class ArmorManager {
             if (item == null || !item.hasItemMeta()) continue;
 
             // 识别防具 ID
-            String id = item.getItemMeta().getPersistentDataContainer().get(armorKey, PersistentDataType.STRING);
+            String id = item.getItemMeta().getPersistentDataContainer().get(armorKey, org.bukkit.persistence.PersistentDataType.STRING);
             if (id == null) {
                 // 兼容旧 ID key
-                id = item.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
+                id = item.getItemMeta().getPersistentDataContainer().get(keyId, org.bukkit.persistence.PersistentDataType.STRING);
             }
             if (id == null) continue; // 不是本系统的防具
 
             ArmorData aData = loadedArmors.get(id);
             if (aData == null) continue;
 
+            // === 逻辑判断区域 (完全保持原样) ===
             boolean isActive = true;
             List<String> statusLore = new ArrayList<>();
 
@@ -92,13 +94,36 @@ public class ArmorManager {
                 statusLore.add(ChatColor.RED + "⚠ 等级不足 (" + data.getLv() + "/" + aData.reqLv + ")");
             }
 
-            // 更新 Lore
+            // === Lore 构建区域 (仅在此处修改) ===
             ItemMeta meta = item.getItemMeta();
+            // 顺便刷新一下名字，防止配置改了名字不生效
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', aData.display));
+
             List<String> newLore = new ArrayList<>();
+
+            // 【新增】在第一行插入稀有度星星
+            // 调用 WeaponManager 的静态方法 (前提是你已经改好了 WeaponManager)
+//            newLore.add(WeaponManager.getRarityStars(aData.rarity));
+            // 获取颜色代码（根据下面的 case 逻辑，必须跟下面保持一致）
+            String colorCode = "§7"; // 默认为灰
+            switch (aData.rarity) {
+                case 1: colorCode = "§f"; break; // 白
+                case 2: colorCode = "§a"; break; // 绿
+                case 3: colorCode = "§9"; break; // 蓝
+                case 4: colorCode = "§d"; break; // 粉
+                case 5: colorCode = "§e"; break; // 黄
+                case 6: colorCode = "§c"; break; // 红
+            }
+
+            // 拼接：颜色 + 文字 + 星星 (getRarityStars自带颜色，所以这里前面拼一次颜色即可)
+            newLore.add(colorCode + "稀有度: " + WeaponManager.getRarityStars(aData.rarity));
+
+            // 【保留】插入配置文件里的 Lore
             for (String line : aData.lore) {
                 newLore.add(ChatColor.translateAlternateColorCodes('&', line));
             }
 
+            // 【保留】插入状态提示
             if (isActive) {
                 newLore.add(" ");
                 newLore.add(ChatColor.GREEN + "✔ 已激活 - 防御生效中");
@@ -108,11 +133,12 @@ public class ArmorManager {
             }
 
             meta.setLore(newLore);
+            meta.setCustomModelData(aData.customModelData); // 顺手刷新一下模型数据
             item.setItemMeta(meta);
             changed = true;
         }
 
-        // 如果修改了物品 Meta，需要重新设置回去 (虽然 getArmorContents 可能是引用，但 set 回去最保险)
+        // 如果修改了物品 Meta，需要重新设置回去
         if (changed) {
             player.getInventory().setArmorContents(armorContents);
         }
@@ -123,10 +149,14 @@ public class ArmorManager {
      */
     public Map<String, Double> calculateArmorStats(Player player, PlayerData data) {
         Map<String, Double> totalStats = new HashMap<>();
+        // 1. 定义稀有度累加变量
+        double totalRarity = 0.0;
 
+        // 遍历身上 4 件装备
         for (ItemStack item : player.getInventory().getArmorContents()) {
             if (item == null || !item.hasItemMeta()) continue;
 
+            // 获取ID (优先 armor_id，其次 resource_id)
             String id = item.getItemMeta().getPersistentDataContainer().get(armorKey, PersistentDataType.STRING);
             if (id == null) id = item.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
             if (id == null) continue;
@@ -134,12 +164,25 @@ public class ArmorManager {
             ArmorData aData = loadedArmors.get(id);
             if (aData == null) continue;
 
-            if (checkRequirements(player, data, aData)) {
-                for (Map.Entry<String, Double> entry : aData.stats.entrySet()) {
-                    totalStats.merge(entry.getKey(), entry.getValue(), Double::sum);
-                }
+            // === 校验激活条件 ===
+            // 1. 等级不够，跳过
+            if (data.getLv() < aData.reqLv) continue;
+            // 2. 职业不符，跳过
+            if (aData.reqJob != -1 && (data.getJob() == null || data.getJob() != aData.reqJob)) continue;
+
+            // ★【新增】这里是激活成功的地方，把稀有度记入 List
+            data.getRarityDetails().add(aData.rarity);
+            // ★ 修改点1：累加稀有度
+            totalRarity += aData.rarity;
+            // ★ 修改点2：累加所有属性
+            for (Map.Entry<String, Double> entry : aData.stats.entrySet()) {
+                totalStats.merge(entry.getKey(), entry.getValue(), Double::sum);
             }
         }
+
+        // ★ 修改点3：把计算好的总稀有度放入 Map 返回
+        totalStats.put("total_rarity", totalRarity);
+
         return totalStats;
     }
 
@@ -201,9 +244,10 @@ public class ArmorManager {
         Material material;
         int customModelData;
         List<String> lore;
-        int reqJob;
-        int reqLv;
+        public int reqJob;
+        public int reqLv;
         String activeLoreLine;
+        public int rarity; // <--- 【1】新增字段
         public Map<String, Double> stats = new HashMap<>();
 
         public ArmorData(String id, ConfigurationSection sec) {
@@ -215,6 +259,7 @@ public class ArmorManager {
             this.reqJob = sec.getInt("req_job", -1);
             this.reqLv = sec.getInt("req_lv", 1);
             this.activeLoreLine = sec.getString("active_lore_line", "条件不符");
+            this.rarity = sec.getInt("rarity", 1); // <--- 【2】读取配置，默认为1
             ConfigurationSection statSec = sec.getConfigurationSection("stats");
             if (statSec != null) {
                 for (String key : statSec.getKeys(false)) {

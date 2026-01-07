@@ -8,6 +8,7 @@ weapons:
   # === 战士武器示例 ===
   novice_sword:
     display: "&6&l新手铁剑"
+    rarity: 1  # 1级=白色1星
     material: WOODEN_SWORD
     lore:
       - "&7战士专用，现在测试伤害为：10点"
@@ -29,6 +30,7 @@ weapons:
 
   baoji_jian:
     display: "&6&l测试暴击剑"
+    rarity: 5
     material: DIAMOND_SWORD
     lore:
       - "&7战士专用，现在测试伤害为：15点"
@@ -49,6 +51,7 @@ weapons:
   # === 弓箭手武器示例 ===
   novice_bow:
     display: "&a&l新手长弓"
+    rarity: 4
     material: BOW
     lore:
       - "&7弓箭手专用"
@@ -63,6 +66,7 @@ weapons:
 
   baojiceshi_bow:
     display: "&a&l暴击测试弩"
+    rarity: 2
     material: CROSSBOW
     lore:
       - "&7弓箭手专用，测试暴击率用的80%"
@@ -79,6 +83,7 @@ weapons:
   # === 术士武器示例 ===
   furnace_1:
     display: "&a&l初级术法炉"
+    rarity: 3
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
     custom_model_data: 1
@@ -97,6 +102,7 @@ weapons:
 
   furnace_test:
     display: "&c测试神鼎"
+    rarity: 6
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
     custom_model_data: 6

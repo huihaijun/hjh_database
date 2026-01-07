@@ -92,26 +92,22 @@ public class WeaponManager {
      * 刷新玩家背包中【所有位置】武器的 Lore 状态
      */
     public void refreshPlayerWeapons(Player player) {
-        PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
+        // 获取玩家数据
+        com.hjh_database.data.PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
         if (data == null) return;
-
-        // 遍历整个背包（包括 0-35 存储/快捷栏，36-39 装备栏，40 副手）
-        // getSize() 通常返回 41 (9+27+4+1)
+        // 遍历整个背包
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack item = player.getInventory().getItem(slot);
             if (item == null || !item.hasItemMeta()) continue;
-
-            // 检查是否是武器
-            String id = item.getItemMeta().getPersistentDataContainer().get(weaponKey, PersistentDataType.STRING);
-            if (id == null) id = item.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
+            // 检查是否是武器 (优先检查 weapon_id，兼容 resource_id)
+            String id = item.getItemMeta().getPersistentDataContainer().get(weaponKey, org.bukkit.persistence.PersistentDataType.STRING);
+            if (id == null) id = item.getItemMeta().getPersistentDataContainer().get(keyId, org.bukkit.persistence.PersistentDataType.STRING);
             if (id == null) continue; // 不是武器，跳过
-
             WeaponData wData = loadedWeapons.get(id);
             if (wData == null) continue;
-
+            // === 判定激活状态逻辑 (保留你原本的逻辑) ===
             boolean isActive = true;
             List<String> statusLore = new ArrayList<>();
-
             // 1. 检查槽位要求
             if (wData.activateSlot != -1 && wData.activateSlot != slot) {
                 isActive = false;
@@ -129,14 +125,32 @@ public class WeaponManager {
                 isActive = false;
                 statusLore.add(ChatColor.RED + "⚠ 等级不足 (" + data.getLv() + "/" + wData.reqLv + ")");
             }
-
-            // 更新 Lore
+            // === 重新构建 Lore (包含稀有度) ===
             ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', wData.display)); // 确保名字也刷新
             List<String> newLore = new ArrayList<>();
+
+            // 【修改点】 1. 第一行插入稀有度星星
+            // 获取颜色代码（根据下面的 case 逻辑，必须跟下面保持一致）
+            String colorCode = "§7"; // 默认为灰
+            switch (wData.rarity) {
+                case 1: colorCode = "§f"; break; // 白
+                case 2: colorCode = "§a"; break; // 绿
+                case 3: colorCode = "§9"; break; // 蓝
+                case 4: colorCode = "§d"; break; // 粉
+                case 5: colorCode = "§e"; break; // 黄
+                case 6: colorCode = "§c"; break; // 红
+            }
+
+            // 拼接：颜色 + 文字 + 星星 (getRarityStars自带颜色，所以这里前面拼一次颜色即可)
+            newLore.add(colorCode + "稀有度: " + getRarityStars(wData.rarity));
+
+            // 2. 插入原有 Lore
             for (String line : wData.lore) {
                 newLore.add(ChatColor.translateAlternateColorCodes('&', line));
             }
 
+            // 3. 插入激活状态提示
             if (isActive) {
                 newLore.add(" ");
                 newLore.add(ChatColor.GREEN + "✔ 已激活 - 属性生效中");
@@ -144,9 +158,31 @@ public class WeaponManager {
                 newLore.add(" ");
                 newLore.addAll(statusLore);
             }
+
+            // 4. 应用更改
             meta.setLore(newLore);
+            meta.setCustomModelData(wData.customModelData); // 顺便刷新材质
             item.setItemMeta(meta);
         }
+    }
+    // 获取稀有度显示的星星
+    public static String getRarityStars(int rarity) {
+        StringBuilder sb = new StringBuilder();
+        String color;
+        switch (rarity) {
+            case 1: color = "§f"; break; // 白
+            case 2: color = "§a"; break; // 绿
+            case 3: color = "§9"; break; // 蓝
+            case 4: color = "§d"; break; // 粉
+            case 5: color = "§e"; break; // 黄
+            case 6: color = "§c"; break; // 红
+            default: color = "§7"; break;
+        }
+        sb.append(color);
+        for (int i = 0; i < rarity; i++) {
+            sb.append("★");
+        }
+        return sb.toString();
     }
 
     /**
@@ -155,12 +191,15 @@ public class WeaponManager {
      */
     public Map<String, Double> calculateWeaponStats(Player player, PlayerData data) {
         Map<String, Double> totalStats = new HashMap<>();
+        // 1. 定义稀有度累加变量
+        double totalRarity = 0.0;
 
         // 遍历全背包
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack item = player.getInventory().getItem(slot);
             if (item == null || !item.hasItemMeta()) continue;
 
+            // 获取ID (优先 weapon_id，其次 resource_id)
             String id = item.getItemMeta().getPersistentDataContainer().get(weaponKey, PersistentDataType.STRING);
             if (id == null) id = item.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
             if (id == null) continue;
@@ -168,17 +207,31 @@ public class WeaponManager {
             WeaponData wData = loadedWeapons.get(id);
             if (wData == null) continue;
 
-            // 校验激活条件
+            // === 校验激活条件 ===
+            // 1. 槽位不对，跳过
             if (wData.activateSlot != -1 && wData.activateSlot != slot) continue;
+            // 2. 职业不符，跳过
             if (wData.reqJob != -1 && (data.getJob() == null || data.getJob() != wData.reqJob)) continue;
+            // 3. 等级不够，跳过
             if (data.getLv() < wData.reqLv) continue;
 
-            // ★ 修改点：不再过滤 attack/crit 等属性
-            // 只要激活，属性全给，方便后续技能调用 data.getAttack()
+            // === 激活成功 ===
+            // ★【新增】这里是激活成功的地方，把稀有度记入 List
+            data.getRarityDetails().add(wData.rarity);
+            // ★ 修改点1：累加稀有度
+            // (前提是你已经在 WeaponData 类里加了 rarity 字段，没加的话记得去加)
+            totalRarity += wData.rarity;
+
+            // ★ 修改点2：累加所有属性
             for (Map.Entry<String, Double> entry : wData.stats.entrySet()) {
                 totalStats.merge(entry.getKey(), entry.getValue(), Double::sum);
             }
         }
+
+        // ★ 修改点3：把计算好的总稀有度放入 Map 返回
+        // 这样 PlayerManager 就能通过 get("total_rarity") 拿到了
+        totalStats.put("total_rarity", totalRarity);
+
         return totalStats;
     }
 
@@ -236,6 +289,8 @@ public class WeaponManager {
         public int reqLv;
         public int activateSlot;
         public String activeLoreLine;
+        //稀有度
+        public int rarity; // <--- 新增
         public Map<String, Double> stats = new HashMap<>();
 
         public WeaponData(String id, ConfigurationSection sec) {
@@ -248,6 +303,8 @@ public class WeaponManager {
             this.reqLv = sec.getInt("req_lv", 1);
             this.activateSlot = sec.getInt("activate_slot", 0);
             this.activeLoreLine = sec.getString("active_lore_line", "请放在快捷栏第一格激活");
+            // 在构造函数里添加读取逻辑：
+            this.rarity = sec.getInt("rarity", 1); // <--- 新增，默认值为 1
             ConfigurationSection statSec = sec.getConfigurationSection("stats");
             if (statSec != null) {
                 for (String key : statSec.getKeys(false)) {

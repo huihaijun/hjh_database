@@ -65,49 +65,110 @@ public class PlayerRecipeListGui implements InventoryHolder, Listener {
     }
 
     private void setupPage() {
-        inv.clear();
-        slotMap.clear(); // 翻页时清空映射
+        inv.clear(); // 清空当前页
+        slotMap.clear(); // 清空点击映射
 
-        int start = (page - 1) * 45;
-        int end = Math.min(start + 45, displayRecipes.size());
+        // 1. 设置背景填充物 (保持原逻辑)
+        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemMeta fm = filler.getItemMeta();
+        fm.setDisplayName(" ");
+        filler.setItemMeta(fm);
+        for (int i = 45; i < 54; i++) inv.setItem(i, filler);
 
-//        System.out.println("[GUI调试] 构建页面: " + page + " 总配方数: " + displayRecipes.size());
-
-        for (int i = start; i < end; i++) {
-            DzRecipe recipe = displayRecipes.get(i);
-            if (recipe.getResult() == null) continue;
-
-            // 1. 准备显示物品
-            ItemStack display = recipe.getResult().clone();
-            ItemMeta meta = display.getItemMeta();
-
-            List<String> lore = meta.getLore();
-            if (lore == null) lore = new ArrayList<>();
-            lore.add(" ");
-            lore.add("§8-----------------");
-            lore.add("§7配方ID: " + recipe.getId());
-            lore.add("§7职业: " + DzUtil.getJobName(recipe.getReqJob()));
-            lore.add("§7等级: " + recipe.getReqForgeLevel());
-            lore.add(" ");
-            lore.add("§e点击查看详情");
-            meta.setLore(lore);
-            display.setItemMeta(meta);
-
-            // 2. 放入界面
-            int slotIndex = i - start;
-            inv.setItem(slotIndex, display);
-
-            // 3. 【核心】记录槽位映射
-            // 不管物品上面的NBT会不会被清洗，这个Map是存在内存里的，绝对安全
-            slotMap.put(slotIndex, recipe.getId());
-
-//            System.out.println("[GUI映射] Slot:" + slotIndex + " -> ID:" + recipe.getId());
+        // 2. 设置翻页按钮 (保持原逻辑)
+        if (page > 1) {
+            ItemStack prev = new ItemStack(Material.ARROW);
+            ItemMeta pm = prev.getItemMeta();
+            pm.setDisplayName("§a上一页");
+            prev.setItemMeta(pm);
+            inv.setItem(45, prev);
+        }
+        if ((page * 45) < displayRecipes.size()) {
+            ItemStack next = new ItemStack(Material.ARROW);
+            ItemMeta nm = next.getItemMeta();
+            nm.setDisplayName("§a下一页");
+            next.setItemMeta(nm);
+            inv.setItem(53, next);
         }
 
-        // 底部按钮
-        if (page > 1) setBtn(45, Material.ARROW, "§e上一页");
-        if (end < displayRecipes.size()) setBtn(53, Material.ARROW, "§e下一页");
-        setBtn(49, Material.BARRIER, "§c返回分类");
+        // 3. 返回按钮 (保持原逻辑)
+        ItemStack back = new ItemStack(Material.BARRIER);
+        ItemMeta bm = back.getItemMeta();
+        bm.setDisplayName("§c返回分类");
+        back.setItemMeta(bm);
+        inv.setItem(49, back);
+
+        // ====================================================
+        // 【核心修改区域】 配方列表渲染
+        // ====================================================
+
+        int startIndex = (page - 1) * 45;
+        int endIndex = Math.min(startIndex + 45, displayRecipes.size());
+
+        // A. 预先获取玩家数据 (用于显示 ✔/✘ 状态，不用于拦截)
+        // 获取锻造数据
+        com.hjh_database.dz.data.DzPlayerData dzData = plugin.getPlayerManager().getDzData(player.getUniqueId());
+        int myForgeLv = (dzData != null) ? dzData.getForgeLevel() : 1;
+        int myLicense = (dzData != null) ? dzData.getForgeLicense() : 0;
+        // 获取RPG职业数据
+        com.hjh_database.data.PlayerData rpgData = plugin.getPlayerManager().getData(player.getUniqueId());
+        int myJob = (rpgData != null) ? rpgData.getJob() : 0;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            DzRecipe recipe = displayRecipes.get(i);
+            int slot = i - startIndex;
+
+            // 记录槽位 -> 配方ID 的映射
+            slotMap.put(slot, recipe.getId());
+
+            // B. 克隆结果物品 (关键：使用 clone 保留 WeaponManager 生成的原始属性)
+            ItemStack icon = recipe.getResult().clone();
+            ItemMeta meta = icon.getItemMeta();
+
+            // C. 获取物品现有的 Lore (如果有的话，比如武器的攻击力)
+            List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+
+            // --- 在原有属性下方追加锻造信息 ---
+            lore.add("");
+            lore.add("§8§m------------------");
+
+            // 1. 职业需求
+            String jobName = DzUtil.getJobName(recipe.getReqJob());
+            boolean jobOk = (recipe.getReqJob() == 0) || (myJob == recipe.getReqJob());
+            String jobStatus = jobOk ? "§a✔" : "§c✘";
+
+            if (recipe.getReqJob() > 0) {
+                lore.add("§7职业: §f" + jobName + " " + jobStatus);
+            } else {
+                lore.add("§7职业: §f通用");
+            }
+
+            // 2. 锻造等级需求
+            boolean lvOk = myForgeLv >= recipe.getReqForgeLevel();
+            String lvStatus = lvOk ? "§a✔" : "§c✘";
+            lore.add("§7等级: §fLv." + recipe.getReqForgeLevel() + " " + lvStatus);
+
+            // 3. 锻造资质/执照需求 (新增)
+            if (recipe.getReqLicense() > 0) {
+                boolean licOk = myLicense >= recipe.getReqLicense();
+                String licStatus = licOk ? "§a✔" : "§c✘";
+                lore.add("§7资质: §f" + recipe.getReqLicense() + "级执照 " + licStatus);
+            }
+
+            // 4. 经验奖励
+            if (recipe.getExpReward() > 0) {
+                lore.add("§7经验: §e+" + recipe.getExpReward());
+            }
+
+            // 5. 底部提示 (无论条件是否满足，都显示可点击)
+            lore.add("");
+            lore.add("§e▶ 点击查看配方详情");
+
+            meta.setLore(lore);
+            icon.setItemMeta(meta);
+
+            inv.setItem(slot, icon);
+        }
     }
 
     private void setBtn(int slot, Material mat, String name) {

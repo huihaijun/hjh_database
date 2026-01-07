@@ -216,12 +216,15 @@ public class RecipeCraftingGui implements InventoryHolder, Listener {
         player.getInventory().addItem(recipe.getResult().clone());
 
         // 3. 增加经验 (修复为奖励)
+        // 在 RecipeCraftingGui.java 的 doCraft 方法底部
+
+// 3. 增加经验
         DzPlayerData forgeData = plugin.getPlayerManager().getDzData(player.getUniqueId());
         if (forgeData != null && recipe.getExpReward() > 0) {
-            forgeData.addExp(recipe.getExpReward());
+            // 【修改后】传入 plugin 和 player 以触发升级特效和保存
+            forgeData.addExp(recipe.getExpReward(), plugin, player);
+            // 这一行原本的 sendMessage 可以保留也可以去掉，因为 addExp 里已经有了升级提示
             player.sendMessage("§a锻造成功！获得 " + recipe.getExpReward() + " 点锻造经验。");
-        } else {
-            player.sendMessage("§a锻造成功！");
         }
 
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1, 1);

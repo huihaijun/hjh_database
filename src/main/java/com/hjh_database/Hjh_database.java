@@ -7,6 +7,7 @@ import com.hjh_database.data.DatabaseManager;
 import com.hjh_database.data.PlayerManager;
 import com.hjh_database.dz.command.DzCommand;
 import com.hjh_database.dz.listener.StationListener;
+import com.hjh_database.dz.manager.DzLevelManager;
 import com.hjh_database.dz.manager.RecipeManager;
 import com.hjh_database.listener.CombatListener;
 import com.hjh_database.listener.MenuListener;
@@ -29,9 +30,12 @@ public final class Hjh_database extends JavaPlugin {
     private com.hjh_database.skill.element_zf.ElementZfManager elementZfManager;
     private ResourceManager resourceManager;
     private RecipeManager recipeManager; // 1. 声明变量
-
     // 在主类中添加
     private WeaponSkillManager weaponSkillManager;
+    private DzLevelManager dzLevelManager; // 新增字段
+
+    // 1. 添加成员变量
+    private com.hjh_database.kaiwu.KaiWuManager kaiWuManager;
 
 
     @Override
@@ -52,6 +56,10 @@ public final class Hjh_database extends JavaPlugin {
         // 初始化资源管理器
         this.resourceManager = new ResourceManager(this);
 
+        // 【新增】 初始化 DzLevelManager
+        // 建议放在 PlayerManager 之后，DzCommand 之前
+        this.dzLevelManager = new DzLevelManager(this);
+
         // 注册指令
         AdminCommand adminCmd = new AdminCommand(this);
         getCommand("hjhadmin").setExecutor(adminCmd);
@@ -68,6 +76,12 @@ public final class Hjh_database extends JavaPlugin {
 
         // 初始化技能管理器
         this.weaponSkillManager = new WeaponSkillManager(this);
+
+        // 初始化开物术管理器
+        this.kaiWuManager = new com.hjh_database.kaiwu.KaiWuManager(this);
+        // 注册监听器 (放在 registerEvents 区域)
+        getServer().getPluginManager().registerEvents(new com.hjh_database.kaiwu.KaiWuListener(this), this);
+
         // 注册监听器
         getServer().getPluginManager().registerEvents(new WeaponSkillListener(this), this);
 
@@ -108,6 +122,13 @@ public final class Hjh_database extends JavaPlugin {
             getCommand("hjhadmin").setExecutor(adminCommand);
             getCommand("hjhadmin").setTabCompleter(adminCommand); // 注册 TabCompleter
         }
+
+        // 开物术指令
+        // 注册指令 (放在 getCommand 区域)
+        if (getCommand("hjhkw") != null) {
+            getCommand("hjhkw").setExecutor(new com.hjh_database.kaiwu.KaiWuCommand(this));
+        }
+
 
         // =========================================================
         // 【新增】注册 /hjh resourcereload 指令
@@ -173,5 +194,15 @@ public final class Hjh_database extends JavaPlugin {
 
     public WeaponSkillManager getWeaponSkillManager() {
         return weaponSkillManager;
+    }
+
+    // 【新增】 Getter 方法
+    public DzLevelManager getDzLevelManager() {
+        return dzLevelManager;
+    }
+
+    // 3. 添加 Getter 方法 (供其他类调用)
+    public com.hjh_database.kaiwu.KaiWuManager getKaiWuManager() {
+        return kaiWuManager;
     }
 }

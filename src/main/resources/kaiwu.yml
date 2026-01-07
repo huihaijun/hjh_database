@@ -1,0 +1,63 @@
+# === 开物术系统核心配置 ===
+
+# 精力系统
+energy:
+  regen_interval_min: 10   # 自动恢复间隔 (分钟)
+  regen_amount: 20.0       # 每次恢复数值
+  base_max: 100.0          # 基础精力上限
+  level_bonus: 10.0        # 每级增加的上限 (总上限 = 基础 + 等级 * 此值)
+
+# 升级经验公式 (当前等级 * base)
+# 例如 Lv.1 升 Lv.2 需要 1 * 100 = 100 经验
+level_exp_base: 100
+
+# 采集设置
+mining:
+  interrupt_distance: 5.0  # 允许的最大移动距离 (超过则打断)
+  # 枯竭状态下的掉落倍率 (0.5 表示 50%)
+  depleted_multiplier: 0.5
+  # 枯竭状态下是否延长采集时间 (倍率, 1.0为不变, 2.0为双倍时间)
+  depleted_time_multiplier: 2
+  # 3. 精力消耗倍率 (1.5 = 消耗1.5倍精力，体现"浪费精力")
+  depleted_energy_multiplier: 2
+  # 每次在枯竭状态下采集，是否重置恢复倒计时？(true=惩罚贪婪，false=固定时间恢复)
+  reset_timer_on_depleted_mining: true
+  # === 枯竭状态 (Depleted) 配置 ===
+  # 枯竭状态持续时间 (秒)。如果玩家不强行挖，过多久自动变回富饶？
+  depleted_duration: 10
+
+
+
+# 消息提示 (支持颜色代码 &)
+messages:
+  prefix: "&8[&6开物术&8] "
+  mining_success: "&a开采成功！获得 &f%item% &7x%amount%"
+  mining_fail_bag_full: "&c背包已满，物品掉落在脚下！"
+  mining_interrupted_move: "&c你移动了太远，采集被打断！"
+  mining_interrupted_damage: "&c你受到了攻击，精神无法集中！"
+  node_depleted_hint: "&e该资源已枯竭！强行开采将消耗额外浪费时间和精力，且收益减半！"
+  node_recovering: "&7资源点正在凝聚灵气，预计还需 &f%time% &7秒。"
+  level_up: "&6恭喜！你的开物等级提升到了 &eLv.%level%&6！"
+  admin_confirm_delete: "&c检测到此方块为配置资源点！\n&c请在聊天栏输入 &e1 &c确认连同配置一起删除。\n&c输入其他内容取消操作。(60秒有效)"
+  admin_delete_success: "&a资源点及配置已成功移除。"
+  admin_delete_cancel: "&7操作已取消。"
+
+# 视觉效果配置
+visual:
+  enabled: true
+  check_interval: 20      # 扫描频率 (Tick)，20tick=1秒。太快会卡客户端。
+  default_range: 10.0      # 默认显示范围 (格)
+  particle_count: 8       # 每次显示的粒子数量 (越少越流畅)
+
+  # 颜色配置 (RGB格式: R, G, B)
+  colors:
+    rich: "HAPPY_VILLAGER"     # 富饶 (浅绿)
+    depleted: "255,170,0" # 枯竭 (暗黄)
+    recovering: "128,128,128" # 冷却/恢复中 (灰色) - 注：目前逻辑主要用前两个，可视情况扩展
+
+# BossBar 进度条标题
+bossbar:
+  title_rich: "&a正在开采... (富饶)"
+  title_depleted: "&e强行开采中... (枯竭)"
+  color_rich: "GREEN"     # 可选: PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+  color_depleted: "YELLOW"
