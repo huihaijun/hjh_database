@@ -13,6 +13,13 @@ gui:
         - "&f职业: &b%job%"
         - "&f种族: &d%race%"
         - "&f等级: &e%lv% &7(%exp% / %max_exp%)"
+        - "&7----------------"
+        - "&f锻造等级: &aLv.%forge_level% &7(%forge_exp% / %forge_max_exp%)"
+        - "&f锻造资质: %forge_license_name%"
+        - "&f装备稀有度: &6%rarity_display%"
+        - "&7----------------"
+        - "&f开物等级: &eLv.%kaiwu_level% &7(%kaiwu_exp% / %kaiwu_next_exp%)"
+        - "&f剩余精力: &a%kaiwu_energy% / %kaiwu_max_energy%"
         # =======================
         - "&7----------------"
         - "%main_stat_line%"

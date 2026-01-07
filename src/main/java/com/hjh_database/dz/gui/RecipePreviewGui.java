@@ -47,7 +47,7 @@ public class RecipePreviewGui implements InventoryHolder, Listener {
             return;
         }
 
-        this.inv = Bukkit.createInventory(this, 54, "配方预览: " + recipeId);
+        this.inv = Bukkit.createInventory(this, 54, "配方预览: ");
         setupGui();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }

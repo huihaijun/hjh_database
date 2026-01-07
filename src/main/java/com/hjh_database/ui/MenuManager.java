@@ -2,6 +2,7 @@ package com.hjh_database.ui;
 
 import com.hjh_database.Hjh_database;
 import com.hjh_database.data.PlayerData;
+import com.hjh_database.dz.data.DzPlayerData; // 【新增】导入锻造数据类
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -85,14 +86,14 @@ public class MenuManager {
     }
 
     public void openMainMenu(Player player) {
-        // 打开前先刷新一下属性，确保灵力上限等数据是最新的
+        // 打开前先刷新一下属性
         plugin.getPlayerManager().updateStats(player);
 
         String title = format(config.getString("gui.title", "天机阁"));
         int size = config.getInt("gui.size", 54);
         Inventory inv = Bukkit.createInventory(null, size, title);
 
-        // 获取最新数据
+        // 获取最新 RPG 数据
         PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
         if (data == null) {
             player.sendMessage(ChatColor.RED + "数据加载中，请稍后再试...");
@@ -116,11 +117,11 @@ public class MenuManager {
                     ((SkullMeta) meta).setOwningPlayer(player);
                 }
                 if (meta != null) {
-                    // 替换标题中的变量
+                    // 替换标题
                     meta.setDisplayName(format(replacePlaceholders(name, player, data)));
                     List<String> finalLore = new ArrayList<>();
                     for (String line : lore) {
-                        // 替换每一行 Lore 中的变量
+                        // 替换 Lore
                         String replacedLine = replacePlaceholders(line, player, data);
                         finalLore.add(format(replacedLine));
                     }
@@ -132,7 +133,7 @@ public class MenuManager {
             }
         }
 
-        // 放置“道天图录”入口按钮
+        // 道天图录按钮
         ItemStack book = new ItemStack(Material.BOOK);
         ItemMeta meta = book.getItemMeta();
         meta.setDisplayName("§b§l道天图录");
@@ -144,7 +145,6 @@ public class MenuManager {
         player.openInventory(inv);
     }
 
-    // === 2. 打开道天图录 (二级菜单) ===
     public void openDaoTianMenu(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, "§8§l道天图录 - 元素仓库");
         PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
@@ -182,7 +182,6 @@ public class MenuManager {
         return item;
     }
 
-    // === 生成 NBT 物品 ===
     @SuppressWarnings("deprecation")
     public ItemStack getPanlingItem(ElementType type, int count) {
         ItemStack item = new ItemStack(type.material, count);
@@ -190,7 +189,6 @@ public class MenuManager {
         if (type == ElementType.RELIVE) {
             nbtTag = "{id:\"" + type.nbtId + "\",display:{Name:'{\"translate\":\"pl.item.name.relifestone\"}'}}";
         } else {
-            // 安全起见，硬编码确保 ID 正确
             if (type == ElementType.METAL) nbtTag = "{id:\"panling:metal\",display:{Name:'{\"translate\":\"pl.item.name.metal\"}'}}";
             else if (type == ElementType.WOOD) nbtTag = "{id:\"panling:wood\",display:{Name:'{\"translate\":\"pl.item.name.wood\"}'}}";
             else if (type == ElementType.WATER) nbtTag = "{id:\"panling:water\",display:{Name:'{\"translate\":\"pl.item.name.water\"}'}}";
@@ -230,29 +228,82 @@ public class MenuManager {
         return ChatColor.translateAlternateColorCodes('&', msg);
     }
 
-    // === 核心修改逻辑 ===
+    // =========================================================
+    //  ⚡️ 核心替换逻辑：包含 RPG 数据和 锻造数据
+    // =========================================================
     private String replacePlaceholders(String text, Player player, PlayerData data) {
         // 1. 基础替换
         text = text.replace("%player_name%", player.getName());
         text = text.replace("%lv%", String.valueOf(data.getLv()));
 
-        // 【新增】经验相关占位符 (仅在此处插入逻辑，不动其他代码)
-        if (text.contains("%exp%") || text.contains("%max_exp%")) {
-            int currentExp = data.getExp(); // 需确保 PlayerData 中有 getExp()
-            // 调用 PlayerManager 获取配置中的升级经验
+        // 2. 锻造系统变量替换 (修正乱码问题的核心)
+        if (text.contains("forge")) { // 简单优化：只有包含 forge 关键字时才去获取数据
+            DzPlayerData dzData = plugin.getPlayerManager().getDzData(player.getUniqueId());
+            if (dzData != null) {
+                // 正确的做法：调用 get 方法获取 int，而不是直接用对象
+                text = text.replace("%forge_level%", String.valueOf(dzData.getForgeLevel()));
+                text = text.replace("%forge_exp%", String.valueOf(dzData.getForgeExp()));
+
+                // 获取最大经验和资质名称
+                int maxForgeExp = plugin.getDzLevelManager().getMaxExp(dzData.getForgeLevel());
+                String maxExpStr = (maxForgeExp == -1) ? "MAX" : String.valueOf(maxForgeExp);
+                text = text.replace("%forge_max_exp%", maxExpStr);
+
+                String licName = plugin.getDzLevelManager().getLicenseName(dzData.getForgeLicense());
+                text = text.replace("%forge_license_name%", licName);
+            } else {
+                // 如果获取不到数据，显示默认值
+                text = text.replace("%forge_level%", "1");
+                text = text.replace("%forge_exp%", "0");
+                text = text.replace("%forge_max_exp%", "-");
+                text = text.replace("%forge_license_name%", "无数据");
+            }
+        }
+
+        // === 开物术变量 ===
+        if (text.contains("%kaiwu_level%")) {
+            text = text.replace("%kaiwu_level%", String.valueOf(data.getKaiWuLevel()));
+        }
+        if (text.contains("%kaiwu_exp%")) {
+            text = text.replace("%kaiwu_exp%", String.valueOf(data.getKaiWuExp()));
+        }
+        // 【新增】
+        if (text.contains("%kaiwu_next_exp%")) {
+            text = text.replace("%kaiwu_next_exp%", String.valueOf(data.getKaiWuNextLevelExp()));
+        }
+        if (text.contains("%kaiwu_energy%")) {
+            // 保留一位小数
+            text = text.replace("%kaiwu_energy%", String.format("%.1f", data.getKaiWuEnergy()));
+        }
+        if (text.contains("%kaiwu_max_energy%")) {
+            // 保留一位小数
+            text = text.replace("%kaiwu_max_energy%", String.format("%.1f", data.getMaxKaiWuEnergy()));
+        }
+
+        // 3. RPG 经验相关
+        if (text.contains("%exp%") || text.contains("%max_exp%") || text.contains("%exp_percent%")) {
+            // 注意：这里要小心不要误伤到上面的 %forge_exp%，所以最好先处理完 forge 再处理这个
+            // 或者你的变量名区分度足够高（forge_exp vs exp）
+
+            int currentExp = data.getExp();
             int maxExp = plugin.getPlayerManager().getMaxExpRequired(data.getLv());
 
+            // 这里只替换 %exp%，不会替换 %forge_exp%
+            // 但为了安全，可以使用 replaceAll("\\b%exp%\\b", ...) 但这里简单处理即可
+            // 因为 %forge_exp% 已经被上面替换成数字了，所以不会冲突
             text = text.replace("%exp%", String.valueOf(currentExp));
-            text = text.replace("%max_exp%", String.valueOf(maxExp));
 
-            // 百分比显示
-            if (text.contains("%exp_percent%")) {
-                int percent = maxExp > 0 ? (int) (((double) currentExp / maxExp) * 100) : 0;
+            if (maxExp <= 0) {
+                text = text.replace("%max_exp%", "MAX");
+                text = text.replace("%exp_percent%", "100%");
+            } else {
+                text = text.replace("%max_exp%", String.valueOf(maxExp));
+                int percent = (int) (((double) currentExp / maxExp) * 100);
                 text = text.replace("%exp_percent%", percent + "%");
             }
         }
 
-        // 职业映射
+        // 4. 职业与种族
         String jobName = "无";
         Integer job = data.getJob();
         if (job != null && job >= 0 && job < JOB_NAMES.length) {
@@ -260,7 +311,6 @@ public class MenuManager {
         }
         text = text.replace("%job%", jobName);
 
-        // 种族映射
         String raceName = "未知";
         Integer race = data.getRace();
         if (race != null && race >= 0 && race < RACE_NAMES.length) {
@@ -268,7 +318,14 @@ public class MenuManager {
         }
         text = text.replace("%race%", raceName);
 
-        // 数值替换
+        // 稀有度
+
+        // === 【新增】 稀有度详细显示 ===
+        if (text.contains("%rarity_display%")) {
+            text = text.replace("%rarity_display%", getRarityDisplayString(player, data));
+        }
+
+        // 5. 战斗属性
         text = text.replace("%max_health%", String.format("%.1f", data.getMaxHealth()));
         text = text.replace("%current_health%", String.format("%.1f", player.getHealth()));
         text = text.replace("%attack%", String.format("%.1f", data.getAttack()));
@@ -276,45 +333,51 @@ public class MenuManager {
         text = text.replace("%armor%", String.format("%.1f", data.getArmor()));
         text = text.replace("%money%", String.format("%.1f", data.getMoney()));
         text = text.replace("%crit_chance%", String.format("%.1f%%", data.getCritChance() * 100));
-
-        // 冷却缩减
         text = text.replace("%CoolReduce%", String.format("%.1f%%", data.getCoolReduce() * 100));
 
-        // 【修改的核心】灵力显示格式：当前/上限
-        // 这里会自动读取 data.getLingli() (数据库存的) 和 data.getMaxLingli() (代码算的)
-        // 并拼接成 "10/100" 这种格式返回给菜单
+
+        // 灵力
         String lingliDisplay = (int)data.getLingli().doubleValue() + "/" + (int)data.getMaxLingli();
         text = text.replace("%lingli%", lingliDisplay);
 
-        // 抗击退显示为百分比 (0.1 -> 10%)
+        // 抗击退
         text = text.replace("%knock_back_res%", String.format("%.0f%%", data.getKnockBackRes() * 100));
 
-        // 2. 智能属性行替换
+        // 6. 主属性行
         if (text.contains("%main_stat_line%")) {
             String replacement = "&f主属性: &7暂无职业";
-
             if (job != null) {
                 switch (job) {
-                    case 0: // 战士
-                        replacement = "&f近战强度: &b" + String.format("%.1f", data.getAttack());
-                        break;
-                    case 1: // 弓箭手
-                        replacement = "&f箭矢强度: &b" + String.format("%.1f", data.getArcherDamage());
-                        break;
-                    case 2: // 术士
-                        replacement = "&f阵法强度: &b" + String.format("%.1f", data.getZfStr());
-                        break;
-                    case 3: // 医师
-                        replacement = "&f医术: &b" + String.format("%.1f", data.getZfStr());
-                        break;
-                    default:
-                        replacement = "&f主属性: &7未知";
-                        break;
+                    case 0: replacement = "&f近战强度: &b" + String.format("%.1f", data.getAttack()); break;
+                    case 1: replacement = "&f箭矢强度: &b" + String.format("%.1f", data.getArcherDamage()); break;
+                    case 2: replacement = "&f阵法强度: &b" + String.format("%.1f", data.getZfStr()); break;
+                    case 3: replacement = "&f医术: &b" + String.format("%.1f", data.getZfStr()); break;
+                    default: replacement = "&f主属性: &7未知"; break;
                 }
             }
             text = text.replace("%main_stat_line%", replacement);
         }
 
         return text;
+    }
+
+    // 生成 "总和 / (分 + 分 + ...)" 格式的字符串
+    private String getRarityDisplayString(Player player, PlayerData data) {
+        // 1. 获取总分
+        int total = data.getTotalRarity();
+        // 2. 直接获取已经在 Manager 里计算好的明细列表
+        List<Integer> details = data.getRarityDetails();
+        // 3. 拼接字符串 (例如 "5+5+2")
+        // 使用流操作简化代码，或者用循环拼
+        List<String> strList = new ArrayList<>();
+        for (Integer i : details) {
+            strList.add(String.valueOf(i));
+        }
+        String detailStr = String.join("+", strList);
+        if (detailStr.isEmpty()) {
+            detailStr = "0";
+        }
+        // 返回格式: 15 / (5+5+2)
+        return total + " / (" + detailStr + ")";
     }
 }

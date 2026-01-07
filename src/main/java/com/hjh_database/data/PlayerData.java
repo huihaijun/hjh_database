@@ -1,8 +1,6 @@
 package com.hjh_database.data;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class PlayerData {
     private final UUID uuid;
@@ -66,6 +64,15 @@ public class PlayerData {
 
     // 【新增】当前经验值
     private int exp = 0;
+
+    // === 稀有度系统 ===
+    // 【新增】装备总稀有度 (武器+护甲)
+    private Integer totalRarity = 0;
+
+//    采集系统-开物术
+    private Integer kaiwuLevel = 1;
+    private Integer kaiwuExp = 0;
+    private Double kaiwuEnergy = 100.0; // 精力值
 
     public PlayerData(UUID uuid, String playerName) {
         this.uuid = uuid;
@@ -180,5 +187,79 @@ public class PlayerData {
 
     public int getExp() { return exp; }
     public void setExp(int exp) { this.exp = exp; }
+
+    //装备稀有度
+    public Integer getTotalRarity() { return totalRarity; }
+    public void setTotalRarity(Integer totalRarity) { this.totalRarity = totalRarity; }
+
+    // ... 原有的 totalRarity ...
+    // ★【新增】用来存明细的列表 (例如存 [5, 5, 2, 3])
+    private final java.util.List<Integer> rarityDetails = new java.util.ArrayList<>();
+
+    public java.util.List<Integer> getRarityDetails() {
+        return rarityDetails;
+    }
+
+    //采集系统——开物术
+    // 稀疏存储核心：只存冷却中的节点 { "world,100,64,200": 1700000000 }
+    private Map<String, Long> nodeCoolDowns = new HashMap<>();
+
+    public Integer getKaiWuLevel() { return kaiwuLevel; }
+    public void setKaiWuLevel(Integer kaiwuLevel) { this.kaiwuLevel = kaiwuLevel; }
+
+    public Integer getKaiWuExp() { return kaiwuExp; }
+    public void setKaiWuExp(Integer kaiwuExp) { this.kaiwuExp = kaiwuExp; }
+
+    public Double getKaiWuEnergy() { return kaiwuEnergy; }
+//    public void setKaiWuEnergy(Double kaiwuEnergy) { this.kaiwuEnergy = kaiwuEnergy; }
+
+    public double getMaxKaiWuEnergy() {
+        return 100.0 + (this.kaiwuLevel * 10.0);
+    }
+
+    // 【修改】设置精力时防止低于0，也防止超过上限(可选，这里只防负数)
+    public void setKaiWuEnergy(Double kaiwuEnergy) {
+        if (kaiwuEnergy < 0) kaiwuEnergy = 0.0;
+        // 如果你需要限制上限，可以解开下面这行
+        // if (kaiwuEnergy > getMaxKaiWuEnergy()) kaiwuEnergy = getMaxKaiWuEnergy();
+        this.kaiwuEnergy = kaiwuEnergy;
+    }
+
+    public int getKaiWuNextLevelExp() {
+        // 为了方便，这里暂时硬编码默认值，实际建议从 KaiWuManager 传参或做成静态配置读取
+        // 假设基础值是 100
+        return this.kaiwuLevel * 100;
+    }
+
+
+    public Map<String, Long> getNodeCoolDowns() { return nodeCoolDowns; }
+    public void setNodeCoolDowns(Map<String, Long> nodeCoolDowns) { this.nodeCoolDowns = nodeCoolDowns; }
+
+    // --- JSON 序列化逻辑 (用于存入数据库 LONGTEXT) ---
+    // 简单实现，避免依赖复杂库，格式： "key:value,key2:value2"
+    // 如果你服务器有 Gson，建议用 Gson，这里手写一个轻量级的防报错
+
+    public String getNodeDataAsJsonString() {
+        if (nodeCoolDowns == null || nodeCoolDowns.isEmpty()) {
+            return "{}";
+        }
+        // 使用 Gson (Spigot 自带)
+        return new com.google.gson.Gson().toJson(nodeCoolDowns);
+    }
+
+    public void setNodeDataFromJsonString(String json) {
+        if (json == null || json.isEmpty() || json.equals("{}")) {
+            this.nodeCoolDowns = new HashMap<>();
+            return;
+        }
+        try {
+            // 使用 Gson 反序列化
+            java.lang.reflect.Type type = new com.google.gson.reflect.TypeToken<Map<String, Long>>(){}.getType();
+            this.nodeCoolDowns = new com.google.gson.Gson().fromJson(json, type);
+        } catch (Exception e) {
+            this.nodeCoolDowns = new HashMap<>();
+            e.printStackTrace();
+        }
+    }
 
 }
