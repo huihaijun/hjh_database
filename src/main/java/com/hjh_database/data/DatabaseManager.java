@@ -29,6 +29,9 @@ public class DatabaseManager {
         // 在 createForgeTable(); 下面添加：
         createKaiWuTable();
 
+        // 医师技能列表
+        createMedicalTable();
+
         // 2. 【核心修复】自动补全旧表缺失的字段 (使用你正确的列名)
         updateTables();
     }
@@ -193,6 +196,8 @@ public class DatabaseManager {
                 ");";
         executeSql(sql);
     }
+
+
 
 
     private void executeSql(String sql) {
@@ -374,8 +379,9 @@ public class DatabaseManager {
 
                 ps.executeUpdate();
             }
-
-
+            // 【新增】在此处调用医术保存，确保下线/自动保存生效
+            // ============================================
+            saveMedicalData(data);
         } catch (SQLException e) {
             plugin.getLogger().severe("保存玩家数据失败: " + e.getMessage());
             e.printStackTrace();
@@ -489,12 +495,87 @@ public class DatabaseManager {
                     }
                 }
 
+                // 5. 加载医师数据 (新增)
+                loadMedicalData(data);
+
             } catch (SQLException e) {
                 plugin.getLogger().severe("加载玩家数据失败: " + e.getMessage());
                 e.printStackTrace();
             }
             return data;
         });
+    }
+
+    // ==========================================
+    //           医师系统数据库逻辑
+    // ==========================================
+
+    public void createMedicalTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS player_medical (" +
+                "uuid VARCHAR(36) PRIMARY KEY, " +
+                "player_name VARCHAR(32), " +
+                "medical_skills TEXT" +  // 对应 PlayerData 中的 String 转换
+                ");";
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 单独保存玩家的医术数据
+     */
+    public void saveMedicalData(PlayerData data) {
+        // 1. 准备 SQL：如果没有记录则插入，有则更新 (ON DUPLICATE KEY UPDATE)
+        // 注意：表名 player_medical 和字段 medical_skills 要和你建表时一致
+        String sql = "INSERT INTO player_medical (uuid, player_name, medical_skills) VALUES (?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE player_name=?, medical_skills=?";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // 2. 获取数据
+            String uuidStr = data.getUuid().toString();
+            String name = data.getPlayerName();
+
+            // 将 List<String> 转换成数据库存储的 String (例如 "skill1,skill2")
+            // 假设你在 PlayerData 里写过 getMedicalSkillsAsString() 或者类似的方法
+            // 如果没有，可以用 String.join(",", data.getMedicalLoadout())
+            String skillsStr = String.join(",", data.getMedicalLoadout());
+
+            // 3. 填充参数
+            ps.setString(1, uuidStr);
+            ps.setString(2, name);
+            ps.setString(3, skillsStr);
+
+            ps.setString(4, name);
+            ps.setString(5, skillsStr);
+
+            // 4. 执行
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            plugin.getLogger().severe("保存医术数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void loadMedicalData(PlayerData data) {
+        String sql = "SELECT medical_skills FROM player_medical WHERE uuid=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, data.getUuid().toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    data.setMedicalSkillsFromString(rs.getString("medical_skills"));
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("加载医师数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**

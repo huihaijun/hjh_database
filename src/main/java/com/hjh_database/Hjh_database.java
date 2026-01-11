@@ -16,6 +16,8 @@ import com.hjh_database.listener.WeaponSkillListener;
 import com.hjh_database.resource.ResourceListener;
 import com.hjh_database.resource.ResourceManager;
 import com.hjh_database.skill.element_zf.ElementZfManager;
+import com.hjh_database.skill.medical.spell.MedicalSpellManager;
+import com.hjh_database.skill.medical.spell.MedicalSpellListener;
 import com.hjh_database.skill.weapon.WeaponSkillManager;
 import com.hjh_database.ui.MenuManager;
 import org.bukkit.command.TabCompleter;
@@ -36,6 +38,11 @@ public final class Hjh_database extends JavaPlugin {
 
     // 1. 添加成员变量
     private com.hjh_database.kaiwu.KaiWuManager kaiWuManager;
+
+    // 【新增】在这里添加医师管理器变量
+    private com.hjh_database.skill.medical.MedicalManager medicalManager;
+    // 新加医师-医术管理器
+    private MedicalSpellManager medicalSpellManager;
 
 
     @Override
@@ -85,6 +92,16 @@ public final class Hjh_database extends JavaPlugin {
         // 注册监听器
         getServer().getPluginManager().registerEvents(new WeaponSkillListener(this), this);
 
+        // 【新增】医师系统初始化
+        // 1. 初始化管理器
+        this.medicalManager = new com.hjh_database.skill.medical.MedicalManager(this);
+        // 2. 注册监听器 (这一步至关重要，没有它，右键织布机没反应)
+        // 我们注册 MedicalEtchGui 作为监听器
+        getServer().getPluginManager().registerEvents(new com.hjh_database.skill.medical.gui.MedicalEtchGui(this), this);
+        // 初始化医术管理器
+        this.medicalSpellManager = new MedicalSpellManager(this);
+        // 注册医术监听器
+        getServer().getPluginManager().registerEvents(new MedicalSpellListener(this), this);
 
         // 3. 注册事件监听
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
@@ -97,9 +114,8 @@ public final class Hjh_database extends JavaPlugin {
         // 注册命令
         getCommand("hjhdz").setExecutor(new DzCommand(this));
 
-            // 注册监听器
+        // 注册监听器
         getServer().getPluginManager().registerEvents(new StationListener(this), this);
-
 
         // 在 onEnable 方法里，指令注册的那部分下面添加：
         if (getCommand("testmob") != null) {
@@ -204,5 +220,13 @@ public final class Hjh_database extends JavaPlugin {
     // 3. 添加 Getter 方法 (供其他类调用)
     public com.hjh_database.kaiwu.KaiWuManager getKaiWuManager() {
         return kaiWuManager;
+    }
+    // 【新增】获取医师管理器的方法
+    public com.hjh_database.skill.medical.MedicalManager getMedicalManager() {
+        return medicalManager;
+    }
+    // 添加 医师-医术 的Getter
+    public MedicalSpellManager getMedicalSpellManager() {
+        return medicalSpellManager;
     }
 }

@@ -23,8 +23,6 @@ public class CombatListener implements Listener {
     private final Hjh_database plugin;
     private final NamespacedKey armorKey;
     private final NamespacedKey weaponKey;
-
-    // 专属标签，用于识别测伤怪物
     private static final String TEST_DUMMY_TAG = "hjh_test_dummy";
 
     public CombatListener(Hjh_database plugin) {
@@ -33,23 +31,12 @@ public class CombatListener implements Listener {
         this.weaponKey = new NamespacedKey(plugin, "weapon_id");
     }
 
-    /**
-     * 【新增辅助方法】检查武器是否在正确槽位
-     * 仅在不满足条件时返回 false
-     */
     private boolean isWeaponSlotValid(Player player, ItemStack item) {
-        // 1. 基础检查
         if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) return true;
-
-        // 2. 检查是否是 RPG 武器
         String weaponId = item.getItemMeta().getPersistentDataContainer().get(weaponKey, PersistentDataType.STRING);
         if (weaponId == null) return true;
-
-        // 3. 获取配置
         WeaponManager.WeaponData wd = plugin.getPlayerManager().getWeaponManager().getLoadedWeapons().get(weaponId);
         if (wd == null) return true;
-
-        // 4. 核心校验：如果规定了槽位且当前槽位不符
         if (wd.activateSlot != -1 && player.getInventory().getHeldItemSlot() != wd.activateSlot) {
             return false;
         }
@@ -59,6 +46,24 @@ public class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onDamage(EntityDamageEvent event) {
         if (event.isCancelled()) return;
+
+        // =========================================================
+        // 【核心修复 A】 优先检测法术伤害标记 (HJH_MAGIC_DAMAGE)
+        // =========================================================
+        // 如果受击者身上有这个标记，说明这是 TuiDiSpell 等技能传递过来的伤害。
+        // 我们必须立刻提取伤害值，然后跳过"物理伤害计算"环节，防止被重置为 1.0。
+        boolean isMagicDamage = false;
+        double magicBaseDamage = 0.0;
+
+        // 注意：这里用的是你 TuiDiSpell 里写的 Metadata Key "HJH_MAGIC_DAMAGE" (大写)
+        // 请确保 TuiDiSpell 里 setMetadata 用的 Key 和这里完全一致！
+        if (event.getEntity().hasMetadata("HJH_MAGIC_DAMAGE")) {
+            isMagicDamage = true;
+            magicBaseDamage = event.getEntity().getMetadata("HJH_MAGIC_DAMAGE").get(0).asDouble();
+            // 立即清除标记
+            event.getEntity().removeMetadata("HJH_MAGIC_DAMAGE", plugin);
+        }
+        // =========================================================
 
         // 0. 横扫攻击检测
         if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
@@ -71,36 +76,47 @@ public class CombatListener implements Listener {
             }
         }
 
-        // === 【核心修复步骤 A】 检测是否为物理技能伤害 ===
-        // 如果怪物身上带有 hjh_physical_skill 标签，说明这是由 WeaponSkill 造成的伤害
-        // 我们必须跳过 "攻击者逻辑" (防止重算伤害)，但保留 "受击者逻辑" (计算护甲)
-        boolean isSkillDamage = event.getEntity().hasMetadata("hjh_physical_skill");
-        // 【修复核心】检测完之后，必须立即移除标签！
-        // 否则这只怪物这辈子都会被视为"正在受技能伤害"，导致后续普攻无法计算数值
-        if (isSkillDamage) {
+        // =========================================================
+        // 【核心修复 B】 物理技能伤害 (WeaponSkill) 检测
+        // =========================================================
+        boolean isPhysicalSkill = event.getEntity().hasMetadata("hjh_physical_skill");
+        if (isPhysicalSkill) {
             event.getEntity().removeMetadata("hjh_physical_skill", plugin);
         }
+
         double damage = event.getDamage();
-        // 1. 攻击者逻辑 (仅当不是技能伤害时执行)
-        if (!isSkillDamage && event instanceof EntityDamageByEntityEvent evt) {
+
+        // 如果是法术伤害，直接使用传递过来的数值，覆盖原始伤害
+        if (isMagicDamage) {
+            damage = magicBaseDamage;
+        }
+
+        // 1. 攻击者逻辑 (物理伤害计算)
+        // 只有当 [不是法术伤害] 且 [不是物理技能] 时，才执行这里的计算
+        if (!isMagicDamage && !isPhysicalSkill && event instanceof EntityDamageByEntityEvent evt) {
             if (evt.getDamager() instanceof Player attacker) {
 
-                // === 【修复核心】 近战武器槽位限制检查 ===
+                // 槽位检查
                 ItemStack hand = attacker.getInventory().getItemInMainHand();
                 if (!isWeaponSlotValid(attacker, hand)) {
+                    // 医师特化：如果是医师，不提示，静默取消
+                    PlayerData data = plugin.getPlayerManager().getData(attacker.getUniqueId());
+                    if (data != null && data.getJob() != null && data.getJob() == 3) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    // 其他人正常提示
                     event.setCancelled(true);
                     attacker.sendMessage(ChatColor.RED + "武器未激活！请将武器移动到正确的槽位使用！");
                     attacker.playSound(attacker.getLocation(), Sound.ENTITY_ITEM_BREAK, 1, 0.5f);
                     return;
                 }
-                // ======================================
+
                 PlayerData data = plugin.getPlayerManager().getData(attacker.getUniqueId());
                 if (data != null) {
-                    // 判断是否为 RPG 武器
                     boolean isRpgWeapon = hand.hasItemMeta() &&
                             hand.getItemMeta().getPersistentDataContainer().has(weaponKey, PersistentDataType.STRING);
-                    // A. 战士职业 (Job == 0)
-                    // 基础伤害计算
+
                     if (data.getJob() != null && data.getJob() == 0) { // 战士
                         String type = hand.getType().name();
                         if (type.endsWith("_SWORD") || type.endsWith("_AXE")) {
@@ -110,36 +126,35 @@ public class CombatListener implements Listener {
                             damage = baseAttack;
                         }
                     }
-                    // B. 非战士职业 + RPG 武器 -> 惩罚
+                    // 【问题根源在这里】
+                    // 如果是医师(非战士) + 拿医旗(RPG武器) -> 这里把 damage 变成了 1.0
+                    // 但我们加了 !isMagicDamage 的判断，所以法术伤害会跳过这整段代码，保住了数值！
                     else if (isRpgWeapon) {
                         damage = 1.0;
                     }
-                    // 【核心修改】 暴击判定逻辑 (通用，战士/弓箭手/甚至其他职业普攻都能触发)
-                    // 上限 80% (0.8)
+
+                    // 暴击逻辑
                     double critChance = Math.min(0.8, data.getVal(data.getCritChance()));
-                    // 只有冷却比较完善时才能暴击 (防止连点器)
                     if (attacker.getAttackCooldown() > 0.9F) {
                         if (Math.random() < critChance) {
-                            damage *= 1.5; // 1.5倍伤害
-                            // 播放原版暴击粒子 (跳劈效果)
+                            damage *= 1.5;
                             attacker.getWorld().spawnParticle(Particle.CRIT, evt.getEntity().getLocation().add(0, 1, 0), 15);
                             attacker.playSound(attacker.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
                         }
                     }
                 }
             }
-            // 远程逻辑 (弓箭手)
+            // 远程逻辑
             else if (evt.getDamager() instanceof AbstractArrow arrow && arrow.getShooter() instanceof Player shooter) {
                 PlayerData data = plugin.getPlayerManager().getData(shooter.getUniqueId());
                 if (data != null) {
                     double archerDmg = data.getVal(data.getArcherDamage());
                     double velocity = arrow.getVelocity().length();
                     damage = archerDmg * (Math.min(3.0, velocity) / 3.0);
-                    // 【核心修改】 弓箭也能触发暴击属性
                     double critChance = Math.min(0.8, data.getVal(data.getCritChance()));
                     if (Math.random() < critChance) {
                         damage *= 1.5;
-                        arrow.setCritical(true); // 视觉上的粒子
+                        arrow.setCritical(true);
                         shooter.playSound(shooter.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 1, 1);
                     }
                 }
@@ -148,6 +163,7 @@ public class CombatListener implements Listener {
 
         // 2. 受击者逻辑 (减伤)
         if (event.getEntity() instanceof LivingEntity victim) {
+            // ... (原版护甲清理逻辑) ...
             if (victim.getAttribute(Attribute.GENERIC_ARMOR) != null) {
                 victim.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(0);
             }
@@ -167,25 +183,25 @@ public class CombatListener implements Listener {
                     PlayerData data = plugin.getPlayerManager().getData(p.getUniqueId());
                     if (data != null) armor = data.getVal(data.getArmor());
                 } else {
-                    // 读取怪物身上的护甲 NBT
                     if (victim.getPersistentDataContainer().has(armorKey, PersistentDataType.DOUBLE)) {
                         armor = victim.getPersistentDataContainer().get(armorKey, PersistentDataType.DOUBLE);
                     }
                 }
 
-                // === 【核心修改】检测法术伤害标记 ===
-                if (victim.hasMetadata("hjh_magic_damage")) {
-                    armor = 0.0; // 如果是法术伤害，无视护甲
-                    // TODO: 这里以后可以添加 victimMagicResist (法抗) 的逻辑
+                // === 【核心修复 C】如果是法术伤害，无视护甲 ===
+                if (isMagicDamage || victim.hasMetadata("hjh_magic_damage")) {
+                    // 这里兼容大小写写法，或者如果你上面已经处理了 isMagicDamage，这里就可以简写
+                    // 只要确认是法术伤害，护甲视为 0 (真伤)
+                    armor = 0.0;
                 }
-                // ==============================
+                // ==========================================
 
                 if (armor < 0) armor = 0;
                 double multiplier = 50.0 / (50.0 + armor);
                 damage = damage * multiplier;
             }
 
-            // 3. 测伤反馈 (保持原样，未修改)
+            // 3. 测伤反馈
             if (victim.getScoreboardTags().contains(TEST_DUMMY_TAG)) {
                 if (event instanceof EntityDamageByEntityEvent evt) {
                     CommandSender msgTarget = null;
@@ -207,45 +223,30 @@ public class CombatListener implements Listener {
         }
     }
 
-    // 复活逻辑 (已合并经验获取逻辑)
+    // ... (onDeath 和 onShoot 保持不变) ...
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
+        // ... (保持你提供的代码，包括经验和测伤人偶复活) ...
         LivingEntity entity = event.getEntity();
-
-        // === 1. 【新增】经验获取逻辑 ===
-        // 注意：测伤人偶(TEST_DUMMY_TAG)虽然也有panling标签，但不能给经验，否则会无限刷
         Player killer = entity.getKiller();
         if (killer != null && !entity.getScoreboardTags().contains(TEST_DUMMY_TAG)) {
-            // 检查标签：同时拥有 panling 和 monster
-            if (entity.getScoreboardTags().contains("panling") &&
-                    entity.getScoreboardTags().contains("monster")) {
-
-                // 从 PlayerManager 获取配置的经验值
+            if (entity.getScoreboardTags().contains("panling") && entity.getScoreboardTags().contains("monster")) {
                 int expAmount = plugin.getPlayerManager().getMobExp();
-
-                // 给予经验 (会自动处理升级)
                 plugin.getPlayerManager().giveExp(killer, expAmount);
-
-                // 动作栏提示 (比聊天栏更清爽)
-                killer.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                        new TextComponent("§e+ " + expAmount + " 经验"));
+                killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent("§e+ " + expAmount + " 经验"));
             }
         }
-
-        // === 2. 测伤人偶复活逻辑 (保持原样) ===
         if (entity.getScoreboardTags().contains(TEST_DUMMY_TAG)) {
+            // ... (测伤人偶复活逻辑，省略以节省空间，直接用你原来的) ...
             event.getDrops().clear();
             event.setDroppedExp(0);
-
             Location loc = entity.getLocation();
             double maxHealth = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             double armor = 0.0;
-            // 读取旧尸体的护甲数据
             if (entity.getPersistentDataContainer().has(armorKey, PersistentDataType.DOUBLE)) {
                 armor = entity.getPersistentDataContainer().get(armorKey, PersistentDataType.DOUBLE);
             }
             final double finalArmor = armor;
-
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 loc.getWorld().spawn(loc, Creeper.class, creeper -> {
                     creeper.addScoreboardTag("panling");
@@ -254,10 +255,7 @@ public class CombatListener implements Listener {
                     creeper.setAI(false);
                     creeper.setPowered(false);
                     creeper.setExplosionRadius(0);
-
-                    // 写入新尸体的护甲数据
                     creeper.getPersistentDataContainer().set(armorKey, PersistentDataType.DOUBLE, finalArmor);
-
                     if (creeper.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
                         creeper.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(maxHealth);
                     }
@@ -265,7 +263,6 @@ public class CombatListener implements Listener {
                         creeper.getAttribute(Attribute.GENERIC_ARMOR).setBaseValue(0);
                     }
                     creeper.setHealth(maxHealth);
-
                     creeper.setCustomName(ChatColor.translateAlternateColorCodes('&',
                             "&c&l测伤人偶 &7(HP:" + (int)maxHealth + " 护甲:" + (int)finalArmor + ")"));
                     creeper.setCustomNameVisible(true);
@@ -277,8 +274,6 @@ public class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onShoot(EntityShootBowEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-
-        // === 【修复核心】 弓箭武器槽位限制检查 ===
         ItemStack bow = event.getBow();
         if (!isWeaponSlotValid(player, bow)) {
             event.setCancelled(true);
@@ -286,8 +281,6 @@ public class CombatListener implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1, 0.5f);
             return;
         }
-        // ======================================
-
         PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
         if (data != null && (data.getJob() == null || data.getJob() != 1)) {
             event.setCancelled(true);

@@ -7,6 +7,7 @@ import com.hjh_database.dz.gui.PlayerRecipeListGui;
 import com.hjh_database.dz.gui.RecipePreviewGui;
 // 如果有其他不想被刷新的界面也加在这里
 
+import com.hjh_database.skill.medical.gui.MedicalEtchGui;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,6 +16,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder; // 导入这个
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 public class ResourceListener implements Listener {
     private final Hjh_database plugin;
@@ -40,7 +42,10 @@ public class ResourceListener implements Listener {
         // 因为这些界面里的物品是"展示用"的，带有特殊的Lore和NBT数据，不能被重置。
         if (holder instanceof PlayerRecipeListGui ||
                 holder instanceof AdminRecipeListGui ||
-                holder instanceof RecipePreviewGui) {
+                holder instanceof RecipePreviewGui ||
+                holder instanceof MedicalEtchGui.EtchHolder ||
+                holder instanceof MedicalEtchGui.SeparateHolder ||
+                holder instanceof MedicalEtchGui.MainMenuHolder) {
             return;
         }
         // =============================
@@ -54,11 +59,19 @@ public class ResourceListener implements Listener {
     }
 
     // 批量刷新逻辑 (保持不变)
+// === 修改后的刷新逻辑 ===
     private void updateInventory(Inventory inv) {
         for (ItemStack item : inv.getContents()) {
-            if (item != null) {
-                plugin.getResourceManager().refreshItem(item);
+            if (item == null || !item.hasItemMeta()) continue;
+            // 【核心保护】检查是否有“免刷新锁” (ignore_refresh)
+            // 如果有这个 Key，说明它是已绘制的医旗或其他特殊物品，跳过刷新，保护 Lore
+            if (item.getItemMeta().getPersistentDataContainer().has(
+                    plugin.getMedicalManager().keyIgnoreRefresh,
+                    PersistentDataType.INTEGER)) {
+                continue;
             }
+            // 【原有逻辑】没有锁，正常刷新
+            plugin.getResourceManager().refreshItem(item);
         }
     }
 }

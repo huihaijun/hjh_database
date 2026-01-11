@@ -47,6 +47,9 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.YELLOW + "/hjhadmin givetoken <玩家> - 给予天机令");
             sender.sendMessage(ChatColor.YELLOW + "/hjhadmin job <玩家> <职业> - 设置职业");
             sender.sendMessage(ChatColor.YELLOW + "/hjhadmin race <玩家> <种族> - 设置种族");
+            // 【新增提示】
+            sender.sendMessage(ChatColor.YELLOW + "/hjhadmin medical <技能ID> - 获取医术秘籍");
+            sender.sendMessage(ChatColor.YELLOW + "/hjhadmin getstation - 获取医术绘制台");
             return true;
         }
 
@@ -59,12 +62,16 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             plugin.getPlayerManager().getWeaponManager().reload();
             plugin.getPlayerManager().getArmorManager().reload();
 
-            // 【新增】重载 Resource 物品
+            // 重载 Resource 物品
             if (plugin.getResourceManager() != null) {
                 plugin.getResourceManager().reload();
             }
+            // 【新增】重载医术配置
+            if (plugin.getMedicalManager() != null) {
+                plugin.getMedicalManager().loadSkillBooks(); // 假设你在 Manager 里有这个加载方法
+            }
 
-            sender.sendMessage(ChatColor.GREEN + "所有配置文件(含Resource物品)已重载！");
+            sender.sendMessage(ChatColor.GREEN + "所有配置文件(含Resource/Medical)已重载！");
             return true;
         }
 
@@ -99,6 +106,39 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             player.getInventory().addItem(item);
             sender.sendMessage(ChatColor.GREEN + "已获得物品: " + itemName + " x" + amount);
             return true;
+        }
+
+        // === medical (获取医术秘籍) 【新增部分】 ===
+        if (subCommand.equals("medical")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "只有玩家可以使用此命令。");
+                return true;
+            }
+            Player player = (Player) sender;
+
+            if (args.length < 2) return error(sender, "用法: /hjhadmin medical <技能ID>");
+
+            String skillId = args[1];
+            // 调用 MedicalManager 获取秘籍
+            if (plugin.getMedicalManager() != null) {
+                ItemStack book = plugin.getMedicalManager().getSkillBook(skillId); // 之前写的方法叫 getSkillBook
+                if (book != null) {
+                    player.getInventory().addItem(book);
+                    sender.sendMessage(ChatColor.GREEN + "已获得医术秘籍: " + skillId);
+                } else {
+                    sender.sendMessage(ChatColor.RED + "未找到技能ID为 [" + skillId + "] 的秘籍配置。");
+                }
+            }
+            return true;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("getstation")) {
+            if (plugin.getMedicalManager() != null) {
+                Player p = (Player) sender;
+                p.getInventory().addItem(plugin.getMedicalManager().getMedicalStationItem());
+                p.sendMessage("§a已获取医术绘制台！");
+                return true;
+            }
         }
 
         // === givetoken (给予天机令) ===
@@ -171,7 +211,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return Arrays.asList("job", "race", "givetoken", "reload", "gettestgear", "get");
+        // 【修改】添加 medical 到一级补全
+        if (args.length == 1) return Arrays.asList("job", "race", "givetoken", "reload", "gettestgear", "get", "medical","getstation");
 
         // 如果是 get 指令，第二个参数提示所有物品的ID和名字
         if (args.length == 2 && args[0].equalsIgnoreCase("get")) {
@@ -184,6 +225,14 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         .collect(Collectors.toList());
             }
             return new ArrayList<>();
+        }
+
+        // 【新增】如果是 medical 指令，提示技能ID
+        if (args.length == 2 && args[0].equalsIgnoreCase("medical")) {
+            if (plugin.getMedicalManager() != null) {
+                // 之前让你在 Manager 里加的 getAllSkillIds()
+                return new ArrayList<>(plugin.getMedicalManager().getAllSkillIds());
+            }
         }
 
         if (args.length == 2) return null; // 其他指令默认回显玩家名

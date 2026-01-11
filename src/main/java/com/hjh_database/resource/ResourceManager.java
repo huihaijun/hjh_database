@@ -145,6 +145,20 @@ public class ResourceManager {
     public boolean refreshItem(ItemStack item) {
         if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) return false;
         ItemMeta meta = item.getItemMeta();
+
+        // ==========================================================================
+        // 【核心修复】 检查 "免刷新锁" (hjh_ignore_refresh)
+        // 这是保护医术旗帜、秘籍不被 "洗白" 的关键！
+        // ==========================================================================
+        // 注意：这里需要传入 plugin 实例，确保 ResourceManager 类里有 plugin 字段
+        // 如果你的 plugin 变量名不一样，请自行调整
+        org.bukkit.NamespacedKey ignoreKey = new org.bukkit.NamespacedKey(plugin, "hjh_ignore_refresh");
+        if (meta.getPersistentDataContainer().has(ignoreKey, org.bukkit.persistence.PersistentDataType.INTEGER)) {
+            // 发现锁！这是一个特殊的物品（如已刻印的医旗），绝对不能被重置！
+            return false;
+        }
+        // ==========================================================================
+
         if (!meta.getPersistentDataContainer().has(keyId, PersistentDataType.STRING)) return false;
 
         String id = meta.getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
@@ -152,6 +166,7 @@ public class ResourceManager {
         // --- 逻辑分支 ---
 
         // A. 如果是武器
+        // (注意：这里原本的逻辑是毁灭性的，但加上上面的锁之后，医旗就安全了)
         WeaponManager wm = plugin.getPlayerManager().getWeaponManager();
         if (wm.getAllIds().contains(id)) {
             ItemStack newItem = wm.getItemStack(id);

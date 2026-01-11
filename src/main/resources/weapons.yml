@@ -118,3 +118,71 @@ weapons:
     stats:
       zf_str: 50.0      # 增加阵法强度
       max_health: 5.0
+
+
+  # === 医师武器：空白医旗 (R1 - R5) ===
+  # 颜色对应稀有度：白、绿、蓝、紫、橙
+  medical_banner_1:
+    display: "&f素布医旗"
+    rarity: 1
+    material: WHITE_BANNER
+    lore:
+      - "&7医师专用，尚未绘制医术"
+      - "&7可承载稀有度 &f1 &7及以下的医术"
+    req_job: 3 # 假设2是医师
+    req_lv: 1
+    activate_slot: 0
+    stats:
+      zf_str: 5.0 # 假设有个治疗强度属性
+
+  medical_banner_2:
+    display: "&a青囊医旗"
+    rarity: 2
+    material: GREEN_BANNER
+    lore:
+      - "&7医师专用，尚未绘制医术"
+      - "&7可承载稀有度 &a2 &7及以下的医术"
+    req_job: 3
+    req_lv: 10
+    activate_slot: 0
+    stats:
+      zf_str: 10.0
+
+  medical_banner_3:
+    display: "&b灵纹医旗"
+    rarity: 3
+    material: BLUE_BANNER
+    lore:
+      - "&7医师专用，尚未绘制医术"
+      - "&7可承载稀有度 &b3 &7及以下的医术"
+    req_job: 3
+    req_lv: 20
+    activate_slot: 0
+    stats:
+      zf_str: 20.0
+
+  medical_banner_4:
+    display: "&d玄天医旗"
+    rarity: 4
+    material: PURPLE_BANNER
+    lore:
+      - "&7医师专用，尚未绘制医术"
+      - "&7可承载稀有度 &d4 &7及以下的医术"
+    req_job: 3
+    req_lv: 40
+    activate_slot: 0
+    stats:
+      zf_str: 40.0
+
+  medical_banner_5:
+    display: "&6仙道医旗"
+    rarity: 5
+    material: ORANGE_BANNER
+    lore:
+      - "&7医师专用，尚未绘制医术"
+      - "&7可承载稀有度 &65 &7及以下的医术"
+    req_job: 3
+    req_lv: 60
+    activate_slot: 0
+    stats:
+      zf_str: 80.0

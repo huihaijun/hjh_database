@@ -43,6 +43,53 @@ public class PlayerData {
     // 额外灵力 (装备提供的上限加成)
     private transient double extraLingli = 0.0;
 
+    // ==========================================
+    //           医师系统 (Medical)
+    // ==========================================
+    // 存储已绘制成功的医术ID (例如: "test1", "test2")
+    // 存储已学会的医术
+    private List<String> medicalSkills = new ArrayList<>();
+
+    // --- 修复报错的核心方法 ---
+
+    // 1. 获取当前持有的医术 (对应 Manager 中的 getMedicalLoadout)
+    public List<String> getMedicalLoadout() {
+        return medicalSkills;
+    }
+
+    // 2. 添加记忆 (对应 Manager 中的 addMedicalSkillMemory)
+    public void addMedicalSkillMemory(String skillId) {
+        if (!medicalSkills.contains(skillId)) {
+            medicalSkills.add(skillId);
+        }
+    }
+
+    // 3. 遗忘/移除记忆 (对应 Manager 分离时的逻辑)
+    public void removeMedicalSkillMemory(String skillId) {
+        if (medicalSkills.contains(skillId)) {
+            medicalSkills.remove(skillId);
+        }
+    }
+
+    // 4.清空所有医术记忆
+    public void clearMedicalSkills() {
+        medicalSkills.clear();
+    }
+
+    // --- 数据库辅助方法 (保持不变) ---
+    public String getMedicalSkillsAsString() {
+        if (medicalSkills == null || medicalSkills.isEmpty()) return "";
+        return String.join(",", medicalSkills);
+    }
+
+    public void setMedicalSkillsFromString(String str) {
+        medicalSkills = new ArrayList<>();
+        if (str != null && !str.isEmpty()) {
+            String[] parts = str.split(",");
+            Collections.addAll(medicalSkills, parts);
+        }
+    }
+
     private Double jhq = 0.0;
     private Double money = 0.0;
 
@@ -231,7 +278,6 @@ public class PlayerData {
         return this.kaiwuLevel * 100;
     }
 
-
     public Map<String, Long> getNodeCoolDowns() { return nodeCoolDowns; }
     public void setNodeCoolDowns(Map<String, Long> nodeCoolDowns) { this.nodeCoolDowns = nodeCoolDowns; }
 
@@ -261,5 +307,6 @@ public class PlayerData {
             e.printStackTrace();
         }
     }
+
 
 }

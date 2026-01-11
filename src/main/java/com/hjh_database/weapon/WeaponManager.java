@@ -95,16 +95,21 @@ public class WeaponManager {
         // 获取玩家数据
         com.hjh_database.data.PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
         if (data == null) return;
+
         // 遍历整个背包
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack item = player.getInventory().getItem(slot);
             if (item == null || !item.hasItemMeta()) continue;
+
             // 检查是否是武器 (优先检查 weapon_id，兼容 resource_id)
             String id = item.getItemMeta().getPersistentDataContainer().get(weaponKey, org.bukkit.persistence.PersistentDataType.STRING);
             if (id == null) id = item.getItemMeta().getPersistentDataContainer().get(keyId, org.bukkit.persistence.PersistentDataType.STRING);
+
             if (id == null) continue; // 不是武器，跳过
+
             WeaponData wData = loadedWeapons.get(id);
-            if (wData == null) continue;
+            if (wData == null) continue; // 配置文件里已经删除了这个武器
+
             // === 判定激活状态逻辑 (保留你原本的逻辑) ===
             boolean isActive = true;
             List<String> statusLore = new ArrayList<>();
@@ -125,12 +130,16 @@ public class WeaponManager {
                 isActive = false;
                 statusLore.add(ChatColor.RED + "⚠ 等级不足 (" + data.getLv() + "/" + wData.reqLv + ")");
             }
-            // === 重新构建 Lore (包含稀有度) ===
-            ItemMeta meta = item.getItemMeta();
+
+            // === 重新构建 Meta ===
+            ItemMeta meta = item.getItemMeta(); // 获取现有 Meta (保留旗帜图案)
             meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', wData.display)); // 确保名字也刷新
+            meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "rarity"), PersistentDataType.INTEGER, wData.rarity);
+
+            // 构建新的 Lore 列表
             List<String> newLore = new ArrayList<>();
 
-            // 【修改点】 1. 第一行插入稀有度星星
+            // 【修改点】 1. 第一行插入稀有度星星 (紧跟名字下方)
             // 获取颜色代码（根据下面的 case 逻辑，必须跟下面保持一致）
             String colorCode = "§7"; // 默认为灰
             switch (wData.rarity) {
@@ -142,10 +151,10 @@ public class WeaponManager {
                 case 6: colorCode = "§c"; break; // 红
             }
 
-            // 拼接：颜色 + 文字 + 星星 (getRarityStars自带颜色，所以这里前面拼一次颜色即可)
+            // 拼接：颜色 + 文字 + 星星 (假设 getRarityStars 方法存在于本类中)
             newLore.add(colorCode + "稀有度: " + getRarityStars(wData.rarity));
 
-            // 2. 插入原有 Lore
+            // 2. 插入原有 Lore (配置文件的描述)
             for (String line : wData.lore) {
                 newLore.add(ChatColor.translateAlternateColorCodes('&', line));
             }
@@ -158,6 +167,46 @@ public class WeaponManager {
                 newLore.add(" ");
                 newLore.addAll(statusLore);
             }
+
+            // =======================================================
+            // 【关键修复】 4. 检查并保留医术信息 (防止刷新丢失)
+            // =======================================================
+            // 检查是否有医术ID的 NBT
+            NamespacedKey medKey = new NamespacedKey(plugin, "med_skill_id");
+            if (meta.getPersistentDataContainer().has(medKey, org.bukkit.persistence.PersistentDataType.STRING)) {
+                String medSkillId = meta.getPersistentDataContainer().get(medKey, org.bukkit.persistence.PersistentDataType.STRING);
+
+                // 检查是否有制作者 NBT
+                NamespacedKey crafterKey = new NamespacedKey(plugin, "med_crafter");
+                String crafterName = meta.getPersistentDataContainer().get(crafterKey, org.bukkit.persistence.PersistentDataType.STRING);
+
+                newLore.add("§8§m------------------");
+
+                // 尝试获取技能中文名
+                if (plugin.getMedicalManager() != null) {
+                    String skillName = plugin.getMedicalManager().getSkillName(medSkillId);
+                    newLore.add("§6[医术] §e" + (skillName != null ? skillName : medSkillId));
+
+                    // 【核心逻辑补充】从 MedicalManager 读取原始技能书的详细Lore
+                    // 只有加上这一段，"冷却时间"、"灵力消耗" 这些信息才会被补回来
+                    ItemStack originalBook = plugin.getMedicalManager().getSkillBook(medSkillId);
+                    if (originalBook != null && originalBook.hasItemMeta() && originalBook.getItemMeta().hasLore()) {
+                        for (String line : originalBook.getItemMeta().getLore()) {
+                            // 过滤掉那句 "放入绘制台" 的提示，其他都加上
+                            if (line.contains("放入绘制台")) continue;
+                            newLore.add(line);
+                        }
+                    }
+
+                } else {
+                    newLore.add("§6[医术] §e" + medSkillId);
+                }
+
+                if (crafterName != null) {
+                    newLore.add("§7绘旗者: " + crafterName);
+                }
+            }
+            // =======================================================
 
             // 4. 应用更改
             meta.setLore(newLore);
