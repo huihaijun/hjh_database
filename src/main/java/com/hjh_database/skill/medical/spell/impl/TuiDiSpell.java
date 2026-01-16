@@ -60,9 +60,8 @@ public class TuiDiSpell implements MedicalSpell {
                 // =========================================================
                 // 【修复问题 2】 伤害注入
                 // =========================================================
-                // 1. 给怪物打上伤害标记，告诉 CombatListener 这是 72点(80*0.9) 魔法伤害
+                // 1. 给怪物打上伤害标记
                 mob.setMetadata("HJH_MAGIC_DAMAGE", new FixedMetadataValue(plugin, damage));
-
                 // 2. 触发伤害事件 (参数填0即可，反正 CombatListener 会读取 Meta 覆盖它)
                 // 必须传 player 作为 attacker，否则不算玩家击杀
                 mob.damage(0, player);

@@ -53,39 +53,43 @@ public class WeaponManager {
         plugin.getLogger().info("WeaponManager 加载了 " + loadedWeapons.size() + " 把武器。");
     }
 
+    public WeaponData checkActiveWeapon(Player player, ItemStack item, int checkSlot) {
+        if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) {
+            return null;
+        }
+        // 1. 获取 ID
+        String id = item.getItemMeta().getPersistentDataContainer().get(weaponKey, PersistentDataType.STRING);
+        if (id == null) {
+            id = item.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
+        }
+        if (id == null) return null;
+        WeaponData wData = loadedWeapons.get(id);
+        if (wData == null) return null;
+        PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
+        if (data == null) return null;
+        // 2. 检查槽位要求
+        // wData.activateSlot: 配置文件的要求 (例如 0 或 40)
+        // checkSlot: 物品实际所在的位置
+        // -1 代表任意位置
+        if (wData.activateSlot != -1 && wData.activateSlot != checkSlot) {
+            return null;
+        }
+        // 3. 检查职业
+        if (wData.reqJob != -1) {
+            if (data.getJob() == null || data.getJob() != wData.reqJob) return null;
+        }
+        // 4. 检查等级
+        if (data.getLv() < wData.reqLv) return null;
+        return wData;
+    }
 
     /**
      * 获取副手当前处于“激活状态”的武器 ID (供 SpellListener 使用)
      */
     public String getActiveOffHandWeaponId(Player player) {
-        ItemStack offItem = player.getInventory().getItemInOffHand();
-        if (offItem == null || offItem.getType() == Material.AIR || !offItem.hasItemMeta()) {
-            return null;
-        }
-
-        String id = offItem.getItemMeta().getPersistentDataContainer().get(weaponKey, PersistentDataType.STRING);
-        if (id == null) {
-            id = offItem.getItemMeta().getPersistentDataContainer().get(keyId, PersistentDataType.STRING);
-        }
-        if (id == null) return null;
-
-        WeaponData wData = loadedWeapons.get(id);
-        if (wData == null) return null;
-
-        PlayerData data = plugin.getPlayerManager().getData(player.getUniqueId());
-        if (data == null) return null;
-
-        // 判定：必须允许放在副手 (40) 或 任意位置 (-1)
-        if (wData.activateSlot != -1 && wData.activateSlot != 40) {
-            return null;
-        }
-
-        if (wData.reqJob != -1) {
-            if (data.getJob() == null || data.getJob() != wData.reqJob) return null;
-        }
-        if (data.getLv() < wData.reqLv) return null;
-
-        return id;
+        // 40 是副手槽位的 ID
+        WeaponData wd = checkActiveWeapon(player, player.getInventory().getItemInOffHand(), 40);
+        return wd != null ? wd.id : null;
     }
 
     /**
@@ -340,6 +344,9 @@ public class WeaponManager {
         public String activeLoreLine;
         //稀有度
         public int rarity; // <--- 新增
+        // 【新增】灵力回复数值 (默认 0.0 代表不回蓝)
+        public double manaRegen = 0.0;
+
         public Map<String, Double> stats = new HashMap<>();
 
         public WeaponData(String id, ConfigurationSection sec) {
@@ -359,6 +366,8 @@ public class WeaponManager {
                 for (String key : statSec.getKeys(false)) {
                     stats.put(key, statSec.getDouble(key));
                 }
+                // 【新增】提取灵力回复属性
+                this.manaRegen = stats.getOrDefault("mana_regen", 0.0);
             }
         }
     }

@@ -134,6 +134,7 @@ weapons:
     activate_slot: 0
     stats:
       zf_str: 5.0 # 假设有个治疗强度属性
+      mana_regen: 2.0   #每秒恢复灵力
 
   medical_banner_2:
     display: "&a青囊医旗"
@@ -147,6 +148,7 @@ weapons:
     activate_slot: 0
     stats:
       zf_str: 10.0
+      mana_regen: 3.0
 
   medical_banner_3:
     display: "&b灵纹医旗"
@@ -160,6 +162,7 @@ weapons:
     activate_slot: 0
     stats:
       zf_str: 20.0
+      mana_regen: 4.0
 
   medical_banner_4:
     display: "&d玄天医旗"
@@ -173,6 +176,7 @@ weapons:
     activate_slot: 0
     stats:
       zf_str: 40.0
+      mana_regen: 5.0
 
   medical_banner_5:
     display: "&6仙道医旗"
@@ -186,3 +190,4 @@ weapons:
     activate_slot: 0
     stats:
       zf_str: 80.0
+      mana_regen: 6.0

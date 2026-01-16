@@ -155,7 +155,15 @@ public class MedicalManager {
         ItemStack result = banner.clone();
         result.setAmount(1);
         ItemMeta resultMeta = result.getItemMeta();
-
+        // 修改显示名称：原名 + [医术名]
+        String skillDisplayName = getSkillName(skillId);
+        if (resultMeta.hasDisplayName()) {
+            // 使用 §r 重置颜色，避免前面名字的颜色影响到后面
+            resultMeta.setDisplayName(resultMeta.getDisplayName() + "§r[" + skillDisplayName + "§r]");
+        } else {
+            // 如果原本没名字，就给个默认的（防止空指针或无名）
+            resultMeta.setDisplayName("§f医旗§r[" + skillDisplayName + "§r]");
+        }
         // 1. 设置技能 ID
         resultMeta.getPersistentDataContainer().set(keySkillId, PersistentDataType.STRING, skillId);
 
@@ -217,6 +225,18 @@ public class MedicalManager {
         blankBanner.setAmount(1);
         ItemMeta meta = blankBanner.getItemMeta();
 
+        // 还原显示名称：移除 [医术名]
+        String skillDisplayName = getSkillName(skillId);
+        if (meta.hasDisplayName()) {
+            String currentName = meta.getDisplayName();
+            // 构造后缀字符串（必须和etchSkill里加的一模一样）
+            String suffix = "§r[" + skillDisplayName + "§r]";
+
+            if (currentName.contains(suffix)) {
+                // 将后缀替换为空
+                meta.setDisplayName(currentName.replace(suffix, ""));
+            }
+        }
         meta.getPersistentDataContainer().remove(keySkillId);
 
         // 【核心】移除免刷新锁 (让它变回普通武器，可以被 WeaponManager 刷新属性)

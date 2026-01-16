@@ -90,6 +90,41 @@ public class PlayerData {
         }
     }
 
+    // 【新增】存储医术离线剩余冷却时间 (Key=医术ID, Value=剩余毫秒)
+    private Map<String, Long> medicalCooldowns = new HashMap<>();
+    public Map<String, Long> getMedicalCooldowns() {
+        return medicalCooldowns;
+    }
+    public void setMedicalCooldowns(Map<String, Long> medicalCooldowns) {
+        this.medicalCooldowns = medicalCooldowns;
+    }
+    // JSON 序列化：存入数据库时变成字符串
+    public String getMedicalCooldownsAsJson() {
+        if (medicalCooldowns == null || medicalCooldowns.isEmpty()) {
+            return "{}";
+        }
+        return new com.google.gson.Gson().toJson(medicalCooldowns);
+    }
+
+    // JSON 反序列化：从数据库读出来变回 Map
+    public void setMedicalCooldownsFromJson(String json) {
+        if (json == null || json.isEmpty() || json.equals("{}")) {
+            this.medicalCooldowns = new HashMap<>();
+            return;
+        }
+        try {
+            java.lang.reflect.Type type = new com.google.gson.reflect.TypeToken<Map<String, Long>>(){}.getType();
+            this.medicalCooldowns = new com.google.gson.Gson().fromJson(json, type);
+        } catch (Exception e) {
+            this.medicalCooldowns = new HashMap<>();
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+
     private Double jhq = 0.0;
     private Double money = 0.0;
 
@@ -185,9 +220,17 @@ public class PlayerData {
 
     // 获取灵力上限
     public double getMaxLingli() { return maxLingli; }
+
+    // 安全增加灵力
+    public void addLingli(double amount) {
+        double max = getMaxLingli();
+        this.lingli += amount;
+        if (this.lingli > max) this.lingli = max;
+        if (this.lingli < 0) this.lingli = 0.0;
+    }
+
     // 设置灵力上限 (由 PlayerManager 计算后写入)
     public void setMaxLingli(double maxLingli) { this.maxLingli = maxLingli; }
-
     // 获取额外灵力上限 (装备提供)
     public double getExtraLingli() { return extraLingli; }
     public void setExtraLingli(double extraLingli) { this.extraLingli = extraLingli; }
