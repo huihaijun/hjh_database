@@ -9,8 +9,5 @@
         <module name="hjh_database" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="hjh_database" target="17" />
-    </bytecodeTargetLevel>
   </component>
 </project>
