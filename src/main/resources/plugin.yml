@@ -1,7 +1,7 @@
 name: hjh_database
 version: '${project.version}'
 main: com.hjh_database.Hjh_database
-api-version: '1.20'
+api-version: '1.21'
 commands:
   hjhstats:
     description: 查看属性
