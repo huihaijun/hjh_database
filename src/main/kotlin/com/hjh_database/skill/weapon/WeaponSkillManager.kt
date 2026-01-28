@@ -47,7 +47,8 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
             if (file.isDirectory) {
                 loadSkillFiles(file)
             } else if (file.name.endsWith(".yml")) {
-                val fileName = file.name.replace(".yml", "")
+                val fileName = file.name.replace(".yml", "").lowercase()
+//                val fileName = file.name.replace(".yml", "")
                 val yml = YamlConfiguration.loadConfiguration(file)
                 skillConfigCache[fileName] = yml
             }
@@ -63,14 +64,26 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["novice_bow"] = NoviceBowSkill()
     }
 
-    fun tryCastSkill(player: Player, weaponId: String, item: ItemStack, projectile: Entity?) {
-        if (!skillRegistry.containsKey(weaponId)) return
+    fun tryCastSkill(player: Player, rawWeaponId: String, item: ItemStack, projectile: Entity?) {
+        // 1. 【修复】强制转为小写，确保 "Novice_Bow" 能匹配到 "novice_bow"
+        val weaponId = rawWeaponId.lowercase()
+
+        // 2. 检查注册表中是否有这个技能
+        if (!skillRegistry.containsKey(weaponId)) {
+            // 可选：加个调试日志，如果以后还按不出来，取消注释这一行就能看到
+            plugin.logger.warning("未找到注册的技能 ID: $weaponId (原始ID: $rawWeaponId)")
+            return
+        }
 
         val config = skillConfigCache[weaponId]
         if (config == null || !config.getBoolean("active.enable", false)) return
 
         val weaponData = plugin.playerManager.weaponManager.getWeaponData(weaponId)
-        if (weaponData == null) return
+        if (weaponData == null) {
+            // 可选：调试日志
+            plugin.logger.warning("未找到武器数据配置: $weaponId")
+            return
+        }
 
         // 【关键】必须显式使用 !! 断言将其转换为非空类型
         val data = plugin.playerManager.getData(player.uniqueId)!!

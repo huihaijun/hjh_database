@@ -20,7 +20,7 @@ class MenuManager(private val plugin: Hjh_database) {
     private lateinit var config: FileConfiguration
     private val tokenKey: NamespacedKey = NamespacedKey(plugin, "hjh_token_item")
 
-    // 用于 PDC 识别的 Key (对应 components 中的 custom_data -> id)
+    // 用于 PDC 识别的 Key
     private val keyId = NamespacedKey(plugin, "id")
     private val keyUid = NamespacedKey(plugin, "uid")
     private val keyRank = NamespacedKey(plugin, "element_rank")
@@ -35,7 +35,6 @@ class MenuManager(private val plugin: Hjh_database) {
     }
 
     // === 枚举定义 ===
-    // 删除了 Color 字段，保留 translatableKey 用于生成组件数据
     enum class ElementType(
         val displayName: String,
         val nbtId: String,
@@ -43,14 +42,11 @@ class MenuManager(private val plugin: Hjh_database) {
         val modelData: Int,
         val translatableKey: String
     ) {
-        // 顺序：金10004 -> 木10005 -> 水10006 -> 火10007 -> 土10008
         METAL("金元素", "panling:metal", Material.GOLD_NUGGET, 10004, "pl.item.name.metal"),
         WOOD("木元素", "panling:wood", Material.GOLD_NUGGET, 10005, "pl.item.name.wood"),
         WATER("水元素", "panling:water", Material.GOLD_NUGGET, 10006, "pl.item.name.water"),
         FIRE("火元素", "panling:fire", Material.GOLD_NUGGET, 10007, "pl.item.name.fire"),
         EARTH("土元素", "panling:earth", Material.GOLD_NUGGET, 10008, "pl.item.name.earth"),
-
-        // 重生石 10019
         RELIVE("重生石", "panling:relive_stone", Material.GOLD_NUGGET, 10019, "pl.item.name.relife_stone");
     }
 
@@ -95,6 +91,7 @@ class MenuManager(private val plugin: Hjh_database) {
             return
         }
 
+        // 加载配置文件中的物品
         val itemsSec = config.getConfigurationSection("gui.items")
         if (itemsSec != null) {
             for (key in itemsSec.getKeys(false)) {
@@ -126,6 +123,18 @@ class MenuManager(private val plugin: Hjh_database) {
             }
         }
 
+        // === 【新增】Slot 30: 任务记录 ===
+        val questBook = ItemStack(Material.WRITABLE_BOOK)
+        val questMeta = questBook.itemMeta
+        questMeta?.setDisplayName("§e§l任务记录")
+        val questLore: MutableList<String> = ArrayList()
+        questLore.add("§7点击查看当前任务进度")
+        questLore.add("§8主线/支线/赏金/挑战")
+        questMeta?.lore = questLore
+        questBook.itemMeta = questMeta
+        inv.setItem(30, questBook)
+
+        // === Slot 31: 道天图录 ===
         val book = ItemStack(Material.BOOK)
         val meta = book.itemMeta
         meta?.setDisplayName("§b§l道天图录")
@@ -134,6 +143,7 @@ class MenuManager(private val plugin: Hjh_database) {
         meta?.lore = lore
         book.itemMeta = meta
         inv.setItem(31, book)
+
         player.openInventory(inv)
     }
 
@@ -156,12 +166,11 @@ class MenuManager(private val plugin: Hjh_database) {
         player.openInventory(inv)
     }
 
-    // GUI 显示用的图标，仅设置 Meta 即可，不需要复杂的组件
     private fun createGuiItem(type: ElementType, amount: Int): ItemStack {
         val item = ItemStack(type.material)
         val meta = item.itemMeta
         meta?.setDisplayName("§e" + type.displayName)
-        meta?.setCustomModelData(type.modelData) // 确保 GUI 里也能看到材质变化
+        meta?.setCustomModelData(type.modelData)
 
         val lore: MutableList<String> = ArrayList()
         lore.add("§7----------------")
@@ -176,37 +185,20 @@ class MenuManager(private val plugin: Hjh_database) {
         return item
     }
 
-    /**
-     * 【最终修复版】生成组件物品
-     * 1. 自动拼接物品ID，满足 1.21.3 解析器格式要求 (Item ID + Components)
-     * 2. 完美还原 JSON 数据结构
-     */
     @Suppress("DEPRECATION")
     fun getPanlingItem(type: ElementType, count: Int): ItemStack {
-        // 1. 获取物品的标准 ID
         val itemId = type.material.key.toString()
-
-        // 2. 构建基础组件字符串 (移除 custom_data 部分，改用 PDC 设置)
-        // 这样可以避免 modifyItemStack 对数据类型进行错误的自动压缩
         val fullItemString = StringBuilder()
         fullItemString.append(itemId)
         fullItemString.append("[")
-
-        // 视觉与基础属性
         fullItemString.append("minecraft:custom_model_data=${type.modelData},")
         fullItemString.append("minecraft:max_stack_size=99,")
         fullItemString.append("minecraft:rarity=common,")
         fullItemString.append("minecraft:repair_cost=0,")
-
-        // 翻译名
         fullItemString.append("minecraft:custom_name='{\"translate\":\"${type.translatableKey}\"}',")
-
-        // 仅重生石发光
         if (type == ElementType.RELIVE) {
             fullItemString.append("minecraft:enchantment_glint_override=true,")
         }
-
-        // 移除末尾逗号并闭合
         if (fullItemString.endsWith(",")) {
             fullItemString.setLength(fullItemString.length - 1)
         }
@@ -214,7 +206,6 @@ class MenuManager(private val plugin: Hjh_database) {
 
         var resultItem: ItemStack
         try {
-            // 第一步：生成带视觉效果的物品
             val baseItem = ItemStack(type.material)
             resultItem = Bukkit.getUnsafe().modifyItemStack(baseItem, fullItemString.toString())
         } catch (e: Exception) {
@@ -223,25 +214,17 @@ class MenuManager(private val plugin: Hjh_database) {
             resultItem = ItemStack(type.material)
         }
 
-        // 第二步：使用 PDC 注入强类型数据 (解决 Int 变 Short/Byte 的问题)
         val meta = resultItem.itemMeta
         if (meta != null) {
             val pdc = meta.persistentDataContainer
-
-            // 字符串类型
             pdc.set(keyId, PersistentDataType.STRING, type.nbtId)
-
-            // 整数类型 (强制 Integer，绝对不会变成 s 或 b)
             pdc.set(keyUid, PersistentDataType.INTEGER, type.modelData)
-
             if (type != ElementType.RELIVE) {
                 pdc.set(keyRank, PersistentDataType.INTEGER, 1)
                 pdc.set(keyType, PersistentDataType.INTEGER, 1)
             }
-
             resultItem.itemMeta = meta
         }
-
         resultItem.amount = count
         return resultItem
     }
@@ -249,29 +232,16 @@ class MenuManager(private val plugin: Hjh_database) {
     fun isPanlingItem(item: ItemStack?, type: ElementType): Boolean {
         if (item == null || item.type != type.material) return false
         val meta = item.itemMeta ?: return false
-
-        // 1. 优先检查 PDC (这是我们新生成的格式，最准确)
-        // 检查 ID
         if (meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) {
             val id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING)
-            // 只有 ID 匹配还不够，为了保险，我们也可以检查 UID 是否为 Integer
-            // 但通常 ID 唯一即可
             if (id == type.nbtId) return true
         }
-
-        // 2. 【兼容旧数据】如果 PDC 里没找到，尝试解析字符串 (针对旧物品)
-        // 如果你之前生成的物品没有 PDC，这个逻辑能让它们继续被识别
         try {
             val itemStr = item.toString()
             if (itemStr.contains("id:\"${type.nbtId}\"") || itemStr.contains("id=\"${type.nbtId}\"")) {
-                // 这里可以顺便把旧物品更新一下吗？
-                // 如果是在 MenuListener 里调用，不好直接改。
-                // 暂时只做识别。
                 return true
             }
-        } catch (ignored: Exception) {
-        }
-
+        } catch (ignored: Exception) {}
         return false
     }
 
@@ -284,9 +254,6 @@ class MenuManager(private val plugin: Hjh_database) {
         return ChatColor.translateAlternateColorCodes('&', msg)
     }
 
-    // =========================================================
-    //  ⚡️ 核心替换逻辑
-    // =========================================================
     private fun replacePlaceholders(text: String, player: Player, data: PlayerData): String {
         var result = text
         result = result.replace("%player_name%", player.name)
@@ -297,11 +264,9 @@ class MenuManager(private val plugin: Hjh_database) {
             if (dzData != null) {
                 result = result.replace("%forge_level%", dzData.forgeLevel.toString())
                 result = result.replace("%forge_exp%", dzData.forgeExp.toString())
-
                 val maxForgeExp = plugin.dzLevelManager.getMaxExp(dzData.forgeLevel!!)
                 val maxExpStr = if (maxForgeExp == -1) "MAX" else maxForgeExp.toString()
                 result = result.replace("%forge_max_exp%", maxExpStr)
-
                 val licName = plugin.dzLevelManager.getLicenseName(dzData.forgeLicense!!)
                 result = result.replace("%forge_license_name%", licName)
             } else {
@@ -312,21 +277,11 @@ class MenuManager(private val plugin: Hjh_database) {
             }
         }
 
-        if (result.contains("%kaiwu_level%")) {
-            result = result.replace("%kaiwu_level%", data.kaiwuLevel.toString())
-        }
-        if (result.contains("%kaiwu_exp%")) {
-            result = result.replace("%kaiwu_exp%", data.kaiwuExp.toString())
-        }
-        if (result.contains("%kaiwu_next_exp%")) {
-            result = result.replace("%kaiwu_next_exp%", data.kaiWuNextLevelExp.toString())
-        }
-        if (result.contains("%kaiwu_energy%")) {
-            result = result.replace("%kaiwu_energy%", String.format("%.1f", data.kaiwuEnergy))
-        }
-        if (result.contains("%kaiwu_max_energy%")) {
-            result = result.replace("%kaiwu_max_energy%", String.format("%.1f", data.maxKaiWuEnergy))
-        }
+        if (result.contains("%kaiwu_level%")) result = result.replace("%kaiwu_level%", data.kaiwuLevel.toString())
+        if (result.contains("%kaiwu_exp%")) result = result.replace("%kaiwu_exp%", data.kaiwuExp.toString())
+        if (result.contains("%kaiwu_next_exp%")) result = result.replace("%kaiwu_next_exp%", data.kaiWuNextLevelExp.toString())
+        if (result.contains("%kaiwu_energy%")) result = result.replace("%kaiwu_energy%", String.format("%.1f", data.kaiwuEnergy))
+        if (result.contains("%kaiwu_max_energy%")) result = result.replace("%kaiwu_max_energy%", String.format("%.1f", data.maxKaiWuEnergy))
 
         if (result.contains("%exp%") || result.contains("%max_exp%") || result.contains("%exp_percent%")) {
             val currentExp = data.exp
@@ -344,21 +299,15 @@ class MenuManager(private val plugin: Hjh_database) {
 
         var jobName = "无"
         val job = data.job
-        if (job != null && job >= 0 && job < JOB_NAMES.size) {
-            jobName = JOB_NAMES[job]
-        }
+        if (job != null && job >= 0 && job < JOB_NAMES.size) jobName = JOB_NAMES[job]
         result = result.replace("%job%", jobName)
 
         var raceName = "未知"
         val race = data.race
-        if (race != null && race >= 0 && race < RACE_NAMES.size) {
-            raceName = RACE_NAMES[race]
-        }
+        if (race != null && race >= 0 && race < RACE_NAMES.size) raceName = RACE_NAMES[race]
         result = result.replace("%race%", raceName)
 
-        if (result.contains("%rarity_display%")) {
-            result = result.replace("%rarity_display%", getRarityDisplayString(player, data))
-        }
+        if (result.contains("%rarity_display%")) result = result.replace("%rarity_display%", getRarityDisplayString(player, data))
 
         result = result.replace("%max_health%", String.format("%.1f", data.maxHealth))
         result = result.replace("%current_health%", String.format("%.1f", player.health))
@@ -393,13 +342,9 @@ class MenuManager(private val plugin: Hjh_database) {
         val total = data.totalRarity
         val details = data.rarityDetails
         val strList = ArrayList<String>()
-        for (i in details) {
-            strList.add(i.toString())
-        }
+        for (i in details) strList.add(i.toString())
         var detailStr = java.lang.String.join("+", strList)
-        if (detailStr.isEmpty()) {
-            detailStr = "0"
-        }
+        if (detailStr.isEmpty()) detailStr = "0"
         return "$total / ($detailStr)"
     }
 }

@@ -2,8 +2,11 @@ package com.hjh_database.data
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzPlayerData
+import com.hjh_database.quest.core.QuestStatus
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import java.io.File
+import java.sql.Connection
 import java.sql.SQLException
 import java.sql.Statement
 import java.util.*
@@ -13,6 +16,11 @@ class DatabaseManager(private val plugin: Hjh_database) {
     private var dataSource: HikariDataSource? = null
 
     init {
+        // 确保插件数据文件夹存在
+        if (!plugin.dataFolder.exists()) {
+            plugin.dataFolder.mkdirs()
+        }
+
         connect()
 
         // 1. 建表 (针对新服)
@@ -20,8 +28,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
         createBankTable()
         createSkillTable()
         createForgeTable()
-        // 在 createForgeTable(); 下面添加：
         createKaiWuTable()
+        createQuestTable() // 【新增】任务独立表
 
         // 医师技能列表
         createMedicalTable()
@@ -32,33 +40,29 @@ class DatabaseManager(private val plugin: Hjh_database) {
 
     private fun connect() {
         val config = HikariConfig()
-        // 读取 config.yml 配置
-        val host = plugin.config.getString("database.host", "localhost")
-        val port = plugin.config.getString("database.port", "3306")
-        val dbName = plugin.config.getString("database.name", "hjh_rpg")
-        val user = plugin.config.getString("database.user", "root")
-        val pass = plugin.config.getString("database.password", "root")
 
-        config.jdbcUrl = "jdbc:mysql://$host:$port/$dbName?useSSL=false&characterEncoding=utf8"
-        config.username = user
-        config.password = pass
+        // --- 适配 SQLite 路径 ---
+        val dbFile = File(plugin.dataFolder, "hjh_rpg.db")
+        config.jdbcUrl = "jdbc:sqlite:${dbFile.absolutePath}"
+        config.driverClassName = "org.sqlite.JDBC"
 
-        // 连接池配置
-        config.maximumPoolSize = 10
-        config.minimumIdle = 5
+        // --- 连接池配置 ---
+        // SQLite 强烈建议 maximumPoolSize 设为 1，防止文件写入锁冲突
+        config.maximumPoolSize = 1
+        config.minimumIdle = 1
         config.connectionTimeout = 30000
         config.idleTimeout = 600000
         config.maxLifetime = 1800000
 
         dataSource = HikariDataSource(config)
-        plugin.logger.info("数据库连接成功！")
+        plugin.logger.info("SQLite 数据库连接成功！文件路径: ${dbFile.absolutePath}")
     }
 
     fun close() {
         dataSource?.close()
     }
 
-    // === 自动检测并补全字段 (关键修复) ===
+    // === 自动检测并补全字段 ===
     private fun updateTables() {
         plugin.logger.info("正在检查数据库表结构...")
         try {
@@ -67,7 +71,6 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     // 1. 修复 player_data
                     safeAddColumn(stmt, "player_data", "exp", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)")
-                    // 【新增】自动为旧数据表添加 total_rarity 字段
                     safeAddColumn(stmt, "player_data", "total_rarity", "INT DEFAULT 0")
 
                     // 2. 修复 player_element_zf_lvl
@@ -87,11 +90,10 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     // 4. 修复 player_elementbank (仓库表)
                     safeAddColumn(stmt, "player_elementbank", "player_name", "VARCHAR(16)")
 
-                    // 5. 【修复】player_kaiwu (开物术表)
+                    // 5. 修复 player_kaiwu (开物术表)
                     safeAddColumn(stmt, "player_kaiwu", "player_name", "VARCHAR(16)")
                     safeAddColumn(stmt, "player_kaiwu", "kaiwu_level", "INT DEFAULT 1")
                     safeAddColumn(stmt, "player_kaiwu", "kaiwu_exp", "INT DEFAULT 0")
-                    // 核心：精力值 + 稀疏存储JSON
                     safeAddColumn(stmt, "player_kaiwu", "kaiwu_energy", "DOUBLE DEFAULT 100.0")
                     safeAddColumn(stmt, "player_kaiwu", "node_data", "LONGTEXT")
                 }
@@ -110,10 +112,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
         }
     }
 
-    // === 建表逻辑 (确保列名正确) ===
-
+    // === 建表逻辑 ===
     private fun createTable() {
-        // 主数据表：加入 exp 和 total_rarity
         val sql = """
             CREATE TABLE IF NOT EXISTS player_data (
             uuid VARCHAR(36) PRIMARY KEY, 
@@ -199,6 +199,22 @@ class DatabaseManager(private val plugin: Hjh_database) {
         executeSql(sql)
     }
 
+    // 【新增】创建任务独立表
+    private fun createQuestTable() {
+        val sql = """
+            CREATE TABLE IF NOT EXISTS player_quests (
+                uuid VARCHAR(36) NOT NULL,
+                player_name VARCHAR(16),
+                quest_id VARCHAR(64) NOT NULL,
+                status VARCHAR(16) DEFAULT 'LOCKED',
+                progress INT DEFAULT 0,
+                PRIMARY KEY (uuid, quest_id),
+                FOREIGN KEY (uuid) REFERENCES player_data(uuid) ON DELETE CASCADE
+            );
+        """.trimIndent()
+        executeSql(sql)
+    }
+
     private fun executeSql(sql: String) {
         try {
             dataSource?.connection?.use { conn ->
@@ -214,7 +230,6 @@ class DatabaseManager(private val plugin: Hjh_database) {
     // === 存取逻辑 ===
 
     fun savePlayer(data: PlayerData) {
-        // 1. player_data: 加入 total_rarity
         val updateMain = "UPDATE player_data SET player_name=?, lv=?, exp=?, job=?, race=?, attack=?, archer_damage=?, armor=?, speed=?, max_health=?, current_health=?, toughness=?, knock_back_res=?, attack_speed=?, crit_chance=?, zf_str=?, cool_reduce=?, lingli=?, total_rarity=? WHERE uuid=?"
         val insertMain = "INSERT INTO player_data (player_name, lv, exp, job, race, attack, archer_damage, armor, speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance, zf_str, cool_reduce, lingli, total_rarity, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
@@ -230,10 +245,11 @@ class DatabaseManager(private val plugin: Hjh_database) {
         val saveKaiWu = """
             INSERT INTO player_kaiwu (uuid, player_name, kaiwu_level, kaiwu_exp, kaiwu_energy, node_data) 
             VALUES (?, ?, ?, ?, ?, ?) 
-            ON DUPLICATE KEY UPDATE player_name=?, kaiwu_level=?, kaiwu_exp=?, kaiwu_energy=?, node_data=?
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, kaiwu_level=?, kaiwu_exp=?, kaiwu_energy=?, node_data=?
         """.trimIndent()
 
         try {
+            // 【死锁修复】这里获取唯一连接，并一直持有到所有数据保存完毕
             dataSource?.connection?.use { conn ->
                 // 保存主数据
                 conn.prepareStatement(updateMain).use { ps ->
@@ -360,25 +376,22 @@ class DatabaseManager(private val plugin: Hjh_database) {
 
                 // 保存开物术
                 conn.prepareStatement(saveKaiWu).use { ps ->
-                    // INSERT Values
                     ps.setString(1, data.uuid.toString())
                     ps.setString(2, data.playerName)
                     ps.setInt(3, data.kaiwuLevel)
                     ps.setInt(4, data.kaiwuExp)
                     ps.setDouble(5, data.kaiwuEnergy)
                     ps.setString(6, data.getNodeDataAsJsonString())
-                    // UPDATE Values
                     ps.setString(7, data.playerName)
                     ps.setInt(8, data.kaiwuLevel)
                     ps.setInt(9, data.kaiwuExp)
                     ps.setDouble(10, data.kaiwuEnergy)
                     ps.setString(11, data.getNodeDataAsJsonString())
-
                     ps.executeUpdate()
                 }
 
-                // 保存医术
-                saveMedicalData(data)
+                // 【死锁修复】保存医术 (传入当前 conn)
+                saveMedicalData(conn, data)
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存玩家数据失败: " + e.message)
@@ -387,7 +400,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
     }
 
     @Throws(SQLException::class)
-    private fun checkExists(conn: java.sql.Connection, table: String, uuid: UUID): Boolean {
+    private fun checkExists(conn: Connection, table: String, uuid: UUID): Boolean {
         val sql = "SELECT 1 FROM $table WHERE uuid = ?"
         conn.prepareStatement(sql).use { ps ->
             ps.setString(1, uuid.toString())
@@ -396,6 +409,71 @@ class DatabaseManager(private val plugin: Hjh_database) {
             }
         }
     }
+
+//    存入玩家任务
+fun loadPlayerQuests(conn: Connection, data: PlayerData) {
+    val sql = "SELECT quest_id, status, progress FROM player_quests WHERE uuid = ?"
+    try {
+        // 直接使用传入的 conn，不再 dataSource.connection
+        conn.prepareStatement(sql).use { ps ->
+            ps.setString(1, data.uuid.toString())
+            ps.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val qId = rs.getString("quest_id")
+                    val statusStr = rs.getString("status")
+                    val progress = rs.getInt("progress")
+
+                    val status = try {
+                        QuestStatus.valueOf(statusStr)
+                    } catch (e: Exception) { QuestStatus.LOCKED }
+
+                    data.questStatuses[qId] = status
+                    data.questProgress[qId] = progress
+                }
+            }
+        }
+    } catch (e: SQLException) {
+        plugin.logger.severe("加载任务数据失败: ${e.message}")
+        e.printStackTrace()
+    }
+}
+
+    /**
+     * 保存单个任务状态 (当任务更新时调用，无需全量保存)
+     * 这是一个高效的 Upsert 操作
+     */
+    fun saveQuestData(player: org.bukkit.entity.Player, questId: String, status: QuestStatus, progress: Int) {
+        val sql = """
+            INSERT INTO player_quests (uuid, player_name, quest_id, status, progress) 
+            VALUES (?, ?, ?, ?, ?) 
+            ON CONFLICT(uuid, quest_id) DO UPDATE SET 
+            player_name=?, status=?, progress=?
+        """.trimIndent()
+
+        // 异步保存，防止卡主线程
+        java.util.concurrent.CompletableFuture.runAsync {
+            try {
+                dataSource?.connection?.use { conn ->
+                    conn.prepareStatement(sql).use { ps ->
+                        ps.setString(1, player.uniqueId.toString())
+                        ps.setString(2, player.name)
+                        ps.setString(3, questId)
+                        ps.setString(4, status.name)
+                        ps.setInt(5, progress)
+
+                        ps.setString(6, player.name)
+                        ps.setString(7, status.name)
+                        ps.setInt(8, progress)
+
+                        ps.executeUpdate()
+                    }
+                }
+            } catch (e: SQLException) {
+                plugin.logger.severe("保存任务 $questId 失败: ${e.message}")
+            }
+        }
+    }
+
 
     fun loadPlayer(uuid: UUID, playerName: String): CompletableFuture<PlayerData> {
         return CompletableFuture.supplyAsync {
@@ -407,6 +485,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
             val sqlKaiWu = "SELECT * FROM player_kaiwu WHERE uuid = ?"
 
             try {
+                // 【死锁修复】获取唯一连接
                 dataSource?.connection?.use { conn ->
                     // 1. 加载主数据
                     conn.prepareStatement(sqlMain).use { ps ->
@@ -481,7 +560,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
                         }
                     }
 
-                    // 5. 【加载】开物术
+                    // 5. 加载开物术
                     conn.prepareStatement(sqlKaiWu).use { ps ->
                         ps.setString(1, uuid.toString())
                         ps.executeQuery().use { rs ->
@@ -489,16 +568,16 @@ class DatabaseManager(private val plugin: Hjh_database) {
                                 try { data.kaiwuLevel = rs.getInt("kaiwu_level") } catch (e: Exception) {}
                                 try { data.kaiwuExp = rs.getInt("kaiwu_exp") } catch (e: Exception) {}
                                 try { data.kaiwuEnergy = rs.getDouble("kaiwu_energy") } catch (e: Exception) {}
-
-                                // 读取 JSON 并还原为 Map
                                 val jsonNode = rs.getString("node_data")
                                 data.setNodeDataFromJsonString(jsonNode)
                             }
                         }
                     }
 
-                    // 5. 加载医师数据
-                    loadMedicalData(data)
+                    // 6. 【死锁修复】加载医师数据 (传入 conn)
+                    loadMedicalData(conn, data)
+                    // 加载任务表数据
+                    loadPlayerQuests(conn,data)
                 }
             } catch (e: SQLException) {
                 plugin.logger.severe("加载玩家数据失败: " + e.message)
@@ -531,31 +610,56 @@ class DatabaseManager(private val plugin: Hjh_database) {
         }
     }
 
-    /**
-     * 单独保存玩家的医术数据
+    /**f
+     * 【死锁修复】增加了 conn 参数，并不再自己获取连接
      */
     fun saveMedicalData(data: PlayerData) {
+        try {
+            // 这里自动申请一个新连接，专门用于这次保存
+            dataSource?.connection?.use { conn ->
+                saveMedicalData(conn, data)
+            }
+        } catch (e: SQLException) {
+            plugin.logger.severe("独立保存医术数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 【兼容旧代码】供外部类直接调用
+     */
+    fun loadMedicalData(data: PlayerData) {
+        try {
+            dataSource?.connection?.use { conn ->
+                loadMedicalData(conn, data)
+            }
+        } catch (e: SQLException) {
+            plugin.logger.severe("独立加载医师数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    fun saveMedicalData(conn: java.sql.Connection, data: PlayerData) {
         val sql = """
             INSERT INTO player_medical (uuid, player_name, medical_skills) VALUES (?, ?, ?) 
-            ON DUPLICATE KEY UPDATE player_name=?, medical_skills=?
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, medical_skills=?
         """.trimIndent()
 
         try {
-            dataSource?.connection?.use { conn ->
-                conn.prepareStatement(sql).use { ps ->
-                    val uuidStr = data.uuid.toString()
-                    val name = data.playerName
-                    val skillsStr = data.getMedicalSkillsAsString()
+            // 直接使用传入的 conn
+            conn.prepareStatement(sql).use { ps ->
+                val uuidStr = data.uuid.toString()
+                val name = data.playerName
+                val skillsStr = data.getMedicalSkillsAsString()
 
-                    ps.setString(1, uuidStr)
-                    ps.setString(2, name)
-                    ps.setString(3, skillsStr)
+                ps.setString(1, uuidStr)
+                ps.setString(2, name)
+                ps.setString(3, skillsStr)
 
-                    ps.setString(4, name)
-                    ps.setString(5, skillsStr)
+                ps.setString(4, name)
+                ps.setString(5, skillsStr)
 
-                    ps.executeUpdate()
-                }
+                ps.executeUpdate()
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存医术数据失败: " + e.message)
@@ -563,16 +667,18 @@ class DatabaseManager(private val plugin: Hjh_database) {
         }
     }
 
-    fun loadMedicalData(data: PlayerData) {
+    /**
+     * 【死锁修复】增加了 conn 参数，并不再自己获取连接
+     */
+    fun loadMedicalData(conn: Connection, data: PlayerData) {
         val sql = "SELECT medical_skills FROM player_medical WHERE uuid=?"
         try {
-            dataSource?.connection?.use { conn ->
-                conn.prepareStatement(sql).use { ps ->
-                    ps.setString(1, data.uuid.toString())
-                    ps.executeQuery().use { rs ->
-                        if (rs.next()) {
-                            data.setMedicalSkillsFromString(rs.getString("medical_skills"))
-                        }
+            // 直接使用传入的 conn
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        data.setMedicalSkillsFromString(rs.getString("medical_skills"))
                     }
                 }
             }
@@ -583,31 +689,28 @@ class DatabaseManager(private val plugin: Hjh_database) {
     }
 
     /**
-     * 保存/更新玩家的锻造数据
+     * 保存/更新玩家的锻造数据 (独立事务，保持原状即可，除非此方法也被 savePlayer 调用)
+     * 目前看来它只在锻造系统独立保存时使用，所以保留自动获取连接。
      */
     fun saveDzPlayerData(data: DzPlayerData) {
         val sql = """
             INSERT INTO player_dzlv (uuid, player_name, forge_level, forge_exp, forge_license) 
             VALUES (?, ?, ?, ?, ?) 
-            ON DUPLICATE KEY UPDATE player_name=?, forge_level=?, forge_exp=?, forge_license=?
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, forge_level=?, forge_exp=?, forge_license=?
         """.trimIndent()
 
         try {
             dataSource?.connection?.use { conn ->
                 conn.prepareStatement(sql).use { ps ->
-                    // INSERT 部分
                     ps.setString(1, data.uuid.toString())
                     ps.setString(2, data.playerName)
                     ps.setInt(3, data.forgeLevel)
                     ps.setInt(4, data.forgeExp)
                     ps.setInt(5, data.forgeLicense)
-
-                    // UPDATE 部分
                     ps.setString(6, data.playerName)
                     ps.setInt(7, data.forgeLevel)
                     ps.setInt(8, data.forgeExp)
                     ps.setInt(9, data.forgeLicense)
-
                     ps.executeUpdate()
                 }
             }

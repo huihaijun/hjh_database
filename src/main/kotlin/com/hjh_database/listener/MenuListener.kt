@@ -41,8 +41,18 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
         // 1. 处理主菜单
         if (title.contains("天机")) {
             event.isCancelled = true
-            if (event.rawSlot == 31) {
+
+            // 【新增】Slot 30: 任务记录 -> 打开任务分类 GUI
+            if (event.rawSlot == 30) {
+                // 调用我们刚刚写好的独立 GUI
+                plugin.questGui.openCategoryMenu(player)
+                player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
+            }
+
+            // Slot 31: 道天图录
+            else if (event.rawSlot == 31) {
                 plugin.menuManager.openDaoTianMenu(player)
+                player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
         }
         // 2. 处理道天图录菜单
@@ -66,7 +76,8 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 val typeName = meta.persistentDataContainer.get(btnKey, PersistentDataType.STRING)
                 try {
                     if (typeName != null) {
-                        val type = ElementType.valueOf(typeName)
+                        val type = com.hjh_database.ui.MenuManager.ElementType.valueOf(typeName)
+                        // 调用你自己定义的处理逻辑 (确保这个方法在 Listener 类里存在)
                         handleElementClick(player, type, event.click)
                     }
                 } catch (e: IllegalArgumentException) {

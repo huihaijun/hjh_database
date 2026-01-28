@@ -1,5 +1,6 @@
 package com.hjh_database.weapon
 
+import com.google.common.collect.ArrayListMultimap // 【新增】用于清除属性
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import org.bukkit.ChatColor
@@ -229,6 +230,11 @@ class WeaponManager(private val plugin: Hjh_database) {
             if (wData.customModelData != 0) {
                 meta.setCustomModelData(wData.customModelData) // 顺便刷新材质
             }
+
+            // 【此处可复用 1.21 属性清除逻辑，如果你希望 refresh 也清除属性的话】
+            // meta.setAttributeModifiers(ArrayListMultimap.create())
+            // meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+
             item.itemMeta = meta
         }
     }
@@ -310,8 +316,13 @@ class WeaponManager(private val plugin: Hjh_database) {
         meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, id)
         meta.persistentDataContainer.set(weaponKey, PersistentDataType.STRING, id)
 
-        // 3. 属性标记 (1.21.3 推荐加入 HIDE_ADDITIONAL_TOOLTIP)
+        // 3. 属性标记 (1.21.3 修复 +4 攻击力显示问题)
         meta.isUnbreakable = true
+
+        // 【关键修复】显式设置空属性修改器，清除原版属性
+        meta.setAttributeModifiers(ArrayListMultimap.create())
+
+        // 隐藏常规属性和 1.21+ 的额外提示
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
 
         item.itemMeta = meta

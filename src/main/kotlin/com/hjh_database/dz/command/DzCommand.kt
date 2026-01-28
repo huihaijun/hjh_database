@@ -115,7 +115,7 @@ class DzCommand(private val plugin: Hjh_database) : CommandExecutor, TabComplete
     }
 
     private fun giveStation(player: Player) {
-        val station = ItemStack(Material.ANVIL)
+        val station = ItemStack(Material.DISPENSER)
         val meta = station.itemMeta
         if (meta != null) {
             meta.setDisplayName("${ChatColor.GOLD}== 锻造台 ==")

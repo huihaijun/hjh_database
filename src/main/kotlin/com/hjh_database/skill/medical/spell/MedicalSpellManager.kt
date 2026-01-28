@@ -3,10 +3,14 @@ package com.hjh_database.skill.medical.spell
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.medical.spell.impl.TuiDiSpell
 import com.hjh_database.skill.medical.spell.impl.YuHeHuaSpell
+import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.UseCooldown
+import net.kyori.adventure.key.Key
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
@@ -16,6 +20,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 class MedicalSpellManager(private val plugin: Hjh_database) {
     private val spells: MutableMap<String, MedicalSpell> = HashMap()
+
+    // 【新增】存储每个技能对应的冷却组 Key (自动生成)
+    private val spellGroupKeys: MutableMap<String, NamespacedKey> = HashMap()
+
     private val cooldowns: MutableMap<UUID, MutableMap<String, Long>> = ConcurrentHashMap()
     private val spellConfigs: MutableMap<String, ConfigurationSection> = HashMap()
 
@@ -25,15 +33,21 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
 
     fun reload() {
         spells.clear()
+        spellGroupKeys.clear() // 清除旧 Key
         spellConfigs.clear()
+
         registerSpell("yuhehua", YuHeHuaSpell(plugin))
         // 【新增】注册退敌
         registerSpell("tuidi", TuiDiSpell(plugin))
+
         loadConfig()
     }
 
     private fun registerSpell(id: String, spell: MedicalSpell) {
         spells[id] = spell
+        // 【核心】自动为每个技能生成唯一的冷却组 Key
+        // 例如: hjh_database:medical_yuhehua
+        spellGroupKeys[id] = NamespacedKey(plugin, "medical_${id.lowercase()}")
     }
 
     private fun loadConfig() {
@@ -44,7 +58,6 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         if (items != null) {
             for (key in items.getKeys(false)) {
                 val sec = items.getConfigurationSection(key)
-                // sec 可能为 null，需安全处理，但此处逻辑我们假定存在
                 if (sec != null) {
                     val skillId = sec.getString("skill_id", key)!!
                     spellConfigs[skillId] = sec
@@ -58,7 +71,6 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         val config = spellConfigs[skillId]
 
         if (spell == null) return
-        // 【关键】使用 !! 断言，解决 PlayerData? 到 PlayerData 的类型不匹配
         val data = plugin.playerManager.getPlayerData(player)!!
 
         val skillFullName = plugin.medicalManager.getSkillName(skillId)
@@ -69,10 +81,9 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
 
         if (isOnCooldown(player, skillId)) {
             val remainingMillis = getCooldownEndTime(player, skillId) - System.currentTimeMillis()
-            val remainingSeconds = (remainingMillis / 1000) + 1 // 向上取整显示
+            val remainingSeconds = (remainingMillis / 1000) + 1
 
-            // Fix #1: 红色加粗 ActionBar，只读名字不读颜色
-            val rawName = ChatColor.stripColor(skillFullName) // 去除颜色代码
+            val rawName = ChatColor.stripColor(skillFullName)
             val barMsg = "§c§l$rawName 正在冷却中，剩余 $remainingSeconds 秒"
 
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(barMsg))
@@ -89,32 +100,89 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         // 3. 释放
         if (spell.cast(player, data, config)) {
             data.lingli = data.lingli - manaCost
+
+            // A. 设置逻辑冷却 (插件内部判断用)
             setCooldown(player, skillId, cdMillis)
 
             // Fix #2: 释放消息与 YML 一致
-            // 读取 YML 中的 cast_message
             var msg = config?.getString("cast_message")
-
             if (msg != null) {
-                // 处理变量
                 msg = msg.replace("%player%", player.name)
-                // 如果 YML 里写了 %skill%，我们再替换；如果没写，保留原样
                 if (msg.contains("%skill%")) {
                     msg = msg.replace("%skill%", skillFullName)
                 }
-                // 最后统一处理颜色代码，确保显示正确
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg))
             } else {
-                // 默认消息 (兜底)
                 player.sendMessage("§e" + player.name + " §f释放了 §e" + skillFullName)
             }
 
-            // 原版物品冷却 (转圈圈)
+            // B. 【核心修改】设置独立的视觉冷却 (物品栏转圈圈)
+            // 只有手持物品不是空气时才设置
             val hand = player.inventory.itemInMainHand
             if (hand.type != Material.AIR) {
+                // 计算 ticks (1秒 = 20 ticks)
                 val cooldownTicks = (cdMillis / 50).toInt()
-                player.setCooldown(hand.type, cooldownTicks)
+                // 调用下方的视觉冷却方法
+                setVisualCooldown(player, skillId, cooldownTicks)
             }
+        }
+    }
+
+    /**
+     * 【新功能】设置医术的独立视觉冷却
+     */
+    private fun setVisualCooldown(player: Player, skillId: String, ticks: Int) {
+        val item = player.inventory.itemInMainHand
+        if (item.type == Material.AIR) return
+
+        // 获取该技能对应的 Group Key
+        val groupKey = spellGroupKeys[skillId] ?: return
+
+        try {
+            // 1. 使用 Paper API 修改物品的冷却组
+            // 注意：默认时间必须 > 0.0，否则报错，所以用 0.1f 占位
+            val cooldownComponent = UseCooldown.useCooldown(0.1f)
+                .cooldownGroup(Key.key(groupKey.toString()))
+                .build()
+
+            item.setData(DataComponentTypes.USE_COOLDOWN, cooldownComponent)
+            player.inventory.setItemInMainHand(item)
+
+            // 2. 发送冷却数据包 (反射，直到 Bukkit 支持 Key 参数)
+            sendPacketCooldown(player, groupKey, ticks)
+
+        } catch (e: Exception) {
+            plugin.logger.warning("医术视觉冷却设置失败 [$skillId]: ${e.message}")
+            // 降级处理
+            player.setCooldown(item.type, ticks)
+        }
+    }
+
+    /**
+     * 发送 ClientboundCooldownPacket
+     */
+    private fun sendPacketCooldown(player: Player, key: NamespacedKey, ticks: Int) {
+        try {
+            val craftPlayerMethod = player.javaClass.getMethod("getHandle")
+            val nmsPlayer = craftPlayerMethod.invoke(player)
+            val connectionField = nmsPlayer.javaClass.fields.firstOrNull {
+                it.type.name.contains("ServerGamePacketListenerImpl") || it.name == "c" || it.name == "connection"
+            } ?: throw NoSuchFieldException("No connection field")
+            val connection = connectionField.get(nmsPlayer)
+
+            val resourceLocationClass = Class.forName("net.minecraft.resources.ResourceLocation")
+            val parseMethod = resourceLocationClass.getMethod("parse", String::class.java)
+            val nmsKey = parseMethod.invoke(null, key.toString())
+
+            val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundCooldownPacket")
+            val packetConstructor = packetClass.getConstructor(resourceLocationClass, Int::class.javaPrimitiveType)
+            val packet = packetConstructor.newInstance(nmsKey, ticks)
+
+            val sendMethod = connection.javaClass.getMethod("send", Class.forName("net.minecraft.network.protocol.Packet"))
+            sendMethod.invoke(connection, packet)
+
+        } catch (e: Exception) {
+            // 静默失败或调试输出
         }
     }
 
@@ -123,7 +191,6 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         return cooldowns[player.uniqueId]!!.getOrDefault(skillId, 0L) > System.currentTimeMillis()
     }
 
-    // 获取冷却结束时间戳
     fun getCooldownEndTime(player: Player, skillId: String): Long {
         if (!cooldowns.containsKey(player.uniqueId)) return 0L
         return cooldowns[player.uniqueId]!!.getOrDefault(skillId, 0L)

@@ -1,6 +1,7 @@
 package com.hjh_database.command
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.quest.core.QuestStatus
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
@@ -41,6 +42,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 【新增提示】
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medical <技能ID> - 获取医术秘籍")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getstation - 获取医术绘制台")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin quest <玩家> <ID> <状态> - 修改任务进度")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gennpc <ID|ALL> - 生成剧情NPC")
             return true
         }
 
@@ -59,7 +62,13 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
             // 【新增】重载医术配置
             if (plugin.medicalManager != null) {
-                plugin.medicalManager.loadSkillBooks() // 假设你在 Manager 里有这个加载方法
+                plugin.medicalManager.loadSkillBooks()
+            }
+
+            // 【新增】重载 NPC 数据 (只读不存，防止覆盖)
+            if (plugin.npcModule != null) {
+                plugin.npcModule.manager.loadData()
+                sender.sendMessage(ChatColor.AQUA.toString() + "NPC 数据已从磁盘重新加载！")
             }
 
             sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical)已重载！")
@@ -77,8 +86,6 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size < 2) return error(sender, "用法: /hjhadmin get <物品ID或名字> [数量]")
 
             val itemName = args[1]
-            // 从 ResourceManager 获取物品
-            // 注意：这里调用的是 plugin.resourceManager
             val item = plugin.resourceManager.getItem(itemName)
 
             if (item == null) {
@@ -100,7 +107,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return true
         }
 
-        // === medical (获取医术秘籍) 【新增部分】 ===
+        // === medical (获取医术秘籍) ===
         if (subCommand == "medical") {
             if (sender !is Player) {
                 sender.sendMessage(ChatColor.RED.toString() + "只有玩家可以使用此命令。")
@@ -111,9 +118,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size < 2) return error(sender, "用法: /hjhadmin medical <技能ID>")
 
             val skillId = args[1]
-            // 调用 MedicalManager 获取秘籍
             if (plugin.medicalManager != null) {
-                val book = plugin.medicalManager.getSkillBook(skillId) // 之前写的方法叫 getSkillBook
+                val book = plugin.medicalManager.getSkillBook(skillId)
                 if (book != null) {
                     player.inventory.addItem(book)
                     sender.sendMessage(ChatColor.GREEN.toString() + "已获得医术秘籍: " + skillId)
@@ -169,30 +175,139 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         }
 
         // === job / race (设置职业/种族) ===
-        if (args.size < 3) return error(sender, "用法: /hjhadmin <job|race> <玩家> <值>")
+        // 【修改】将 Job 和 Race 的判断独立出来，不再阻断后续指令
+        if (subCommand == "job" || subCommand == "race") {
+            if (args.size < 3) return error(sender, "用法: /hjhadmin <job|race> <玩家> <值>")
 
-        val target = Bukkit.getPlayerExact(args[1])
-        if (target == null) return error(sender, "玩家不在线")
-        val data = plugin.playerManager.getData(target.uniqueId)
-        if (data == null) return error(sender, "数据加载中...")
+            val target = Bukkit.getPlayerExact(args[1])
+            if (target == null) return error(sender, "玩家不在线")
+            val data = plugin.playerManager.getData(target.uniqueId)
+            if (data == null) return error(sender, "数据加载中...")
 
-        val valStr = args[2]
-        if (subCommand == "job") {
-            val job = jobReverseMap[valStr]
-            if (job == null) return error(sender, "无效职业 (战士/弓箭手/术士/医师)")
-            data.job = job
-            sender.sendMessage(ChatColor.GREEN.toString() + "职业已设为: " + valStr)
-        } else if (subCommand == "race") {
-            val race = raceReverseMap[valStr]
-            if (race == null) return error(sender, "无效种族 (神/仙/人/战神/妖)")
-            data.race = race
-            sender.sendMessage(ChatColor.GREEN.toString() + "种族已设为: " + valStr)
-        } else {
-            return error(sender, "未知指令")
+            val valStr = args[2]
+            if (subCommand == "job") {
+                val job = jobReverseMap[valStr]
+                if (job == null) return error(sender, "无效职业 (战士/弓箭手/术士/医师)")
+                data.job = job
+                sender.sendMessage(ChatColor.GREEN.toString() + "职业已设为: " + valStr)
+            } else {
+                val race = raceReverseMap[valStr]
+                if (race == null) return error(sender, "无效种族 (神/仙/人/战神/妖)")
+                data.race = race
+                sender.sendMessage(ChatColor.GREEN.toString() + "种族已设为: " + valStr)
+            }
+            // 修改了属性后刷新
+            plugin.playerManager.updateStats(target)
+            return true
         }
 
-        plugin.playerManager.updateStats(target)
-        return true
+        // === quest (任务管理指令) ===
+        if (subCommand == "quest") {
+            if (args.size < 4) return error(sender, "用法: /hjhadmin quest <玩家> <ID> <状态> [进度]")
+
+            val target = Bukkit.getPlayer(args[1])
+            if (target == null) {
+                sender.sendMessage("§c玩家不在线")
+                return true
+            }
+
+            val questId = args[2]
+            val statusStr = args[3].uppercase()
+            val status = try {
+                QuestStatus.valueOf(statusStr)
+            } catch (e: Exception) {
+                sender.sendMessage("§c无效的状态 (LOCKED, IN_PROGRESS, COMPLETED)")
+                return true
+            }
+
+            val progress = if (args.size >= 5) args[4].toIntOrNull() ?: 0 else 0
+
+            // 1. 获取数据
+            val data = plugin.playerManager.getPlayerData(target)
+            if (data != null) {
+                // 2. 修改内存
+                data.questStatuses[questId] = status
+                data.questProgress[questId] = progress
+
+                // 3. 强制保存数据库
+                plugin.databaseManager.saveQuestData(target, questId, status, progress)
+
+                sender.sendMessage("§a已将玩家 ${target.name} 的任务 $questId 设置为 $status (进度: $progress)")
+                target.sendMessage("§e[管理员] 你的任务状态已更新。")
+            }
+            return true
+        }
+
+        // === gennpc (生成NPC指令) ===
+        if (subCommand == "gennpc") {
+            if (args.size < 2) return error(sender, "用法: /hjhadmin gennpc <ID|ALL>")
+
+            val targetName = args[1]
+            val listToSpawn = ArrayList<com.hjh_database.quest.core.StoryNpcs>()
+
+            if (targetName.equals("ALL", ignoreCase = true)) {
+                listToSpawn.addAll(com.hjh_database.quest.core.StoryNpcs.values())
+            } else {
+                try {
+                    listToSpawn.add(com.hjh_database.quest.core.StoryNpcs.valueOf(targetName))
+                } catch (e: IllegalArgumentException) {
+                    sender.sendMessage("§c找不到该剧情NPC配置: $targetName")
+                    return true
+                }
+            }
+
+            var count = 0
+            val manager = plugin.npcModule.manager
+
+            for (npcData in listToSpawn) {
+                // 1. 检查模版 (Template) 是否存在，不存在则注册
+                if (!manager.templates.containsKey(npcData.id)) {
+                    val template = com.hjh_database.npc.data.NpcTemplate(
+                        npcData.id,
+                        npcData.displayName,
+                        npcData.profession,
+                        npcData.type
+                    )
+                    // 【修正】dialogue -> dialogues (复数)
+                    template.dialogue.add("&7(好像没什么事发生...)")
+                    manager.templates[npcData.id] = template
+                    manager.saveData()
+                    sender.sendMessage("§e[系统] 已新建模版: ${npcData.id}")
+                }
+
+                // 找到所有使用该 ID 的旧实例 UUID
+                val oldInstances = manager.instances.filterValues { it.templateId == npcData.id }.keys
+
+                // 遍历删除旧实体和数据
+                if (oldInstances.isNotEmpty()) {
+                    for (uuid in oldInstances) {
+                        // 尝试从世界中移除实体
+                        Bukkit.getEntity(uuid)?.remove()
+                        // 从内存 Map 中移除
+                        manager.instances.remove(uuid)
+                    }
+                    sender.sendMessage("§e[系统] 检测到旧的 ${npcData.displayName}，已清除。")
+                }
+
+                // 3. 【修改部分】直接生成新的 NPC (不再 else 跳过)
+                try {
+                    val loc = npcData.getLocation()
+                    // 确保区块加载
+                    if (!loc.chunk.isLoaded) loc.chunk.load()
+
+                    manager.spawnNpc(loc, npcData.id)
+                    sender.sendMessage("§a[系统] 已在 ${loc.blockX},${loc.blockY},${loc.blockZ} 生成 ${npcData.displayName}")
+                    count++
+                } catch (e: Exception) {
+                    sender.sendMessage("§c[错误] 生成 ${npcData.id} 失败: ${e.message}")
+                }
+            }
+
+            sender.sendMessage("§a操作完成，共生成/刷新了 $count 个 NPC。")
+            return true
+        }
+
+        return error(sender, "未知指令: $subCommand")
     }
 
     // 简化的错误提示
@@ -203,13 +318,11 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<out String>): List<String>? {
         // 【修改】添加 medical 到一级补全
-        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation")
+        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc")
 
         // 如果是 get 指令，第二个参数提示所有物品的ID和名字
         if (args.size == 2 && args[0].equals("get", ignoreCase = true)) {
             if (plugin.resourceManager != null) {
-                // 注意：这里使用了 getAllNames() 匹配 ResourceManager.kt 中的方法名
-                // 如果你的 Java 接口是 getAllItemNames()，请确认 ResourceManager.kt 中对应的方法名
                 val allNames = plugin.resourceManager.getAllItemNames()
                 val currentInput = args[1].lowercase()
                 return allNames.filter { it.lowercase().startsWith(currentInput) }
@@ -217,12 +330,29 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return ArrayList()
         }
 
+        // 任务系统的指令
+        if (args[0].equals("quest", ignoreCase = true)) {
+            if (args.size == 2) return null // 玩家名
+            if (args.size == 3) {
+                // 返回所有注册的任务ID
+                return plugin.questManager.getAllQuests().map { it.id }
+            }
+            if (args.size == 4) return listOf("LOCKED", "IN_PROGRESS", "COMPLETED")
+            if (args.size == 5) return listOf("0", "1", "5", "10")
+        }
+
         // 【新增】如果是 medical 指令，提示技能ID
         if (args.size == 2 && args[0].equals("medical", ignoreCase = true)) {
             if (plugin.medicalManager != null) {
-                // 之前让你在 Manager 里加的 getAllSkillIds()
                 return ArrayList(plugin.medicalManager.getAllSkillIds())
             }
+        }
+
+        if (args.size == 2 && args[0].equals("gennpc", ignoreCase = true)) {
+            val list = ArrayList<String>()
+            list.add("ALL")
+            list.addAll(com.hjh_database.quest.core.StoryNpcs.values().map { it.name })
+            return list
         }
 
         if (args.size == 2) return null // 其他指令默认回显玩家名

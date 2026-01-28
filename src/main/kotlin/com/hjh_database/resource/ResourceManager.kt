@@ -67,7 +67,7 @@ class ResourceManager(private val plugin: Hjh_database) {
     }
 
     private fun loadLocalResources() {
-        val folder = File(plugin.dataFolder, "resources")
+        val folder = File(plugin.dataFolder, "resources/items")
         if (!folder.exists()) {
             folder.mkdirs()
         }
