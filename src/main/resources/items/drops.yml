@@ -1,0 +1,14 @@
+# 路径: resources/items/drops.yml
+demon_blood:
+  material: RED_DYE
+  name: "&c恶魔之血"
+  lore:
+    - "&7击杀高阶恶魔获得。"
+    - "&c[稀有材料]"
+  custom_model_data: 1001
+
+wolf_tooth:
+  material: FLINT
+  name: "&f狼牙"
+  lore:
+    - "&7锋利的野兽牙齿。"

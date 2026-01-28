@@ -1,0 +1,14 @@
+# 路径: resources/items/economy.yml
+gold_coin:
+  material: GOLD_NUGGET
+  name: "&e金币"
+  lore:
+    - "&7大陆通用的货币。"
+  custom_model_data: 500
+
+trade_ticket:
+  material: PAPER
+  name: "&b商会凭证"
+  lore:
+    - "&7用于与商会进行大宗交易。"
+  unbreakable: true

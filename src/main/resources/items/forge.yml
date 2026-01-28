@@ -1,0 +1,8 @@
+# 路径: resources/items/forge.yml
+steel_ingot:
+  material: IRON_INGOT
+  name: "&f精钢锭"
+  lore:
+    - "&7经过千锤百炼的钢锭。"
+    - "&e[锻造材料]"
+  custom_model_data: 3005

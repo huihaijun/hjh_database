@@ -1,0 +1,15 @@
+# 路径: resources/items/materials.yml
+copper_ore:
+  material: WET_SPONGE
+  name: "&b山泉水"
+  lore:
+    - "&7&o从人族峡谷最东部的山坡开采的山泉水"
+    - "&7&o甘甜无比，沁人心脾，村长最喜欢用它泡茶喝了"
+    - "&e[任务物品]"
+
+spirit_herb:
+  material: FERN
+  name: "&a灵草"
+  lore:
+    - "&7生长在灵气充裕之地的草药。"
+  custom_model_data: 2001
