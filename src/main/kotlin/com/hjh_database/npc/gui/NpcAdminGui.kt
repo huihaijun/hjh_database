@@ -26,7 +26,7 @@ class NpcAdminGui(
     private val plugin: Hjh_database,
     private val player: Player,
     private val templateId: String,
-    private val entityUuid: UUID? // 【新增】 传入具体的实体UUID，用于删除操作
+    private val entityUuid: UUID? // 传入具体的实体UUID，用于删除操作
 ) : InventoryHolder, Listener {
 
     private val inventory: Inventory
@@ -47,6 +47,11 @@ class NpcAdminGui(
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
 
         // === 1. 加载交易项 ===
+        // 先清空交易区，防止刷新时残留
+        for (i in 0 until 45) {
+            inventory.setItem(i, null)
+        }
+
         for (index in template.trades.indices) {
             if (index >= 5) break
             val trade = template.trades[index]
@@ -54,15 +59,14 @@ class NpcAdminGui(
 
             inventory.setItem(rowStart + 0, trade.ingredient1)
             inventory.setItem(rowStart + 1, trade.ingredient2)
-            inventory.setItem(rowStart + 2, createItem(Material.ARROW, "§7-->"))
+            // 箭头在下面统一设置
             inventory.setItem(rowStart + 3, trade.result)
         }
 
+        // 统一设置箭头
         for (row in 0 until 5) {
             val arrowSlot = row * 9 + 2
-            if (inventory.getItem(arrowSlot) == null) {
-                inventory.setItem(arrowSlot, createItem(Material.ARROW, "§7-->"))
-            }
+            inventory.setItem(arrowSlot, createItem(Material.ARROW, "§7-->"))
         }
 
         // === 2. 加载底部按钮 ===
@@ -71,26 +75,47 @@ class NpcAdminGui(
         inventory.setItem(47, createItem(Material.MAP, "§e切换类型", listOf("§7当前: ${template.type.key.key}", "§a点击切换下一个")))
         inventory.setItem(48, createItem(Material.EXPERIENCE_BOTTLE, "§b刷新所有实体", listOf("§7修改后点击此项", "§7让全服该ID的NPC变身")))
 
-        // 【新增】删除按钮 (Slot 52)
+        // 装饰用的玻璃板 (只填 49 和 50)
+        val pane = createItem(Material.GRAY_STAINED_GLASS_PANE, " ")
+        inventory.setItem(49, pane)
+        inventory.setItem(50, pane)
+
+        // [新增] 种族打折开关 (Slot 51)
+        val discountStatus = if (template.allowRaceDiscount) "§a已开启" else "§c已关闭"
+        val switchIcon = if (template.allowRaceDiscount) Material.EMERALD else Material.REDSTONE_BLOCK
+
+        inventory.setItem(51, createItem(switchIcon, "§e种族优惠开关", listOf(
+            "§7当前状态: $discountStatus",
+            "§7",
+            "§e点击切换",
+            "§7开启后，符合条件的人族",
+            "§7玩家将获得价格优惠。"
+        )))
+
+        // [新增] 删除按钮 (Slot 52)
         inventory.setItem(52, createItem(Material.BARRIER, "§c§l删除此NPC", listOf("§7点击永久删除这个NPC实例", "§7(不会删除模板数据)")))
 
+        // 保存按钮 (Slot 53)
         inventory.setItem(53, createItem(Material.EMERALD_BLOCK, "§a§l保存配置", listOf("§7点击保存当前交易项")))
-
-        val pane = createItem(Material.GRAY_STAINED_GLASS_PANE, " ")
-        for (i in 49..51) inventory.setItem(i, pane)
     }
 
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
         if (event.inventory.holder != this) return
-        val clickedSlot = event.rawSlot
 
-        if (clickedSlot >= 45 && clickedSlot < 54) {
+        // 允许上方点击与拖拽(编辑交易)，但在点击底部功能区时取消事件
+        val clickedSlot = event.rawSlot
+        if (clickedSlot in 45..53) {
             event.isCancelled = true
+
             val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
 
             when (clickedSlot) {
                 45 -> { // 修改名字
+                    // 先保存当前的变更，避免数据丢失
+                    saveTradesFromGui()
+                    plugin.npcModule.manager.saveData()
+
                     plugin.npcModule.getInteractListener().editingNameMap[player.uniqueId] = templateId
                     player.closeInventory()
                     player.sendMessage("§a请在聊天栏输入新的 NPC 名字（支持颜色代码 &）：")
@@ -100,16 +125,18 @@ class NpcAdminGui(
                     val currentIdx = allProfs.indexOf(template.profession)
                     val nextIdx = (currentIdx + 1) % allProfs.size
                     template.profession = allProfs[nextIdx]
-                    loadContent()
+
                     player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                    loadContent() // 刷新图标
                 }
                 47 -> { // 切换类型
                     val allTypes = Registry.VILLAGER_TYPE.toList()
                     val currentIdx = allTypes.indexOf(template.type)
                     val nextIdx = (currentIdx + 1) % allTypes.size
                     template.type = allTypes[nextIdx]
-                    loadContent()
+
                     player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                    loadContent() // 刷新图标
                 }
                 48 -> { // 刷新实体
                     saveTradesFromGui()
@@ -134,6 +161,14 @@ class NpcAdminGui(
                     player.sendMessage("§a已刷新 $count 个 NPC 实例。")
                     player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
                 }
+                51 -> { // 【新增】修改打折
+                    template.allowRaceDiscount = !template.allowRaceDiscount
+                    // 这里不需要立即保存到文件，点击最右侧保存按钮时统一保存，或者你希望立即生效也可以：
+                    // plugin.npcModule.manager.saveData()
+
+                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                    loadContent() // 刷新界面以更新图标
+                }
                 52 -> { // 【新增】删除实体
                     if (entityUuid != null) {
                         plugin.npcModule.manager.removeNpc(entityUuid)
@@ -148,6 +183,7 @@ class NpcAdminGui(
                 53 -> { // 保存
                     saveTradesFromGui()
                     plugin.npcModule.manager.saveData()
+                    player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
                     player.sendMessage("§a配置已保存！")
                     player.closeInventory()
                 }
@@ -158,7 +194,10 @@ class NpcAdminGui(
     @EventHandler
     fun onClose(event: InventoryCloseEvent) {
         if (event.inventory.holder != this) return
+
+        // 关闭时自动保存交易项到内存（不一定保存到文件，取决于是否点击了保存按钮，但通常为了体验会存一下内存）
         saveTradesFromGui()
+
         InventoryClickEvent.getHandlerList().unregister(this)
         InventoryCloseEvent.getHandlerList().unregister(this)
     }

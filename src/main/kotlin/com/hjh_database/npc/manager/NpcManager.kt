@@ -78,7 +78,12 @@ class NpcManager(private val plugin: Hjh_database) {
                                 tradeList.add(CustomTrade(r, i1, i2))
                             }
                         }
-                        templates[key] = NpcTemplate(key, name, profession, type, dialogue, tradeList)
+
+                        // 【修改点1】读取是否允许打折
+                        val allowDiscount = sec.getBoolean("allow_race_discount", false)
+
+                        // 构造 Template
+                        templates[key] = NpcTemplate(key, name, profession, type, dialogue, tradeList, allowDiscount)
                     }
                 } catch (e: Exception) {
                     plugin.logger.warning("加载 NPC 模板文件失败: ${file.name}")
@@ -137,6 +142,9 @@ class NpcManager(private val plugin: Hjh_database) {
             tConfig.set("$path.type", t.type.key.toString())
             tConfig.set("$path.dialogue", t.dialogue)
 
+            // 【修改点2】保存是否允许打折
+            tConfig.set("$path.allow_race_discount", t.allowRaceDiscount)
+
             for ((index, trade) in t.trades.withIndex()) {
                 tConfig.set("$path.trades.$index.result", trade.result)
                 tConfig.set("$path.trades.$index.input1", trade.ingredient1)
@@ -177,9 +185,7 @@ class NpcManager(private val plugin: Hjh_database) {
         return true
     }
 
-    // ... (以下方法保持不变：parseKey, getTemplate, openTrade, applyNpcAttributes, spawnNpc, stripAiGoals, removeNpc, convertVanillaRecipes) ...
     // 为了完整性，请确保保留你之前代码中的 convertVanillaRecipes 等方法
-    // 这里简单列出 convertVanillaRecipes 防止遗漏
 
     fun convertVanillaRecipes(recipes: List<MerchantRecipe>): ArrayList<CustomTrade> {
         val list = ArrayList<CustomTrade>()
@@ -205,14 +211,6 @@ class NpcManager(private val plugin: Hjh_database) {
     }
 
     fun getTemplate(id: String): NpcTemplate? = templates[id]
-
-    fun openTrade(player: Player, templateId: String) {
-        val template = templates[templateId] ?: return
-        val merchant = Bukkit.createMerchant(template.name)
-        val recipes = template.trades.map { it.toMerchantRecipe() }
-        merchant.recipes = recipes
-        player.openMerchant(merchant, true)
-    }
 
     fun applyNpcAttributes(villager: Villager) {
         villager.removeWhenFarAway = false
@@ -253,8 +251,15 @@ class NpcManager(private val plugin: Hjh_database) {
     }
 
     fun removeNpc(uuid: UUID) {
+        val instance = instances[uuid]
         instances.remove(uuid)
         Bukkit.getEntity(uuid)?.remove()
+        if (instance != null) {
+            val tid = instance.templateId
+            if (tid.startsWith("npc_") || tid.startsWith("converted_")) {
+                deleteTemplate(tid) // 这一步会删除内存模板 + yml 文件
+            }
+        }
         saveData()
     }
 }

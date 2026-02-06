@@ -5,8 +5,10 @@ import com.hjh_database.npc.data.NpcInstance
 import com.hjh_database.npc.data.NpcTemplate
 import com.hjh_database.npc.gui.NpcAdminGui
 import com.hjh_database.npc.gui.NpcLibraryGui
+import com.hjh_database.race.impl.HumanRace
 import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.entity.Player
@@ -18,39 +20,38 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.MerchantRecipe
 import org.bukkit.persistence.PersistentDataType
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class NpcInteractListener(private val plugin: Hjh_database) : Listener {
 
-    // === 【核心修改1】将冷却表放入 companion object ===
-    // 这样即使插件重载导致监听器重复注册，它们也会共享这份冷却数据，彻底杜绝双击
+    // === 【核心修改1】静态冷却表 (防双击/并发) ===
     companion object {
         private val interactCooldown = HashMap<UUID, Long>()
+
+        /**
+         * 统一的冷却检查函数
+         */
+        fun isCoolingDown(player: Player): Boolean {
+            val currentTime = System.currentTimeMillis()
+            val lastTime = interactCooldown.getOrDefault(player.uniqueId, 0L)
+
+            // 500ms 冷却，防止右键连点或左右手同时触发
+            if (currentTime - lastTime < 500) {
+                return true
+            }
+
+            interactCooldown[player.uniqueId] = currentTime
+            return false
+        }
     }
 
     private val clipboard = HashMap<UUID, String>()
     val editingNameMap = HashMap<UUID, String>()
     private val dialogueProgress = HashMap<UUID, HashMap<String, Int>>()
-
-    /**
-     * 统一的冷却检查函数
-     * 返回 true 表示正在冷却中（应该拦截）
-     * 返回 false 表示可以通行
-     */
-    private fun isCoolingDown(player: Player): Boolean {
-        val currentTime = System.currentTimeMillis()
-        val lastTime = interactCooldown.getOrDefault(player.uniqueId, 0L)
-
-        // 500ms 冷却，防双击，防左右手并发
-        if (currentTime - lastTime < 500) {
-            return true
-        }
-
-        interactCooldown[player.uniqueId] = currentTime
-        return false
-    }
 
     // ================== 1. 右键 NPC (交易/管理) ==================
     @EventHandler
@@ -61,12 +62,17 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         val entity = event.rightClicked
         if (entity !is Villager) return
 
-        // === 【核心修改2】给右键也加上冷却检查 ===
-        // 这能解决 "提示不能交易" 弹出两次的问题
-        if (isCoolingDown(event.player)) return
-
+        // 检查是否是本插件 NPC
         val container = entity.persistentDataContainer
         val key = plugin.npcModule.manager.npcKey
+        if (!container.has(key, PersistentDataType.STRING)) return
+
+        // === 【核心修改2】右键冷却检查 ===
+        if (isCoolingDown(event.player)) {
+            event.isCancelled = true // 必须取消，否则原版交易界面可能还会闪现
+            return
+        }
+
         val player = event.player
         val item = player.inventory.itemInMainHand
 
@@ -76,8 +82,11 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
 
             var templateId = container.get(key, PersistentDataType.STRING)
 
-            // 如果还没有被收编
-            if (templateId == null) {
+            // 如果还没有被收编 (或者数据丢失)
+            // 增加空值检查，防止 getTemplate 报错
+            val existingTemplate = if (templateId != null) plugin.npcModule.manager.getTemplate(templateId) else null
+
+            if (existingTemplate == null) {
                 val newId = "converted_${UUID.randomUUID().toString().substring(0, 8)}"
                 val currentName = entity.customName ?: "NPC_${newId.take(4)}"
 
@@ -103,8 +112,8 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
                 templateId = newId
             }
 
-            // 打开编辑器
-            NpcAdminGui(plugin, player, templateId, entity.uniqueId).open()
+            // 打开编辑器 (使用 !! 强转是安全的，因为上面刚刚赋值过)
+            NpcAdminGui(plugin, player, templateId!!, entity.uniqueId).open()
             return
         }
 
@@ -121,19 +130,61 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         }
 
         // --- 普通玩家交互 (交易) ---
-        if (container.has(key, PersistentDataType.STRING)) {
-            event.isCancelled = true // 阻止原版 GUI
+        event.isCancelled = true // 阻止原版 GUI
 
-            val tid = container.get(key, PersistentDataType.STRING) ?: return
-            val template = plugin.npcModule.manager.getTemplate(tid) ?: return
+        val tid = container.get(key, PersistentDataType.STRING) ?: return
+        val template = plugin.npcModule.manager.getTemplate(tid) ?: return
 
-            if (template.trades.isEmpty()) {
-                player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
-                player.sendMessage("§e[提示] §7这个NPC暂时不能交易，试着左键和他说说话吧！")
-            } else {
-                plugin.npcModule.manager.openTrade(player, tid)
+        if (template.trades.isEmpty()) {
+            player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
+            player.sendMessage("§e[提示] §7这个NPC暂时不能交易，试着左键和他说说话吧！")
+        } else {
+            // === 【核心修改3】调用支持打折的交易方法 ===
+            // 这里替换了原有的 manager.openTrade
+            openTradeWithDiscounts(player, template)
+        }
+    }
+
+    /**
+     * 打开交易窗口并应用种族折扣
+     * 包含安全检查，防止 RaceModule 未加载导致报错
+     */
+    private fun openTradeWithDiscounts(player: Player, template: NpcTemplate) {
+        val merchant = Bukkit.createMerchant(template.name)
+        val recipes = ArrayList<MerchantRecipe>()
+
+        // 1. 转换配方 (将 CustomTrade 转为 MerchantRecipe)
+        for (trade in template.trades) {
+            val recipe = MerchantRecipe(trade.result, 0, 9999, false)
+            recipe.addIngredient(trade.ingredient1)
+            if (trade.ingredient2 != null) {
+                recipe.addIngredient(trade.ingredient2!!)
+            }
+            recipes.add(recipe)
+        }
+
+        // 2. 种族打折判定
+        if (template.allowRaceDiscount) {
+            try {
+                // 尝试获取人族逻辑
+                // 这里的 2 是人族的 ID，需与 RaceManager 注册的一致
+                val humanRace = plugin.raceModule.getRace(2) as? HumanRace
+
+                if (humanRace != null) {
+                    // 检查玩家是否激活了该种族特权 (种族匹配 + 任务完成)
+                    if (humanRace.isRaceActive(player)) {
+                        humanRace.applyDiscounts(recipes)
+                    }
+                }
+            } catch (e: Exception) {
+                // 防止因为 raceModule 未初始化或其他原因导致打不开商店
+                plugin.logger.warning("[NpcInteract] 调用种族打折失败: ${e.message}")
             }
         }
+
+        // 3. 设置配方并打开窗口
+        merchant.recipes = recipes
+        player.openMerchant(merchant, true)
     }
 
     // ================== 2. 右键地面 (生成 NPC) ==================
@@ -144,8 +195,8 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         if (!player.isSneaking || !player.isOp) return
 
-        // 地面操作不需要那么严格的冷却，但如果也双击了，可以在这里加
-        // if (isCoolingDown(player)) return
+        // 地面生成不需要严格冷却，但也加上以防万一
+        if (isCoolingDown(player)) return
 
         val item = event.item ?: return
         val block = event.clickedBlock ?: return
@@ -191,7 +242,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         val damager = event.damager
         if (damager !is Player) return
 
-        // === 【核心修改3】调用静态冷却检查 ===
+        // === 【核心修改4】左键冷却检查 ===
         if (isCoolingDown(damager)) return
 
         val templateId = entity.persistentDataContainer.get(plugin.npcModule.manager.npcKey, PersistentDataType.STRING) ?: return
@@ -202,6 +253,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
             return
         }
 
+        // 对话逻辑
         val dialogues = template.dialogue
         if (dialogues.isNotEmpty()) {
             val playerProgress = dialogueProgress.computeIfAbsent(damager.uniqueId) { HashMap() }
@@ -209,20 +261,16 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
             if (currentIndex >= dialogues.size) currentIndex = 0
 
             val msg = dialogues[currentIndex]
-            // 修复颜色溢出问题
             damager.sendMessage("§e[${template.name}§e]: §f${msg.replace("&", "§")}")
             damager.playSound(damager.location, Sound.ENTITY_VILLAGER_TRADE, 1f, 1f)
 
             if (currentIndex < dialogues.size - 1) {
-                // 如果不想每次都提示这一句，可以注释掉下面这行
-                // damager.sendMessage("§a[提示] -> 请继续左键点击，继续对话...")
                 playerProgress[templateId] = currentIndex + 1
             } else {
                 damager.sendMessage("§c[提示] -> 对话已结束！")
                 playerProgress[templateId] = 0
             }
         } else {
-            // 如果NPC没有对话内容
             damager.sendMessage("§7(好像没什么事发生...)")
         }
     }

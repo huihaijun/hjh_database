@@ -7,9 +7,66 @@ copper_ore:
     - "&7&o甘甜无比，沁人心脾，村长最喜欢用它泡茶喝了"
     - "&e[任务物品]"
 
-spirit_herb:
-  material: FERN
-  name: "&a灵草"
+hjh_xsyg:
+  material: FISHING_ROD
+  name: "&b新手鱼竿"
   lore:
-    - "&7生长在灵气充裕之地的草药。"
-  custom_model_data: 2001
+    - "&7&o用简单的木头和线制作的鱼竿"
+    - "&7&o轻盈无比，连小孩子都能用"
+    - "&e[任务物品]"
+
+hjh_ygmg:
+  material: STICK
+  name: "&b鱼竿木棍"
+  lore:
+    - "&7&o用来制作鱼竿的木棍"
+    - "&e[任务物品]"
+    -
+hjh_ygx:
+  material: GLASS_BOTTLE
+  name: "&b鱼竿线"
+  lore:
+    - "&7&o用来制作鱼竿的线"
+    - "&7&o存放很久了，用一团纸包着"
+    - "&e[任务物品]"
+
+hjh_xsyy:
+  material: GOLD_NUGGET
+  name: "&b[药引]新手疗愈丹"
+  lore:
+    - "&7&o用来冶炼&b&o新手疗愈丹&7&o的药引"
+    - "&7&o需要配合3个人族草药才能成功炼制"
+    - "&e[任务物品]"
+  custom_model_data: 10137
+
+hjh_rzcy:
+  material: SEAGRASS
+  name: "&b人族草药"
+  lore:
+    - "&7&o在人族峡谷开采的草药"
+    - "&7&o可以用来冶炼丹药"
+    - "&e[任务物品]"
+
+ren_zm_begin:
+  material: COCOA_BEANS
+  name: "&b人族证明"
+  lore:
+    - "&7&o象征着人族族人的证明"
+    - "&7&o握在手中能感受到女娲的祝福"
+    - "&8==============&2&l&n技能效果&8==============="
+    - "&e[被动] &e[人祖训佑]"
+    - "&f获得后，饱和度将不会低于&b3&f格"
+    - "&f在&b[皇城]&f与部分&b人族商人&f交易时"
+    - "&f所消耗的&b钱财&f将在交易成功后返回一定比例"
+
+hjh_xyzy:
+  material: FEATHER
+  name: "&9新芽之羽"
+  rarity: 3
+  lore:
+    - "&7&o初飞的鸟儿掉落的羽毛"
+    - "&7&o使用后能身轻如燕"
+    - "&8==============&2&l&n技能效果&8==============="
+    - "&e[被动] &9[初飞] &f冷却：&b10&f秒"
+    - "&f使用后，将提升自己移速&b30%&f持续&b10&f分钟"
+    - "&f在受到伤害后加速效果立即消失"

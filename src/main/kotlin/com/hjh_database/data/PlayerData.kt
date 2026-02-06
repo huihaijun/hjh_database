@@ -138,6 +138,28 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var forgeExp: Int = 0
     var forgeLicense: Int = 0
 
+    // 【新增】冶药法属性
+    var alchemyLevel: Int = 1
+    var alchemyExp: Int = 0
+
+    // 【新增】获取当前等级升级所需经验 (1级50, 2级100, 3级150...)
+    val alchemyMaxExp: Int
+        get() = alchemyLevel * 50
+
+    // 【新增】增加经验逻辑
+    fun addAlchemyExp(amount: Int) {
+        if (amount <= 0) return
+        alchemyExp += amount
+
+        // 循环升级检测
+        while (alchemyExp >= alchemyMaxExp) {
+            alchemyExp -= alchemyMaxExp
+            alchemyLevel++
+            // 可以根据需要在这里播放升级音效或发送消息
+            // Bukkit.getPlayer(uuid)?.sendMessage("§a[冶药法] 你的冶药等级提升到了 Lv.$alchemyLevel！")
+        }
+    }
+
     // 当前经验值
     var exp: Int = 0
 
@@ -149,6 +171,44 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var kaiwuLevel: Int = 1
     var kaiwuExp: Int = 0
     var kaiwuEnergy: Double = 100.0 // 精力值
+
+
+    // === 【新增】当前活跃的药效 ===
+    // 玩家下线后药效保留（
+//    @Transient
+    val activePills: MutableList<com.hjh_database.alchemy.data.ActivePill> = java.util.ArrayList()
+
+    // 药毒结束时间戳
+    var pillSicknessEnd: Long = 0
+    fun isSick(): Boolean = System.currentTimeMillis() < pillSicknessEnd
+
+    // 【新增】已完成任务的缓存 (只存 completed 的任务ID)
+    val completedQuests: MutableSet<String> = HashSet()
+
+    /**
+     * 每秒调用的心跳函数 (由 AlchemyManager 驱动)
+     */
+    fun tickAlchemyEffects(plugin: com.hjh_database.Hjh_database, player: org.bukkit.entity.Player) {
+        val iterator = activePills.iterator()
+        while (iterator.hasNext()) {
+            val pill = iterator.next()
+            val effect = plugin.alchemyManager.getEffect(pill.effectId)
+
+            if (effect != null) {
+                // 执行每秒逻辑
+                effect.onTick(player, this, pill.tier, pill.remainingSeconds)
+            }
+
+            // 扣除时间
+            pill.remainingSeconds--
+
+            // 检查过期
+            if (pill.remainingSeconds < 0) {
+                effect?.onExpire(player, this, pill.tier)
+                iterator.remove()
+            }
+        }
+    }
 
     var nodeCoolDowns: MutableMap<String, Long> = HashMap()
 

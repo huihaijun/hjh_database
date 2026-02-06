@@ -41,6 +41,22 @@ enum class StoryNpcs(
     Villager.Profession.NITWIT,
     Villager.Type.PLAINS,
     1786.5, 175.5, 109.5, 90f
+    ),
+
+    REN_SMITH(
+    "ren_smith",
+    "§a§l铁匠铺掌柜",
+    Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    1737.5, 160.5, 97.5, 90f
+    ),
+
+    REN_ALCHEMIST(
+    "ren_alchemist",
+    "§a§l炼丹房掌柜",
+    Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    1654.5, 153.5, 174.5, 90f
     );
     // 后续有新 NPC 直接往这里加...
 

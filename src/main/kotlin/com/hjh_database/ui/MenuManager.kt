@@ -297,6 +297,11 @@ class MenuManager(private val plugin: Hjh_database) {
             }
         }
 
+        // 冶药法变量替换
+        result = result.replace("%alchemy_level%", data.alchemyLevel.toString())
+        result = result.replace("%alchemy_exp%", data.alchemyExp.toString())
+        result = result.replace("%alchemy_max_exp%", data.alchemyMaxExp.toString())
+
         var jobName = "无"
         val job = data.job
         if (job != null && job >= 0 && job < JOB_NAMES.size) jobName = JOB_NAMES[job]

@@ -13,7 +13,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class DatabaseManager(private val plugin: Hjh_database) {
-    private var dataSource: HikariDataSource? = null
+    var dataSource: HikariDataSource? = null
 
     init {
         // 确保插件数据文件夹存在
@@ -30,6 +30,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
         createForgeTable()
         createKaiWuTable()
         createQuestTable() // 【新增】任务独立表
+        createAlchemyTable() // 新增 丹药表
 
         // 医师技能列表
         createMedicalTable()
@@ -96,6 +97,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     safeAddColumn(stmt, "player_kaiwu", "kaiwu_exp", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_kaiwu", "kaiwu_energy", "DOUBLE DEFAULT 100.0")
                     safeAddColumn(stmt, "player_kaiwu", "node_data", "LONGTEXT")
+                    // 6.修复 player_alchemy_data 冶药法表
+                    safeAddColumn(stmt, "player_alchemy", "alchemy_exp", "INT DEFAULT 0")
                 }
             }
         } catch (e: SQLException) {
@@ -210,6 +213,19 @@ class DatabaseManager(private val plugin: Hjh_database) {
                 progress INT DEFAULT 0,
                 PRIMARY KEY (uuid, quest_id),
                 FOREIGN KEY (uuid) REFERENCES player_data(uuid) ON DELETE CASCADE
+            );
+        """.trimIndent()
+        executeSql(sql)
+    }
+
+    private fun createAlchemyTable() {
+        val sql = """
+            CREATE TABLE IF NOT EXISTS player_alchemy (
+                uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32),
+                alchemy_level INT DEFAULT 1,
+                alchemy_exp INT DEFAULT 0,
+                pill_sickness_end BIGINT DEFAULT 0
             );
         """.trimIndent()
         executeSql(sql)
@@ -392,6 +408,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
 
                 // 【死锁修复】保存医术 (传入当前 conn)
                 saveMedicalData(conn, data)
+                // === 【新增】保存丹药数据 ===
+                saveAlchemyData(conn, data)
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存玩家数据失败: " + e.message)
@@ -483,6 +501,8 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
             val sqlSkills = "SELECT * FROM player_element_zf_lvl WHERE uuid = ?"
             val sqlForge = "SELECT * FROM player_dzlv WHERE uuid = ?"
             val sqlKaiWu = "SELECT * FROM player_kaiwu WHERE uuid = ?"
+            // 【新增】查询已完成任务的 SQL
+            val sqlCompletedQuests = "SELECT quest_id FROM player_quests WHERE uuid = ? AND status = 'COMPLETED'"
 
             try {
                 // 【死锁修复】获取唯一连接
@@ -578,6 +598,20 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
                     loadMedicalData(conn, data)
                     // 加载任务表数据
                     loadPlayerQuests(conn,data)
+                    // === 【新增】加载已完成的任务到缓存 === 这一步非常快，专门为了 RaceManager 优化
+                    conn.prepareStatement(sqlCompletedQuests).use { ps ->
+                        ps.setString(1, uuid.toString())
+                        ps.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val qId = rs.getString("quest_id")
+                                if (qId != null) {
+                                    data.completedQuests.add(qId)
+                                }
+                            }
+                        }
+                    }
+                    // === 【新增】加载丹药数据 ===
+                    loadAlchemyData(conn, data)
                 }
             } catch (e: SQLException) {
                 plugin.logger.severe("加载玩家数据失败: " + e.message)
@@ -684,6 +718,64 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
             }
         } catch (e: SQLException) {
             plugin.logger.severe("加载医师数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    // ==========================================
+    //            丹药系统数据库逻辑 (新增)
+    // ==========================================
+    /**
+     * 保存丹药数据 (支持传入连接，防止死锁)
+     */
+    // 还原为带 conn 参数，方便统一事务管理
+    fun saveAlchemyData(conn: Connection, data: PlayerData) {
+        // 注意：SQL 依然要保持修复后的 5 个问号
+        val sql = """
+            INSERT INTO player_alchemy (uuid, player_name, alchemy_level, alchemy_exp, pill_sickness_end) 
+            VALUES (?, ?, ?, ?, ?) 
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, alchemy_level=?, alchemy_exp=?, pill_sickness_end=?
+        """.trimIndent()
+
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.setString(2, data.playerName)
+                ps.setInt(3, data.alchemyLevel)
+                ps.setInt(4, data.alchemyExp)
+                ps.setLong(5, data.pillSicknessEnd)
+
+                ps.setString(6, data.playerName)
+                ps.setInt(7, data.alchemyLevel)
+                ps.setInt(8, data.alchemyExp)
+                ps.setLong(9, data.pillSicknessEnd)
+
+                ps.executeUpdate()
+            }
+        } catch (e: java.sql.SQLException) {
+            plugin.logger.severe("保存丹药数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 读取丹药数据 (支持传入连接)
+     */
+    fun loadAlchemyData(conn: Connection, data: PlayerData) {
+        val sql = "SELECT alchemy_level, alchemy_exp,pill_sickness_end FROM player_alchemy WHERE uuid = ?"
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        data.alchemyLevel = rs.getInt("alchemy_level")
+                        data.alchemyExp = rs.getInt("alchemy_exp")
+                        data.pillSicknessEnd = rs.getLong("pill_sickness_end")
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.severe("加载丹药数据失败: " + e.message)
             e.printStackTrace()
         }
     }

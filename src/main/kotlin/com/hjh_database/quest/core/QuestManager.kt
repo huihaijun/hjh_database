@@ -55,6 +55,9 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
         data.questStatuses[quest.id] = QuestStatus.COMPLETED
         data.questProgress[quest.id] = 9999 // 标记满
 
+        // 同步更新已完成任务的缓存 Set
+        data.completedQuests.add(quest.id)
+
         // 数据库保存
         plugin.databaseManager.saveQuestData(player, quest.id, QuestStatus.COMPLETED, 9999)
 

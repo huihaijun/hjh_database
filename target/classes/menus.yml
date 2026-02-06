@@ -18,6 +18,8 @@ gui:
         - "&f锻造资质: %forge_license_name%"
         - "&f装备稀有度: &6%rarity_display%"
         - "&7----------------"
+        - "&f冶药等级: &dLv.%alchemy_level% &7(%alchemy_exp% / %alchemy_max_exp%)"
+        - "&7----------------"
         - "&f开物等级: &eLv.%kaiwu_level% &7(%kaiwu_exp% / %kaiwu_next_exp%)"
         - "&f剩余精力: &a%kaiwu_energy% / %kaiwu_max_energy%"
         # =======================

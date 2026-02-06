@@ -141,13 +141,9 @@ class ResourceManager(private val plugin: Hjh_database) {
     fun refreshItem(item: ItemStack?): Boolean {
         if (item == null || item.type == Material.AIR || !item.hasItemMeta()) return false
         val meta = item.itemMeta ?: return false // Kotlin 空安全检查
-
         // ==========================================================================
         // 【核心修复】 检查 "免刷新锁" (hjh_ignore_refresh)
         // 这是保护医术旗帜、秘籍不被 "洗白" 的关键！
-        // ==========================================================================
-        // 注意：这里需要传入 plugin 实例，确保 ResourceManager 类里有 plugin 字段
-        // 如果你的 plugin 变量名不一样，请自行调整
         val ignoreKey = NamespacedKey(plugin, "hjh_ignore_refresh")
         if (meta.persistentDataContainer.has(ignoreKey, PersistentDataType.INTEGER)) {
             // 发现锁！这是一个特殊的物品（如已刻印的医旗），绝对不能被重置！

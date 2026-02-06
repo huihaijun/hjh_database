@@ -1,7 +1,9 @@
 package com.hjh_database.command
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.alchemy.data.AlchemyTier
 import com.hjh_database.quest.core.QuestStatus
+import com.hjh_database.quest.core.StoryNpcs
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command
@@ -44,6 +46,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getstation - 获取医术绘制台")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin quest <玩家> <ID> <状态> - 修改任务进度")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gennpc <ID|ALL> - 生成剧情NPC")
+            // 【新增丹药提示】
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin alchemy <list|give|getcauldron> ... - 丹药系统指令")
             return true
         }
 
@@ -71,7 +75,87 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 sender.sendMessage(ChatColor.AQUA.toString() + "NPC 数据已从磁盘重新加载！")
             }
 
-            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical)已重载！")
+            // 重载丹药配方
+            plugin.alchemyManager.loadRecipes()
+
+            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy)已重载！")
+            return true
+        }
+
+        // === alchemy (丹药系统) ===
+        if (subCommand == "alchemy") {
+            // 参数: /hjhadmin alchemy <list|give|getcauldron> ...
+            if (args.size < 2) {
+                sender.sendMessage("§c用法: /hjhadmin alchemy <list|give|getcauldron> ...")
+                return true
+            }
+
+            val alcSub = args[1].lowercase()
+
+            // 1. 获取炼药锅
+            if (alcSub == "getcauldron") {
+                if (sender !is Player) {
+                    sender.sendMessage("§c只有玩家可以使用此指令。")
+                    return true
+                }
+                val cauldron = org.bukkit.inventory.ItemStack(org.bukkit.Material.CAULDRON)
+                val meta = cauldron.itemMeta
+                meta?.setDisplayName("§5§l冶药锅")
+                val key = org.bukkit.NamespacedKey(plugin, "hjh_alchemy_cauldron")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.INTEGER, 1)
+                cauldron.itemMeta = meta
+                sender.inventory.addItem(cauldron)
+                sender.sendMessage("§a已获得冶药锅")
+                return true
+            }
+
+            // 2. 列出丹药
+            if (alcSub == "list") {
+                sender.sendMessage("§e=== 已注册的丹药效果 ===")
+                plugin.alchemyManager.effects.keys.forEach { id ->
+                    val recipe = plugin.alchemyManager.recipes[id]
+                    val name = recipe?.displayName ?: "未配置"
+                    sender.sendMessage("§7- §f$id §7($name)")
+                }
+                return true
+            }
+
+            // 3. 给予丹药
+            // /hjhadmin alchemy give <player> <pill_id> [LOW/MID/HIGH]
+            if (alcSub == "give") {
+                if (args.size < 4) {
+                    sender.sendMessage("§c用法: /hjhadmin alchemy give <玩家> <丹药ID> [品质(默认LOW)]")
+                    return true
+                }
+
+                val target = Bukkit.getPlayer(args[2])
+                if (target == null) {
+                    sender.sendMessage("§c玩家不在线。")
+                    return true
+                }
+
+                val pillId = args[3]
+                // 默认品质为 LOW
+                val tierStr = if (args.size >= 5) args[4].uppercase() else "LOW"
+                val tier = try {
+                    AlchemyTier.valueOf(tierStr)
+                } catch (e: Exception) {
+                    sender.sendMessage("§c无效的品质，请使用: LOW, MID, HIGH")
+                    return true
+                }
+
+                // 调用 Manager 的方法生成物品
+                val item = plugin.alchemyManager.createPillItem(pillId, tier)
+
+                if (item != null) {
+                    target.inventory.addItem(item)
+                    sender.sendMessage("§a已给予 ${target.name} 丹药: $pillId ($tier)")
+                    target.sendMessage("§a[系统] 你获得了丹药: ${item.itemMeta?.displayName}")
+                } else {
+                    sender.sendMessage("§c给予失败！可能是该丹药ID不存在，或者该丹药没有配置 '${tier.name}' 品质的物品。")
+                }
+                return true
+            }
             return true
         }
 
@@ -243,13 +327,13 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size < 2) return error(sender, "用法: /hjhadmin gennpc <ID|ALL>")
 
             val targetName = args[1]
-            val listToSpawn = ArrayList<com.hjh_database.quest.core.StoryNpcs>()
+            val listToSpawn = ArrayList<StoryNpcs>()
 
             if (targetName.equals("ALL", ignoreCase = true)) {
-                listToSpawn.addAll(com.hjh_database.quest.core.StoryNpcs.values())
+                listToSpawn.addAll(StoryNpcs.values())
             } else {
                 try {
-                    listToSpawn.add(com.hjh_database.quest.core.StoryNpcs.valueOf(targetName))
+                    listToSpawn.add(StoryNpcs.valueOf(targetName))
                 } catch (e: IllegalArgumentException) {
                     sender.sendMessage("§c找不到该剧情NPC配置: $targetName")
                     return true
@@ -299,7 +383,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     sender.sendMessage("§a[系统] 已在 ${loc.blockX},${loc.blockY},${loc.blockZ} 生成 ${npcData.displayName}")
                     count++
                 } catch (e: Exception) {
-                    sender.sendMessage("§c[错误] 生成 ${npcData.id} 失败: ${e.message}")
+                    sender.sendMessage("§c[错误] 生成 $e{npcData.id} 失败: ${e.message}")
                 }
             }
 
@@ -317,49 +401,76 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
     }
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<out String>): List<String>? {
-        // 【修改】添加 medical 到一级补全
-        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc")
+        // 【修改】添加 medical, alchemy 到一级补全
+        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy").filter { it.startsWith(args[0].lowercase()) }
+
+        val subCmd = args[0].lowercase()
+
+        // === 丹药 Tab 补全 ===
+        if (subCmd == "alchemy") {
+            if (args.size == 2) {
+                return listOf("give", "list", "getcauldron").filter { it.startsWith(args[1].lowercase()) }
+            }
+            if (args.size == 3 && args[1].equals("give", ignoreCase = true)) {
+                // 补全玩家名
+                return null
+            }
+            if (args.size == 4 && args[1].equals("give", ignoreCase = true)) {
+                // 补全丹药ID
+                return plugin.alchemyManager.effects.keys.toList().filter { it.startsWith(args[3]) }
+            }
+            if (args.size == 5 && args[1].equals("give", ignoreCase = true)) {
+                // 补全品质
+                return listOf("LOW", "MID", "HIGH").filter { it.startsWith(args[4].uppercase()) }
+            }
+        }
 
         // 如果是 get 指令，第二个参数提示所有物品的ID和名字
-        if (args.size == 2 && args[0].equals("get", ignoreCase = true)) {
-            if (plugin.resourceManager != null) {
-                val allNames = plugin.resourceManager.getAllItemNames()
-                val currentInput = args[1].lowercase()
-                return allNames.filter { it.lowercase().startsWith(currentInput) }
+        if (subCmd == "get") {
+            if (args.size == 2) {
+                if (plugin.resourceManager != null) {
+                    val allNames = plugin.resourceManager.getAllItemNames()
+                    val currentInput = args[1].lowercase()
+                    return allNames.filter { it.lowercase().startsWith(currentInput) }
+                }
+                return ArrayList()
             }
-            return ArrayList()
         }
 
         // 任务系统的指令
-        if (args[0].equals("quest", ignoreCase = true)) {
+        if (subCmd == "quest") {
             if (args.size == 2) return null // 玩家名
             if (args.size == 3) {
                 // 返回所有注册的任务ID
-                return plugin.questManager.getAllQuests().map { it.id }
+                return plugin.questManager.getAllQuests().map { it.id }.filter { it.startsWith(args[2]) }
             }
-            if (args.size == 4) return listOf("LOCKED", "IN_PROGRESS", "COMPLETED")
+            if (args.size == 4) return listOf("LOCKED", "IN_PROGRESS", "COMPLETED").filter { it.startsWith(args[3].uppercase()) }
             if (args.size == 5) return listOf("0", "1", "5", "10")
         }
 
         // 【新增】如果是 medical 指令，提示技能ID
-        if (args.size == 2 && args[0].equals("medical", ignoreCase = true)) {
-            if (plugin.medicalManager != null) {
-                return ArrayList(plugin.medicalManager.getAllSkillIds())
+        if (subCmd == "medical") {
+            if (args.size == 2) {
+                if (plugin.medicalManager != null) {
+                    return ArrayList(plugin.medicalManager.getAllSkillIds()).filter { it.startsWith(args[1]) }
+                }
             }
         }
 
-        if (args.size == 2 && args[0].equals("gennpc", ignoreCase = true)) {
-            val list = ArrayList<String>()
-            list.add("ALL")
-            list.addAll(com.hjh_database.quest.core.StoryNpcs.values().map { it.name })
-            return list
+        if (subCmd == "gennpc") {
+            if (args.size == 2) {
+                val list = ArrayList<String>()
+                list.add("ALL")
+                list.addAll(StoryNpcs.values().map { it.name })
+                return list.filter { it.startsWith(args[1].uppercase()) }
+            }
         }
 
         if (args.size == 2) return null // 其他指令默认回显玩家名
 
         if (args.size == 3) {
-            if (args[0].equals("job", ignoreCase = true)) return ArrayList(jobReverseMap.keys)
-            if (args[0].equals("race", ignoreCase = true)) return ArrayList(raceReverseMap.keys)
+            if (args[0].equals("job", ignoreCase = true)) return ArrayList(jobReverseMap.keys).filter { it.startsWith(args[2]) }
+            if (args[0].equals("race", ignoreCase = true)) return ArrayList(raceReverseMap.keys).filter { it.startsWith(args[2]) }
         }
         return ArrayList()
     }

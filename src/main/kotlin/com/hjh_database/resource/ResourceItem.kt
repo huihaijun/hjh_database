@@ -3,6 +3,7 @@ package com.hjh_database.resource
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.configuration.ConfigurationSection
+import java.util.ArrayList
 
 /**
  * 资源物品数据类
@@ -14,7 +15,8 @@ class ResourceItem(
     rawName: String,        // 构造参数：原始名称（未处理颜色）
     rawLore: List<String>?, // 构造参数：原始Lore（未处理颜色）
     private val _customModelData: Int?, // 私有属性：用于内部存储（区分 null 和 0）
-    val isUnbreakable: Boolean
+    val isUnbreakable: Boolean,
+    val rarity: Int = 0 // 默认为 0，表示没有稀有度
 ) {
 
     // === 属性初始化逻辑 (自动处理颜色和默认值) ===
@@ -25,16 +27,27 @@ class ResourceItem(
     // 自动处理名称颜色
     val name: String = ChatColor.translateAlternateColorCodes('&', rawName)
 
-    // 自动处理 Lore 颜色，如果为空则初始化为空列表
-    val lore: MutableList<String> = rawLore?.map {
-        ChatColor.translateAlternateColorCodes('&', it)
-    }?.toMutableList() ?: ArrayList()
+    // 自动处理 Lore 颜色，并根据稀有度在最上方插入星星
+    val lore: MutableList<String>
+
+    init {
+        // 1. 处理原始 Lore 颜色
+        val tempLore = rawLore?.map {
+            ChatColor.translateAlternateColorCodes('&', it)
+        }?.toMutableList() ?: ArrayList()
+
+        // 2. 如果有稀有度，插入到 Lore 的第一行 (索引 0)
+        // 这样就会显示在 Name 下面，其他 Lore 之上
+        if (rarity > 0) {
+            tempLore.add(0, getRarityDisplay(rarity))
+        }
+
+        this.lore = tempLore
+    }
 
     /**
-     * 【修复重点】
-     * 显式定义公开属性 customModelData
-     * 其他文件调用 res.customModelData 时会走这里的 get() 逻辑
-     * 逻辑保持：如果是 null 则返回 0
+     * 【属性】customModelData
+     * 如果是 null 则返回 0
      */
     val customModelData: Int
         get() = _customModelData ?: 0
@@ -42,33 +55,54 @@ class ResourceItem(
     // === 次要构造函数：从 Config 读取 ===
     constructor(id: String?, sec: ConfigurationSection) : this(
         id = id,
-        // 从配置读取 Material，默认为 STONE
         rawMaterial = Material.matchMaterial(sec.getString("material", "STONE") ?: "STONE"),
-        // 从配置读取 Name，默认为 "未知物品"
         rawName = sec.getString("name", "&f未知物品") ?: "&f未知物品",
-        // 从配置读取 Lore List
         rawLore = sec.getStringList("lore"),
-        // 检查配置中是否存在 custom_model_data，存在则读取，不存在则为 null
         _customModelData = if (sec.contains("custom_model_data")) sec.getInt("custom_model_data") else null,
-        // 读取不可破坏属性
-        isUnbreakable = sec.getBoolean("unbreakable", false)
+        isUnbreakable = sec.getBoolean("unbreakable", false),
+        rarity = sec.getInt("rarity", 0)
     )
 
     // === 功能方法 ===
 
     /**
      * 判断是否有自定义模型数据
-     * 逻辑保持：判断原始存储是否为 null
      */
     fun hasCustomModelData(): Boolean {
         return _customModelData != null
     }
 
     /**
-     * 如果你需要保留旧的方法调用方式，可以保留此方法
-     * 但现在的推荐用法是直接使用属性：item.customModelData
+     * 旧版兼容方法
      */
     fun getCustomModelDataMethod(): Int {
         return customModelData
+    }
+
+    /**
+     * 生成稀有度显示行
+     * [修改点]：将前缀颜色与星星颜色统一
+     */
+    private fun getRarityDisplay(level: Int): String {
+        val color = when (level) {
+            1 -> "§f" // 白
+            2 -> "§a" // 绿
+            3 -> "§9" // 蓝 (使用 §9)
+            4 -> "§d" // 紫
+            5 -> "§6" // 金
+            else -> "§c" // 红 (6级及以上)
+        }
+        val sb = StringBuilder()
+
+        // 先添加颜色代码，让后续的文字和星星颜色一致
+        sb.append(color)
+        sb.append("稀有度：")
+
+        // 生成星星
+        for (i in 0 until level) {
+            sb.append("★")
+        }
+
+        return sb.toString()
     }
 }

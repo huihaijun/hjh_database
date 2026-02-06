@@ -1,5 +1,7 @@
 package com.hjh_database
 
+import com.hjh_database.alchemy.listener.AlchemyListener
+import com.hjh_database.alchemy.manager.AlchemyManager
 import com.hjh_database.command.AdminCommand
 import com.hjh_database.command.ResourceReloadCommand
 import com.hjh_database.command.StatsCommand
@@ -50,6 +52,10 @@ class Hjh_database : JavaPlugin() {
     // 【新增】任务管理器变量
     lateinit var questManager: QuestManager
     lateinit var questGui: QuestGui // 变量声明在这里
+    // 【新增】丹药管理器变量
+    lateinit var alchemyManager: AlchemyManager
+    // 【新增】种族祝福模块
+    lateinit var raceModule: com.hjh_database.race.RaceManager
 
     override fun onEnable() {
 
@@ -115,6 +121,18 @@ class Hjh_database : JavaPlugin() {
         // 3. 注册 QuestGui 监听器
         server.pluginManager.registerEvents(this.questGui, this)
 
+        // 【新增】丹药 (Alchemy) 系统初始化
+        // ==========================================
+        // 1. 初始化管理器 (加载配方)
+        this.alchemyManager = AlchemyManager(this)
+        // 2. 注册交互监听器 (处理锅的交互、木锄编辑等)
+        server.pluginManager.registerEvents(AlchemyListener(this), this)
+        // === 自动注册丹药 ===
+        com.hjh_database.alchemy.AlchemyAutoRegister.registerAll(this, this.alchemyManager)
+
+        // 初始化种族祝福模块
+        raceModule = com.hjh_database.race.RaceManager(this)
+
         // 注册通用监听
         server.pluginManager.registerEvents(PlayerListener(this), this)
         server.pluginManager.registerEvents(CombatListener(this), this)
@@ -122,7 +140,6 @@ class Hjh_database : JavaPlugin() {
         server.pluginManager.registerEvents(MenuListener(this), this)
 
         // 注册 NPC 交互监听 (它会调用 questManager，所以必须在后面注册)
-        // 注意：我帮你把 NpcInteractListener 加上了，之前你可能漏了注册这个，导致 NPC 对话没反应
         server.pluginManager.registerEvents(com.hjh_database.npc.listener.NpcInteractListener(this), this)
 
         // 注册其他命令
