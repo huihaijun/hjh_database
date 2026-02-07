@@ -44,21 +44,40 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     @EventHandler(priority = EventPriority.HIGH)
     fun onDamage(event: EntityDamageEvent) {
         if (event.isCancelled) return
+        // =========================================================
+        // 【新增修复】 环境伤害过滤
+        // =========================================================
+        when (event.cause) {
+            EntityDamageEvent.DamageCause.CONTACT,      // 仙人掌、浆果丛
+            EntityDamageEvent.DamageCause.SUFFOCATION,  // 窒息
+            EntityDamageEvent.DamageCause.FALL,         // 掉落
+            EntityDamageEvent.DamageCause.FIRE,         // 火焰伤害
+            EntityDamageEvent.DamageCause.FIRE_TICK,    // 燃烧状态
+            EntityDamageEvent.DamageCause.LAVA,         // 岩浆
+            EntityDamageEvent.DamageCause.DROWNING,     // 溺水
+            EntityDamageEvent.DamageCause.STARVATION,   // 饥饿
+            EntityDamageEvent.DamageCause.CRAMMING,     // 实体挤压
+            EntityDamageEvent.DamageCause.HOT_FLOOR     // 熔岩块
+                -> return
+            else -> {} // 其他类型（攻击、法术等）继续向下执行
+        }
+        // =========================================================
 
         // =========================================================
         // 【核心修复 A】 优先检测法术伤害标记 (HJH_MAGIC_DAMAGE)
         // =========================================================
         var isMagicDamage = false
         var magicBaseDamage = 0.0
+        val entity = event.entity // 缓存 entity 引用
 
-        if (event.entity.hasMetadata("HJH_MAGIC_DAMAGE")) {
+        if (entity.hasMetadata("HJH_MAGIC_DAMAGE")) {
             isMagicDamage = true
-            val metadataList = event.entity.getMetadata("HJH_MAGIC_DAMAGE")
+            val metadataList = entity.getMetadata("HJH_MAGIC_DAMAGE")
             if (metadataList.isNotEmpty()) {
                 magicBaseDamage = metadataList[0].asDouble()
             }
             // 立即清除标记
-            event.entity.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            entity.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
         }
         // =========================================================
 
@@ -67,7 +86,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             if (event is EntityDamageByEntityEvent) {
                 val damager = event.damager
                 if (damager is Player) {
-                    val data = plugin.playerManager.getData(damager.uniqueId)
+                    val data = plugin.playerManager.getPlayerData(damager)
                     if (data == null || data.job == null || data.job != 0) {
                         event.isCancelled = true
                         return
@@ -79,9 +98,9 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         // =========================================================
         // 【核心修复 B】 物理技能伤害 (WeaponSkill) 检测
         // =========================================================
-        val isPhysicalSkill = event.entity.hasMetadata("hjh_physical_skill")
+        val isPhysicalSkill = entity.hasMetadata("hjh_physical_skill")
         if (isPhysicalSkill) {
-            event.entity.removeMetadata("hjh_physical_skill", plugin)
+            entity.removeMetadata("hjh_physical_skill", plugin)
         }
 
         var damage = event.damage
@@ -91,17 +110,22 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             damage = magicBaseDamage
         }
 
-        // 1. 攻击者逻辑 (物理伤害计算)
-        // 只有当 [不是法术伤害] 且 [不是物理技能] 时，才执行这里的计算
+        // =========================================================
+        // 【新增】词缀变量准备
+        // =========================================================
+        var ignoreArmor = false // 是否无视护甲 (破军)
+
+        // 1. 攻击者逻辑 (物理伤害计算 & 攻击词缀)
         if (!isMagicDamage && !isPhysicalSkill && event is EntityDamageByEntityEvent) {
             val attacker = event.damager
-            if (attacker is Player) {
 
+            // --- A. 玩家攻击逻辑 ---
+            if (attacker is Player) {
                 // 槽位检查
                 val hand = attacker.inventory.itemInMainHand
                 if (!isWeaponSlotValid(attacker, hand)) {
                     // 医师特化：如果是医师，不提示，静默取消
-                    val data = plugin.playerManager.getData(attacker.uniqueId)
+                    val data = plugin.playerManager.getPlayerData(attacker)
                     if (data != null && data.job != null && data.job == 3) {
                         event.isCancelled = true
                         return
@@ -113,7 +137,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     return
                 }
 
-                val data = plugin.playerManager.getData(attacker.uniqueId)
+                val data = plugin.playerManager.getPlayerData(attacker)
                 if (data != null) {
                     var isRpgWeapon = false
                     if (hand.hasItemMeta()) {
@@ -123,38 +147,52 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     if (data.job != null && data.job == 0) { // 战士
                         val type = hand.type.name
                         if (type.endsWith("_SWORD") || type.endsWith("_AXE")) {
-                            var baseAttack = data.getVal(data.attack)
+                            var baseAttack = data.attack // 使用 getter 访问
                             val cooldown = attacker.attackCooldown
                             baseAttack *= cooldown.toDouble()
                             damage = baseAttack
                         }
-                    }
-                    // 【问题根源在这里】
-                    // 如果是医师(非战士) + 拿医旗(RPG武器) -> 这里把 damage 变成了 1.0
-                    // 但我们加了 !isMagicDamage 的判断，所以法术伤害会跳过这整段代码，保住了数值！
-                    else if (isRpgWeapon) {
+                    } else if (isRpgWeapon) {
+                        // 非战士职业拿着RPG武器，伤害修正为 1.0
                         damage = 1.0
                     }
 
                     // 暴击逻辑
-                    val critChance = min(0.8, data.getVal(data.critChance))
+                    val critChance = min(0.8, data.critChance)
                     if (attacker.attackCooldown > 0.9F) {
                         if (Math.random() < critChance) {
                             damage *= 1.5
-                            attacker.world.spawnParticle(Particle.CRIT, event.entity.location.add(0.0, 1.0, 0.0), 15)
+                            attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
                             attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
                         }
                     }
                 }
-            } else if (attacker is AbstractArrow) {
+            }
+            // --- B. 怪物攻击逻辑 (词缀检测) ---
+            else if (attacker is LivingEntity) {
+                // 读取攻击者词缀
+                val affixes = getMobAffixes(attacker)
+                if (affixes.isNotEmpty()) {
+                    // 【燃烧的】：攻击附带燃烧
+                    if (affixes.contains(com.hjh_database.spawner.MobAffix.BURNING)) {
+                        entity.fireTicks = 60 // 烧 3 秒
+                    }
+                    // 【破军的】：无视护甲
+                    if (affixes.contains(com.hjh_database.spawner.MobAffix.PIERCING)) {
+                        ignoreArmor = true
+                    }
+                }
+            }
+            // --- C. 投射物攻击逻辑 ---
+            else if (attacker is AbstractArrow) {
                 val shooter = attacker.shooter
                 if (shooter is Player) {
-                    val data = plugin.playerManager.getData(shooter.uniqueId)
+                    val data = plugin.playerManager.getPlayerData(shooter)
                     if (data != null) {
-                        val archerDmg = data.getVal(data.archerDamage)
+                        val archerDmg = data.archerDamage
                         val velocity = attacker.velocity.length()
                         damage = archerDmg * (min(3.0, velocity) / 3.0)
-                        val critChance = min(0.8, data.getVal(data.critChance))
+                        val critChance = min(0.8, data.critChance)
                         if (Math.random() < critChance) {
                             damage *= 1.5
                             attacker.isCritical = true
@@ -165,13 +203,30 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
-        // 2. 受击者逻辑 (减伤)
+        // 2. 受击者逻辑 (减伤 & 受击词缀)
         val victim = event.entity
         if (victim is LivingEntity) {
             // ... (原版护甲清理逻辑) ...
-            // 1.21.3 适配: Attribute.GENERIC_ARMOR -> Attribute.ARMOR
             if (victim.getAttribute(Attribute.ARMOR) != null) {
                 victim.getAttribute(Attribute.ARMOR)!!.baseValue = 0.0
+            }
+
+            // --- 受击词缀检测 (反伤) ---
+            // 必须是非玩家生物才可能有词缀
+            if (victim !is Player) {
+                val victimAffixes = getMobAffixes(victim)
+                if (victimAffixes.contains(com.hjh_database.spawner.MobAffix.THORNS)) {
+                    // 【反抗的】：反弹 20% 伤害
+                    // 仅当攻击者是生物时生效
+                    if (event is EntityDamageByEntityEvent && event.damager is LivingEntity) {
+                        val damager = event.damager as LivingEntity
+                        val reflectDmg = damage * 0.2
+                        if (reflectDmg > 1.0) {
+                            damager.damage(reflectDmg)
+                            damager.sendMessage("§c受到反伤：${String.format("%.1f", reflectDmg)}")
+                        }
+                    }
+                }
             }
 
             val cause = event.cause
@@ -186,8 +241,8 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             if (!isMagic && !isTrueDamage) {
                 var armor = 0.0
                 if (victim is Player) {
-                    val data = plugin.playerManager.getData(victim.uniqueId)
-                    if (data != null) armor = data.getVal(data.armor)
+                    val data = plugin.playerManager.getPlayerData(victim)
+                    if (data != null) armor = data.armor
                 } else {
                     if (victim.persistentDataContainer.has(armorKey, PersistentDataType.DOUBLE)) {
                         armor = victim.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
@@ -195,8 +250,13 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 }
 
                 // === 【核心修复 C】如果是法术伤害，无视护甲 ===
-                if (isMagicDamage || victim.hasMetadata("hjh_magic_damage")) {
+                // 【新增】如果是【破军】攻击，也无视护甲 (ignoreArmor)
+                if (isMagicDamage || victim.hasMetadata("hjh_magic_damage") || ignoreArmor) {
                     armor = 0.0
+                    // 如果是破军触发的破甲，可以给个提示
+                    if (ignoreArmor && victim is Player) {
+                        victim.sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§d§l警告：受到破甲伤害！"))
+                    }
                 }
                 // ==========================================
 
@@ -233,6 +293,20 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         if (damage != event.damage) {
             event.damage = damage
         }
+    }
+
+    // === 【新增辅助方法】读取怪物词缀 ===
+    // 这里的 Key 字符串必须与 MobFactory 中定义的一致 ("hjh_database:mob_affixes")
+    private fun getMobAffixes(entity: LivingEntity): Set<com.hjh_database.spawner.MobAffix> {
+        // 创建或缓存 Key
+        val affixKey = NamespacedKey(plugin, "mob_affixes")
+        val pdc = entity.persistentDataContainer
+
+        if (!pdc.has(affixKey, PersistentDataType.STRING)) return emptySet()
+
+        val str = pdc.get(affixKey, PersistentDataType.STRING) ?: return emptySet()
+        // 解析逗号分隔的字符串为枚举 Set
+        return str.split(",").mapNotNull { com.hjh_database.spawner.MobAffix.fromId(it) }.toSet()
     }
 
     @EventHandler

@@ -29,6 +29,7 @@ import com.hjh_database.npc.NpcModule
 import com.hjh_database.quest.core.QuestManager
 // 【建议】导入 QuestGui，代码看着干净点
 import com.hjh_database.quest.gui.QuestGui
+import com.hjh_database.spawner.SpawnerBlockManager
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -56,6 +57,8 @@ class Hjh_database : JavaPlugin() {
     lateinit var alchemyManager: AlchemyManager
     // 【新增】种族祝福模块
     lateinit var raceModule: com.hjh_database.race.RaceManager
+    // 【新增】声明 spawnerBlockManager 变量
+    lateinit var spawnerBlockManager: SpawnerBlockManager
 
     override fun onEnable() {
 
@@ -132,6 +135,15 @@ class Hjh_database : JavaPlugin() {
 
         // 初始化种族祝福模块
         raceModule = com.hjh_database.race.RaceManager(this)
+
+        // 初始化羽毛系统
+        com.hjh_database.feather.FeatherManager(this)
+
+        // 【新增】在 onEnable 里初始化刷怪
+        spawnerBlockManager = SpawnerBlockManager(this)
+
+        // 注册监听器 (之前提到过的)
+        server.pluginManager.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
 
         // 注册通用监听
         server.pluginManager.registerEvents(PlayerListener(this), this)

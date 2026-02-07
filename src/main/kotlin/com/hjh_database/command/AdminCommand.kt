@@ -391,6 +391,55 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return true
         }
 
+        // === spawner (刷怪笼工具) ===
+        if (subCommand == "spawner") {
+            if (sender !is Player) {
+                sender.sendMessage("§c只有玩家可以使用此指令。")
+                return true
+            }
+            // /hjhadmin spawner [get/wand]
+            if (args.size < 2) {
+                sender.sendMessage("§c用法: /hjhadmin spawner <get|wand>")
+                return true
+            }
+
+            val type = args[1].lowercase()
+            val player = sender
+
+            // 1. 获取自定义刷怪笼物品
+            if (type == "get") {
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.SPAWNER)
+                val meta = item.itemMeta
+                meta?.setDisplayName("§c§l自定义刷怪笼")
+                meta?.lore = listOf("§7放置后使用木锄右键编辑", "§7HJH RPG System")
+
+                // 打上标记，让 SpawnerListener 识别
+                val key = org.bukkit.NamespacedKey(plugin, "hjh_spawner_item")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.BYTE, 1)
+
+                item.itemMeta = meta
+                player.inventory.addItem(item)
+                player.sendMessage("§a已获取自定义刷怪笼。")
+                return true
+            }
+            // 2. 获取链接权杖 (金锄头)
+            else if (type == "wand") {
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_HOE)
+                val meta = item.itemMeta
+                meta?.setDisplayName("§b§l[链接权杖]")
+                meta?.lore = listOf("§7左键/右键普通方块: §f记录坐标", "§7右键刷怪笼: §a绑定坐标", "§7用于设定怪物的出生点")
+
+                // 打上标记
+                val key = org.bukkit.NamespacedKey(plugin, "hjh_link_wand")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.BYTE, 1)
+
+                item.itemMeta = meta
+                player.inventory.addItem(item)
+                player.sendMessage("§a已获取链接权杖。")
+                return true
+            }
+        }
+
         return error(sender, "未知指令: $subCommand")
     }
 
@@ -402,7 +451,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<out String>): List<String>? {
         // 【修改】添加 medical, alchemy 到一级补全
-        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy").filter { it.startsWith(args[0].lowercase()) }
+        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy","spawner").filter { it.startsWith(args[0].lowercase()) }
 
         val subCmd = args[0].lowercase()
 
@@ -422,6 +471,13 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size == 5 && args[1].equals("give", ignoreCase = true)) {
                 // 补全品质
                 return listOf("LOW", "MID", "HIGH").filter { it.startsWith(args[4].uppercase()) }
+            }
+        }
+
+        // 【新增】spawner 子命令补全
+        if (subCmd == "spawner") {
+            if (args.size == 2) {
+                return listOf("get", "wand").filter { it.startsWith(args[1].lowercase()) }
             }
         }
 
