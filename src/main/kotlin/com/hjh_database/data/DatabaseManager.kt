@@ -35,6 +35,9 @@ class DatabaseManager(private val plugin: Hjh_database) {
         // 医师技能列表
         createMedicalTable()
 
+        // 【新增】创建玩家状态表
+        createPlayerStatusTable()
+
         // 2. 【核心修复】自动补全旧表缺失的字段
         updateTables()
     }
@@ -231,6 +234,32 @@ class DatabaseManager(private val plugin: Hjh_database) {
         executeSql(sql)
     }
 
+    // 【新增】玩家状态表逻辑
+    // ==========================================
+    private fun createPlayerStatusTable() {
+        // 简单的表结构：uuid, status, description
+        val sql = """
+            CREATE TABLE IF NOT EXISTS player_status (
+                uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32),
+                status INTEGER DEFAULT 0,
+                description TEXT
+            );
+        """.trimIndent()
+
+        try {
+            // 使用 use 确保连接和 Statement 自动关闭，防止锁表
+            dataSource?.connection?.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(sql)
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.severe("创建玩家状态表失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
     private fun executeSql(sql: String) {
         try {
             dataSource?.connection?.use { conn ->
@@ -410,6 +439,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
                 saveMedicalData(conn, data)
                 // === 【新增】保存丹药数据 ===
                 saveAlchemyData(conn, data)
+                // === 【新增】保存玩家状态数据 ===
+                savePlayerStatus(conn, data)
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存玩家数据失败: " + e.message)
@@ -612,6 +643,8 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
                     }
                     // === 【新增】加载丹药数据 ===
                     loadAlchemyData(conn, data)
+                    // === 【新增】加载玩家状态数据 ===
+                    loadPlayerStatus(conn, data)
                 }
             } catch (e: SQLException) {
                 plugin.logger.severe("加载玩家数据失败: " + e.message)
@@ -754,6 +787,55 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
             }
         } catch (e: java.sql.SQLException) {
             plugin.logger.severe("保存丹药数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 保存状态
+     */
+    fun savePlayerStatus(conn: Connection, data: PlayerData) {
+        val sql = """
+            INSERT INTO player_status (uuid, status, description) 
+            VALUES (?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET status = ?, description = ?;
+        """.trimIndent()
+
+        try {
+            // 不要关闭传入的 conn，只关闭 PreparedStatement
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.setInt(2, data.status)
+                ps.setString(3, data.statusDescription)
+                // Update
+                ps.setInt(4, data.status)
+                ps.setString(5, data.statusDescription)
+                ps.executeUpdate()
+            }
+        } catch (e: SQLException) {
+            plugin.logger.warning("保存玩家状态失败: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 读取状态 (返回 Pair<Int, String>)
+     */
+    fun loadPlayerStatus(conn: Connection, data: PlayerData) {
+        val sql = "SELECT status, description FROM player_status WHERE uuid = ?"
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        val s = rs.getInt("status")
+                        // 设值并自动刷新描述
+                        data.updateStatus(s)
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.warning("读取玩家状态失败: ${e.message}")
             e.printStackTrace()
         }
     }

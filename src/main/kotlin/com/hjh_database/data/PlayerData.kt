@@ -271,4 +271,31 @@ class PlayerData(val uuid: UUID, val playerName: String) {
             e.printStackTrace()
         }
     }
+
+    // 【新增】玩家状态系统 (Status)
+    // ==========================================
+
+    // 状态值 (默认 0)
+    var status: Int = 0
+    // 状态描述
+    var statusDescription: String = "新人进入服务器"
+
+    /**
+     * 更新状态的唯一入口
+     * 调用这个方法，会自动更新 status 和 description
+     */
+    fun updateStatus(newStatus: Int) {
+        this.status = newStatus
+        // 根据数字自动匹配描述 (你可以随时在这里修改文案)
+        this.statusDescription = when (newStatus) {
+            0 -> "新人进入服务器"
+            1 -> "新人-过前置描述-未进入盘古大陆"
+            2 -> "新人-已进入大陆-过剧情ing"
+            3 -> "大陆中"
+            4 -> "新人-已进入大陆-职业体验中"
+            5 -> "副本中"
+            6 -> "奈何桥中"
+            else -> "未知状态"
+        }
+    }
 }

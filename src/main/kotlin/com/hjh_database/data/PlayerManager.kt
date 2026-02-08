@@ -112,7 +112,6 @@ class PlayerManager(private val plugin: Hjh_database) {
             .thenAccept { loadedData ->
                 // 如果数据库为空，创建新数据
                 val data = loadedData ?: PlayerData(player.uniqueId, player.name)
-
                 dataCache[player.uniqueId] = data
 
                 // 同步锻造数据 (保持原样)
