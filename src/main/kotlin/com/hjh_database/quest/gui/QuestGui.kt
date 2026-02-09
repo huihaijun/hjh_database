@@ -24,11 +24,11 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
     fun openCategoryMenu(player: Player) {
         val inv = Bukkit.createInventory(CategoryHolder(), 27, "§8任务列表 - 请选择分类")
 
-        // 放置四个分类按钮
-        inv.setItem(10, createIcon(Material.BOOK, "§e§l主线任务", listOf("§7查看当前种族的主线剧情")))
-        inv.setItem(12, createIcon(Material.PAPER, "§b§l支线任务", listOf("§7查看江湖轶事")))
-        inv.setItem(14, createIcon(Material.MAP, "§c§l赏金任务", listOf("§7悬赏缉拿，获取报酬")))
-        inv.setItem(16, createIcon(Material.NETHER_STAR, "§6§l挑战任务", listOf("§7突破自我，挑战极限")))
+        //放置四个分类按钮
+        inv.setItem(10, createIcon(Material.BOOK, "§e§l云游志", listOf("§7查看当前种族的主线剧情")))
+        inv.setItem(12, createIcon(Material.PAPER, "§b§l奇遇记", listOf("§7查看支线任务")))
+        inv.setItem(14, createIcon(Material.MAP, "§c§l赏金簿", listOf("§7查看赏金任务")))
+        inv.setItem(16, createIcon(Material.NETHER_STAR, "§6§l征伐书", listOf("§7查看挑战任务")))
 
         player.openInventory(inv)
     }

@@ -8,7 +8,7 @@ enum class QuestType(val displayName: String) {
 }
 
 enum class QuestStatus {
-    LOCKED,      // 未接取/不可见
+    LOCKED,      //未接取/不可见
     IN_PROGRESS, // 进行中
     COMPLETED    // 已完成
 }

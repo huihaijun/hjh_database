@@ -59,6 +59,8 @@ class Hjh_database : JavaPlugin() {
     lateinit var raceModule: com.hjh_database.race.RaceManager
     // 【新增】声明 spawnerBlockManager 变量
     lateinit var spawnerBlockManager: SpawnerBlockManager
+    // 【新增】声明 TeleportManager 传送锚点变量
+    lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
 
     override fun onEnable() {
 
@@ -141,6 +143,10 @@ class Hjh_database : JavaPlugin() {
 
         // 【新增】在 onEnable 里初始化刷怪
         spawnerBlockManager = SpawnerBlockManager(this)
+
+        // 初始化传送模块
+        teleportManager = com.hjh_database.teleport.TeleportManager(this)
+        server.pluginManager.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
 
         // 注册监听器 (之前提到过的)
         server.pluginManager.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)

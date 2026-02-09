@@ -5,7 +5,12 @@ import com.hjh_database.quest.impl.main.ren.Ren_02
 import com.hjh_database.quest.impl.main.ren.Ren_03
 import com.hjh_database.quest.impl.main.ren.Ren_04
 import com.hjh_database.quest.impl.main.ren.Ren_05
-//import com.hjh_database.quest.impl.main.ren.Ren_06
+import com.hjh_database.quest.impl.main.ren.Ren_06
+//import com.hjh_database.quest.impl.main.ren.Ren_07
+//import com.hjh_database.quest.impl.main.ren.Ren_08
+//import com.hjh_database.quest.impl.main.ren.Ren_09
+//import com.hjh_database.quest.impl.main.ren.Ren_10
+//import com.hjh_database.quest.impl.main.ren.Ren_11
 
 object QuestRegistry {
     fun registerAll(manager: QuestManager) {
@@ -15,7 +20,12 @@ object QuestRegistry {
         manager.register(Ren_03())
         manager.register(Ren_04())
         manager.register(Ren_05())
-//        manager.register(Ren_06())
+        manager.register(Ren_06())
+//        manager.register(Ren_07())
+//        manager.register(Ren_08())
+//        manager.register(Ren_09())
+//        manager.register(Ren_10())
+
 
 
         // === 仙族主线 ===

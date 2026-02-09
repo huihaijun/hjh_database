@@ -48,6 +48,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin spawn - 生成自定义刷怪笼等")
             // 【丹药提示】
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin alchemy <list|give|getcauldron> ... - 丹药系统指令")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettp <方块材质> <传送点ID> - 获取传送触发器")
             return true
         }
 
@@ -77,8 +78,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             // 重载丹药配方
             plugin.alchemyManager.loadRecipes()
-
-            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy)已重载！")
+            // 重载传送点
+            plugin.teleportManager.reload()
+            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport)已重载！")
             return true
         }
 
@@ -255,6 +257,74 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 刷新属性
             plugin.playerManager.updateStats(target)
             sender.sendMessage(ChatColor.GREEN.toString() + "已发放全套测试装备给 " + target.name)
+            return true
+        }
+
+        // === status (查看/修改玩家剧情状态) ===
+        if (subCommand == "status") {
+            // 参数检查: /hjhadmin status <玩家> [set <数值>]
+            if (args.size < 2) return error(sender, "用法: /hjhadmin status <玩家> [set <数值>]")
+            val target = Bukkit.getPlayerExact(args[1])
+            if (target == null) return error(sender, "玩家不在线")
+            // 获取数据
+            val data = plugin.playerManager.getPlayerData(target)
+            if (data == null) return error(sender, "数据加载中...")
+            // 1. 查询状态 (只有2个参数时)
+            if (args.size == 2) {
+                sender.sendMessage("§8[§aStatus§8] §f${target.name}: §e${data.status} §7(${data.statusDescription})")
+                return true
+            }
+            // 2. 修改状态 (参数 >= 4 且 第三个参数是 set)
+            if (args.size >= 4 && args[2].equals("set", ignoreCase = true)) {
+                val newStatus = args[3].toIntOrNull()
+                if (newStatus == null) return error(sender, "状态值必须是整数")
+                // 修改内存 (描述自动更新)
+                data.updateStatus(newStatus)
+                // 异步保存数据库
+                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    try {
+                        plugin.databaseManager.dataSource?.connection?.use { conn ->
+                            // 调用之前在 DatabaseManager 写的子模块方法
+                            plugin.databaseManager.savePlayerStatus(conn, data)
+                        }
+                        sender.sendMessage("§a[HJH] 已将 ${target.name} 状态设为 $newStatus (${data.statusDescription}) 并保存。")
+                    } catch (e: Exception) {
+                        sender.sendMessage("§c保存失败: ${e.message}")
+                        e.printStackTrace()
+                    }
+                })
+                return true
+            }
+            return error(sender, "用法: /hjhadmin status <玩家> [set <数值>]")
+        }
+
+        // === gettp (获取传送触发方块) ===
+        if (subCommand == "gettp") {
+            // 用法: /hjhadmin gettp <材质> <传送点ID>
+            if (args.size < 3) return error(sender, "用法: /hjhadmin gettp <材质> <传送点ID>")
+            if (sender !is Player) return error(sender, "只有玩家可用")
+            val matName = args[1].uppercase()
+            val pointId = args[2]
+            // 1. 检查材质
+            val mat = org.bukkit.Material.getMaterial(matName)
+            if (mat == null || !mat.isBlock) {
+                return error(sender, "无效的方块材质: $matName")
+            }
+            // 2. 检查配置中是否有这个ID (可选，建议检查)
+            if (!plugin.teleportManager.points.containsKey(pointId)) {
+                sender.sendMessage("§c[警告] 传送点ID [$pointId] 尚未在 teleports.yml 中配置，但你仍然可以放置它。")
+            }
+            // 3. 生成物品
+            val item = org.bukkit.inventory.ItemStack(mat)
+            val meta = item.itemMeta
+            meta?.setDisplayName("§b§l[传送触发器] §e$pointId")
+            meta?.lore = listOf("§7放置此方块后", "§7玩家交互将传送至: §f$pointId")
+            // 写入 NBT (PDC)
+            val key = org.bukkit.NamespacedKey(plugin, "hjh_tp_point_id")
+            meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.STRING, pointId)
+            item.itemMeta = meta
+            sender.inventory.addItem(item)
+            sender.sendMessage("§a已获取传送触发器: $pointId ($matName)")
             return true
         }
 
@@ -451,7 +521,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<out String>): List<String>? {
         // 【修改】添加 medical, alchemy 到一级补全
-        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy","spawner").filter { it.startsWith(args[0].lowercase()) }
+        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy","spawner", "status","gettp").filter { it.startsWith(args[0].lowercase()) }
 
         val subCmd = args[0].lowercase()
 
@@ -478,6 +548,25 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         if (subCmd == "spawner") {
             if (args.size == 2) {
                 return listOf("get", "wand").filter { it.startsWith(args[1].lowercase()) }
+            }
+        }
+
+        // 【新增】玩家状态status 指令补全
+        if (subCmd == "status") {
+            if (args.size == 2) return null // 补全玩家名
+            if (args.size == 3) return listOf("set")
+            // 提示一些常用状态值
+            if (args.size == 4 && args[2].equals("set", true)) return listOf("0", "1", "2", "3", "4")
+        }
+
+        if (subCmd == "gettp") {
+            if (args.size == 2) {
+                // 提示压力板和按钮，方便选择
+                return listOf("STONE_PRESSURE_PLATE", "OAK_BUTTON", "LEVER", "STONE").filter { it.startsWith(args[1].uppercase()) }
+            }
+            if (args.size == 3) {
+                // 提示已有的传送点ID
+                return plugin.teleportManager.points.keys.toList().filter { it.startsWith(args[2]) }
             }
         }
 

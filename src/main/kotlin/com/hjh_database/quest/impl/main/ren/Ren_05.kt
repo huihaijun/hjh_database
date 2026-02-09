@@ -157,8 +157,10 @@ class Ren_05 : QuestBase("main_ren_5", "[人族主线]人族证明", QuestType.M
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
             data.exp += 10
+            data.status = 3
             Hjh_database.instance.databaseManager.savePlayer(data)
         }
+
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
     }

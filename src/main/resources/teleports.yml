@@ -1,0 +1,118 @@
+## 传送点配置
+#points:
+#  # 传送点ID (指令里用这个名字)
+#  测试地点（支持中文）:
+#    # 目标坐标
+#    world: "world"
+#    x: 100.5
+#    y: 65.0
+#    z: 200.5
+#    yaw: 0.0
+#    pitch: 0.0
+#    # === 限制条件 (不写则无限制) ===
+#    conditions:
+#      # 职业限制: 0=战士, 1=弓箭手...
+#      job:
+#        values: [0, 1]
+#        message: "&c只有战士和弓箭手才能前往新手村！"
+#      # 等级限制 (>=)
+#      min_level: 10
+#      level_message: "&c你的等级不足 10 级，无法传送！"
+#      # 状态限制 (必须等于其中之一)
+#      status:
+#        values: [1, 2]
+#        message: "&c你需要先完成前置剧情才能通过！"
+#    # === 成功后的操作 ===
+#    actions:
+#      # 传送成功后，将玩家状态修改为 2 (例如：进入下一章)
+#      # 如果不需要修改，删除此行即可
+#      rewrite_status: 2
+#      # 传送提示
+#      message: "&a你被传送到了新手村..."
+#      set_job: 0  # 踩上去就变成战士(id:0)
+#    # set_race: 1  custom_action: "ENTER_BOSS_ROOM"
+points:
+  选择人族-前往新手前置:
+    world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40      # 449.40 - 360 = 89.40 (角度归一化，效果一样)
+    pitch: 2.10
+    actions:
+      # 这里填写我们在代码里定义的代号
+      custom_action: "CHOOSE_HUMAN_START"
+      message: "&7你选择了[人族]，正在前往新手前置之地"
+
+  新手前置回初始点:
+    world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40      # 449.40 - 360 = 89.40 (角度归一化，效果一样)
+    pitch: 2.10
+    actions:
+      message: "&7你回到了新手前置初始点"
+
+  新手前置-听种族故事:
+    # 这里填 Race 0 的坐标，作为基础点
+    world: "world"
+    x: 1200.5
+    y: 43.0
+    z: 647.5
+    yaw: -90.0
+    pitch: 0.0
+    actions:
+      custom_action: "TELEPORT_BY_RACE" # 调用刚才写的代码逻辑
+
+
+  种族故事-进大陆前制作人员介绍:
+    world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
+    x: 1204.05
+    y: 27.00
+    z: -381.01
+    yaw: -90.0
+    pitch: 0.0
+
+  制作组-反悔重选种族:
+    world: "world"
+    x: 1315.5
+    y: 76.0
+    z: 42.5
+    yaw: 0.0    # 朝向，你可以进游戏F3看一眼你希望玩家朝哪边，然后改这个值
+    pitch: 0.0
+    actions:
+      custom_action: "RESET_RACE"
+
+  确认进入盘古大陆:
+    world: "world"
+    x: 3208.5
+    y: 73.0
+    z: 381.5
+    yaw: 90.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑
+      custom_action: "ENTER_PANGU"
+
+  人族-皇城:
+    world: "world"
+    x: 220.5
+    y: 49.0
+    z: 34.5
+    yaw: 0.0
+    pitch: 0.0
+    #=== 限制条件 ===
+    conditions:
+      # 状态限制 (必须等于其中之一)
+      status:
+        values: [ 3, 4 ]
+        message: "&c人族守卫对你说,请先再多了解一下,再前往皇城吧(请先完成主线剧情)"
+
+  皇城-人族:
+    world: "world"
+    x: 1595.5
+    y: 140.0
+    z: 123.5
+    yaw: -90.0
+    pitch: 0.0

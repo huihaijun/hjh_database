@@ -30,7 +30,7 @@ abstract class QuestBase(
     // 子类实现：具体的进度文本
     abstract fun getProgressText(progress: Int): List<String>
 
-    // === 核心逻辑接口 ===
+    //=== 核心逻辑接口 ===
 
     // 检查是否完成，返回 true 代表完成了
     abstract fun checkComplete(progress: Int): Boolean

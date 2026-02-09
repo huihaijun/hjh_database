@@ -44,7 +44,7 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
         if (quest.checkComplete(newProgress)) {
             completeQuest(player, data, quest)
         } else {
-            // 仅保存进度到数据库
+            //仅保存进度到数据库
             plugin.databaseManager.saveQuestData(player, questId, QuestStatus.IN_PROGRESS, newProgress)
         }
     }

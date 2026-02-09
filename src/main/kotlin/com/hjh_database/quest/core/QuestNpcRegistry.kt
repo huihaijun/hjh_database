@@ -57,7 +57,16 @@ enum class StoryNpcs(
     Villager.Profession.NITWIT,
     Villager.Type.PLAINS,
     1654.5, 153.5, 174.5, 90f
+    ),
+
+    REN_LIGONGGONG(
+    "ren_ligonggong",
+    "§a§l大内总管-李公公",
+    Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    173.5, 66.5, -158.5, 90f
     );
+
     // 后续有新 NPC 直接往这里加...
 
     /**
