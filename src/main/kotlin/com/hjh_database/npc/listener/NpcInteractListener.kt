@@ -1,5 +1,6 @@
 package com.hjh_database.npc.listener
 
+import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent
 import com.hjh_database.Hjh_database
 import com.hjh_database.npc.data.NpcInstance
 import com.hjh_database.npc.data.NpcTemplate
@@ -272,6 +273,26 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
             }
         } else {
             damager.sendMessage("§7(好像没什么事发生...)")
+        }
+    }
+
+    // ================== 4. 【新增】监听实体进入世界 (修复碰撞箱丢失) ==================
+    /**
+     * 当实体被加载到世界（区块加载、生成、重启后加载）时触发
+     * 确保 NPC 永远保持无碰撞状态
+     */
+    @EventHandler
+    fun onEntityLoad(event: EntityAddToWorldEvent) {
+        val entity = event.entity
+        if (entity !is Villager) return
+        // 检查是否是本插件 NPC
+        // 注意：这里不要做太重的逻辑，只检查 PDC
+        if (entity.persistentDataContainer.has(plugin.npcModule.manager.npcKey, PersistentDataType.STRING)) {
+            // 延迟 1 tick 执行，确保实体完全初始化后再覆盖属性
+            // 有时候刚生成的瞬间设置属性会被原版覆盖回去
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                plugin.npcModule.manager.applyNpcAttributes(entity)
+            })
         }
     }
 

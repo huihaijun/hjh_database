@@ -116,3 +116,48 @@ points:
     z: 123.5
     yaw: -90.0
     pitch: 0.0
+
+  职业体验-战士:
+    world: "world"
+    x: 1247.5
+    y: 36.0
+    z: -391.5
+    yaw: 90.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑
+      custom_action: "JOB_TRIAL_WARRIOR"
+
+  职业体验-弓箭手:
+    world: "world"
+    x: 1247.5
+    y: 36.0
+    z: -411.5
+    yaw: 90.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑
+      custom_action: "JOB_TRIAL_ARCHER"
+
+  职业体验-术士:
+    world: "world"
+    x: 1247.5
+    y: 36.0
+    z: -429.5
+    yaw: 90.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑
+      custom_action: "JOB_TRIAL_MAGIC"
+
+  职业体验-医师:
+    world: "world"
+    x: 1247.5
+    y: 36.0
+    z: -447.5
+    yaw: 90.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑
+      custom_action: "JOB_TRIAL_ALCHEMY"
+

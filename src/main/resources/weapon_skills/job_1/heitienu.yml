@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【游击】发动！"
+  cooldown: 10.0

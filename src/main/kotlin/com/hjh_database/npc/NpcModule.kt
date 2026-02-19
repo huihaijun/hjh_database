@@ -25,6 +25,12 @@ class NpcModule(private val plugin: Hjh_database) {
 
         // 4. (可选) 注册指令，如果以后有 /npc create 这种指令的话
 
+        // 【新增】延迟一小段时间后刷新全服 NPC
+        // 为什么要延迟？为了确保 WorldGuard 等其他世界保护插件或多世界插件加载完毕
+        plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            manager.refreshGlobalNpcs()
+        }, 20L) // 延迟 1秒 (20 ticks)
+
         plugin.logger.info("NPC 模块已加载")
     }
 

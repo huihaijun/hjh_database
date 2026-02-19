@@ -188,17 +188,53 @@ class PlayerManager(private val plugin: Hjh_database) {
             bonuses.merge(k, v) { a, b -> a + b }
         }
 
+        // ★★★ (C) 【新增】技能/Buff 临时加成 ★★★
+        // 这一步让技能可以直接影响最终面板，而不需要改写 PlayerData 的具体字段
+        data.tempBonuses.forEach { (k, v) ->
+            bonuses.merge(k, v) { a, b -> a + b }
+        }
+
         // ★ 在这里加上这段代码：从 Map 中提取总稀有度并保存
         if (bonuses.containsKey("total_rarity")) {
             data.totalRarity = bonuses["total_rarity"]!!.toInt()
         }
 
-        // 3. 应用加成 (保持原样)
-        data.maxHealth += bonuses.getOrDefault("max_health", 0.0)
-        data.attack += bonuses.getOrDefault("attack", 0.0)
-        data.archerDamage += bonuses.getOrDefault("archer_damage", 0.0)
+        // --- 生命值 ---
+        var extraHealth = bonuses.getOrDefault("max_health", 0.0)
+        data.maxHealth += extraHealth
+        // 处理生命百分比
+        if (bonuses.containsKey("max_health_percent")) {
+            val percent = bonuses["max_health_percent"]!!
+            data.maxHealth *= (1.0 + percent)
+        }
+
+        // --- 攻击力 ---
+        var baseAttack = bonuses.getOrDefault("attack", 0.0)
+        // 处理攻击力百分比
+        if (bonuses.containsKey("attack_percent")) {
+            // 假设基础攻击是 0 (实际上你应该有基础值)，这里我们让百分比作用于 (武器+装备) 的总攻击
+            // 如果你希望百分比作用于 (玩家自带1 + 装备)，请自行调整公式
+            // 目前逻辑：装备给的攻击力 * (1 + 百分比)
+            baseAttack *= (1.0 + bonuses["attack_percent"]!!)
+        }
+        data.attack += baseAttack
+
+        // --- 箭矢强度 ---
+        var baseArcher = bonuses.getOrDefault("archer_damage", 0.0)
+        if (bonuses.containsKey("archer_damage_percent")) {
+            baseArcher *= (1.0 + bonuses["archer_damage_percent"]!!)
+        }
+        data.archerDamage += baseArcher
+
         data.zfStr += bonuses.getOrDefault("zf_str", 0.0)
+
+        // --- 护甲 ---
         data.armor += bonuses.getOrDefault("armor", 0.0)
+        // 处理护甲百分比 (青铜剑)
+        if (bonuses.containsKey("armor_percent")) {
+            data.armor *= (1.0 + bonuses["armor_percent"]!!)
+        }
+
         data.knockBackRes += bonuses.getOrDefault("knock_back_res", 0.0)
         data.critChance += bonuses.getOrDefault("crit_chance", 0.0)
         data.coolReduce += bonuses.getOrDefault("cool_reduce", 0.0)
@@ -233,6 +269,18 @@ class PlayerManager(private val plugin: Hjh_database) {
 
         if (bonuses.containsKey("speed")) {
             data.speed += bonuses["speed"]!!
+        }
+
+        // === 【新增】速度百分比逻辑 ===
+        // 在 weapons.yml 里写 speed_percent: 0.5 代表增加 50% 移速
+        // --- 移速 ---
+        if (bonuses.containsKey("speed")) {
+            data.speed += bonuses["speed"]!!
+        }
+        // 处理移速百分比
+        if (bonuses.containsKey("speed_percent")) {
+            // speed_percent 为负数时即为减速
+            data.speed *= (1.0 + bonuses["speed_percent"]!!)
         }
 
         if (bonuses.containsKey("attack_percent")) {

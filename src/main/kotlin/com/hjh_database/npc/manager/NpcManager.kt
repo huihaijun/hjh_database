@@ -220,7 +220,30 @@ class NpcManager(private val plugin: Hjh_database) {
         villager.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = 0.0
         villager.getAttribute(Attribute.KNOCKBACK_RESISTANCE)?.baseValue = 1.0
         villager.isCollidable = false
+        villager.isGliding = false
         stripAiGoals(villager)
+    }
+
+    /**
+     * 【新增】全局刷新方法
+     * 用于在插件重载/启动时，扫描所有已加载区块的实体，恢复 NPC 属性
+     */
+    fun refreshGlobalNpcs() {
+        var count = 0
+        // 遍历所有世界
+        for (world in Bukkit.getWorlds()) {
+            // 遍历该世界所有加载的实体 (性能消耗很小，因为只是检查PDC)
+            for (entity in world.entities) {
+                if (entity is Villager) {
+                    // 检查是否包含本插件的 NPC Key
+                    if (entity.persistentDataContainer.has(npcKey, PersistentDataType.STRING)) {
+                        applyNpcAttributes(entity) // 再次强制应用属性
+                        count++
+                    }
+                }
+            }
+        }
+        plugin.logger.info("已重新应用属性到 $count 个在线 NPC 实例。")
     }
 
     fun spawnNpc(location: Location, templateId: String): Villager? {

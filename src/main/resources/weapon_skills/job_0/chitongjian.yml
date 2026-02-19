@@ -1,0 +1,11 @@
+active:
+  enable: true
+  message: "&a&l武器技【凤焰斩】发动！"
+  cooldown: 10.0
+
+  # === 技能参数 (当前代码中写死了逻辑，如需全配置化可修改代码读取此处) ===
+  # 下面仅作为说明，代码中已经实现了 150% 和 2% Dot
+  damage_multiplier: 2.0
+  dot_duration: 5
+  dot_percent: 0.02
+  dot_max: 100.0

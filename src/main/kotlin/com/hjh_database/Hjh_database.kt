@@ -11,6 +11,7 @@ import com.hjh_database.dz.command.DzCommand
 import com.hjh_database.dz.listener.StationListener
 import com.hjh_database.dz.manager.DzLevelManager
 import com.hjh_database.dz.manager.RecipeManager
+import com.hjh_database.jobtrial.JobTrialManager
 import com.hjh_database.listener.CombatListener
 import com.hjh_database.listener.MenuListener
 import com.hjh_database.listener.PlayerListener
@@ -30,6 +31,7 @@ import com.hjh_database.quest.core.QuestManager
 // 【建议】导入 QuestGui，代码看着干净点
 import com.hjh_database.quest.gui.QuestGui
 import com.hjh_database.spawner.SpawnerBlockManager
+import com.hjh_database.weapon.WeaponManager
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -39,6 +41,7 @@ class Hjh_database : JavaPlugin() {
 
     lateinit var databaseManager: DatabaseManager
     lateinit var playerManager: PlayerManager
+    lateinit var weaponManager: WeaponManager
     lateinit var menuManager: MenuManager
     lateinit var elementZfManager: ElementZfManager
     lateinit var resourceManager: ResourceManager
@@ -49,6 +52,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var medicalManager: com.hjh_database.skill.medical.MedicalManager
     lateinit var medicalSpellManager: MedicalSpellManager
     lateinit var npcModule: NpcModule
+
 
     // 【新增】任务管理器变量
     lateinit var questManager: QuestManager
@@ -61,6 +65,8 @@ class Hjh_database : JavaPlugin() {
     lateinit var spawnerBlockManager: SpawnerBlockManager
     // 【新增】声明 TeleportManager 传送锚点变量
     lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
+    // 【新增】职业体验
+    lateinit var jobTrialManager: JobTrialManager
 
     override fun onEnable() {
 
@@ -70,6 +76,9 @@ class Hjh_database : JavaPlugin() {
 
         // 2. 初始化玩家管理器
         this.playerManager = PlayerManager(this)
+
+        // 初始化武器管理
+        this.weaponManager = WeaponManager(this)
 
         // 初始化菜单
         this.menuManager = MenuManager(this)
@@ -147,6 +156,9 @@ class Hjh_database : JavaPlugin() {
         // 初始化传送模块
         teleportManager = com.hjh_database.teleport.TeleportManager(this)
         server.pluginManager.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
+
+        // 初始化职业试炼管理器
+        jobTrialManager = JobTrialManager(this)
 
         // 注册监听器 (之前提到过的)
         server.pluginManager.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)

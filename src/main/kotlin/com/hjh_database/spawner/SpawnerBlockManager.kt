@@ -1,6 +1,5 @@
 package com.hjh_database.spawner
 
-import com.google.gson.Gson
 import com.hjh_database.Hjh_database
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -12,135 +11,101 @@ import org.bukkit.scheduler.BukkitRunnable
 
 class SpawnerBlockManager(private val plugin: Hjh_database) {
 
-    private val gson = Gson()
-    private val keySpawnerData = NamespacedKey(plugin, "hjh_spawner_data")
+    private val keyMobId = NamespacedKey(plugin, "hjh_spawner_mobid_block")
+    private val keyTarget = NamespacedKey(plugin, "hjh_spawner_target_block")
+    // 下次生成的冷却时间标记
+    private val keyNextSpawn = NamespacedKey(plugin, "hjh_spawner_next_spawn")
 
     init {
+        // 记得在 onEnable 调用 MobRegistry.init()
+        MobRegistry.init()
         startSpawnerTask()
+    }
+
+    // 写入数据工具方法 (给 Listener 用)
+    fun writeToSpawner(spawner: CreatureSpawner, mobId: String, targetStr: String?) {
+        spawner.persistentDataContainer.set(keyMobId, PersistentDataType.STRING, mobId)
+        if (targetStr != null) {
+            spawner.persistentDataContainer.set(keyTarget, PersistentDataType.STRING, targetStr)
+        } else {
+            spawner.persistentDataContainer.remove(keyTarget)
+        }
+        // 禁用原版生成
+        spawner.spawnCount = 0
+        spawner.update()
     }
 
     private fun startSpawnerTask() {
         object : BukkitRunnable() {
             override fun run() {
-                // 遍历所有在线玩家
                 for (player in Bukkit.getOnlinePlayers()) {
                     processPlayerSurroundings(player)
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L) // 每秒检查一次
+        }.runTaskTimer(plugin, 20L, 20L)
     }
 
     private fun processPlayerSurroundings(player: Player) {
-        val world = player.world
         val chunk = player.location.chunk
-
-        // 简单起见，只扫描玩家当前所在的 Chunk 和周围一圈
+        // 扫描周围区块
         for (x in -1..1) {
             for (z in -1..1) {
-                val currentChunk = world.getChunkAt(chunk.x + x, chunk.z + z)
+                val currentChunk = player.world.getChunkAt(chunk.x + x, chunk.z + z)
                 if (!currentChunk.isLoaded) continue
 
-                // 遍历 Chunk 内的所有 TileEntity
-                for (blockState in currentChunk.tileEntities) {
-                    if (blockState is CreatureSpawner) {
-                        tryTickSpawner(blockState, player)
+                for (tile in currentChunk.tileEntities) {
+                    if (tile is CreatureSpawner) {
+                        attemptSpawn(tile)
                     }
                 }
             }
         }
     }
 
-    private fun tryTickSpawner(spawner: CreatureSpawner, player: Player) {
-        // 1. 检查是否有我们的自定义数据
+    private fun attemptSpawn(spawner: CreatureSpawner) {
         val pdc = spawner.persistentDataContainer
-        if (!pdc.has(keySpawnerData, PersistentDataType.STRING)) return
+        val mobId = pdc.get(keyMobId, PersistentDataType.STRING) ?: return
+        val def = MobRegistry.get(mobId) ?: return // 如果 ID 不存在则跳过
 
-        // 2. 反序列化数据
-        val json = pdc.get(keySpawnerData, PersistentDataType.STRING)
-        val data = try {
-            gson.fromJson(json, SpawnerData::class.java)
-        } catch (e: Exception) {
-            return
-        }
-        // 核心修复：检查开关状态
-        // 如果未启用，直接不执行后续刷怪逻辑
-        if (!data.isEnabled) {
-            return
-        }
+        // 1. 检查冷却
+        val nextSpawn = pdc.get(keyNextSpawn, PersistentDataType.LONG) ?: 0L
+        if (System.currentTimeMillis() < nextSpawn) return
 
-        // 3. 检查玩家距离
-        if (player.location.distanceSquared(spawner.location) > (data.checkRange * data.checkRange)) {
-            return
-        }
-
-        // 4. 处理冷却
-        val currentTime = System.currentTimeMillis()
-        val nextSpawnKey = NamespacedKey(plugin, "next_spawn_time")
-        val nextSpawnTime = pdc.get(nextSpawnKey, PersistentDataType.LONG) ?: 0L
-
-        if (currentTime < nextSpawnTime) return
-
-        // 5. 确定刷怪坐标
-        val spawnLoc = parseSpawnLocation(spawner.location, data.targetLocationStr) ?: spawner.location.add(0.5, 1.0, 0.5)
-
-        // 6. 检查附近怪物数量
-        val nearby = spawnLoc.world?.getNearbyEntities(spawnLoc, 8.0, 8.0, 8.0) ?: return
-        val count = nearby.count {
-            it.scoreboardTags.contains("hjh_mob_id:${data.internalId}")
+        // 2. 确定生成位置
+        val targetStr = pdc.get(keyTarget, PersistentDataType.STRING)
+        val spawnLoc = if (targetStr != null) {
+            parseLocation(targetStr) ?: spawner.location.add(0.5, 1.0, 0.5) // 解析失败则回退
+        } else {
+            // 默认模式：在刷怪笼周围随机找一点
+            spawner.location.add(0.5, 1.0, 0.5).add(
+                (Math.random() - 0.5) * 8,
+                (Math.random() - 0.5) * 2,
+                (Math.random() - 0.5) * 8
+            )
         }
 
-        if (count >= data.maxNearby) {
-            pdc.set(nextSpawnKey, PersistentDataType.LONG, currentTime + 5000L)
-            spawner.update()
-            return
-        }
+        if (spawnLoc.world == null) return
 
-        // 7. 生成怪物！
-        MobFactory.spawnMob(spawnLoc, data)
+        // 3. 检查数量上限 (def.maxNearby)
+        // 简单检查生成点周围 20 格内的同类怪物
+        val nearby = spawnLoc.world!!.getNearbyEntities(spawnLoc, 20.0, 20.0, 20.0)
+            .count { it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId }
 
-        // 8. 设置下一次刷新时间
-        val cooldownMs = data.cooldown * 50L // Tick -> Milliseconds
-        pdc.set(nextSpawnKey, PersistentDataType.LONG, currentTime + cooldownMs)
+        if (nearby >= def.maxNearby) return // 达到上限，不生成，也不重置冷却
+
+        // 4. 生成怪物 (传入 plugin 以便 Factory 访问 ResourceManager 等)
+        MobFactory.spawnMob(plugin, spawnLoc, mobId)
+        // 5. 设置冷却 (例如 20秒)
+        pdc.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + 20000L)
         spawner.update()
     }
 
-    /**
-     * 解析坐标字符串
-     */
-    private fun parseSpawnLocation(origin: Location, locStr: String?): Location? {
-        if (locStr == null) return null
-        try {
-            val parts = locStr.split(",")
-            if (parts.size != 4) return null
-
-            // 绝对坐标模式: "worldName,x,y,z"
-            val world = Bukkit.getWorld(parts[0]) ?: return null
-            val x = parts[1].toDouble()
-            val y = parts[2].toDouble()
-            val z = parts[3].toDouble()
-            return Location(world, x, y, z)
-        } catch (e: Exception) {
-            return null
-        }
-    }
-
-    // === 提供给外部的工具方法 ===
-
-    fun setSpawnerData(spawner: CreatureSpawner, data: SpawnerData) {
-        val json = gson.toJson(data)
-        spawner.persistentDataContainer.set(keySpawnerData, PersistentDataType.STRING, json)
-
-        // 禁用原版刷怪逻辑
-        spawner.spawnCount = 0
-        spawner.maxNearbyEntities = 0
-        spawner.update()
-    }
-
-    fun getSpawnerData(spawner: CreatureSpawner): SpawnerData? {
-        val pdc = spawner.persistentDataContainer
-        if (!pdc.has(keySpawnerData, PersistentDataType.STRING)) return null
+    private fun parseLocation(str: String): Location? {
+        val parts = str.split(",")
+        if (parts.size != 4) return null
+        val world = Bukkit.getWorld(parts[0]) ?: return null
         return try {
-            gson.fromJson(pdc.get(keySpawnerData, PersistentDataType.STRING), SpawnerData::class.java)
+            Location(world, parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
         } catch (e: Exception) { null }
     }
 }

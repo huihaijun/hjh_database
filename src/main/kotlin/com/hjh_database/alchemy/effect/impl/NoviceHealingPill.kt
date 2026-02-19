@@ -83,9 +83,7 @@ class NoviceHealingPill : AlchemyEffect {
         if (tier == AlchemyTier.LOW) {
             // 瞬间治疗逻辑
             player.addPotionEffect(PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 0))
-//            player.sendMessage("§a[药效] 你喝下了药水，感觉好多了。")
         }
-
         // 返回 0 表示这是一个瞬间药剂，不需要持续 ticking
         // 如果你返回 10，那么 onTick 就会被执行 10 次
         return 0

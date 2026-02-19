@@ -15,4 +15,8 @@ interface WeaponSkill {
      * @return 释放是否成功
      */
     fun castActive(player: Player?, data: PlayerData?, config: ConfigurationSection?, projectile: Entity?): Boolean
+
+    // 【新增】强制关闭方法 (用于切换武器时自动失效)
+    // 默认实现为空，不需要关闭逻辑的技能可以不写
+    fun deactivate(player: Player) {}
 }

@@ -7,7 +7,6 @@ import com.hjh_database.dz.gui.RecipePreviewGui
 import com.hjh_database.skill.medical.gui.MedicalEtchGui.EtchHolder
 import com.hjh_database.skill.medical.gui.MedicalEtchGui.MainMenuHolder
 import com.hjh_database.skill.medical.gui.MedicalEtchGui.SeparateHolder
-import com.hjh_database.spawner.gui.SpawnerGui
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
@@ -47,8 +46,7 @@ class ResourceListener(private val plugin: Hjh_database) : Listener {
             holder is RecipePreviewGui ||
             holder is EtchHolder ||
             holder is SeparateHolder ||
-            holder is MainMenuHolder ||
-            holder is SpawnerGui
+            holder is MainMenuHolder
         ) {
             return
         }

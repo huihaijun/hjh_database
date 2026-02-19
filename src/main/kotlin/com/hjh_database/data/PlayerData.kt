@@ -7,6 +7,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 // 【新增】导入任务状态枚举
 import com.hjh_database.quest.core.QuestStatus
+import java.util.concurrent.ConcurrentHashMap
 
 class PlayerData(val uuid: UUID, val playerName: String) {
 
@@ -19,6 +20,12 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var attack: Double = 0.0
     var archerDamage: Double = 0.0
     var armor: Double = 0.0
+
+    // ★★★ 【新增】通用临时属性池 ★★★
+    // Key 对应 PlayerManager 里的属性名 (如 "attack", "max_health", "speed_percent")
+    // 不需要存入数据库，玩家下线或重启后自动清空，非常适合技能 buff
+    val tempBonuses = ConcurrentHashMap<String, Double>()
+
     var speed: Double = 0.2
     var maxHealth: Double = 20.0
     var currentHealth: Double = 20.0

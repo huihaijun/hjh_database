@@ -39,7 +39,7 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
 
     private val scriptLiGongGong = listOf(
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f啊，新面孔！从峡谷里走出来的族人，都是好样的。",
-        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f想当年，我也是通过层层考验，才得以进宫当差。见到你，就像见到当初的自己。",
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f想当年，我也是通过层层考验，才得以进宫做官呢。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f怎么样，有没有意愿也到宫里来当差啊？长那么俊俏去当探险者，真是可惜了…",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f好啦，不玩了，说正事。近来皇城周遭村庄屡遭野兽侵袭，陛下为此甚是忧心。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f朝廷决意派遣可靠之人前往查探。你来得正是时候。",
@@ -136,6 +136,7 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
         player.sendMessage("  §e[奖励] §f经验 +10")
         player.sendMessage("")
         player.sendMessage("  §e[提示] §f请阅读笔记，寻找职业导师")
+        player.sendMessage("  §e[提示] §f[选择职业]不记入主线流程")
         player.sendMessage("§8§m========================================")
 
         // 经验奖励

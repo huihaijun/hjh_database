@@ -1,0 +1,5 @@
+active:
+  enable: true
+  message: "&a&l武器技【檀香】发动！"
+  cooldown: 10.0
+  # 减速和晕眩的时长由代码硬编码控制以确保完美兼容

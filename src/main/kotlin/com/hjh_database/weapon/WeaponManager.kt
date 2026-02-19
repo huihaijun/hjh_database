@@ -187,6 +187,23 @@ class WeaponManager(private val plugin: Hjh_database) {
             }
 
             // =======================================================
+            // 【新增】弩型武器专属判定：激活时给附魔，未激活时移除，且始终隐藏附魔显示
+            // =======================================================
+            if (item.type == Material.CROSSBOW) {
+                if (isActive) {
+                    // 添加多重射击1 和 快速装填2 (true 代表无视原版附魔限制)
+                    meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
+                    meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+                } else {
+                    // 失效时移除，防止玩家放回背包依然能射出多重箭
+                    meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
+                    meta.removeEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE)
+                }
+                // 隐藏附魔文字描述
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS)
+            }
+
+            // =======================================================
             // 【关键修复】 4. 检查并保留医术信息 (防止刷新丢失)
             // =======================================================
             // 检查是否有医术ID的 NBT
@@ -319,11 +336,20 @@ class WeaponManager(private val plugin: Hjh_database) {
         // 3. 属性标记 (1.21.3 修复 +4 攻击力显示问题)
         meta.isUnbreakable = true
 
+        // 【新增】如果拿出来的是弩，默认给它附魔
+        if (item.type == Material.CROSSBOW) {
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+        }
+
         // 【关键修复】显式设置空属性修改器，清除原版属性
         meta.setAttributeModifiers(ArrayListMultimap.create())
 
         // 隐藏常规属性和 1.21+ 的额外提示
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES,
+            ItemFlag.HIDE_UNBREAKABLE,
+            ItemFlag.HIDE_ADDITIONAL_TOOLTIP,
+            ItemFlag.HIDE_ENCHANTS)
 
         item.itemMeta = meta
         return item

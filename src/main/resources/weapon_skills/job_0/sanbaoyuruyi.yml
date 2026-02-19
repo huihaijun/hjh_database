@@ -1,0 +1,9 @@
+active:
+  enable: true
+  message: "&a&l武器技【驱邪】发动！"
+  cooldown: 8.0 # 建议冷却稍微长一点
+
+  # 技能参数
+  duration: 5.0        # 持续时间
+  damage_boost: 1.5    # 伤害倍率 (1.5 = +50%)
+  execute_percent: 0.15 # 斩杀线 15%

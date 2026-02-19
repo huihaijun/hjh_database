@@ -232,4 +232,5 @@ class ResourceManager(private val plugin: Hjh_database) {
         list.addAll(plugin.playerManager.armorManager.allIds) // 护甲ID
         return list
     }
+
 }

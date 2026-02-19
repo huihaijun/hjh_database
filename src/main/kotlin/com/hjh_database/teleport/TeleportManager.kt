@@ -307,8 +307,87 @@ class TeleportManager(private val plugin: Hjh_database) {
                 player.sendMessage("§6恭喜正式进入盘古大陆。请与新手引导员进行交流，接取任务吧！")
                 return true // 需要保存数据
             }
+            // === 新增：职业体验-战士 ===
+            "JOB_TRIAL_WARRIOR" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+                // 3. 传送与数据更新
+                // 设置职业为 1，状态为 4
+                data.job = 0
+                data.updateStatus(4)
+                return true // 返回 true 以保存数据
+            }
+            "JOB_TRIAL_ARCHER" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+                // 3. 传送与数据更新
+                // 设置职业为 1，状态为 4
+                data.job = 1
+                data.updateStatus(4)
+                return true // 返回 true 以保存数据
+            }
+            "JOB_TRIAL_MAGIC" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+                // 3. 传送与数据更新
+                data.job = 2
+                data.updateStatus(4)
+                return true // 返回 true 以保存数据
+            }
+            "JOB_TRIAL_ALCHEMY" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+                // 3. 传送与数据更新
+                // 设置职业为 1，状态为 4
+                data.job = 3
+                data.updateStatus(4)
+                return true // 返回 true 以保存数据
+            }
         }
-
 
         return false
     }

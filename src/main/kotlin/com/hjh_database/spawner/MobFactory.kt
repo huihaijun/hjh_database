@@ -1,6 +1,5 @@
 package com.hjh_database.spawner
 
-import com.google.gson.Gson
 import com.hjh_database.Hjh_database
 import org.bukkit.ChatColor
 import org.bukkit.Location
@@ -8,123 +7,85 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.LivingEntity
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
-import org.bukkit.potion.PotionEffect
-import org.bukkit.potion.PotionEffectType
 
 object MobFactory {
 
-    private val KEY_MOB_ID = NamespacedKey.fromString("hjh_database:mob_id")!!
-    // 对接 CombatListener 的 Key
-    private val KEY_MOB_ARMOR = NamespacedKey.fromString("hjh_database:hjh_mob_armor")!!
+    val KEY_MOB_ID = NamespacedKey.fromString("hjh_database:mob_id")!!
+    private val KEY_CUSTOM_ARMOR = NamespacedKey.fromString("hjh_database:hjh_mob_armor")!!
     private val KEY_MOB_AFFIXES = NamespacedKey.fromString("hjh_database:mob_affixes")!!
-    // ★★★ 新增：掉落物数据的 Key ★★★
-    val KEY_MOB_DROPS = NamespacedKey.fromString("hjh_database:mob_drops")!!
-    private val gson = Gson() // 用于序列化掉落物列表
 
-    fun spawnMob(location: Location, data: SpawnerData): LivingEntity {
-        val world = location.world ?: throw IllegalArgumentException("Location world is null")
-        val entity = world.spawnEntity(location, data.mobType) as LivingEntity
+    fun spawnMob(plugin: Hjh_database, location: Location, mobId: String): LivingEntity? {
+        val def = MobRegistry.get(mobId) ?: return null
+        val world = location.world ?: return null
 
-        // --- 1. 处理属性数值 (先计算词缀加成) ---
-        var finalSpeed = data.speed
+        val entity = world.spawnEntity(location, def.type) as? LivingEntity ?: return null
 
-        // 【神速的】：速度 x 1.4
-        if (data.affixes.contains(MobAffix.SPEED)) {
-            finalSpeed *= 1.4
-        }
-
-        // --- 2. 应用基础属性 ---
-        applyAttribute(entity, Attribute.MAX_HEALTH, data.health)
-        entity.health = data.health
-        applyAttribute(entity, Attribute.ATTACK_DAMAGE, data.damage)
-        applyAttribute(entity, Attribute.MOVEMENT_SPEED, finalSpeed)
-
-        // 护甲写入 PDC，原版护甲清零
-        entity.persistentDataContainer.set(KEY_MOB_ARMOR, PersistentDataType.DOUBLE, data.armor)
-        applyAttribute(entity, Attribute.ARMOR, 0.0)
-
-        // --- 3. 处理静态词缀效果 ---
-
-        // 【千斤的】：防击退
-        if (data.affixes.contains(MobAffix.HEAVY)) {
-            applyAttribute(entity, Attribute.KNOCKBACK_RESISTANCE, 1.0)
-        }
-
-        // 【燃烧的】：自身抗火 + 视觉效果
-        if (data.affixes.contains(MobAffix.BURNING)) {
-            entity.addPotionEffect(PotionEffect(PotionEffectType.FIRE_RESISTANCE, 999999, 0, false, false))
-            entity.isVisualFire = true
-        }
-
-        // --- 4. 名字拼接 (格式：&c词缀 &c名字，中间空格) ---
-        val rawName = ChatColor.translateAlternateColorCodes('&', data.mobName)
-
-        if (data.affixes.isNotEmpty()) {
-            val prefixBuilder = StringBuilder()
-            // 这里只取第一个词缀做前缀，或者你可以遍历所有词缀
-            // 现在的需求是： "神速的 僵尸"
-            val affixName = data.affixes.first().displayName
-
-            // 格式：红色词缀 + 空格 + 红色名字
-            entity.customName = "§c$affixName §c$rawName"
-        } else {
-            entity.customName = rawName
-        }
-
+        // 1. 基础显示与属性
+        entity.customName = ChatColor.translateAlternateColorCodes('&', def.name)
         entity.isCustomNameVisible = true
 
-        // --- 5. 设置装备 ---
-        setupEquipment(entity, data)
+        entity.getAttribute(Attribute.MAX_HEALTH)?.baseValue = def.health
+        entity.health = def.health
+        entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = def.damage
+        entity.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = def.speed
 
-        // --- 6. 存数据 ---
+        // 2. 护甲系统适配
+        entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
+        entity.persistentDataContainer.set(KEY_CUSTOM_ARMOR, PersistentDataType.DOUBLE, def.armor)
+
+        // 3. Tags
         entity.addScoreboardTag("panling")
         entity.addScoreboardTag("monster")
-        entity.addScoreboardTag("hjh_mob_id:${data.internalId}")
-        entity.persistentDataContainer.set(KEY_MOB_ID, PersistentDataType.STRING, data.internalId)
+        entity.persistentDataContainer.set(KEY_MOB_ID, PersistentDataType.STRING, def.id)
 
-        if (data.affixes.isNotEmpty()) {
-            val affixStr = data.affixes.joinToString(",") { it.id }
+        // 4. 词缀
+        if (def.affixes.isNotEmpty()) {
+            val affixStr = def.affixes.joinToString(",") { it.id }
             entity.persistentDataContainer.set(KEY_MOB_AFFIXES, PersistentDataType.STRING, affixStr)
+
+            def.affixes.forEach { affix ->
+                if (affix == MobAffix.SPEED) {
+                    entity.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, Int.MAX_VALUE, 1))
+                }
+            }
         }
 
-        // ★★★ 核心修复：写入掉落物数据 ★★★
-        if (data.drops.isNotEmpty()) {
-            // 将 List<MobDrop> 转为 JSON 字符串存入实体
-            val dropsJson = gson.toJson(data.drops)
-            entity.persistentDataContainer.set(KEY_MOB_DROPS, PersistentDataType.STRING, dropsJson)
+        // 5. ★★★ 装备系统 (装饰性) ★★★
+        val equipment = entity.equipment
+        if (equipment != null) {
+            // A. 清空默认生成的装备 (防止普通僵尸自带杂乱装备)
+            equipment.clear()
+            // B. 辅助函数：创建纯装饰物品
+            fun setCosmetic(slot: EquipmentSlot, mat: Material?) {
+                if (mat == null || mat == Material.AIR) return
+                val item = ItemStack(mat)
+                val meta = item.itemMeta
+                if (meta != null) {
+                    // 无限耐久
+                    meta.isUnbreakable = true
+                    // 核心：清除所有属性修饰符 (Attack, Armor 等)
+                    // 这样装备就仅仅是"看起来"穿在身上，不提供任何数值
+                    meta.attributeModifiers = com.google.common.collect.ArrayListMultimap.create()
+                    item.itemMeta = meta
+                }
+
+                equipment.setItem(slot, item)
+                // 绝对不掉落
+                equipment.setDropChance(slot, 0f)
+            }
+
+            // C. 应用配置的装备
+            setCosmetic(EquipmentSlot.HEAD, def.helmet)
+            setCosmetic(EquipmentSlot.CHEST, def.chestplate)
+            setCosmetic(EquipmentSlot.LEGS, def.leggings)
+            setCosmetic(EquipmentSlot.FEET, def.boots)
+            setCosmetic(EquipmentSlot.HAND, def.mainHand)
+            setCosmetic(EquipmentSlot.OFF_HAND, def.offHand)
         }
 
         return entity
-    }
-
-    private fun setupEquipment(entity: LivingEntity, data: SpawnerData) {
-        // 1. 获取实体装备栏，如果没有(如史莱姆)则跳过
-        val equip = entity.equipment ?: return
-
-        // 2. 清空原版默认装备
-        equip.clear()
-
-        // 3. ★★★ 核心修复：使用新的 Base64 数据加载装备 ★★★
-        val equipmentMap = data.getEquipmentMap() // 调用 SpawnerData 中的新方法
-
-        equipmentMap.forEach { (slot, item) ->
-            if (item != null && item.type != Material.AIR) {
-                equip.setItem(slot, item)
-                // 设置掉落概率为 0 (装饰用)
-                equip.setDropChance(slot, 0f)
-            }
-        }
-    }
-
-    private fun applyAttribute(entity: LivingEntity, attribute: Attribute, value: Double) {
-        entity.getAttribute(attribute)?.baseValue = value
-    }
-
-    private fun createDisplayItem(matName: String?): ItemStack? {
-        if (matName.isNullOrEmpty()) return null
-        val mat = Material.matchMaterial(matName) ?: return null
-        return ItemStack(mat)
     }
 }
