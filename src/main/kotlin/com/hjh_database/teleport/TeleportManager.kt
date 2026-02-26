@@ -152,6 +152,13 @@ class TeleportManager(private val plugin: Hjh_database) {
             return
         }
 
+        // ★★★ 新增：前置硬编码条件检查，不满足直接 return 拦截传送 ★★★
+        if (point.customAction != null) {
+            if (!checkCustomActionConditions(player, data, point.customAction)) {
+                return // 条件不满足，安全终止
+            }
+        }
+
         // --- 执行传送 ---
         player.teleport(point.location)
         player.playSound(player.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f)
@@ -206,6 +213,104 @@ class TeleportManager(private val plugin: Hjh_database) {
                 }
             })
         }
+    }
+
+    /**
+     * 前置检查自定义动作的条件
+     * @return true 允许传送，false 拦截传送
+     */
+    private fun checkCustomActionConditions(player: Player, data: com.hjh_database.data.PlayerData, actionStr: String): Boolean {
+        when (actionStr) {
+            "JOB_TRIAL_WARRIOR" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+            }
+            "JOB_TRIAL_ARCHER" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+            }
+            "JOB_TRIAL_MAGIC" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+            }
+            "JOB_TRIAL_ALCHEMY" -> {
+                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
+                if (data.job != null && data.job in 0..3) {
+                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
+                    return false
+                }
+                // 2. 背包检查：检查背包内容和装备栏是否为空
+                val inv = player.inventory
+                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
+                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
+                if (hasItem) {
+                    player.sendMessage("§c请先清空背包再来吧")
+                    return false
+                }
+            }
+            // === 新增：重生石前置检查 ===
+            "RELIVE_STONE_TO_CITY", "RELIVE_STONE_TO_RACE" -> {
+                val itemInHand = player.inventory.itemInMainHand
+                // 从 ResourceManager 获取正确的重生石模板
+                val rm = Hjh_database.instance.resourceManager
+                val reliveStone = rm.getItem("relive_stone")
+                // 如果没拿东西或者配置获取失败
+                if (itemInHand.type == org.bukkit.Material.AIR || !itemInHand.hasItemMeta()) {
+                    player.sendMessage("§c请手持重生石重生！")
+                    return false
+                }
+                // 比对材质和名字判定是否为重生石
+                if (reliveStone != null) {
+                    val handMeta = itemInHand.itemMeta
+                    val stoneMeta = reliveStone.itemMeta
+                    if (itemInHand.type != reliveStone.type || handMeta?.displayName != stoneMeta?.displayName) {
+                        player.sendMessage("§c请手持重生石重生！")
+                        return false
+                    }
+                } else {
+                    player.sendMessage("§c[错误] 缺失重生石配置，请联系管理员！")
+                    return false
+                }
+                return true // 检查通过，允许传送
+            }
+        }
+        return true
     }
 
     /**
@@ -303,45 +408,26 @@ class TeleportManager(private val plugin: Hjh_database) {
                 // 3. 补满状态 (瞬间治疗 + 饱和)
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.INSTANT_HEALTH, 1, 255, false, false))
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1, 255, false, false))
+                // ★★★ 新增：自动接取人族主线第一个任务 ★★★
+                if (raceId == 2) {  // 只给人族接取
+                    plugin.questManager.acceptQuest(player, "main_ren_1")
+                }
                 // 4. 发送提示消息
                 player.sendMessage("§6恭喜正式进入盘古大陆。请与新手引导员进行交流，接取任务吧！")
                 return true // 需要保存数据
             }
-            // === 新增：职业体验-战士 ===
+            // === 职业体验-战士 ===
             "JOB_TRIAL_WARRIOR" -> {
-                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
-                if (data.job != null && data.job in 0..3) {
-                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
-                    return false
-                }
-                // 2. 背包检查：检查背包内容和装备栏是否为空
-                val inv = player.inventory
-                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
-                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
-                if (hasItem) {
-                    player.sendMessage("§c请先清空背包再来吧")
-                    return false
-                }
-                // 3. 传送与数据更新
+                // 此时能运行到这里，说明 checkCustomActionConditions 已经通过了
+                // 且玩家已经被 tryTeleport 方法准确传送到了 yml 填写的坐标
                 // 设置职业为 1，状态为 4
                 data.job = 0
                 data.updateStatus(4)
-                return true // 返回 true 以保存数据
+                player.playSound(player.location, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f)
+                return true // 返回 true 以保存数据库
             }
+
             "JOB_TRIAL_ARCHER" -> {
-                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
-                if (data.job != null && data.job in 0..3) {
-                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
-                    return false
-                }
-                // 2. 背包检查：检查背包内容和装备栏是否为空
-                val inv = player.inventory
-                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
-                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
-                if (hasItem) {
-                    player.sendMessage("§c请先清空背包再来吧")
-                    return false
-                }
                 // 3. 传送与数据更新
                 // 设置职业为 1，状态为 4
                 data.job = 1
@@ -349,43 +435,234 @@ class TeleportManager(private val plugin: Hjh_database) {
                 return true // 返回 true 以保存数据
             }
             "JOB_TRIAL_MAGIC" -> {
-                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
-                if (data.job != null && data.job in 0..3) {
-                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
-                    return false
-                }
-                // 2. 背包检查：检查背包内容和装备栏是否为空
-                val inv = player.inventory
-                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
-                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
-                if (hasItem) {
-                    player.sendMessage("§c请先清空背包再来吧")
-                    return false
-                }
                 // 3. 传送与数据更新
                 data.job = 2
                 data.updateStatus(4)
                 return true // 返回 true 以保存数据
             }
             "JOB_TRIAL_ALCHEMY" -> {
-                // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
-                if (data.job != null && data.job in 0..3) {
-                    player.sendMessage("§c你已经选择了职业，无法再来体验了！")
-                    return false
-                }
-                // 2. 背包检查：检查背包内容和装备栏是否为空
-                val inv = player.inventory
-                val hasItem = inv.contents.any { it != null && it.type != org.bukkit.Material.AIR } ||
-                        inv.armorContents.any { it != null && it.type != org.bukkit.Material.AIR }
-                if (hasItem) {
-                    player.sendMessage("§c请先清空背包再来吧")
-                    return false
-                }
                 // 3. 传送与数据更新
                 // 设置职业为 1，状态为 4
                 data.job = 3
                 data.updateStatus(4)
                 return true // 返回 true 以保存数据
+            }
+            // === 新增：全职业暂离-体验其他职业 ===
+            "LEAVE_JOB_TRIAL_WARRIOR",
+            "LEAVE_JOB_TRIAL_ARCHER",
+            "LEAVE_JOB_TRIAL_MAGIC",
+            "LEAVE_JOB_TRIAL_DOCTOR" -> {
+                // 1. 清空玩家背包和装备栏
+                player.inventory.clear()
+                player.inventory.armorContents = arrayOfNulls(4)
+                // 2. 将玩家 status 设置为 3
+                data.updateStatus(3)
+                // 3. 将玩家 job 设置为 null
+                data.job = null
+                // 清空该玩家所有的医术记忆
+                data.clearMedicalSkills()
+                // 异步保存医术数据（如果你的转职逻辑最后有统一的 savePlayer(data)，这行也可以省略，但加上最保险）
+                java.util.concurrent.CompletableFuture.runAsync { plugin.databaseManager.saveMedicalData(data) }
+                // 4. 将玩家体力和饱和恢复满 (瞬间治疗 + 饱和度，255级)
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.INSTANT_HEALTH, 1, 255, false, false))
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1, 255, false, false))
+                // 5. 根据具体的 actionStr 动态获取职业名称并发送消息
+                val jobName = when (actionStr) {
+                    "LEAVE_JOB_TRIAL_WARRIOR" -> "战士"
+                    "LEAVE_JOB_TRIAL_ARCHER" -> "弓箭手"
+                    "LEAVE_JOB_TRIAL_MAGIC" -> "术士"
+                    "LEAVE_JOB_TRIAL_DOCTOR" -> "医师"
+                    else -> "未知"
+                }
+                player.sendMessage("§7你暂时离开了${jobName}职业体验……")
+                // 返回 true 表示数据已发生变动，需要保存数据库
+                return true
+            }
+            // === 新增：决定成为职业 (全职业合并处理) ===
+            "CHOOSE_JOB_WARRIOR",
+            "CHOOSE_JOB_ARCHER",
+            "CHOOSE_JOB_MAGIC",
+            "CHOOSE_JOB_DOCTOR" -> {
+                // 1 & 2. 清空背包和装备栏
+                player.inventory.clear()
+                player.inventory.armorContents = arrayOfNulls(4)
+                // 3. 将玩家状态设为 3
+                data.updateStatus(3)
+                // 5. 恢复满状态 (瞬间治疗 + 饱和度)
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.INSTANT_HEALTH, 1, 255, false, false))
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1, 255, false, false))
+                // 6. 播放升级音效，降低音量 (0.6f) 避免太吵
+                player.playSound(player.location, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.6f, 1f)
+                // 获取你的资源管理器 (根据你的之前代码，通常是这样获取的，如果报错请改为 plugin.resourceManager)
+                val rm = Hjh_database.instance.resourceManager
+                // 用来收集溢出背包的物品
+                val leftovers = mutableMapOf<Int, org.bukkit.inventory.ItemStack>()
+                // ★★★ 新增：全职业通用防具 (初心套) ★★★
+                val helmet = rm.getItem("chuxinzhepimao") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.LEATHER_HELMET).apply {
+                    itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] chuxinzhepimao") }
+                }
+                val chestplate = rm.getItem("chuxinzhehujia") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.LEATHER_CHESTPLATE).apply {
+                    itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] chuxinzhehujia") }
+                }
+                val leggings = rm.getItem("chuxinzhehutui") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.LEATHER_LEGGINGS).apply {
+                    itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] chuxinzhehutui") }
+                }
+                val boots = rm.getItem("chuxinzhepixue") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.LEATHER_BOOTS).apply {
+                    itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] chuxinzhepixue") }
+                }
+
+                // 将防具发放给玩家
+                leftovers.putAll(player.inventory.addItem(helmet, chestplate, leggings, boots))
+                // ★★★ ============================ ★★★
+                // 4 & 7 & 8 & 9. 分支处理具体职业的 job、消息与物品
+                when (actionStr) {
+                    "CHOOSE_JOB_WARRIOR" -> {
+                        data.job = 0
+                        player.sendMessage("§6恭喜你成功加入职业——【战士】！")
+                        player.sendMessage("§e[顾镇岳]: §f好小子，果然没看错你！这些就都给你了！")
+                        val weapon = rm.getItem("taomujian") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD).apply {
+                            itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] taomujian") }
+                        }
+                        // 手搓包子
+                        val food = org.bukkit.inventory.ItemStack(org.bukkit.Material.BREAD, 15).apply {
+                            itemMeta = itemMeta?.apply { setDisplayName("§f包子") }
+                        }
+                        leftovers.putAll(player.inventory.addItem(weapon, food))
+                    }
+                    "CHOOSE_JOB_ARCHER" -> {
+                        data.job = 1
+                        player.sendMessage("§6恭喜你成功加入职业——【弓箭手】！")
+                        player.sendMessage("§e[余步云]: §f不错，很有风度，拿好这把弓！")
+                        val weapon = rm.getItem("tengmugong") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.BOW).apply {
+                            itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] tengmugong") }
+                        }
+                        // 手搓原版箭
+                        val arrows = org.bukkit.inventory.ItemStack(org.bukkit.Material.ARROW, 64)
+                        leftovers.putAll(player.inventory.addItem(weapon, arrows))
+                    }
+                    "CHOOSE_JOB_MAGIC" -> {
+                        data.job = 2
+                        player.sendMessage("§6恭喜你成功加入职业——【术士】！")
+                        player.sendMessage("§e[秦观星]: §f果然符合我们术士的审美，这炉子和元素你且拿好~")
+                        val weapon = rm.getItem("xuetulu") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.CARROT_ON_A_STICK).apply {
+                            itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] xuetulu") }
+                        }
+                        // 批量生成5种元素
+                        val elements = listOf("metal", "wood", "fire", "water", "earth").map { id ->
+                            val item = rm.getItem(id) ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_NUGGET).apply {
+                                itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] $id") }
+                            }
+                            item.amount = 8
+                            item
+                        }
+                        // 武器和元素一起塞入背包
+                        leftovers.putAll(player.inventory.addItem(weapon, *elements.toTypedArray()))
+                    }
+                    "CHOOSE_JOB_DOCTOR" -> {
+                        data.job = 3
+                        // 清空该玩家所有的医术记忆
+                        data.clearMedicalSkills()
+                        // 异步保存医术数据（如果你的转职逻辑最后有统一的 savePlayer(data)，这行也可以省略，但加上最保险）
+                        java.util.concurrent.CompletableFuture.runAsync { plugin.databaseManager.saveMedicalData(data) }
+                        player.sendMessage("§6恭喜你成功加入职业——【医师】！")
+                        player.sendMessage("§e[韩济世]: §f老夫后继有人了！这初阶的医术和医旗就交付给你了，拿去绘制台自己绘制吧！")
+                        // 1. 给素布旗 (原有逻辑)
+                        val weapon = rm.getItem("subuqi") ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.WHITE_BANNER).apply {
+                            itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] subuqi") }
+                        }
+                        weapon.amount = 5
+                        leftovers.putAll(player.inventory.addItem(weapon))
+                        // 2. 发放医术：愈合花
+                        // 注意：这里的 plugin 是你的主类实例，请根据你当前类的实际情况替换 (比如 plugin.medicalManager)
+                        val yuhehua = plugin.medicalManager.getSkillBook("yuhehua")
+                        if (yuhehua != null) {
+                            // 默认 getSkillBook 出来的 amount 就是 1，直接给玩家即可
+                            leftovers.putAll(player.inventory.addItem(yuhehua))
+                        } else {
+                            player.sendMessage("§c[配置缺失] 找不到医术：yuhehua")
+                        }
+                        // 3. 发放医术：退敌
+                        val tuidi = plugin.medicalManager.getSkillBook("tuidi")
+                        if (tuidi != null) {
+                            leftovers.putAll(player.inventory.addItem(tuidi))
+                        } else {
+                            player.sendMessage("§c[配置缺失] 找不到医术：tuidi")
+                        }
+                    }
+                }
+
+                // 处理背包满的情况，把塞不下的掉在玩家脚下
+                if (leftovers.isNotEmpty()) {
+                    player.sendMessage("§c[提示] 背包已满，部分物品掉落在脚下！")
+                    for (item in leftovers.values) {
+                        player.world.dropItem(player.location, item)
+                    }
+                }
+                // 返回 true，保存写入的 job 和 status 数据
+                return true
+            }
+            // === 新增：奈何桥——重生石回皇城 ===
+            "RELIVE_STONE_TO_CITY" -> {
+                // 1. 扣除主手1个重生石
+                val itemInHand = player.inventory.itemInMainHand
+                itemInHand.amount = itemInHand.amount - 1
+
+                // 2. 设置状态为 3
+                data.updateStatus(3)
+
+                // 第一种情况的传送已经由 tryTeleport 通过 yml 中的 179.58 坐标自动完成了，无需在代码写传送
+                return true
+            }
+
+            // === 新增：奈何桥——重生石回种族 ===
+            "RELIVE_STONE_TO_RACE" -> {
+                // 1. 扣除主手1个重生石
+                val itemInHand = player.inventory.itemInMainHand
+                itemInHand.amount = itemInHand.amount - 1
+                // 2. 设置状态为 3
+                data.updateStatus(3)
+                // 3. 执行种族动态传送 (覆盖 yml 的空坐标)
+                val world = player.world
+                val raceId = data.race ?: 0
+                val targetLoc = when (raceId) {
+                    0 -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f)
+                    1 -> org.bukkit.Location(world, 3179.5, 127.0, 783.5, -90f, 0f)
+                    2 -> org.bukkit.Location(world, 1689.5, 140.0, 138.5, 90f, 0f)
+                    3 -> org.bukkit.Location(world, 3299.5, 22.0, -138.5, 90f, 0f)
+                    4 -> org.bukkit.Location(world, 2845.5, 48.0, 899.5, 180f, -20f)
+                    else -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f) // 默认去种族0
+                }
+                // 执行传送
+                player.teleport(targetLoc)
+                return true
+            }
+
+            // === 新增：奈何桥——无重生石打回种族 ===
+            "NO_STONE_TO_RACE" -> {
+                // 1. 设置状态为 3
+                data.updateStatus(3)
+                // 2. 执行种族动态传送 (覆盖 yml 的空坐标)
+                val world = player.world
+                val raceId = data.race ?: 0
+                val targetLoc = when (raceId) {
+                    0 -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f)
+                    1 -> org.bukkit.Location(world, 3179.5, 127.0, 783.5, -90f, 0f)
+                    2 -> org.bukkit.Location(world, 1689.5, 140.0, 138.5, 90f, 0f)
+                    3 -> org.bukkit.Location(world, 3299.5, 22.0, -138.5, 90f, 0f)
+                    4 -> org.bukkit.Location(world, 2845.5, 48.0, 899.5, 180f, -20f)
+                    else -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f) // 默认去种族0
+                }
+                // 执行传送
+                player.teleport(targetLoc)
+                // 3. 扣除 20% 的当前经验
+                val currentExp = data.exp
+                val deductExp = (currentExp * 0.2).toInt()
+                data.exp = (currentExp - deductExp).coerceAtLeast(0) // 防止变负数
+                // 为了让经验条立即在原版 UI 刷新，可以给个 0 经验触动一下 PlayerManager 的经验刷新逻辑
+                plugin.playerManager.giveExp(player, 0)
+                // 4. 给予持续 1 分钟的缓慢 2 (1分钟 = 1200 Tick，缓慢2 = amplifier 为 1)
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS, 1200, 1, false, false))
+                return true
             }
         }
 

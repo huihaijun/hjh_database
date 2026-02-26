@@ -1,8 +1,88 @@
 # 路径: resources/items/forge.yml
-steel_ingot:
-  material: IRON_INGOT
-  name: "&f精钢锭"
+armor_core_2:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 2
+  name: "&b二阶防具核心"
   lore:
-    - "&7经过千锤百炼的钢锭。"
-    - "&e[锻造材料]"
-  custom_model_data: 3005
+    - "&7&o不错的防具核心"
+    - "&7&o是用来锻造二阶防具的原材料"
+
+armor_core_3:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 3
+  name: "&b三阶防具核心"
+  lore:
+    - "&7&o稀有的防具核心"
+    - "&7&o是用来锻造三阶防具的原材料"
+
+chitongding:
+  material: GOLD_NUGGET
+  custom_model_data: 10055
+  rarity: 3
+  name: "&b赤铜锭"
+  lore:
+    - "&7&o稀有的武器材料"
+    - "&7&o在铁匠铺可以制作三阶武器"
+
+kaishandao_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a开山刀雏形[破军]"
+  lore:
+    - "&7&o用来制作战士武器——&a开山刀&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&a开山刀"
+
+qingtongjian_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a青铜剑雏形[金钟]"
+  lore:
+    - "&7&o用来制作战士武器——&a青铜剑&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&a青铜剑"
+
+heitienu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a黑铁弩雏形[游侠]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&a黑铁弩&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&a黑铁弩"
+
+qingtonggong_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a青铜弓雏形[狙击]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&a青铜弓&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&a青铜弓"
+
+shufalu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a术法炉雏形"
+  lore:
+    - "&7&o用来制作术士武器——&a术法炉&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士武器——&a术法炉"
+
+qingnangqi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 2
+  name: "&a青囊旗雏形"
+  lore:
+    - "&7&o用来制作医师武器——&a青囊旗&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师武器——&a青囊旗"
+    - "&e注意:&f锻造前,请先将医术从医旗上剥离"

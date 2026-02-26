@@ -1,6 +1,8 @@
 package com.hjh_database.resource
 
 import com.hjh_database.Hjh_database
+import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.UseCooldown
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -24,6 +26,8 @@ class ResourceManager(private val plugin: Hjh_database) {
     private val nameIndex: MutableMap<String, String> = HashMap()
 
     private val keyId: NamespacedKey = NamespacedKey(plugin, "resource_id")
+    // 【新增】定义免刷新锁的 Key
+    private val keyIgnoreRefresh: NamespacedKey = NamespacedKey(plugin, "hjh_ignore_refresh")
 
     init {
         loadAll()
@@ -140,59 +144,63 @@ class ResourceManager(private val plugin: Hjh_database) {
      */
     fun refreshItem(item: ItemStack?): Boolean {
         if (item == null || item.type == Material.AIR || !item.hasItemMeta()) return false
-        val meta = item.itemMeta ?: return false // Kotlin 空安全检查
-        // ==========================================================================
-        // 【核心修复】 检查 "免刷新锁" (hjh_ignore_refresh)
-        // 这是保护医术旗帜、秘籍不被 "洗白" 的关键！
-        val ignoreKey = NamespacedKey(plugin, "hjh_ignore_refresh")
-        if (meta.persistentDataContainer.has(ignoreKey, PersistentDataType.INTEGER)) {
-            // 发现锁！这是一个特殊的物品（如已刻印的医旗），绝对不能被重置！
-            return false
-        }
-        // ==========================================================================
+        val meta = item.itemMeta ?: return false
 
+        // 检查是否是本插件的自定义物品
         if (!meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) return false
-
         val id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING) ?: return false
 
-        // --- 逻辑分支 ---
+        // ==========================================================================
+        // 【核心修改：智能刷新】先提取可能存在的医术 ID，不直接拦截！
+        val keySkillId = NamespacedKey(plugin, "med_skill_id")
+        val skillId = meta.persistentDataContainer.get(keySkillId, PersistentDataType.STRING)
+        // ==========================================================================
 
+        var isRefreshed = false
+
+        // --- 逻辑分支 (接受 YML 最新配置覆盖) ---
         // A. 如果是武器
-        // (注意：这里原本的逻辑是毁灭性的，但加上上面的锁之后，医旗就安全了)
         val wm = plugin.playerManager.weaponManager
         if (wm.allIds.contains(id)) {
             val newItem = wm.getItemStack(id)
             if (newItem != null) {
-                // 直接替换 Meta，这会更新 Lore, Name, Flags, Unbreakable 等所有属性
                 item.type = newItem.type
-                item.itemMeta = newItem.itemMeta
-                return true
+                item.itemMeta = newItem.itemMeta // 这里会覆盖成 YML 最新版，但原本的 NBT 和图案会丢失！
+                isRefreshed = true
             }
         }
-
         // B. 如果是护甲
-        val am = plugin.playerManager.armorManager
-        if (am.allIds.contains(id)) {
-            val newItem = am.getItemStack(id)
+        else if (plugin.playerManager.armorManager.allIds.contains(id)) {
+            val newItem = plugin.playerManager.armorManager.getItemStack(id)
             if (newItem != null) {
                 item.type = newItem.type
                 item.itemMeta = newItem.itemMeta
-                return true
+                isRefreshed = true
             }
         }
-
         // C. 如果是杂项
-        val res = localResources[id]
-        if (res != null) {
-            if (item.type != res.material) {
-                item.type = res.material
+        else {
+            val res = localResources[id]
+            if (res != null) {
+                if (item.type != res.material) item.type = res.material
+                // 注意：由于杂项你写的是 applyResourceToMeta，它只会改 Name 和 Lore，原有的 NBT 可能还活着，
+                // 但为了统一安全，我们依然重新走一遍构建流程
+                val newMeta = item.itemMeta!!
+                applyResourceToMeta(newMeta, res)
+                item.itemMeta = newMeta
+                isRefreshed = true
             }
-            applyResourceToMeta(meta, res)
-            item.itemMeta = meta
-            return true
         }
 
-        return false
+        // ==========================================================================
+        // 【重塑医旗】如果物品刷新成功，且它原本是一把刻有医术的旗帜
+        if (isRefreshed && skillId != null) {
+            // 调用 MedicalManager 把医术独有的属性重新“拼”上去！
+            plugin.medicalManager.rebuildEtchedBanner(item, skillId)
+        }
+        // ==========================================================================
+
+        return isRefreshed
     }
 
     // 构建杂项物品
@@ -203,6 +211,20 @@ class ResourceManager(private val plugin: Hjh_database) {
             applyResourceToMeta(meta, res)
             meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, res.id!!)
             item.itemMeta = meta
+        }
+        // ================= 新增：统一注入冷却组组件 =================
+        // 如果它是五行元素，出厂就自带 Cooldown 冷却组组件，保证新老物品都能堆叠
+        val elements = listOf("metal", "wood", "water", "fire", "earth")
+        if (elements.contains(res.id)) {
+            // 【精准匹配】：根据你的 groupKeys，这里拼接上 "_group" 后缀
+            // 使用 plugin.name.lowercase() 动态获取命名空间，确保 100% 和 Bukkit 的 NamespacedKey 一致
+            val exactKeyString = "${plugin.name.lowercase()}:${res.id}_group"
+
+            val cooldownComponent = io.papermc.paper.datacomponent.item.UseCooldown.useCooldown(0.1f)
+                .cooldownGroup(net.kyori.adventure.key.Key.key(exactKeyString))
+                .build()
+
+            item.setData(io.papermc.paper.datacomponent.DataComponentTypes.USE_COOLDOWN, cooldownComponent)
         }
         return item
     }

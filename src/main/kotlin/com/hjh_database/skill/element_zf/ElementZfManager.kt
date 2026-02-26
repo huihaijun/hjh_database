@@ -6,6 +6,7 @@ import com.hjh_database.skill.element_zf.impl.*
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
@@ -102,6 +103,13 @@ class ElementZfManager(private val plugin: Hjh_database) {
             if (msg != null && msg.isNotEmpty()) {
                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.name)))
             }
+            // ==========================================
+            // 1. 构建带颜色代码的字符串 (使用 Kotlin 字符串模板更优雅)
+            val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
+            // 2. 使用 LegacyComponentSerializer 将 & 符号解析为真正的颜色组件
+            val component = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage)
+            // 3. 直接发送给玩家
+            player.sendActionBar(component)
         }
     }
 
@@ -112,31 +120,16 @@ class ElementZfManager(private val plugin: Hjh_database) {
     private fun setVisualCooldown(player: Player, type: String, seconds: Double) {
         val item = player.inventory.itemInMainHand
         if (item.type.isAir) return
-
         val groupKey = groupKeys[type] ?: return
         val ticks = (seconds * 20).toInt()
-
         try {
-            // 1. 【Paper API】给物品打上 "冷却组" 标签
-            // 这一步完全是原生的，不用反射了！
-            // UseCooldown 组件参数: (默认秒数, 组Key)
-            // 我们把默认秒数设为 0，因为我们想手动控制冷却时间
-            val cooldownComponent = UseCooldown.useCooldown(0.1f) // 1. 创建 Builder，设置默认冷却时间
-                .cooldownGroup(Key.key(groupKey.toString()))      // 2. 设置冷却组
-                .build()
-
-            // 设置组件数据
-            item.setData(DataComponentTypes.USE_COOLDOWN, cooldownComponent)
-
-            // 必须把修改后的物品放回玩家手里 (物品是不可变的，setData会返回新的数据但我们要确保ItemStack对象更新)
-            // *注意：Paper的API通常直接修改ItemStack，但为了保险起见建议重新set
-            player.inventory.setItemInMainHand(item)
-
-            // 2. 【Reflect】发送冷却数据包
-            // 虽然有了 Paper API 改数据，但 Bukkit 目前还没有 player.setCooldown(Key) 的方法
-            // 所以触发视觉效果还是得发包
+            // ================= 核心修改 =================
+            // 【删除】了原本在这里动态组装 UseCooldown 并通过 item.setData 写入物品的代码。
+            // 原因：物品在 ResourceManager 生成时已经自带了这个组件，再次修改会导致它和新物品无法堆叠。
+            // ============================================
+            // 【Reflect】直接发送冷却数据包
+            // 客户端读取到数据包后，会自动匹配手里物品自带的 cooldownGroup 并产生视觉冷却动画
             sendPacketCooldown(player, groupKey, ticks)
-
         } catch (e: Exception) {
             plugin.logger.warning("设置视觉冷却失败: ${e.message}")
             e.printStackTrace()
@@ -202,4 +195,10 @@ class ElementZfManager(private val plugin: Hjh_database) {
             internalCooldowns[player.uniqueId]!!.remove(type)
         }
     }
+
+    // 暴露 element_zf.yml 配置文件
+    fun getConfig(): FileConfiguration? {
+        return config
+    }
+
 }

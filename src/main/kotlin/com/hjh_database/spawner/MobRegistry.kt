@@ -24,7 +24,12 @@ data class MobDefinition(
     val maxNearby: Int,
     val drops: List<MobDrop>,
     val affixes: List<MobAffix> = emptyList(), // 使用你定义的枚举
-    // === 【新增】装饰性装备配置 (默认为空) ===
+    // === 【新增】自定义经验值，默认为 20 ===
+    val exp: Int = 20,
+    // === 【新增】刷怪笼随机生成冷却 (单位：秒) ===
+    val minSpawnDelay: Int = 20,
+    val maxSpawnDelay: Int = 50,
+    // === 装备配置 (默认为空) ===
     val helmet: Material? = null,
     val chestplate: Material? = null,
     val leggings: Material? = null,
@@ -53,28 +58,245 @@ object MobRegistry {
         mobs.clear()
         // === 示例：注册一个测试怪物 ===
         register(MobDefinition(
-            id = "test_zombie",
+            id = "ceshijiangshi",
             name = "&c测试僵尸",
             type = EntityType.ZOMBIE,
             health = 20.0,
-            damage = 4.0,
+            damage = 2.0,
             armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
-            speed = 0.3,
+            speed = 0.15,
             maxNearby = 1,
-            drops = listOf(
-                // 假设 ResourceManager 里有个叫 "coin_gold" 的物品
-                MobDrop("hjh_xsyy", 1, 1, 0.5),
-                // 假设有个叫 "mystic_fragment" 的材料
-                MobDrop("hjh_rzcy", 1, 1, 1.0)
-            ),
-            affixes = listOf(), // 自带荆棘和防击退
-            // 配置装饰装备 (钻石套 + 铁剑)
-//            helmet = Material.DIAMOND_HELMET,
+            exp = 0,    // 经验给0，默认不写给20
+            drops = listOf(),
+            affixes = listOf(),
+//            helmet = Material.LEATHER_HELMET,
 //            chestplate = Material.DIAMOND_CHESTPLATE,
 //            leggings = Material.DIAMOND_LEGGINGS,
 //            boots = Material.DIAMOND_BOOTS,
 //            mainHand = Material.IRON_SWORD,
 //            offHand = Material.SHIELD
+        ))
+        register(MobDefinition(
+            id = "senlinjiangshi",
+            name = "&c森林僵尸",
+            type = EntityType.ZOMBIE,
+            health = 20.0,
+            damage = 2.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.8),
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.4),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 20%掉落皮革 卖钱的
+                MobDrop("pojiupige", 1, 1, 0.1)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+        ))
+        register(MobDefinition(
+            id = "senlinkulou",
+            name = "&c森林骷髅",
+            type = EntityType.SKELETON,
+            health = 12.0,
+            damage = 3.5,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.25,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.9),
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.2),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+            mainHand = Material.WOODEN_SWORD,
+        ))
+        register(MobDefinition(
+            id = "senlinzhizhu",
+            name = "&c森林蜘蛛",
+            type = EntityType.SPIDER,
+            health = 10.0,
+            damage = 3.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.3,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.6),
+                // 掉落水元素
+                MobDrop("metal", 1, 2, 0.2),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 1, 0.3)
+            ),
+            affixes = listOf(),
+        ))
+        register(MobDefinition(
+            id = "jy_senlinjiangshi",
+            name = "&c精英-森林僵尸",
+            type = EntityType.ZOMBIE,
+            health = 35.0,
+            damage = 5.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 2, 3, 0.8),
+                // 掉落金元素
+                MobDrop("metal", 2, 3, 0.4),
+                // 70%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 3, 0.7),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 40%掉落皮革 卖钱的
+                MobDrop("pojiupige", 1, 1, 0.4)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+            mainHand = Material.STONE_SWORD
+        ))
+        register(MobDefinition(
+            id = "jy_senlinkulou",
+            name = "&c精英-森林骷髅",
+            type = EntityType.SKELETON,
+            health = 16.0,
+            damage = 4.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 2, 3, 0.9),
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.2),
+                // 70%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 3, 0.7),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+            mainHand = Material.BOW,
+        ))
+        register(MobDefinition(
+            id = "jy_senlinzhizhu",
+            name = "&c精英-森林蜘蛛",
+            type = EntityType.SPIDER,
+            health = 16.0,
+            damage = 5.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.3,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 3, 0.6),
+                // 掉落水元素
+                MobDrop("metal", 1, 3, 0.2),
+                // 70%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 3, 0.7),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.5)
+            ),
+            affixes = listOf(),
+        ))
+        register(MobDefinition(
+            id = "gongpingongjianshou",
+            name = "&c携带贡品的弓箭手",
+            type = EntityType.SKELETON,
+            health = 14.0,
+            damage = 4.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.25,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.7),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 25%掉落贡品
+                MobDrop("shanshengongpin", 1, 2, 0.25)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+            mainHand = Material.BOW
+        ))
+        register(MobDefinition(
+            id = "gongpinjiangshi",
+            name = "&c携带贡品的僵尸",
+            type = EntityType.ZOMBIE,
+            health = 24.0,
+            damage = 3.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.7),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 25%掉落贡品
+                MobDrop("shanshengongpin", 1, 2, 0.25)
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+        ))
+        register(MobDefinition(
+            id = "gongpingongzhizhu",
+            name = "&c携带贡品的蜘蛛",
+            type = EntityType.SPIDER,
+            health = 15.0,
+            damage = 3.0,
+            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.3,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落木元素
+                MobDrop("wood", 1, 2, 0.7),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 25%掉落贡品
+                MobDrop("shanshengongpin", 1, 2, 0.25)
+            ),
+            affixes = listOf()
+        ))
+        register(MobDefinition(
+            id = "zhizhunvwang",
+            name = "&6神速的 蜘蛛女王",
+            type = EntityType.SPIDER,
+            health = 200.0,
+            damage = 4.0,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.35,
+            maxNearby = 1,
+            drops = listOf(
+                MobDrop("wood", 1, 2, 1.0),
+                MobDrop("hjh_tongqian", 3, 5, 0.9),
+                MobDrop("relive_stone", 1, 2, 1.0),
+                MobDrop("zhizhuyan", 1, 3, 0.7),
+                //赤铜锭
+                MobDrop("chitongding", 1, 1, 0.25),
+                //三阶核心
+                MobDrop("armor_core_3", 1, 1, 0.25)
+            ),
+            affixes = listOf()
         ))
     }
 }

@@ -41,6 +41,18 @@ object MobFactory {
         entity.addScoreboardTag("monster")
         entity.persistentDataContainer.set(KEY_MOB_ID, PersistentDataType.STRING, def.id)
 
+        // === 【新增】Boss 技能挂载分配器 ===
+        // 根据注册的 mobId 动态分配技能类
+        when (mobId) {
+            "zhizhunvwang" -> {
+                com.hjh_database.spawner.impl.Zhizhunvwang(plugin, entity)
+            }
+            // 以后如果有新 boss，继续往下加就行：
+//             "shiyanguai" -> Shiyanguai(plugin, entity)
+            // "kulouwang" -> Kulouwang(plugin, entity)
+        }
+
+
         // 4. 词缀
         if (def.affixes.isNotEmpty()) {
             val affixStr = def.affixes.joinToString(",") { it.id }

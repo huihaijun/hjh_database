@@ -463,29 +463,24 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return true
         }
 
-        // === spawner (刷怪笼工具) ===
+        // === spawner (刷怪笼 / 手动测试笼 工具) ===
         if (subCommand == "spawner") {
-            // 指令: /hjhadmin spawner get <MobID> [x] [y] [z]
-            if (args.size < 3 || args[1].lowercase() != "get") {
-                sender.sendMessage("§c用法: /hjhadmin spawner get <MobID> [x] [y] [z]")
+            // 指令: /hjhadmin spawner <get|button> <MobID> [x] [y] [z]
+            if (args.size < 3 || (args[1].lowercase() != "get" && args[1].lowercase() != "button")) {
+                sender.sendMessage("§c用法: /hjhadmin spawner <get|button> <MobID> [x] [y] [z]")
                 return true
             }
-
+            val action = args[1].lowercase()
             val mobId = args[2]
             if (MobRegistry.get(mobId) == null) {
                 sender.sendMessage("§c错误: 未找到 ID 为 $mobId 的怪物配置。请检查 MobRegistry。")
                 return true
             }
-
             // 计算目标坐标 (如果有)
             var targetLocStr: String? = null
-            var locDisplay = "§7生成位置: §f刷怪笼周围"
-
-            // 如果玩家在输入指令时想要定点生成
+            var locDisplay = "§7生成位置: §f未知"
             if (sender is Player) {
-                // 默认使用玩家当前脚下 (如果未填参)
                 var loc = sender.location
-
                 // 如果填了参数
                 if (args.size >= 6) {
                     try {
@@ -493,7 +488,6 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                         val y = args[4].toDouble()
                         val z = args[5].toDouble()
                         loc = org.bukkit.Location(sender.world, x, y, z)
-                        // 格式化为字符串存储: "world,x,y,z"
                         targetLocStr = "${loc.world.name},${loc.x},${loc.y},${loc.z}"
                         locDisplay = "§7生成位置: §a${String.format("%.1f, %.1f, %.1f", x, y, z)}"
                     } catch (e: Exception) {
@@ -501,40 +495,67 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                         return true
                     }
                 } else {
-                    // 如果没填参数，是否默认定点？根据你的描述“不填默认位于输入指令位置”
-                    // 如果你想默认定点到当前位置：
+                    // 【核心修改】：无论是 get 还是 button，不填坐标都记录输入指令时的当前位置
                     targetLocStr = "${loc.world.name},${loc.x},${loc.y},${loc.z}"
-                    locDisplay = "§7生成位置: §a${String.format("%.1f, %.1f, %.1f", loc.x, loc.y, loc.z)}"
-
-                    // 如果你想不填代表不定点（普通刷怪笼），请删除上面这几行，保持 targetLocStr 为 null
+                    locDisplay = "§7生成位置: §a${String.format("%.1f, %.1f, %.1f", loc.x, loc.y, loc.z)} §c(指令记录位置)"
                 }
-            }
-
-            // 给予物品
-            if (sender is Player) {
                 val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.SPAWNER)
                 val meta = item.itemMeta
-                meta?.setDisplayName("§e定点刷怪笼: §f$mobId")
-                val lore = ArrayList<String>()
-                lore.add(locDisplay)
-                lore.add("§7怪物ID: $mobId")
-                lore.add("§e放置后生效")
-                meta?.lore = lore
-
-                // 将数据存入 ItemStack PDC，以便放置时读取
                 val pdc = meta?.persistentDataContainer
-                val keyId = org.bukkit.NamespacedKey(plugin, "hjh_spawner_mobid")
-                pdc?.set(keyId, org.bukkit.persistence.PersistentDataType.STRING, mobId)
+                if (action == "get") {
+                    meta?.setDisplayName("§e定点刷怪笼: §f$mobId")
+                    val lore = ArrayList<String>()
+                    lore.add(locDisplay)
+                    lore.add("§7怪物ID: $mobId")
+                    lore.add("§e放置后生效")
+                    meta?.lore = lore
+                    // 将数据存入 ItemStack PDC，以便放置时读取
+                    val keyId = org.bukkit.NamespacedKey(plugin, "hjh_spawner_mobid")
+                    pdc?.set(keyId, org.bukkit.persistence.PersistentDataType.STRING, mobId)
 
-                if (targetLocStr != null) {
-                    val keyLoc = org.bukkit.NamespacedKey(plugin, "hjh_spawner_target")
-                    pdc?.set(keyLoc, org.bukkit.persistence.PersistentDataType.STRING, targetLocStr)
+                    if (targetLocStr != null) {
+                        val keyLoc = org.bukkit.NamespacedKey(plugin, "hjh_spawner_target")
+                        pdc?.set(keyLoc, org.bukkit.persistence.PersistentDataType.STRING, targetLocStr)
+                    }
+
+                    item.itemMeta = meta
+                    sender.inventory.addItem(item)
+                    sender.sendMessage("§a已获取自动刷怪笼物品！")
+
+                } else if (action == "button") {
+                    meta?.setDisplayName("§b§l[手动测试方块] §e$mobId")
+                    val lore = ArrayList<String>()
+                    lore.add("§7怪物ID: $mobId")
+                    lore.add(locDisplay)
+                    lore.add("§e放置在地上后，右键点击即可生成怪物")
+                    lore.add("§c自带3秒冷却，方便测试且防刷屏")
+                    meta?.lore = lore
+
+                    pdc?.set(org.bukkit.NamespacedKey(plugin, "hjh_spawner_manual_mobid_item"), org.bukkit.persistence.PersistentDataType.STRING, mobId)
+
+                    if (targetLocStr != null) {
+                        pdc?.set(org.bukkit.NamespacedKey(plugin, "hjh_spawner_manual_target_item"), org.bukkit.persistence.PersistentDataType.STRING, targetLocStr)
+                    }
+
+                    item.itemMeta = meta
+                    sender.inventory.addItem(item)
+                    sender.sendMessage("§a已获取测试用手动方块！")
                 }
-
-                item.itemMeta = meta
-                sender.inventory.addItem(item)
-                sender.sendMessage("§a已获取刷怪笼物品！")
             }
+            return true
+        }
+
+        // === getarrayblock (获取阵法升级紫水晶块) ===
+        if (subCommand == "getarrayblock") {
+            if (sender !is Player) {
+                sender.sendMessage("§c只有玩家可以使用此命令。")
+                return true
+            }
+            // 假设你在主类 plugin 中或者 ElementZfManager 中实例化了 ElementZfGui
+            // 这里我们直接调用我们写好的获取物品方法
+            val amethystBlock = plugin.elementZfGui.getSpecialAmethystBlock()
+            sender.inventory.addItem(amethystBlock)
+            sender.sendMessage("§a已获取特殊的阵法升级紫水晶块！")
             return true
         }
 
@@ -572,10 +593,16 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
         }
 
-        // 【新增】spawner 子命令补全
+        // 【修改】spawner 子命令补全
         if (subCmd == "spawner") {
             if (args.size == 2) {
-                return listOf("get", "wand").filter { it.startsWith(args[1].lowercase()) }
+                return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
+            }
+            // 第三参数：如果前置是 get 或 button，提示补全怪物 ID
+            if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
+                // 注意：这里需要你的 MobRegistry 中有一个 getAllIds() 方法返回 List<String> 或 Set<String>
+                // 如果没有，请在 MobRegistry.kt 中添加： fun getAllIds(): Set<String> = mobs.keys
+                return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
             }
         }
 
@@ -630,6 +657,16 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
         }
 
+        // 【修改】spawner 子命令补全 (加入怪物ID和button)
+        if (subCmd == "spawner") {
+            if (args.size == 2) {
+                return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
+            }
+            // 当输入 get 或 button 后，第三个参数提示 MobRegistry 中的所有ID
+            if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
+                return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
+            }
+        }
         if (subCmd == "gennpc") {
             if (args.size == 2) {
                 val list = ArrayList<String>()

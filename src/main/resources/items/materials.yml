@@ -35,15 +35,15 @@ hjh_xsyy:
   name: "&b[药引]新手疗愈丹"
   lore:
     - "&7&o用来冶炼&b&o新手疗愈丹&7&o的药引"
-    - "&7&o需要配合3个人族草药才能成功炼制"
+    - "&7&o需要配合3株草药才能成功炼制"
     - "&e[任务物品]"
   custom_model_data: 10137
 
-hjh_rzcy:
+hjh_cy:
   material: SEAGRASS
-  name: "&b人族草药"
+  name: "&b草药"
   lore:
-    - "&7&o在人族峡谷开采的草药"
+    - "&7&o遍地都能开采到的草药"
     - "&7&o可以用来冶炼丹药"
     - "&e[任务物品]"
 
@@ -82,3 +82,41 @@ hjh_xyzy:
     - "&e[右键] &f冷却：&b10&f秒"
     - "&f使用后，将提升自己移速&b30%&f持续&b10&f分钟"
     - "&f在受到伤害后加速效果立即消失"
+
+yuansuduihuanquan:
+  material: PAPER
+  name: "&b元素兑换券"
+  lore:
+    - "&7&o用来兑换或转化元素的凭证"
+    - "&7&o可以找到元素兑换师兑换"
+    -
+longlinmu:
+  material: OAK_LOG
+  name: "&b龙鳞木"
+  lore:
+    - "&7&o龙鳞之森开采的木头"
+    - "&7&o是用来锻造武器的好材料"
+
+cucaoshi:
+  material: STONE
+  name: "&b粗糙石头"
+  lore:
+    - "&7&o非常粗糙的石头"
+    - "&7&o制作出来的武器也还说得过去"
+
+cutong:
+  material: RAW_COPPER
+  name: "&b粗铜"
+  rarity: 2
+  lore:
+    - "&7&o比较稀奇的金属材料"
+    - "&7&o可以锻造不错的武器"
+
+bupi:
+  material: GLASS_BOTTLE
+  name: "&b布匹"
+#  rarity: 2
+  lore:
+    - "&7&o开物术可将杂草中的纤维制成布匹"
+    - "&7&o可以制作比较低阶的防具"
+

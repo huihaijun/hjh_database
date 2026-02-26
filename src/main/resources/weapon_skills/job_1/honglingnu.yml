@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【炎海】发动！" # 留空，代码中已经硬编码了唯一的发动提示
+  cooldown: 10.0

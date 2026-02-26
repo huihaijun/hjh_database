@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【灼焰】发动！" # 由代码接管，保持简洁
+  cooldown: 12.0

@@ -1,0 +1,61 @@
+# 默认复活点 (当玩家的 status 找不到对应的复活点时使用)1315.52 76.00 42.49 -89.55 6.00
+default-respawn:
+  world: "world"
+  x: 1315.5
+  y: 76.5
+  z: 42.5
+  yaw: -90.0
+  pitch: 0.0
+
+# 根据 status 配置复活点
+# 这里的键(例如 '0', '3', '6') 对应 PlayerData.kt 中的 status 值
+respawn-points:
+  '0': # 新人进入服务器
+    world: "world"
+    x: 1315.5
+    y: 76.5
+    z: 42.5
+    yaw: -90.0
+    pitch: 0.0
+  '1': # 新人-前置-未进入大陆
+    world: "world"
+    x: 1315.5
+    y: 76.5
+    z: 42.5
+    yaw: -90.0
+    pitch: 0.0
+  '2': # 新人-进入大陆-过新手种族剧情
+    world: "world"
+    x: 1315.5
+    y: 76.5
+    z: 42.5
+    yaw: -90.0
+    pitch: 0.0
+  '3': # 大陆中
+    world: "world"
+    x: -500.0
+    y: 65.0
+    z: 200.0
+    yaw: 0.0
+    pitch: 0.0
+  '4': # 职业体验
+    world: "world"
+    x: 1315.5
+    y: 76.5
+    z: 42.5
+    yaw: -90.0
+    pitch: 0.0
+  '5': # 副本中
+    world: "world"
+    x: 1315.5
+    y: 76.5
+    z: 42.5
+    yaw: -90.0
+    pitch: 0.0
+  '6': # 奈何桥中
+    world: "world"
+    x: 10.0
+    y: 100.0
+    z: 10.0
+    yaw: 180.0
+    pitch: 0.0

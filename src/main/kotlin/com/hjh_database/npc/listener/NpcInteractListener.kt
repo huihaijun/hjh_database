@@ -8,6 +8,7 @@ import com.hjh_database.npc.gui.NpcAdminGui
 import com.hjh_database.npc.gui.NpcLibraryGui
 import com.hjh_database.race.impl.HumanRace
 import io.papermc.paper.event.player.AsyncChatEvent
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -227,21 +228,20 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // ================== 3. 左键 NPC (对话) ==================
     @EventHandler
-    fun onNpcDamage(event: EntityDamageByEntityEvent) {
-        val entity = event.entity
+    // ================== 3. 左键 NPC (对话) 修复：使用 PrePlayerAttackEntityEvent ==================
+    fun onNpcDamage(event: PrePlayerAttackEntityEvent) {
+        val entity = event.attacked
         if (entity !is Villager) return
 
-        // 只要是 NPC，左键一律取消伤害
+        // 只要是 NPC，左键一律取消底层伤害判定
         if (entity.persistentDataContainer.has(plugin.npcModule.manager.npcKey, PersistentDataType.STRING)) {
             event.isCancelled = true
         } else {
             return
         }
 
-        val damager = event.damager
-        if (damager !is Player) return
+        val damager = event.player
 
         // === 【核心修改4】左键冷却检查 ===
         if (isCoolingDown(damager)) return

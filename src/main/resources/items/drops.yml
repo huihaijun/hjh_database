@@ -1,14 +1,62 @@
 # 路径: resources/items/drops.yml
-demon_blood:
-  material: RED_DYE
-  name: "&c恶魔之血"
-  lore:
-    - "&7击杀高阶恶魔获得。"
-    - "&c[稀有材料]"
-  custom_model_data: 1001
+# rarity: 3 配置稀有度
+metal:
+  material: GOLD_NUGGET
+  name: "&f金元素"
+  custom_model_data: 10004
 
-wolf_tooth:
-  material: FLINT
-  name: "&f狼牙"
+wood:
+  material: GOLD_NUGGET
+  name: "&f木元素"
+  custom_model_data: 10005
+
+water:
+  material: GOLD_NUGGET
+  name: "&f水元素"
+  custom_model_data: 10006
+
+fire:
+  material: GOLD_NUGGET
+  name: "&f火元素"
+  custom_model_data: 10007
+
+earth:
+  material: GOLD_NUGGET
+  name: "&f土元素"
+  custom_model_data: 10008
+
+relive_stone:
+  material: GOLD_NUGGET
+  name: "&9重生石"
+  custom_model_data: 10019
+
+pojiupige:
+  material: GLOWSTONE_DUST
+  name: "&7破旧皮革"
   lore:
-    - "&7锋利的野兽牙齿。"
+    - "&7&o从魔物身上掉落的皮革"
+    - "&7&o只能拿去卖点小钱了"
+
+zhizhuyan:
+  material: SPIDER_EYE
+  name: "&7蜘蛛眼"
+  lore:
+    - "&7&o蜘蛛身上的重要器官"
+    - "&7&o拿来炼药说不定也不错"
+
+renshen:
+  material: GLISTERING_MELON_SLICE
+  name: "&f人参"
+  lore:
+    - "&7&o大补的药材,炼药的好引子"
+    - "&7&o皇城也有人专门高价收购"
+
+shanshengongpin:
+  material: ORANGE_DYE
+  name: "&b山神庙的贡品"
+  lore:
+    - "&7&o怪物抢走的山神庙贡品"
+    - "&7&o收集一些交给庙公吧"
+
+
+

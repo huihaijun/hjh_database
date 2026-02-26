@@ -155,7 +155,7 @@ class Ren_04 : QuestBase("main_ren_4", "[人族主线]初识丹道", QuestType.M
 
         // 从资源管理器获取物品
         val yaoyin = rm.getItem("hjh_xsyy") // 药引
-        val caoyao = rm.getItem("hjh_rzcy") // 草药
+        val caoyao = rm.getItem("hjh_cy") // 草药
 
         if (yaoyin == null || caoyao == null) {
             player.sendMessage("§c[错误] 无法获取炼丹材料配置，请联系管理员！")

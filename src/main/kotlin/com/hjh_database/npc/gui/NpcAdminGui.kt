@@ -31,8 +31,19 @@ class NpcAdminGui(
 
     private val inventory: Inventory
 
+    // 【新增】翻页与缓存机制
+    private var currentPage = 0
+    private var localTrades = ArrayList<CustomTrade?>()
+
     init {
         inventory = Bukkit.createInventory(this, 54, "编辑NPC: $templateId")
+
+        // 初始化时，将已有的交易项加载进本地缓存中
+        val template = plugin.npcModule.manager.getTemplate(templateId)
+        if (template != null) {
+            localTrades.addAll(template.trades)
+        }
+
         loadContent()
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
@@ -47,24 +58,27 @@ class NpcAdminGui(
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
 
         // === 1. 加载交易项 ===
-        // 先清空交易区，防止刷新时残留
+        // 先清空交易区，防止刷新或翻页时残留
         for (i in 0 until 45) {
             inventory.setItem(i, null)
         }
 
-        for (index in template.trades.indices) {
-            if (index >= 5) break
-            val trade = template.trades[index]
-            val rowStart = index * 9
-
-            inventory.setItem(rowStart + 0, trade.ingredient1)
-            inventory.setItem(rowStart + 1, trade.ingredient2)
-            // 箭头在下面统一设置
-            inventory.setItem(rowStart + 3, trade.result)
-        }
-
-        // 统一设置箭头
+        // 读取当前页的数据
         for (row in 0 until 5) {
+            val index = currentPage * 5 + row
+
+            // 如果缓存中有当前槽位的数据，就显示出来
+            if (index < localTrades.size) {
+                val trade = localTrades[index]
+                if (trade != null) {
+                    val rowStart = row * 9
+                    inventory.setItem(rowStart + 0, trade.ingredient1)
+                    inventory.setItem(rowStart + 1, trade.ingredient2)
+                    inventory.setItem(rowStart + 3, trade.result)
+                }
+            }
+
+            // 统一设置箭头
             val arrowSlot = row * 9 + 2
             inventory.setItem(arrowSlot, createItem(Material.ARROW, "§7-->"))
         }
@@ -75,10 +89,13 @@ class NpcAdminGui(
         inventory.setItem(47, createItem(Material.MAP, "§e切换类型", listOf("§7当前: ${template.type.key.key}", "§a点击切换下一个")))
         inventory.setItem(48, createItem(Material.EXPERIENCE_BOTTLE, "§b刷新所有实体", listOf("§7修改后点击此项", "§7让全服该ID的NPC变身")))
 
-        // 装饰用的玻璃板 (只填 49 和 50)
-        val pane = createItem(Material.GRAY_STAINED_GLASS_PANE, " ")
-        inventory.setItem(49, pane)
-        inventory.setItem(50, pane)
+        // 【新增】翻页按钮 (Slot 49 和 50)
+        if (currentPage > 0) {
+            inventory.setItem(49, createItem(Material.PAPER, "§a⬅ 上一页", listOf("§7当前页: ${currentPage + 1}", "§e点击返回上一页")))
+        } else {
+            inventory.setItem(49, createItem(Material.GRAY_STAINED_GLASS_PANE, " ")) // 第一页不显示上一页
+        }
+        inventory.setItem(50, createItem(Material.PAPER, "§a下一页 ➡", listOf("§7当前页: ${currentPage + 1}", "§e点击进入下一页")))
 
         // [新增] 种族打折开关 (Slot 51)
         val discountStatus = if (template.allowRaceDiscount) "§a已开启" else "§c已关闭"
@@ -161,6 +178,20 @@ class NpcAdminGui(
                     player.sendMessage("§a已刷新 $count 个 NPC 实例。")
                     player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
                 }
+                49 -> { // 【新增】上一页
+                    if (currentPage > 0) {
+                        saveCurrentPage() // 翻页前保存当前页的数据到缓存
+                        currentPage--
+                        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                        loadContent() // 加载新页
+                    }
+                }
+                50 -> { // 【新增】下一页
+                    saveCurrentPage() // 翻页前保存当前页的数据到缓存
+                    currentPage++
+                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                    loadContent() // 加载新页
+                }
                 51 -> { // 【新增】修改打折
                     template.allowRaceDiscount = !template.allowRaceDiscount
                     // 这里不需要立即保存到文件，点击最右侧保存按钮时统一保存，或者你希望立即生效也可以：
@@ -202,27 +233,47 @@ class NpcAdminGui(
         InventoryCloseEvent.getHandlerList().unregister(this)
     }
 
-    private fun saveTradesFromGui() {
-        val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
-        val newTrades = ArrayList<CustomTrade>()
-
+    /**
+     * 【新增】保存当前页面的交易项到本地缓存
+     */
+    private fun saveCurrentPage() {
         for (row in 0 until 5) {
+            val index = currentPage * 5 + row
             val start = row * 9
             val input1 = inventory.getItem(start + 0)
             val input2 = inventory.getItem(start + 1)
             val result = inventory.getItem(start + 3)
 
+            // 动态扩容缓存列表
+            while (localTrades.size <= index) {
+                localTrades.add(null)
+            }
+
+            // 检查是不是有效的配方
             if (result != null && result.type != Material.AIR &&
                 input1 != null && input1.type != Material.AIR) {
 
-                newTrades.add(CustomTrade(
+                localTrades[index] = CustomTrade(
                     result = result.clone(),
                     ingredient1 = input1.clone(),
                     ingredient2 = if (input2 != null && input2.type != Material.AIR) input2.clone() else null
-                ))
+                )
+            } else {
+                localTrades[index] = null // 无效或清空配方则置空
             }
         }
-        template.trades = newTrades
+    }
+
+    /**
+     * 【修改】汇总缓存并保存到模板
+     */
+    private fun saveTradesFromGui() {
+        saveCurrentPage() // 先保存当前眼下界面的内容
+
+        val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
+
+        // 过滤掉缓存里的空数据(未填写的行)，生成交易列表赋给模板
+        template.trades = ArrayList(localTrades.filterNotNull())
     }
 
     private fun createItem(mat: Material, name: String, lore: List<String> = emptyList()): ItemStack {

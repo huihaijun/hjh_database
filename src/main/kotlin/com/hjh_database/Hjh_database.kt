@@ -30,8 +30,10 @@ import com.hjh_database.npc.NpcModule
 import com.hjh_database.quest.core.QuestManager
 // 【建议】导入 QuestGui，代码看着干净点
 import com.hjh_database.quest.gui.QuestGui
+import com.hjh_database.skill.element_zf.gui.ElementZfGui
 import com.hjh_database.spawner.SpawnerBlockManager
 import com.hjh_database.weapon.WeaponManager
+
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -67,6 +69,9 @@ class Hjh_database : JavaPlugin() {
     lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
     // 【新增】职业体验
     lateinit var jobTrialManager: JobTrialManager
+    // 【新增】职业体验
+    lateinit var elementZfGui: ElementZfGui
+
 
     override fun onEnable() {
 
@@ -146,6 +151,12 @@ class Hjh_database : JavaPlugin() {
 
         // 初始化种族祝福模块
         raceModule = com.hjh_database.race.RaceManager(this)
+
+        // 注册术士升级gui
+        // 【新增】在这里实例化 elementZfGui
+        elementZfGui = ElementZfGui(this)
+        // 然后再注册它的事件
+        server.pluginManager.registerEvents(elementZfGui, this)
 
         // 初始化羽毛系统
         com.hjh_database.feather.FeatherManager(this)

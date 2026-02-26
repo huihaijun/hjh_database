@@ -23,7 +23,7 @@ class YuHeHuaSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         val zfStr = data.zfStr
-        val healAmount = 4.0 + (zfStr * 0.2)
+        val healAmount = zfStr * 0.8
 
         val center = player.location
         player.world.playSound(center, Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 1.5f)

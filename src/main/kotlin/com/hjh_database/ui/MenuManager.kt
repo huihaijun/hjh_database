@@ -37,17 +37,16 @@ class MenuManager(private val plugin: Hjh_database) {
     // === 枚举定义 ===
     enum class ElementType(
         val displayName: String,
-        val nbtId: String,
+        val resourceId: String, // 对应 drops.yml 配置的 ID (如: metal)
         val material: Material,
-        val modelData: Int,
-        val translatableKey: String
+        val modelData: Int
     ) {
-        METAL("金元素", "panling:metal", Material.GOLD_NUGGET, 10004, "pl.item.name.metal"),
-        WOOD("木元素", "panling:wood", Material.GOLD_NUGGET, 10005, "pl.item.name.wood"),
-        WATER("水元素", "panling:water", Material.GOLD_NUGGET, 10006, "pl.item.name.water"),
-        FIRE("火元素", "panling:fire", Material.GOLD_NUGGET, 10007, "pl.item.name.fire"),
-        EARTH("土元素", "panling:earth", Material.GOLD_NUGGET, 10008, "pl.item.name.earth"),
-        RELIVE("重生石", "panling:relive_stone", Material.GOLD_NUGGET, 10019, "pl.item.name.relife_stone");
+        METAL("金元素", "metal", Material.GOLD_NUGGET, 10004),
+        WOOD("木元素", "wood", Material.GOLD_NUGGET, 10005),
+        WATER("水元素", "water", Material.GOLD_NUGGET, 10006),
+        FIRE("火元素", "fire", Material.GOLD_NUGGET, 10007),
+        EARTH("土元素", "earth", Material.GOLD_NUGGET, 10008),
+        RELIVE("重生石", "relive_stone", Material.GOLD_NUGGET, 10019); // 假设重生石在资源库的ID是 relive_stone
     }
 
     fun reload() {
@@ -186,62 +185,28 @@ class MenuManager(private val plugin: Hjh_database) {
     }
 
     @Suppress("DEPRECATION")
+    // 修改 MenuManager.kt 中的 getPanlingItem 方法
     fun getPanlingItem(type: ElementType, count: Int): ItemStack {
-        val itemId = type.material.key.toString()
-        val fullItemString = StringBuilder()
-        fullItemString.append(itemId)
-        fullItemString.append("[")
-        fullItemString.append("minecraft:custom_model_data=${type.modelData},")
-        fullItemString.append("minecraft:max_stack_size=99,")
-        fullItemString.append("minecraft:rarity=common,")
-        fullItemString.append("minecraft:repair_cost=0,")
-        fullItemString.append("minecraft:custom_name='{\"translate\":\"${type.translatableKey}\"}',")
-        if (type == ElementType.RELIVE) {
-            fullItemString.append("minecraft:enchantment_glint_override=true,")
-        }
-        if (fullItemString.endsWith(",")) {
-            fullItemString.setLength(fullItemString.length - 1)
-        }
-        fullItemString.append("]")
-
-        var resultItem: ItemStack
-        try {
-            val baseItem = ItemStack(type.material)
-            resultItem = Bukkit.getUnsafe().modifyItemStack(baseItem, fullItemString.toString())
-        } catch (e: Exception) {
-            plugin.logger.warning("物品组件生成失败，回退到普通物品: " + type.displayName)
-            e.printStackTrace()
-            resultItem = ItemStack(type.material)
-        }
-
-        val meta = resultItem.itemMeta
-        if (meta != null) {
-            val pdc = meta.persistentDataContainer
-            pdc.set(keyId, PersistentDataType.STRING, type.nbtId)
-            pdc.set(keyUid, PersistentDataType.INTEGER, type.modelData)
-            if (type != ElementType.RELIVE) {
-                pdc.set(keyRank, PersistentDataType.INTEGER, 1)
-                pdc.set(keyType, PersistentDataType.INTEGER, 1)
-            }
-            resultItem.itemMeta = meta
-        }
-        resultItem.amount = count
-        return resultItem
+        // 直接从 ResourceManager 获取标准物品
+        val item = plugin.resourceManager.getItem(type.resourceId)
+            ?: ItemStack(type.material) // 兜底
+        item.amount = count
+        // 【删除了这里原本补全 uid, rank, type 的逻辑】
+        // 现在的 item 完美等同于 /resourceitem 生成的物品，可以直接堆叠
+        return item
     }
 
+    // === 3. 替换物品判断方法 ===
+    // 改为通过 ResourceManager 赋予的 resource_id 标签来判断，而不是检测文本或旧版NBT
     fun isPanlingItem(item: ItemStack?, type: ElementType): Boolean {
-        if (item == null || item.type != type.material) return false
+        if (item == null || item.type.isAir || !item.hasItemMeta()) return false
         val meta = item.itemMeta ?: return false
-        if (meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) {
-            val id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING)
-            if (id == type.nbtId) return true
+        // 直接读取 ResourceManager 统一打上的 resource_id 标签
+        val keyResourceId = NamespacedKey(plugin, "resource_id")
+        if (meta.persistentDataContainer.has(keyResourceId, PersistentDataType.STRING)) {
+            val id = meta.persistentDataContainer.get(keyResourceId, PersistentDataType.STRING)
+            return id == type.resourceId
         }
-        try {
-            val itemStr = item.toString()
-            if (itemStr.contains("id:\"${type.nbtId}\"") || itemStr.contains("id=\"${type.nbtId}\"")) {
-                return true
-            }
-        } catch (ignored: Exception) {}
         return false
     }
 

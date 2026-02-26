@@ -15,6 +15,10 @@ class TeleportListener(private val plugin: Hjh_database) : Listener {
 
     private val tpKey = NamespacedKey(plugin, "hjh_tp_point_id")
 
+    companion object {
+        private val interactCooldown = java.util.concurrent.ConcurrentHashMap<java.util.UUID, Long>()
+    }
+
     // === 1. 放置方块时，注册传送点 ===
     @EventHandler
     fun onPlace(e: BlockPlaceEvent) {
@@ -58,6 +62,15 @@ class TeleportListener(private val plugin: Hjh_database) : Listener {
         val block = e.clickedBlock ?: return
         // 只响应 物理接触(踩压力板) 和 右键方块
         if (e.action != Action.PHYSICAL && e.action != Action.RIGHT_CLICK_BLOCK) return
+        val player = e.player
+        // --- 新增：防连点/双击的内置 CD (500毫秒) ---
+        val now = System.currentTimeMillis()
+        val lastInteract = interactCooldown[player.uniqueId] ?: 0L
+        if (now - lastInteract < 500L) {
+            return // 距离上次触发不足 0.5 秒，直接 return 拦截
+        }
+        interactCooldown[player.uniqueId] = now
+        // ------------------------------------------
         val pointId = plugin.teleportManager.getPointIdByBlock(block.location) ?: return
         // 压力板触发时，不要取消事件，否则压力板按不下去看着很怪
         if (e.action == Action.RIGHT_CLICK_BLOCK && !isInteractable(block.type)) {
@@ -67,12 +80,11 @@ class TeleportListener(private val plugin: Hjh_database) : Listener {
         // 如果是物理触发(压力板)，必须延迟；右键其实可以直接传，但统一延迟最安全
         plugin.server.scheduler.runTask(plugin, Runnable {
             // 再次检查玩家是否在线（防止极端情况）
-            if (e.player.isOnline) {
-                plugin.teleportManager.tryTeleport(e.player, pointId)
+            if (player.isOnline) {
+                plugin.teleportManager.tryTeleport(player, pointId)
             }
         })
     }
-
     // 简单的辅助判断：是否是原版可交互方块(按钮/拉杆/门等)
     private fun isInteractable(mat: Material): Boolean {
         return mat.name.contains("BUTTON") ||

@@ -30,8 +30,18 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         } else {
             spawner.persistentDataContainer.remove(keyTarget)
         }
-        // 禁用原版生成
+        // 禁用原版生成逻辑
         spawner.spawnCount = 0
+        spawner.requiredPlayerRange = 0
+        spawner.maxNearbyEntities = 0
+
+        // === 【修改】放置刷怪笼时，根据怪物的配置给一个初始随机冷却 ===
+        val def = MobRegistry.get(mobId)
+        val minDelay = def?.minSpawnDelay ?: 20
+        val maxDelay = (def?.maxSpawnDelay ?: 50).coerceAtLeast(minDelay) // 确保 max >= min
+        val delaySeconds = if (minDelay == maxDelay) minDelay else java.util.concurrent.ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
+
+        spawner.persistentDataContainer.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + delaySeconds * 1000L)
         spawner.update()
     }
 
@@ -95,8 +105,17 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
 
         // 4. 生成怪物 (传入 plugin 以便 Factory 访问 ResourceManager 等)
         MobFactory.spawnMob(plugin, spawnLoc, mobId)
-        // 5. 设置冷却 (例如 20秒)
-        pdc.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + 20000L)
+        // === 【修改部分】5. 设置冷却时间 ===
+        val minDelay = def.minSpawnDelay
+        val maxDelay = def.maxSpawnDelay.coerceAtLeast(minDelay) // 确保最大值不小于最小值
+        // 计算随机秒数
+        val delaySeconds = if (minDelay == maxDelay) {
+            minDelay
+        } else {
+            java.util.concurrent.ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
+        }
+        // 写入下次生成的时间戳 = 当前时间 + 随机秒数 * 1000毫秒
+        spawner.persistentDataContainer.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + delaySeconds * 1000L)
         spawner.update()
     }
 

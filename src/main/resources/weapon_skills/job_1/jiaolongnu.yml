@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【蛟龙出海】发动！"
+  cooldown: 15.0

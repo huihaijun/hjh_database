@@ -77,10 +77,63 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // 7. 玩家复活 (防止死亡后属性未重置)
-    @EventHandler(priority = EventPriority.MONITOR)
+    // 7. 玩家复活 (根据 Status, Race, Job 动态设置复活点)
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onRespawn(event: PlayerRespawnEvent) {
-        refreshPlayerStatus(event.player)
+        val player = event.player
+        val data = plugin.playerManager.getData(player.uniqueId)
+        if (data != null) {
+            // 获取世界，如果世界不存在则使用玩家当前死亡的世界兜底
+            val world = org.bukkit.Bukkit.getWorld("world") ?: player.world
+            var targetLoc: org.bukkit.Location? = null
+            when (data.status) {
+                0 -> {
+                    targetLoc = org.bukkit.Location(world, 1315.5, 76.5, 42.5, -90.0f, 0.0f)
+                }
+                1 -> {
+                    targetLoc = org.bukkit.Location(world, 1248.05, 35.00, -364.01, 89.40f, 2.10f)
+                }
+                2 -> {
+                    // 根据种族分配
+                    targetLoc = when (data.race) {
+                        0 -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f)
+                        1 -> org.bukkit.Location(world, 3179.5, 127.0, 783.5, -90f, 0f)
+                        2 -> org.bukkit.Location(world, 1689.5, 140.0, 138.5, 90f, 0f)
+                        3 -> org.bukkit.Location(world, 3299.5, 22.0, -138.5, 90f, 0f)
+                        4 -> org.bukkit.Location(world, 2845.5, 48.0, 899.5, 180f, -20f)
+                        else -> org.bukkit.Location(world, 3208.5, 73.0, 381.5, 90f, 0f) // 默认去种族0
+                    }
+                }
+                3, 5, 6 -> {
+                    // 3, 5, 6 复活点一致
+                    targetLoc = org.bukkit.Location(world, 205.0, 54.0, -1771.0, 0f, 0f)
+                    // 状态为 3 或 5 时，改写为 6
+                    if (data.status == 3 || data.status == 5) {
+                        data.updateStatus(6)
+                        // 发送消息提示玩家 (可选)
+                        // player.sendMessage("§c你在大陆/副本中陨落，已被打入奈何桥...")
+                    }
+                }
+                4 -> {
+                    // 根据职业分配 (请确保左侧 0, 1, 2, 3 对应你数据库中实际的职业 ID)
+                    targetLoc = when (data.job) {
+                        0 -> org.bukkit.Location(world, 1247.5, 36.0, -391.5, 90.0f, 0.0f) // 战士
+                        1 -> org.bukkit.Location(world, 1247.5, 36.0, -411.5, 90.0f, 0.0f) // 弓箭手
+                        2 -> org.bukkit.Location(world, 1247.5, 36.0, -429.5, 90.0f, 0.0f) // 术士
+                        3 -> org.bukkit.Location(world, 1247.5, 36.0, -447.5, 90.0f, 0.0f) // 医师
+                        else -> org.bukkit.Location(world, 1247.5, 36.0, -391.5, 90.0f, 0.0f) // 默认丢给战士
+                    }
+                }
+            }
+
+            // 如果成功匹配到了目标坐标，则设置复活点
+            if (targetLoc != null) {
+                event.respawnLocation = targetLoc
+            }
+        }
+
+        // 刷新玩家状态 (原有的逻辑)
+        refreshPlayerStatus(player)
     }
 
     /**
