@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【重锤激荡】发动！" # 代码中自定义了提示
+  cooldown: 12.0

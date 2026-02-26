@@ -166,9 +166,26 @@ class MedicalManager(private val plugin: Hjh_database) {
             return null
         }
 
+        // ================= 【修复 2：等阶限制】 =================
+        // 获取医旗和医术书的 rarity (如果获取不到则默认按 1 阶算)
+        val keyRarity = NamespacedKey(plugin, "rarity")
+        val bookRarity = bookMeta.persistentDataContainer.get(keyRarity, PersistentDataType.INTEGER) ?: 1
+        val bannerRarity = banner.persistentDataContainer.get(keyRarity, PersistentDataType.INTEGER) ?: 1
+
+        if (bookRarity > bannerRarity) {
+            player.sendMessage("§c[绘制失败] §7医旗等阶 ( $bannerRarity 阶) 无法承载更高阶的医术 ( $bookRarity 阶)！")
+            return null
+        }
+
         // 检查重复掌握
         // 【关键点】显式使用 !! 断言，将 PlayerData? 转为 PlayerData
         val data = plugin.playerManager.getPlayerData(player)!!
+
+        // ================= 【修复：数量上限限制】 =================
+        if (data.getMedicalLoadout().size >= 5) {
+            player.sendMessage("§c[绘制失败] §7你最多只能同时掌握 5 种医术！")
+            return null
+        }
 
         if (data.getMedicalLoadout().contains(skillId)) {
             player.sendMessage("§c[绘制失败] §7你脑海中已经掌握了此医术。")
@@ -227,6 +244,49 @@ class MedicalManager(private val plugin: Hjh_database) {
         player.sendMessage("§a[绘制成功] §7你将 §e" + getSkillName(skillId) + " §7刻印于旗帜之上！")
         player.playSound(player.location, Sound.UI_LOOM_TAKE_RESULT, 1f, 1f)
         return result
+    }
+
+    // === 智能刷新：重塑刻印旗帜 ===
+    fun rebuildEtchedBanner(banner: ItemStack, skillId: String) {
+        val meta = banner.itemMeta ?: return
+        // 1. 恢复 NBT 标签 (防止丢数据)
+        meta.persistentDataContainer.set(keySkillId, PersistentDataType.STRING, skillId)
+        meta.persistentDataContainer.set(keyIgnoreRefresh, PersistentDataType.INTEGER, 1)
+        // 2. 重新拼接名字
+        val skillDisplayName = getSkillName(skillId)
+        if (meta.hasDisplayName()) {
+            meta.setDisplayName(meta.displayName + "§r[" + skillDisplayName + "§r]")
+        } else {
+            meta.setDisplayName("§f医旗§r[" + skillDisplayName + "§r]")
+        }
+
+        // 3. 隐藏原版旗帜图案等提示
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+
+        // 4. 获取当前最新的医术秘籍 Lore，并重新拼接在医旗 Lore 的底部
+        val lore = if (meta.hasLore()) meta.lore!! else ArrayList()
+        lore.add("§8----------------")
+        lore.add("§6[医术] §e$skillDisplayName")
+
+        // 获取最新的医术书物品，以便读取最新的文本
+        val book = getSkillBook(skillId)
+        if (book != null && book.hasItemMeta() && book.itemMeta!!.hasLore()) {
+            for (line in book.itemMeta!!.lore!!) {
+                if (line.contains("放入绘制台")) continue // 过滤掉不需要的提示
+                lore.add(line)
+            }
+        }
+        meta.lore = lore
+
+        // 5. 恢复旗帜图案
+        if (meta is BannerMeta) {
+            val patterns = MedicalPatternRegistry.getPatterns(skillId)
+            if (patterns != null) {
+                for (p in patterns) meta.addPattern(p)
+            }
+        }
+
+        banner.itemMeta = meta
     }
 
     // === 分离逻辑 ===

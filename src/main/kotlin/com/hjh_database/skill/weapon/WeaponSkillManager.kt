@@ -12,8 +12,15 @@ import com.hjh_database.skill.weapon.job_0.qintongjianSkill
 import com.hjh_database.skill.weapon.job_0.sanbaoyuruyiSkill
 import com.hjh_database.skill.weapon.job_0.taijijianSkill
 import com.hjh_database.skill.weapon.job_1.NoviceBowSkill
+import com.hjh_database.skill.weapon.job_1.beidoumieshengongSkill
 import com.hjh_database.skill.weapon.job_1.heitienuSkill
+import com.hjh_database.skill.weapon.job_1.honglingnuSkill
+import com.hjh_database.skill.weapon.job_1.jiaolongnuSkill
+import com.hjh_database.skill.weapon.job_1.qingtonggongSkill
+import com.hjh_database.skill.weapon.job_1.riyueliuxingnuSkill
 import com.hjh_database.skill.weapon.job_1.tengmugongSkill
+import com.hjh_database.skill.weapon.job_1.yantiegongSkill
+import com.hjh_database.skill.weapon.job_1.zhongchuigongSkill
 import com.hjh_database.weapon.WeaponManager
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -92,8 +99,13 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 //        弓箭手技能注册
         skillRegistry["tengmugong"] = tengmugongSkill()
         skillRegistry["heitienu"] = heitienuSkill()
-
-
+        skillRegistry["qingtonggong"] = qingtonggongSkill()
+        skillRegistry["honglingnu"] = honglingnuSkill()
+        skillRegistry["yantiegong"] = yantiegongSkill()
+        skillRegistry["jiaolongnu"] = jiaolongnuSkill()
+        skillRegistry["zhongchuigong"] = zhongchuigongSkill()
+        skillRegistry["riyueliuxingnu"] = riyueliuxingnuSkill()
+        skillRegistry["beidoumieshengong"] = beidoumieshengongSkill()
 
         skillRegistry["novice_bow"] = NoviceBowSkill()
     }

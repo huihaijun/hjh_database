@@ -309,20 +309,41 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onDeath(event: EntityDeathEvent) {
-        // ... (保持原有的 onDeath 逻辑不变) ...
         val entity = event.entity
         val killer = entity.killer
 
-        if (killer != null
-            && !entity.scoreboardTags.contains(TEST_DUMMY_TAG)
-            && !entity.scoreboardTags.contains("trial_mob")) {
+        // 1. 给击杀者发放经验
+        // 保留了过滤测伤人偶 (TEST_DUMMY_TAG) 的设定，同时删除了废弃的 trial_mob 标签
+        if (killer != null && !entity.scoreboardTags.contains(TEST_DUMMY_TAG)) {
             if (entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
-                val expAmount = plugin.playerManager.getMobExp()
+
+                // === 读取自定义怪物的独立经验 ===
+                var expAmount = 20 // 默认值兜底
+
+                // 从实体的 PDC 中读取 MobId
+                val pdc = entity.persistentDataContainer
+                val mobIdKey = com.hjh_database.spawner.MobFactory.KEY_MOB_ID
+
+                if (pdc.has(mobIdKey, PersistentDataType.STRING)) {
+                    val mobId = pdc.get(mobIdKey, PersistentDataType.STRING)
+                    if (mobId != null) {
+                        val def = com.hjh_database.spawner.MobRegistry.get(mobId)
+                        if (def != null) {
+                            expAmount = def.exp // 读取注册表中的自定义经验
+                        }
+                    }
+                } else {
+                    // 兼容旧版或未注册的怪物
+                    expAmount = plugin.playerManager.getMobExp()
+                }
+
+                // ★ 给玩家经验并发送提示 (有了这两行，expAmount 就不会标灰了)
                 plugin.playerManager.giveExp(killer, expAmount)
                 killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e+ $expAmount 经验"))
             }
         }
 
+        // 2. 测伤玩偶专属：死亡后重生逻辑
         if (entity.scoreboardTags.contains(TEST_DUMMY_TAG)) {
             event.drops.clear()
             event.droppedExp = 0
@@ -337,6 +358,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
             val finalArmor = armor
 
+            // 延迟一秒在原地重新生成测伤玩偶
             Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                 loc.world?.spawn(loc, Creeper::class.java) { creeper ->
                     creeper.addScoreboardTag("panling")

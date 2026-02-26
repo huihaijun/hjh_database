@@ -43,8 +43,13 @@ class HumanRace(manager: RaceManager) : RaceBase(manager) {
                 val originalCost = ingredient.amount
 
                 // 计算折扣量 (向下取整)
-                // 例如: 原价 10, 20% off -> 优惠 2 个 -> 实付 8 个
-                val discountAmount = floor(originalCost * discountPercentage).toInt()
+                var discountAmount = floor(originalCost * discountPercentage).toInt()
+
+                // 【核心修复】：如果算出来的折扣为 0（例如原价 4 * 0.2 = 0.8 取整为 0）
+                // 既然满足了特权条件，强制提供保底 1 点的优惠
+                if (discountAmount <= 0) {
+                    discountAmount = 1
+                }
 
                 if (discountAmount > 0) {
                     // 原版机制：设置负数代表减少的价格

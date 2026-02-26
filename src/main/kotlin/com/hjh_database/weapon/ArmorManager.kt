@@ -135,10 +135,29 @@ class ArmorManager(private val plugin: Hjh_database) {
                 newLore.addAll(statusLore)
             }
 
+            // 【新增】动态刷新时也检查并应用皮革颜色
+            if (meta is org.bukkit.inventory.meta.LeatherArmorMeta && aData.color != null) {
+                meta.setColor(aData.color)
+            }
+
+            // 【修复】强行给旧装备补上最全的隐藏标签
+            meta.addItemFlags(
+                ItemFlag.HIDE_ATTRIBUTES,
+                ItemFlag.HIDE_UNBREAKABLE,
+                ItemFlag.HIDE_ADDITIONAL_TOOLTIP,
+                ItemFlag.HIDE_DYE,
+                ItemFlag.HIDE_ARMOR_TRIM,
+                ItemFlag.HIDE_ENCHANTS
+            )
+
+            // 【修复】清洗旧装备的原版默认属性残留
+            meta.attributeModifiers = com.google.common.collect.ArrayListMultimap.create()
+
             meta.lore = newLore
             if (aData.customModelData != 0) {
                 meta.setCustomModelData(aData.customModelData) // 顺手刷新一下模型数据
             }
+
             item.itemMeta = meta
             changed = true
         }
@@ -223,8 +242,21 @@ class ArmorManager(private val plugin: Hjh_database) {
 
         // 3. 属性标记 (1.21.3 推荐加入 HIDE_ADDITIONAL_TOOLTIP)
         meta.isUnbreakable = true
-        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES,
+            ItemFlag.HIDE_UNBREAKABLE,
+            ItemFlag.HIDE_ADDITIONAL_TOOLTIP,
+            ItemFlag.HIDE_DYE,           // 【关键】隐藏“颜色: #FFFFFF”
+            ItemFlag.HIDE_ARMOR_TRIM,    // 隐藏盔甲纹饰
+            ItemFlag.HIDE_ENCHANTS       // 隐藏附魔
+        )
 
+        // 直接塞入一个空的属性表，彻底干掉原版默认的“穿在XX上: +X 护甲”
+        meta.attributeModifiers = com.google.common.collect.ArrayListMultimap.create()
+
+        // 【新增】如果是皮革材质，且配置了颜色，强转 Meta 并染色
+        if (meta is org.bukkit.inventory.meta.LeatherArmorMeta && data.color != null) {
+            meta.setColor(data.color)
+        }
         item.itemMeta = meta
         return item
     }
@@ -260,11 +292,36 @@ class ArmorManager(private val plugin: Hjh_database) {
         @JvmField var rarity: Int = sec.getInt("rarity", 1) // <--- 【1】新增字段, 【2】读取配置，默认为1
         @JvmField var stats: MutableMap<String, Double> = HashMap()
 
+        // 【新增】护甲颜色字段
+        var color: org.bukkit.Color? = null
+
         init {
             val statSec = sec.getConfigurationSection("stats")
             if (statSec != null) {
                 for (key in statSec.getKeys(false)) {
                     stats[key] = statSec.getDouble(key)
+                }
+            }
+            // 【新增】解析 yaml 中的颜色配置
+            val colorStr = sec.getString("color")
+            if (colorStr != null) {
+                try {
+                    if (colorStr.startsWith("#") && colorStr.length == 7) {
+                        // 解析十六进制 (如 #FF0000)
+                        val r = colorStr.substring(1, 3).toInt(16)
+                        val g = colorStr.substring(3, 5).toInt(16)
+                        val b = colorStr.substring(5, 7).toInt(16)
+                        color = org.bukkit.Color.fromRGB(r, g, b)
+                    } else if (colorStr.contains(",")) {
+                        // 解析 RGB (如 255,0,0)
+                        val rgb = colorStr.split(",")
+                        if (rgb.size >= 3) {
+                            color = org.bukkit.Color.fromRGB(rgb[0].trim().toInt(), rgb[1].trim().toInt(), rgb[2].trim().toInt())
+                        }
+                    }
+                } catch (e: Exception) {
+                    // 解析失败时优雅降级
+                    println("防具 $id 的颜色格式错误: $colorStr，请使用 #RRGGBB 或 R,G,B")
                 }
             }
         }

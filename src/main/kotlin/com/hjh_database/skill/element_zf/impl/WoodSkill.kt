@@ -3,6 +3,10 @@ package com.hjh_database.skill.element_zf.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.ElementSkill
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+import net.md_5.bungee.api.ChatMessageType
+import net.md_5.bungee.api.chat.TextComponent
+import org.bukkit.ChatColor
 import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.Sound
@@ -49,6 +53,11 @@ class WoodSkill(private val plugin: Hjh_database) : ElementSkill {
                 plugin.databaseManager.savePlayer(data)
             }
         }
+
+//        player.spigot().sendMessage(
+//            ChatMessageType.ACTION_BAR,
+//            TextComponent(ChatColor.GOLD.toString() + "当前灵力值: " + String.format("%.1f", data.lingli))
+//        )
 
         // 5. 寻找目标
         val target = findTarget(player, range)

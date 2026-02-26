@@ -1,6 +1,13 @@
 package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
+import com.hjh_database.skill.medical.spell.impl.DuSuZhenSpell
+import com.hjh_database.skill.medical.spell.impl.HuShenZhouSpell
+import com.hjh_database.skill.medical.spell.impl.HuiChunYuSpell
+import com.hjh_database.skill.medical.spell.impl.LingCaoJueSpell
+import com.hjh_database.skill.medical.spell.impl.MingXiangSpell
+import com.hjh_database.skill.medical.spell.impl.MuChunYuSpell
 import com.hjh_database.skill.medical.spell.impl.TuiDiSpell
 import com.hjh_database.skill.medical.spell.impl.YuHeHuaSpell
 import io.papermc.paper.datacomponent.DataComponentTypes
@@ -35,10 +42,16 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         spells.clear()
         spellGroupKeys.clear() // 清除旧 Key
         spellConfigs.clear()
-
+        //===================================注册医术============================
         registerSpell("yuhehua", YuHeHuaSpell(plugin))
-        // 【新增】注册退敌
         registerSpell("tuidi", TuiDiSpell(plugin))
+        registerSpell("muchunyu", MuChunYuSpell(plugin))
+        registerSpell("lingcaojue", LingCaoJueSpell(plugin))
+        registerSpell("hushenzhou", HuShenZhouSpell(plugin))
+        registerSpell("dusuzhen", DuSuZhenSpell(plugin))
+        registerSpell("mingxiang", MingXiangSpell(plugin))
+        registerSpell("bingqingyu", BingQingYuSpell(plugin))
+        registerSpell("huichunyu", HuiChunYuSpell(plugin))
 
         loadConfig()
     }

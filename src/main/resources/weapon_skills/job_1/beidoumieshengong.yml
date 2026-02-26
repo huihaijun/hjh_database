@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【七星灭】发动！" # 由代码接管，保持简洁
+  cooldown: 10.0 # 你可以根据平衡性自行调整冷却

@@ -3,3 +3,13 @@ hjh_tongqian:
   material: GOLD_NUGGET
   name: "&f铜钱"
   custom_model_data: 10001
+
+jinyuanbao:
+  material: GOLD_NUGGET
+  name: "&a金元宝"
+  custom_model_data: 10002
+
+yinpiao:
+  material: GOLD_NUGGET
+  name: "&9银票"
+  custom_model_data: 10003

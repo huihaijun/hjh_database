@@ -2,6 +2,7 @@ package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.ElementSkill
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.*
@@ -44,11 +45,6 @@ class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
         // 修改完数据后，必须告诉数据库管理器保存数据
         // 【修复点】：由于上面加了 !!，这里的 data 已经是非空类型，不会再报错
         plugin.databaseManager.savePlayer(data)
-
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent(ChatColor.GOLD.toString() + "当前灵力值: " + String.format("%.1f", data.lingli))
-        )
 
         // 4. 计算目标位置 (星云中心)
         val hitLoc = getHitLocation(player, range)

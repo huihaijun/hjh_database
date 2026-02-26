@@ -161,3 +161,114 @@ points:
       # 调用代码逻辑
       custom_action: "JOB_TRIAL_ALCHEMY"
 
+  战士暂离-体验其他职业:
+    world: "world"
+    x: 300.5
+    y: 46.0
+    z: 26.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      # 调用代码逻辑，不要额外配置 message，由代码发送
+      custom_action: "LEAVE_JOB_TRIAL_WARRIOR"
+
+  弓箭手暂离-体验其他职业:
+    world: "world"
+    x: 299.5
+    y: 46.0
+    z: -1.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "LEAVE_JOB_TRIAL_ARCHER"
+
+  术士暂离-体验其他职业:
+    world: "world"
+    x: 207.5
+    y: 47.0
+    z: 118.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "LEAVE_JOB_TRIAL_MAGIC"
+
+  医师暂离-体验其他职业:
+    world: "world"
+    x: 95.5
+    y: 48.0
+    z: 28.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "LEAVE_JOB_TRIAL_DOCTOR"
+
+  决定成为职业-战士:
+    world: "world"
+    x: 1247.5
+    y: 36.0
+    z: -391.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "CHOOSE_JOB_WARRIOR"
+
+  决定成为职业-弓箭手:
+    world: "world"
+    x: 299.5
+    y: 46.0
+    z: -1.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "CHOOSE_JOB_ARCHER"
+
+  决定成为职业-术士:
+    world: "world"
+    x: 207.5
+    y: 47.0
+    z: 118.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "CHOOSE_JOB_MAGIC"
+
+  决定成为职业-医师:
+    world: "world"
+    x: 95.5
+    y: 48.0
+    z: 28.5
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "CHOOSE_JOB_DOCTOR"
+
+  奈何桥-重生石回皇城:
+    world: "world"
+    x: 179.58
+    y: 42.19
+    z: 62.70
+    yaw: 179.70
+    pitch: 1.50
+    actions:
+      custom_action: "RELIVE_STONE_TO_CITY"
+
+  奈何桥-重生石回种族:
+    world: "world"
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "RELIVE_STONE_TO_RACE"
+
+  奈何桥-无重生石打回种族:
+    world: "world"
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+    actions:
+      custom_action: "NO_STONE_TO_RACE"
+

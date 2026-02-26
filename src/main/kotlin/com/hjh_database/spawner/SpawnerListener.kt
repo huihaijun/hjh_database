@@ -6,32 +6,113 @@ import org.bukkit.NamespacedKey
 import org.bukkit.block.CreatureSpawner
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.persistence.PersistentDataType
 import java.util.concurrent.ThreadLocalRandom
+import org.bukkit.event.player.PlayerInteractEvent
 
 class SpawnerListener(private val plugin: Hjh_database) : Listener {
 
     private val keyMobIdItem = NamespacedKey(plugin, "hjh_spawner_mobid")
     private val keyTargetLocItem = NamespacedKey(plugin, "hjh_spawner_target")
 
+    // 用于手动测试方块的 NBT Keys
+    private val keyManualMobIdItem = NamespacedKey(plugin, "hjh_spawner_manual_mobid_item")
+    private val keyManualMobIdBlock = NamespacedKey(plugin, "hjh_spawner_manual_mobid_block")
+    private val keyManualCooldown = NamespacedKey(plugin, "hjh_spawner_manual_cd")
+
+    // 【新增】用于手动测试方块坐标传递的 Keys
+    private val keyManualTargetItem = NamespacedKey(plugin, "hjh_spawner_manual_target_item")
+    private val keyManualTargetBlock = NamespacedKey(plugin, "hjh_spawner_manual_target_block")
+
     // 放置刷怪笼逻辑 (保持不变)
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
         val item = event.itemInHand
-        if (item.type != Material.SPAWNER) return
+        if (item.type != org.bukkit.Material.SPAWNER) return
         val meta = item.itemMeta ?: return
         val pdc = meta.persistentDataContainer
+        val spawner = event.blockPlaced.state as? CreatureSpawner ?: return
 
+        // 1. 如果是“手动测试方块”
+        if (pdc.has(keyManualMobIdItem, PersistentDataType.STRING)) {
+            val mobId = pdc.get(keyManualMobIdItem, PersistentDataType.STRING) ?: return
+
+            // 将数据写入放在地上的刷怪笼中 (它会随地图保存，不需要数据库)
+            spawner.persistentDataContainer.set(keyManualMobIdBlock, PersistentDataType.STRING, mobId)
+
+            // 【恢复】把坐标也传递给放下的方块
+            if (pdc.has(keyManualTargetItem, PersistentDataType.STRING)) {
+                val targetStr = pdc.get(keyManualTargetItem, PersistentDataType.STRING)!!
+                spawner.persistentDataContainer.set(keyManualTargetBlock, PersistentDataType.STRING, targetStr)
+            }
+            // 禁用原版生成
+            spawner.spawnedType = org.bukkit.entity.EntityType.AREA_EFFECT_CLOUD
+            spawner.update()
+
+            event.player.sendMessage("§a成功放置手动测试方块！(ID: $mobId) 右键即可测试。")
+            return
+        }
+
+        // 2. 原本的“自动刷怪笼”逻辑保持不变
         if (pdc.has(keyMobIdItem, PersistentDataType.STRING)) {
             val mobId = pdc.get(keyMobIdItem, PersistentDataType.STRING) ?: return
             val targetStr = pdc.get(keyTargetLocItem, PersistentDataType.STRING)
-            val spawner = event.blockPlaced.state as? CreatureSpawner ?: return
 
-            // 写入方块数据
-            plugin.spawnerBlockManager.writeToSpawner(spawner, mobId, targetStr)
-            event.player.sendMessage("§a成功放置定点刷怪笼！(ID: $mobId)")
+            // 假设你的 SpawnerBlockManager 有 writeToSpawner 方法
+            plugin.spawnerBlockManager?.writeToSpawner(spawner, mobId, targetStr)
+            event.player.sendMessage("§a成功放置自动刷怪笼！(ID: $mobId)")
+        }
+    }
+
+    // ★★★ 新增：玩家右键点击地上的手动测试方块 ★★★
+    @EventHandler
+    fun onPlayerInteract(event: PlayerInteractEvent) {
+        // 仅监听右键方块
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        val clickedBlock = event.clickedBlock ?: return
+        // 只检查刷怪笼方块
+        if (clickedBlock.type != org.bukkit.Material.SPAWNER) return
+        val spawner = clickedBlock.state as? CreatureSpawner ?: return
+        val pdc = spawner.persistentDataContainer
+
+        // 检查这个刷怪笼是否有手动测试的标记
+        if (pdc.has(keyManualMobIdBlock, PersistentDataType.STRING)) {
+            event.isCancelled = true // 阻止原版的右键行为
+
+            val mobId = pdc.get(keyManualMobIdBlock, PersistentDataType.STRING) ?: return
+            // 冷却时间检查 (3000毫秒 = 3秒)
+            val currentTime = System.currentTimeMillis()
+            val lastUsed = pdc.get(keyManualCooldown, PersistentDataType.LONG) ?: 0L
+            val cooldownMs = 3000L
+            if (currentTime - lastUsed < cooldownMs) {
+                val timeLeft = (cooldownMs - (currentTime - lastUsed)) / 1000
+                event.player.sendMessage("§c生成冷却中，请等待 ${timeLeft + 1} 秒！")
+                return
+            }
+            // 更新该方块的最后使用时间并保存
+            pdc.set(keyManualCooldown, PersistentDataType.LONG, currentTime)
+            spawner.update()
+
+            // 【修复核心】：读取绑定的目标坐标，如果不存在则兜底在方块上方
+            var spawnLoc = clickedBlock.location.add(0.5, 1.0, 0.5)
+            val targetStr = pdc.get(keyManualTargetBlock, PersistentDataType.STRING)
+            if (targetStr != null) {
+                val parts = targetStr.split(",")
+                if (parts.size >= 4) {
+                    val world = org.bukkit.Bukkit.getWorld(parts[0])
+                    if (world != null) {
+                        try {
+                            spawnLoc = org.bukkit.Location(world, parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
+                        } catch (e: Exception) {
+                            // 坐标解析出错时忽略，回退到方块上方
+                        }
+                    }
+                }
+            }
+            MobFactory.spawnMob(plugin, spawnLoc, mobId)
         }
     }
 

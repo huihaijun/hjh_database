@@ -40,7 +40,12 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         val skillId = plugin.medicalManager.getSkillIdFromBanner(mainHandItem)
         if (skillId == null) return
 
-        // ==================== 修改的核心区域 START ====================
+        // 【新增】如果玩家正在潜行，或正在运气调息的列表中，禁止释放医术
+        if (p.isSneaking || chargingTasks.containsKey(p.uniqueId)) {
+            p.sendMessage("§c[释放失败] §7运气调息时须全神贯注，无法分神施展医术！")
+            return
+        }
+
         // 3. 【核心逻辑优化】检查“激活位（第0格）”是否有合法的医旗
         // 无论你手里拿的是第几格的旗子，我们只看第0格有没有“医师资格”
         val activeSlotItem = p.inventory.getItem(0) // 获取快捷栏第一格物品
@@ -54,7 +59,6 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
             // 这里可以不发消息（静默失败），或者提示玩家“请先在第一格装备已激活的医旗”
             return
         }
-        // ==================== 修改的核心区域 END ====================
 
         e.isCancelled = true
         // 4. 检查是否学会（保持不变）
@@ -104,7 +108,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         // 2. 发送开始提示
         p.sendMessage("§a[医术] §7你已开始凝聚灵力...")
 
-        // 2. 开启循环任务 (每秒执行一次 = 20 ticks)
+        // 2. 开启循环任务
         val taskId = object : BukkitRunnable() {
             override fun run() {
                 // 安全检查：玩家掉线、死亡、不再潜行
@@ -142,7 +146,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                 p.world.spawnParticle(Particle.HAPPY_VILLAGER, p.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.5, 0.3, 0.0)
                 p.world.spawnParticle(Particle.SPLASH, p.location.add(0.0, 0.5, 0.0), 0, 0.0, 1.0, 0.0, 1.0) // 绿色药水粒子
             }
-        }.runTaskTimer(plugin, 0L, 20L).taskId // 0延时，20tick(1秒)间隔
+        }.runTaskTimer(plugin, 40L, 40L).taskId // 2s延时，40tick(2秒)间隔
 
         chargingTasks[p.uniqueId] = taskId
     }

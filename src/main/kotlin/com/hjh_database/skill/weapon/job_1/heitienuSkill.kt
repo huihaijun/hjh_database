@@ -102,7 +102,7 @@ class heitienuSkill : WeaponSkill, Listener {
 
         // === 1. 击退效果 ===
         // 根据箭的飞行方向，生成一个向后的冲力。1.5的强度大概能击退2-3格。
-        val kbVector = arrow.velocity.clone().normalize().multiply(1.5).setY(0.4)
+        val kbVector = arrow.velocity.clone().normalize().multiply(1.5).setY(0.2)
         victim.velocity = kbVector
 
         // 击退音效与特效
