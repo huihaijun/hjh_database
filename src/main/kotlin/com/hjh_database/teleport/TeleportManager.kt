@@ -438,6 +438,12 @@ class TeleportManager(private val plugin: Hjh_database) {
                 // 3. 传送与数据更新
                 data.job = 2
                 data.updateStatus(4)
+                // 初始化五种元素阵法的等级为 1 级
+                data.elementLevels["METAL"] = 1
+                data.elementLevels["WOOD"] = 1
+                data.elementLevels["WATER"] = 1
+                data.elementLevels["FIRE"] = 1
+                data.elementLevels["EARTH"] = 1
                 return true // 返回 true 以保存数据
             }
             "JOB_TRIAL_ALCHEMY" -> {

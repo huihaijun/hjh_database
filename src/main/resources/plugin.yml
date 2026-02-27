@@ -1,5 +1,5 @@
 name: hjh_database
-version: '${project.version}'
+version: '${version}'
 main: com.hjh_database.Hjh_database
 api-version: '1.21'
 commands:
@@ -40,3 +40,9 @@ commands:
     description: 开物术系统指令 (OP)
     usage: /hjhkw <reload|save>
     permission: hjh.op
+
+  # ... (上面是你原来的 commands 等配置)
+libraries:
+  - org.jetbrains.kotlin:kotlin-stdlib:2.0.21
+  - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0
+  - com.zaxxer:HikariCP:5.1.0

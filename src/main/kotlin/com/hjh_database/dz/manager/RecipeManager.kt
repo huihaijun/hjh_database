@@ -25,6 +25,23 @@ class RecipeManager(private val plugin: Hjh_database) {
         if (!folder.exists()) folder.mkdirs()
 
         val categories = arrayOf("weapon", "armor", "artifact", "misc")
+
+        // 【核心修复】启动时强制创建4个空配方文件，确保首次保存也能成功
+        for (cat in categories) {
+            val file = File(folder, "$cat.yml")
+            if (!file.exists()) {
+                try {
+                    val config = YamlConfiguration()
+                    // 可选：加一行注释方便查看
+                    config.set("info", "=== $cat 分类配方文件 ===")
+                    config.save(file)
+                    plugin.logger.info("已自动创建配方文件: recipes/$cat.yml")
+                } catch (e: IOException) {
+                    plugin.logger.warning("创建配方文件 $cat.yml 失败: ${e.message}")
+                }
+            }
+        }
+
         for (cat in categories) {
             loadCategory(cat)
         }
@@ -38,35 +55,49 @@ class RecipeManager(private val plugin: Hjh_database) {
         val config = YamlConfiguration.loadConfiguration(file)
         for (id in config.getKeys(false)) {
             try {
-                // 1. 解析结果物品 (核心修改)
-                val resultStr = config.getString("$id.result_id")
-                val resultItem: ItemStack
+                // 1. 解析结果物品 (修复：支持解析数量，并增加 ResourceManager 检查)
+                val resultRaw = config.getString("$id.result_id") ?: "STONE:1"
+                val resParts = resultRaw.split(":")
+                val resStr = resParts[0]
+                val resAmount = if (resParts.size > 1) resParts[1].toIntOrNull() ?: 1 else 1
 
-                // 尝试从 RPG 库加载
-                // 注意：Kotlin 中 Map 的 containsKey 语法没变，但访问属性更加直接
-                resultItem = if (resultStr != null && plugin.playerManager.weaponManager.loadedWeapons.containsKey(resultStr)) {
-                    plugin.playerManager.weaponManager.getItemStack(resultStr)!!
-                } else if (resultStr != null && plugin.playerManager.armorManager.allIds.contains(resultStr)) {
-                    plugin.playerManager.armorManager.getItemStack(resultStr)!!
+                val resultItem: ItemStack = if (plugin.playerManager.weaponManager.loadedWeapons.containsKey(resStr)) {
+                    plugin.playerManager.weaponManager.getItemStack(resStr)!!
+                } else if (plugin.playerManager.armorManager.allIds.contains(resStr)) {
+                    plugin.playerManager.armorManager.getItemStack(resStr)!!
+                } else if (plugin.resourceManager.getItem(resStr) != null) {
+                    // 【新增】向 ResourceManager 获取杂项物品
+                    plugin.resourceManager.getItem(resStr)!!
                 } else {
-                    // 尝试原版材质
-                    val mat = Material.getMaterial(resultStr ?: "STONE")
+                    val mat = Material.getMaterial(resStr.uppercase())
                     ItemStack(mat ?: Material.STONE)
                 }
+                resultItem.amount = resAmount
 
-                // 2. 解析材料 List (核心修改)
+                // 2. 解析材料 List (修复：支持解析数量，并增加 ResourceManager 检查)
                 val ingredients: MutableList<ItemStack> = ArrayList()
                 val ingList = config.getStringList("$id.ingredients")
-                for (ingStr in ingList) {
+                for (ingRaw in ingList) {
+                    val parts = ingRaw.split(":")
+                    val ingStr = parts[0]
+                    val ingAmount = if (parts.size > 1) parts[1].toIntOrNull() ?: 1 else 1
+
                     val ingItem: ItemStack = if (ingStr.equals("AIR", ignoreCase = true)) {
                         ItemStack(Material.AIR)
                     } else if (plugin.playerManager.weaponManager.loadedWeapons.containsKey(ingStr)) {
                         plugin.playerManager.weaponManager.getItemStack(ingStr)!!
                     } else if (plugin.playerManager.armorManager.allIds.contains(ingStr)) {
                         plugin.playerManager.armorManager.getItemStack(ingStr)!!
+                    } else if (plugin.resourceManager.getItem(ingStr) != null) {
+                        // 【新增】向 ResourceManager 获取杂项材料
+                        plugin.resourceManager.getItem(ingStr)!!
                     } else {
-                        val mat = Material.getMaterial(ingStr)
+                        val mat = Material.getMaterial(ingStr.uppercase())
                         ItemStack(mat ?: Material.STONE)
+                    }
+
+                    if (ingItem.type != Material.AIR) {
+                        ingItem.amount = ingAmount
                     }
                     ingredients.add(ingItem)
                 }
@@ -78,7 +109,6 @@ class RecipeManager(private val plugin: Hjh_database) {
                 val exp = config.getInt("$id.exp_reward", 10)
 
                 val recipe = DzRecipe(id, category, resultItem, ingredients, job, lv, lic, exp)
-                // computeIfAbsent 的 Kotlin 写法
                 recipes.computeIfAbsent(category) { HashMap() }[id] = recipe
 
             } catch (e: Exception) {
@@ -92,12 +122,18 @@ class RecipeManager(private val plugin: Hjh_database) {
         val config = YamlConfiguration.loadConfiguration(file)
         val path = recipe.id
 
-        // 核心：保存 ID 而不是 ItemStack
-        config.set("$path.result_id", ItemUtil.getPublicId(recipe.result))
+        // 核心修改：保存时追加物品数量，格式为 ID:Amount
+        val resId = ItemUtil.getPublicId(recipe.result)
+        config.set("$path.result_id", "$resId:${recipe.result.amount}")
 
         val ingIds: MutableList<String> = ArrayList()
         for (item in recipe.ingredients) {
-            ingIds.add(ItemUtil.getPublicId(item))
+            if (item.type == Material.AIR) {
+                ingIds.add("AIR:1")
+            } else {
+                val ingId = ItemUtil.getPublicId(item)
+                ingIds.add("$ingId:${item.amount}")
+            }
         }
         config.set("$path.ingredients", ingIds)
 

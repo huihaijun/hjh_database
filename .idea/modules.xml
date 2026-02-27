@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/hjh_database.iml" filepath="$PROJECT_DIR$/hjh_database.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/hjh_database.main.iml" filepath="$PROJECT_DIR$/.idea/modules/hjh_database.main.iml" />
     </modules>
   </component>
 </project>
