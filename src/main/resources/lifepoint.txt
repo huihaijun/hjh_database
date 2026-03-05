@@ -1,0 +1,17 @@
+东方
+皇城：/execute in minecraft:overworld run tp @s 179.29 42.19 62.70 180.47 7.05
+龙须镇：/execute in minecraft:overworld run tp @s 528.75 33.00 25.25 -417.88 1.50
+始皇陵：/execute in minecraft:overworld run tp @s 621.45 9.50 -136.47 -629.68 -1.05
+破败的村庄：/execute in minecraft:overworld run tp @s 556.30 40.00 341.03 -271.33 4.50
+青龙祭坛：/execute in minecraft:overworld run tp @s 1696.50 103.00 867.87 -179.83 -0.75
+
+南方
+沙漠客栈：/execute in minecraft:overworld run tp @s -308.47 58.00 584.16 449.57 4.80
+马贼团巢穴：/execute in minecraft:overworld run tp @s -162.72 47.00 580.88 185.72 5.40
+绿洲小镇：/execute in minecraft:overworld run tp @s -22.84 47.00 808.91 273.32 4.80
+火焰魔王的巢穴：/execute in minecraft:overworld run tp @s -298.07 11.00 800.97 449.12 1.50
+废弃村庄：/execute in minecraft:overworld run tp @s 335.78 50.00 781.98 591.77 -2.25
+朱雀祭坛：/execute in minecraft:overworld run tp @s 3233.02 148.00 -799.50 -90.13 -3.60
+
+
+

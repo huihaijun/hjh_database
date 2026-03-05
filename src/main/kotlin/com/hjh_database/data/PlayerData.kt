@@ -180,6 +180,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var kaiwuEnergy: Double = 100.0 // 精力值
 
 
+
     // === 【新增】当前活跃的药效 ===
     // 玩家下线后药效保留（
 //    @Transient
@@ -303,6 +304,52 @@ class PlayerData(val uuid: UUID, val playerName: String) {
             5 -> "副本中"
             6 -> "奈何桥中"
             else -> "未知状态"
+        }
+    }
+
+    // ==========================================
+//           重华晶系统 (Chonghua)
+// ==========================================
+// 存储已经打卡过的地点的ID
+    var unlockedWaypoints: MutableSet<String> = HashSet()
+    // 存储地点ID对应的上次传送时间戳 (用于计算300秒冷却)
+    var waypointCooldowns: MutableMap<String, Long> = HashMap()
+
+    fun getUnlockedWaypointsAsJson(): String {
+        if (unlockedWaypoints.isEmpty()) return "[]"
+        return Gson().toJson(unlockedWaypoints)
+    }
+
+    fun setUnlockedWaypointsFromJson(json: String?) {
+        if (json.isNullOrEmpty() || json == "[]" || json == "null") {
+            this.unlockedWaypoints = HashSet()
+            return
+        }
+        try {
+            val type = object : TypeToken<Set<String>>() {}.type
+            this.unlockedWaypoints = Gson().fromJson(json, type)
+        } catch (e: Exception) {
+            this.unlockedWaypoints = HashSet()
+            e.printStackTrace()
+        }
+    }
+
+    fun getWaypointCooldownsAsJson(): String {
+        if (waypointCooldowns.isEmpty()) return "{}"
+        return Gson().toJson(waypointCooldowns)
+    }
+
+    fun setWaypointCooldownsFromJson(json: String?) {
+        if (json.isNullOrEmpty() || json == "{}" || json == "null") {
+            this.waypointCooldowns = HashMap()
+            return
+        }
+        try {
+            val type = object : TypeToken<Map<String, Long>>() {}.type
+            this.waypointCooldowns = Gson().fromJson(json, type)
+        } catch (e: Exception) {
+            this.waypointCooldowns = HashMap()
+            e.printStackTrace()
         }
     }
 }

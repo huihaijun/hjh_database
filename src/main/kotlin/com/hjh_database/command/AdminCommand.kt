@@ -40,6 +40,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin get <物品ID/名称> [数量] - 获取Resource物品")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettestgear <玩家> - 获取测试装备")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin givetoken <玩家> - 给予天机令")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin level <玩家> [set|add] [数值] - 查看或修改玩家等级")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin job <玩家> <职业> - 设置职业")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin race <玩家> <种族> - 设置种族")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medical <技能ID> - 获取医术秘籍")
@@ -50,6 +51,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 【丹药提示】
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin alchemy <list|give|getcauldron> ... - 丹药系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettp <方块材质> <传送点ID> - 获取传送触发器")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getarrayblock -获取术士阵法升级方块 ")
             return true
         }
 
@@ -234,6 +236,59 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (target == null) return error(sender, "玩家不在线")
             target.inventory.addItem(plugin.menuManager.getTianjiToken())
             sender.sendMessage(ChatColor.GREEN.toString() + "给予天机令成功。")
+            return true
+        }
+
+        // === level (查看/修改玩家等级) ===
+        if (subCommand == "level") {
+            if (args.size < 2) {
+                sender.sendMessage("§c用法: /hjhadmin level <玩家> [set|add] [数值]")
+                return true
+            }
+            val target = Bukkit.getPlayerExact(args[1])
+            if (target == null) {
+                sender.sendMessage("§c玩家不在线。")
+                return true
+            }
+            val data = plugin.playerManager.getData(target.uniqueId)
+            if (data == null) {
+                sender.sendMessage("§c玩家数据正在加载或不存在。")
+                return true
+            }
+            // 仅查看等级: /hjhadmin level <玩家>
+            if (args.size == 2) {
+                sender.sendMessage("§8[§aLevel§8] §f玩家 ${target.name} 的当前等级为: §e${data.lv}")
+                return true
+            }
+            // 修改等级: /hjhadmin level <玩家> <set|add> <数值>
+            if (args.size >= 4) {
+                val action = args[2].lowercase()
+                val value = args[3].toIntOrNull()
+
+                if (value == null) {
+                    sender.sendMessage("§c数值必须为整数。")
+                    return true
+                }
+                when (action) {
+                    "set" -> data.lv = value
+                    "add" -> data.lv += value
+                    else -> {
+                        sender.sendMessage("§c未知操作，请使用 set 或 add。")
+                        return true
+                    }
+                }
+                // 确保等级不小于1
+                if (data.lv < 1) data.lv = 1
+                // 刷新玩家属性，并将最新的等级状态同步回原版的客户端显示
+                plugin.playerManager.updateStats(target)
+                // 异步保存数据，防止回档
+                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    plugin.databaseManager.savePlayer(data)
+                })
+                sender.sendMessage("§8[§aLevel§8] §a已成功将 ${target.name} 的等级修改为: §e${data.lv}")
+                return true
+            }
+            sender.sendMessage("§c用法: /hjhadmin level <玩家> [set|add] [数值]")
             return true
         }
 
@@ -559,6 +614,56 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return true
         }
 
+        // === 重华晶指令 ===
+        if (subCommand == "chonghua") {
+            if (args.size < 3) {
+                sender.sendMessage("§e=== 重华晶配置指令 ===")
+                sender.sendMessage("§c/hjhadmin chonghua crystal <EAST|SOUTH|WEST|NORTH> §7- 获得区域传送门(黄绿粘土)")
+                sender.sendMessage("§c/hjhadmin chonghua checkin <地点ID> §7- 获得特定地点的打卡方块(红色粘土)")
+                return true
+            }
+
+            val type = args[1].lowercase()
+
+            // 获得黄绿色粘土（主界面传送点）
+            if (type == "crystal") {
+                val regionStr = args[2].uppercase()
+                val region = try { com.hjh_database.chonghua.Region.valueOf(regionStr) } catch(e: Exception) { null }
+
+                if (region == null) {
+                    sender.sendMessage("§c无效区域！请使用 EAST, SOUTH, WEST, NORTH")
+                    return true
+                }
+
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.LIME_TERRACOTTA)
+                val meta = item.itemMeta
+                meta?.setDisplayName("§a§l重华晶传送门 - ${region.displayName}")
+                val key = org.bukkit.NamespacedKey(plugin, "chonghua_region")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.STRING, region.name)
+                item.itemMeta = meta
+
+                (sender as Player).inventory.addItem(item)
+                sender.sendMessage("§a已获得传送门方块: ${region.displayName}")
+                return true
+            }
+
+            // 获得红色粘土（打卡点）
+            if (type == "checkin") {
+                val wpId = args[2] // 如 east_01
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.LIME_GLAZED_TERRACOTTA)
+                val meta = item.itemMeta
+                meta?.setDisplayName("§c§l打卡点 - $wpId")
+                val key = org.bukkit.NamespacedKey(plugin, "chonghua_waypoint")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.STRING, wpId)
+                item.itemMeta = meta
+
+                (sender as Player).inventory.addItem(item)
+                sender.sendMessage("§a已获得打卡点方块: $wpId")
+                return true
+            }
+        }
+
+
         return error(sender, "未知指令: $subCommand")
     }
 
@@ -569,119 +674,111 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
     }
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<out String>): List<String>? {
-        // 【修改】添加 medical, alchemy 到一级补全
-        if (args.size == 1) return listOf("job", "race", "givetoken", "reload", "gettestgear", "get", "medical", "getstation","quest","gennpc", "alchemy","spawner", "status","gettp").filter { it.startsWith(args[0].lowercase()) }
+        // 防止空数组异常
+        if (args.isEmpty()) return null
 
+        // === 1. 一级补全 ===
+        if (args.size == 1) {
+            val rootCommands = listOf(
+                "job", "race", "givetoken", "level", "reload", "gettestgear", "get",
+                "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
+                "status", "gettp", "getarrayblock", "chonghua"
+            )
+            return rootCommands.filter { it.startsWith(args[0].lowercase()) }
+        }
+
+        // 只要走到这里，args.size 至少是 2
         val subCmd = args[0].lowercase()
 
-        // === 丹药 Tab 补全 ===
-        if (subCmd == "alchemy") {
-            if (args.size == 2) {
-                return listOf("give", "list", "getcauldron").filter { it.startsWith(args[1].lowercase()) }
-            }
-            if (args.size == 3 && args[1].equals("give", ignoreCase = true)) {
-                // 补全玩家名
-                return null
-            }
-            if (args.size == 4 && args[1].equals("give", ignoreCase = true)) {
-                // 补全丹药ID
-                return plugin.alchemyManager.effects.keys.toList().filter { it.startsWith(args[3]) }
-            }
-            if (args.size == 5 && args[1].equals("give", ignoreCase = true)) {
-                // 补全品质
-                return listOf("LOW", "MID", "HIGH").filter { it.startsWith(args[4].uppercase()) }
-            }
-        }
-
-        // 【修改】spawner 子命令补全
-        if (subCmd == "spawner") {
-            if (args.size == 2) {
-                return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
-            }
-            // 第三参数：如果前置是 get 或 button，提示补全怪物 ID
-            if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
-                // 注意：这里需要你的 MobRegistry 中有一个 getAllIds() 方法返回 List<String> 或 Set<String>
-                // 如果没有，请在 MobRegistry.kt 中添加： fun getAllIds(): Set<String> = mobs.keys
-                return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
-            }
-        }
-
-        // 【新增】玩家状态status 指令补全
-        if (subCmd == "status") {
-            if (args.size == 2) return null // 补全玩家名
-            if (args.size == 3) return listOf("set")
-            // 提示一些常用状态值
-            if (args.size == 4 && args[2].equals("set", true)) return listOf("0", "1", "2", "3", "4")
-        }
-
-        if (subCmd == "gettp") {
-            if (args.size == 2) {
-                // 提示压力板和按钮，方便选择
-                return listOf("STONE_PRESSURE_PLATE", "OAK_BUTTON", "LEVER", "STONE").filter { it.startsWith(args[1].uppercase()) }
-            }
-            if (args.size == 3) {
-                // 提示已有的传送点ID
-                return plugin.teleportManager.points.keys.toList().filter { it.startsWith(args[2]) }
-            }
-        }
-
-        // 如果是 get 指令，第二个参数提示所有物品的ID和名字
-        if (subCmd == "get") {
-            if (args.size == 2) {
-                if (plugin.resourceManager != null) {
-                    val allNames = plugin.resourceManager.getAllItemNames()
-                    val currentInput = args[1].lowercase()
-                    return allNames.filter { it.lowercase().startsWith(currentInput) }
+        // === 2. 二级及以上补全 (根据主指令分支) ===
+        when (subCmd) {
+            "chonghua" -> {
+                // 【修复】：严格分离 size == 2 和 size == 3
+                if (args.size == 2) {
+                    return listOf("crystal", "checkin").filter { it.startsWith(args[1].lowercase()) }
                 }
-                return ArrayList()
+                if (args.size == 3) {
+                    val action = args[1].lowercase()
+                    if (action == "crystal") {
+                        val regions = listOf("EAST", "SOUTH", "WEST", "NORTH")
+                        return regions.filter { it.startsWith(args[2].uppercase()) }
+                    }
+                    if (action == "checkin") {
+                        return plugin.chonghuaManager.waypoints.keys.filter { it.startsWith(args[2].lowercase()) }
+                    }
+                }
             }
-        }
 
-        // 任务系统的指令
-        if (subCmd == "quest") {
-            if (args.size == 2) return null // 玩家名
-            if (args.size == 3) {
-                // 返回所有注册的任务ID
-                return plugin.questManager.getAllQuests().map { it.id }.filter { it.startsWith(args[2]) }
+            "alchemy" -> {
+                // 【修复】：移除了混入的 crystal 和 checkin
+                if (args.size == 2) return listOf("give", "list", "getcauldron").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 3 && args[1].equals("give", ignoreCase = true)) return null // 玩家名
+                if (args.size == 4 && args[1].equals("give", ignoreCase = true)) return plugin.alchemyManager.effects.keys.toList().filter { it.startsWith(args[3]) }
+                if (args.size == 5 && args[1].equals("give", ignoreCase = true)) return listOf("LOW", "MID", "HIGH").filter { it.startsWith(args[4].uppercase()) }
             }
-            if (args.size == 4) return listOf("LOCKED", "IN_PROGRESS", "COMPLETED").filter { it.startsWith(args[3].uppercase()) }
-            if (args.size == 5) return listOf("0", "1", "5", "10")
-        }
 
-        // 【新增】如果是 medical 指令，提示技能ID
-        if (subCmd == "medical") {
-            if (args.size == 2) {
-                if (plugin.medicalManager != null) {
+            "spawner" -> {
+                // 【修复】：移除了重复的代码块
+                if (args.size == 2) return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
+                    return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
+                }
+            }
+
+            "status" -> {
+                if (args.size == 2) return null // 玩家名
+                if (args.size == 3) return listOf("set").filter { it.startsWith(args[2].lowercase()) }
+                if (args.size == 4 && args[2].equals("set", true)) return listOf("0", "1", "2", "3", "4").filter { it.startsWith(args[3]) }
+            }
+
+            "gettp" -> {
+                if (args.size == 2) return listOf("STONE_PRESSURE_PLATE", "OAK_BUTTON", "LEVER", "STONE").filter { it.startsWith(args[1].uppercase()) }
+                if (args.size == 3) return plugin.teleportManager.points.keys.toList().filter { it.startsWith(args[2]) }
+            }
+
+            "get" -> {
+                if (args.size == 2 && plugin.resourceManager != null) {
+                    val currentInput = args[1].lowercase()
+                    return plugin.resourceManager.getAllItemNames().filter { it.lowercase().startsWith(currentInput) }
+                }
+            }
+
+            "quest" -> {
+                if (args.size == 2) return null // 玩家名
+                if (args.size == 3) return plugin.questManager.getAllQuests().map { it.id }.filter { it.startsWith(args[2]) }
+                if (args.size == 4) return listOf("LOCKED", "IN_PROGRESS", "COMPLETED").filter { it.startsWith(args[3].uppercase()) }
+                if (args.size == 5) return listOf("0", "1", "5", "10").filter { it.startsWith(args[4]) }
+            }
+
+            "medical" -> {
+                if (args.size == 2 && plugin.medicalManager != null) {
                     return ArrayList(plugin.medicalManager.getAllSkillIds()).filter { it.startsWith(args[1]) }
                 }
             }
-        }
 
-        // 【修改】spawner 子命令补全 (加入怪物ID和button)
-        if (subCmd == "spawner") {
-            if (args.size == 2) {
-                return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
+            "gennpc" -> {
+                if (args.size == 2) {
+                    val list = ArrayList<String>()
+                    list.add("ALL")
+                    list.addAll(StoryNpcs.values().map { it.name })
+                    return list.filter { it.startsWith(args[1].uppercase()) }
+                }
             }
-            // 当输入 get 或 button 后，第三个参数提示 MobRegistry 中的所有ID
-            if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
-                return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
+
+            "job" -> {
+                if (args.size == 3) return ArrayList(jobReverseMap.keys).filter { it.startsWith(args[2]) }
             }
-        }
-        if (subCmd == "gennpc") {
-            if (args.size == 2) {
-                val list = ArrayList<String>()
-                list.add("ALL")
-                list.addAll(StoryNpcs.values().map { it.name })
-                return list.filter { it.startsWith(args[1].uppercase()) }
+
+            "race" -> {
+                if (args.size == 3) return ArrayList(raceReverseMap.keys).filter { it.startsWith(args[2]) }
             }
         }
 
-        if (args.size == 2) return null // 其他指令默认回显玩家名
+        // === 3. 兜底处理 ===
+        // 如果 args.size == 2 且上面没有处理（比如 job, race 等只匹配 size=3 的指令）
+        // 返回 null 表示默认采用 Bukkit 原生的在线玩家名称补全
+        if (args.size == 2) return null
 
-        if (args.size == 3) {
-            if (args[0].equals("job", ignoreCase = true)) return ArrayList(jobReverseMap.keys).filter { it.startsWith(args[2]) }
-            if (args[0].equals("race", ignoreCase = true)) return ArrayList(raceReverseMap.keys).filter { it.startsWith(args[2]) }
-        }
         return ArrayList()
     }
 }

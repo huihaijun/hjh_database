@@ -51,7 +51,24 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         val inv = Bukkit.createInventory(MainMenuHolder(), 27, TITLE_MAIN)
         inv.setItem(11, createItem(Material.LOOM, "§a§l绘制医术", "§7将医术绘制到旗帜上", "§e点击进入"))
         inv.setItem(13, createItem(Material.GRINDSTONE, "§b§l医术分离", "§7将已绘制的旗帜还原", "§7分为: 空白旗 + 秘籍", "§c需要消耗记忆！", "§e点击进入"))
-        inv.setItem(15, createItem(Material.BARRIER, "§c§l遗忘所有医术", "§c慎用！", "§7清空所有已学会的医术记录", "§e双击确认"))
+        // --- 修改部分开始 ---
+        // 动态构建遗忘医术按钮的 Lore
+        val lore = mutableListOf("§c慎用！", "§7清空所有已学会的医术记录", "§e双击确认", "§8----------------")
+        val data = plugin.playerManager.getData(p.uniqueId)
+
+        if (data != null && data.medicalSkills.isNotEmpty()) {
+            lore.add("§e当前已掌握的医术:")
+            for (skillId in data.medicalSkills) {
+                // 通过 MedicalManager 获取医术的真实名称
+                val skillName = manager.getSkillName(skillId)
+                lore.add("§7- §a$skillName")
+            }
+        } else {
+            lore.add("§7当前未掌握任何医术")
+        }
+
+        inv.setItem(15, createItem(Material.BARRIER, "§c§l遗忘所有医术", *lore.toTypedArray()))
+        // --- 修改部分结束 ---
         fillGlass(inv, 27)
         p.openInventory(inv)
     }

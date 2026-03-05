@@ -212,8 +212,6 @@ class PlayerManager(private val plugin: Hjh_database) {
         var baseAttack = bonuses.getOrDefault("attack", 0.0)
         // 处理攻击力百分比
         if (bonuses.containsKey("attack_percent")) {
-            // 假设基础攻击是 0 (实际上你应该有基础值)，这里我们让百分比作用于 (武器+装备) 的总攻击
-            // 如果你希望百分比作用于 (玩家自带1 + 装备)，请自行调整公式
             // 目前逻辑：装备给的攻击力 * (1 + 百分比)
             baseAttack *= (1.0 + bonuses["attack_percent"]!!)
         }
@@ -226,7 +224,13 @@ class PlayerManager(private val plugin: Hjh_database) {
         }
         data.archerDamage += baseArcher
 
-        data.zfStr += bonuses.getOrDefault("zf_str", 0.0)
+        // --- 阵法强度 ---
+        var baseZfStr = bonuses.getOrDefault("zf_str", 0.0)
+        if (bonuses.containsKey("zf_str_percent")) {
+            baseZfStr *= (1.0 + bonuses["zf_str_percent"]!!)
+        }
+        data.zfStr += baseZfStr
+
 
         // --- 护甲 ---
         data.armor += bonuses.getOrDefault("armor", 0.0)

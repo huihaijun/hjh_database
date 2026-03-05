@@ -37,7 +37,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
 
         // 【新增】创建玩家状态表
         createPlayerStatusTable()
-
+        // 新建重华晶系统数据库
+        createChonghuaTable()
         // 2. 【核心修复】自动补全旧表缺失的字段
         updateTables()
     }
@@ -76,6 +77,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     safeAddColumn(stmt, "player_data", "exp", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)")
                     safeAddColumn(stmt, "player_data", "total_rarity", "INT DEFAULT 0")
+
 
                     // 2. 修复 player_element_zf_lvl
                     safeAddColumn(stmt, "player_element_zf_lvl", "player_name", "VARCHAR(16)")
@@ -257,6 +259,26 @@ class DatabaseManager(private val plugin: Hjh_database) {
         } catch (e: SQLException) {
             plugin.logger.severe("创建玩家状态表失败: " + e.message)
             e.printStackTrace()
+        }
+    }
+
+    fun createChonghuaTable() {
+        val sql = """
+        CREATE TABLE IF NOT EXISTS player_chonghua (
+            uuid VARCHAR(36) PRIMARY KEY,
+            player_name VARCHAR(50),
+            unlocked_waypoints LONGTEXT,
+            waypoint_cooldowns LONGTEXT
+        )
+    """.trimIndent()
+        try {
+            dataSource?.connection?.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(sql)
+                }
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("创建重华晶数据表失败: ${e.message}")
         }
     }
 
@@ -837,6 +859,61 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
         } catch (e: SQLException) {
             plugin.logger.warning("读取玩家状态失败: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    // 加载玩家数据 (如果不存在则创建一个空数据返回)
+    fun loadChonghuaData(uuid: UUID, playerName: String): com.hjh_database.chonghua.ChonghuaData {
+        val data = com.hjh_database.chonghua.ChonghuaData(uuid, playerName)
+        val sql = "SELECT * FROM player_chonghua WHERE uuid = ?"
+        try {
+            dataSource?.connection?.use { conn ->
+                conn.prepareStatement(sql).use { ps ->
+                    ps.setString(1, uuid.toString())
+                    val rs = ps.executeQuery()
+                    if (rs.next()) {
+                        data.playerName = rs.getString("player_name")
+                        data.setUnlockedFromJson(rs.getString("unlocked_waypoints"))
+                        data.setCooldownsFromJson(rs.getString("waypoint_cooldowns"))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("读取重华晶数据失败: ${e.message}")
+        }
+        return data
+    }
+
+    // 3. 保存/更新玩家数据
+    fun saveChonghuaData(data: com.hjh_database.chonghua.ChonghuaData) {
+        val sql = """
+        INSERT INTO player_chonghua (uuid, player_name, unlocked_waypoints, waypoint_cooldowns) 
+        VALUES (?, ?, ?, ?) 
+        ON CONFLICT(uuid) DO UPDATE SET 
+        player_name=?, unlocked_waypoints=?, waypoint_cooldowns=?
+    """.trimIndent()
+
+        try {
+            // 使用异步保存避免卡顿主线程
+            plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                dataSource?.connection?.use { conn ->
+                    conn.prepareStatement(sql).use { ps ->
+                        // INSERT
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setString(3, data.getUnlockedAsJson())
+                        ps.setString(4, data.getCooldownsAsJson())
+                        // UPDATE
+                        ps.setString(5, data.playerName)
+                        ps.setString(6, data.getUnlockedAsJson())
+                        ps.setString(7, data.getCooldownsAsJson())
+
+                        ps.executeUpdate()
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            plugin.logger.severe("保存重华晶数据失败: ${e.message}")
         }
     }
 

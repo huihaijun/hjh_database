@@ -1,15 +1,25 @@
 package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.medical.spell.impl.BaZhenJueSpell
 import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
 import com.hjh_database.skill.medical.spell.impl.DuSuZhenSpell
 import com.hjh_database.skill.medical.spell.impl.HuShenZhouSpell
+import com.hjh_database.skill.medical.spell.impl.HuanShengYuSpell
 import com.hjh_database.skill.medical.spell.impl.HuiChunYuSpell
+import com.hjh_database.skill.medical.spell.impl.HunLingYouSpell
+import com.hjh_database.skill.medical.spell.impl.JiangTianGuangSpell
 import com.hjh_database.skill.medical.spell.impl.LingCaoJueSpell
 import com.hjh_database.skill.medical.spell.impl.MingXiangSpell
 import com.hjh_database.skill.medical.spell.impl.MuChunYuSpell
+import com.hjh_database.skill.medical.spell.impl.NianQiJinSpell
+import com.hjh_database.skill.medical.spell.impl.NingQiBaoSpell
+import com.hjh_database.skill.medical.spell.impl.TianYouSpell
 import com.hjh_database.skill.medical.spell.impl.TuiDiSpell
+import com.hjh_database.skill.medical.spell.impl.WanXiangSuSpell
+import com.hjh_database.skill.medical.spell.impl.XingHuaYuSpell
 import com.hjh_database.skill.medical.spell.impl.YuHeHuaSpell
+import com.hjh_database.skill.medical.spell.impl.ZhangQiSanSpell
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
@@ -52,7 +62,16 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         registerSpell("mingxiang", MingXiangSpell(plugin))
         registerSpell("bingqingyu", BingQingYuSpell(plugin))
         registerSpell("huichunyu", HuiChunYuSpell(plugin))
-
+        registerSpell("xinghuayu", XingHuaYuSpell(plugin))
+        registerSpell("nianqijin", NianQiJinSpell(plugin))
+        registerSpell("hunlingyou", HunLingYouSpell(plugin))
+        registerSpell("tianyou", TianYouSpell(plugin))
+        registerSpell("jiangtianguang", JiangTianGuangSpell (plugin))
+        registerSpell("wanxiangsu", WanXiangSuSpell (plugin))
+        registerSpell("huanshengyu", HuanShengYuSpell (plugin))
+        registerSpell("bazhenjue", BaZhenJueSpell (plugin))
+        registerSpell("ningqibao", NingQiBaoSpell (plugin))
+        registerSpell("zhangqisan", ZhangQiSanSpell (plugin))
         loadConfig()
     }
 

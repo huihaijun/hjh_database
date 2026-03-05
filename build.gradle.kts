@@ -42,4 +42,20 @@ tasks {
             expand("version" to project.version)
         }
     }
+    // 1. 创建一个名为 copyToServer 的复制任务
+    val copyToServer by registering(Copy::class) {
+        // 【重要】把这里替换为你本地测试服务器 plugins 文件夹的绝对路径！
+        // 注意：Windows 路径里的斜杠需要使用双反斜杠 \\ 或者单正斜杠 /
+        val pluginDir = "E:/mc 1.9/hjh1.21.3/plugins"
+        // 如果你最终采纳了【方案二】(不再使用 Shadow，使用 libraries)：
+        dependsOn(jar)
+        from(jar)
+        into(pluginDir)
+    }
+
+    // 2. 将此任务与 build 绑定
+    build {
+        // finalizedBy 的意思是：当 build 任务大功告成后，紧接着执行 copyToServer
+        finalizedBy(copyToServer)
+    }
 }
