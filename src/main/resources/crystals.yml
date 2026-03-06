@@ -1,0 +1,17 @@
+crystals:
+  # 结晶的ID
+  fire_crystal_1:
+    display: "&c初级火之结晶"
+    material: SHULKER_SHELL
+    rarity: 1
+    lore:
+      - "&6限制职业:&b全职业可用&6  限制等级:&b5"
+      - "&7&o蕴含着微弱火元素的潜影壳结晶"
+      - "&c必须放置在饰品栏第一格才可激活！"
+      - "&8===========&2&n&l结晶属性&8============="
+      - "&f进攻属性 +2.0"
+      - "&f暴击率 +5%"
+    req_lv: 5
+    stats:
+      power: 2.0 # 统一的进攻属性
+      crit_chance: 0.05

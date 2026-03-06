@@ -63,6 +63,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.menuManager.reload()
             plugin.playerManager.weaponManager.reload()
             plugin.playerManager.armorManager.reload()
+            plugin.playerManager.crystalManager.reload()
             plugin.weaponSkillManager.reload()
 
             // 重载 Resource 物品

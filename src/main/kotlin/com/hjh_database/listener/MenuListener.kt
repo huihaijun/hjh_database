@@ -54,6 +54,13 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 plugin.menuManager.openDaoTianMenu(player)
                 player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
+
+            // === 【新增】Slot 32: 个人饰品栏 ===
+            else if (event.rawSlot == 32) {
+                player.closeInventory()
+                plugin.accessoryManager.openAccessoryMenu(player)
+                player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
+            }
         }
         // 2. 处理道天图录菜单
         else if (title.contains("道天图录") && title.contains("元素仓库")) {

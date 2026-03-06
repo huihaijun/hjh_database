@@ -65,7 +65,17 @@ enum class StoryNpcs(
     Villager.Profession.NITWIT,
     Villager.Type.PLAINS,
     173.5, 66.5, -158.5, 90f
+    ),
+
+    REN_FAHAI(
+    "ren_fahai",
+    "§a§l护国法师-法海",
+    Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    243.5, 64.5, -205.5, 90f
     );
+
+
 
     // 后续有新 NPC 直接往这里加...
 

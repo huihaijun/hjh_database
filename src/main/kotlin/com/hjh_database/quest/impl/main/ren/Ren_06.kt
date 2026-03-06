@@ -39,7 +39,7 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
 
     private val scriptLiGongGong = listOf(
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f啊，新面孔！从峡谷里走出来的族人，都是好样的。",
-        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f想当年，我也是通过层层考验，才得以进宫做官呢。",
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f想当年，我也是通过层层考验，才得以进宫当差。见到你，就像见到当初的自己。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f怎么样，有没有意愿也到宫里来当差啊？长那么俊俏去当探险者，真是可惜了…",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f好啦，不玩了，说正事。近来皇城周遭村庄屡遭野兽侵袭，陛下为此甚是忧心。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f朝廷决意派遣可靠之人前往查探。你来得正是时候。",
@@ -52,7 +52,12 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f皇宫在城北；城西是藏经阁；城东则是护国法师的炼丹房。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f丹药铺在东南；西南方则有铁匠铺与集市。",
         "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f先前有位与你一般的年轻人，曾将四位导师的方位信息略作笔记，我这便给你。",
-        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f你可在城中转转，选定职业后，便前往龙须镇寻镇长王卯吧。"
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f你可在城中转转，选定职业后，便前往龙须镇寻镇长王卯吧。",
+        // === 新增的4句对话 ===
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f哦对了，在你定下职业，前往龙须镇之前，最好先去皇宫东边的护国殿。",
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f里面有位护国法师-法海，他研究了一种神奇的法阵，名为§b重华晶§f。",
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f能够缩地成寸，日行千里，具体事宜你可以去找他，他会教你如何使用的。",
+        "§e[${StoryNpcs.REN_LIGONGGONG.displayName}§e] §f说不定还能送你一点小礼物呢……"
     )
 
     // ==========================================
@@ -60,12 +65,9 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
     // ==========================================
 
     override fun onNpcDialogue(player: Player, npcId: String, currentProgress: Int): Boolean {
-        // 场景: 找李公公
-        // 注意：这里假设 StoryNpcs 枚举中有名为 REN_LIGONGGONG 的定义
         if (npcId == StoryNpcs.REN_LIGONGGONG.id) {
             if (currentProgress == 0) {
                 playDialogue(player, scriptLiGongGong) {
-                    // 对话结束回调：发放物品并完成任务
                     giveItemsAndFinish(player)
                 }
                 return true
@@ -78,13 +80,9 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
     // 辅助方法
     // ==========================================
 
-    /**
-     * 发放剧情物品并完成任务
-     */
     private fun giveItemsAndFinish(player: Player) {
         val rm = Hjh_database.instance.resourceManager
 
-        // 生成前辈笔记 (id: hjh_zybj)
         val itemNote = rm.getItem("hjh_zybj") ?: ItemStack(Material.PAPER).apply {
             itemMeta = itemMeta?.apply {
                 setDisplayName("§e前辈笔记(配置缺失)")
@@ -92,10 +90,8 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
             }
         }
 
-        // 发放物品
         val leftovers = player.inventory.addItem(itemNote)
 
-        // 掉落处理
         if (leftovers.isNotEmpty()) {
             player.sendMessage("§c[提示] 背包已满，物品掉落在脚下！")
             for (item in leftovers.values) {
@@ -105,24 +101,17 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
             player.sendMessage("§e[系统] 获得 ${itemNote.itemMeta?.displayName}")
         }
 
-        // 完成任务
         Hjh_database.instance.questManager.completeQuest(player, Hjh_database.instance.playerManager.getPlayerData(player)!!, this)
     }
 
-    /**
-     * 简化的对话播放逻辑 (复用自 Ren_05)
-     */
     private fun playDialogue(player: Player, scripts: List<String>, onFinish: () -> Unit) {
         val index = talkProgress.getOrDefault(player.uniqueId, 0)
 
         if (index < scripts.size) {
             player.sendMessage(scripts[index].replace("&", "§"))
-            // 播放村民声音或其他音效
             player.playSound(player.location, Sound.ENTITY_VILLAGER_TRADE, 1f, 1f)
-
             talkProgress[player.uniqueId] = index + 1
 
-            // 播放完毕检测
             if (index == scripts.size - 1) {
                 talkProgress.remove(player.uniqueId)
                 onFinish()
@@ -137,12 +126,18 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
         player.sendMessage("")
         player.sendMessage("  §e[提示] §f请阅读笔记，寻找职业导师")
         player.sendMessage("  §e[提示] §f[选择职业]不记入主线流程")
+        // === 新增支线解锁提示 ===
+        player.sendMessage("  §b[解锁] §f已解锁新支线任务：重华晶的奥秘")
         player.sendMessage("§8§m========================================")
 
-        // 经验奖励
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
             data.exp += 10
+
+            // ★★★ 额外自动解锁支线任务 (Side_Ren_01) ★★★
+            data.questStatuses["side_ren_1"] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
+            data.questProgress["side_ren_1"] = 0
+
             Hjh_database.instance.databaseManager.savePlayer(data)
         }
 

@@ -144,14 +144,17 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (!player.isOnline) return@Runnable
 
-            // 1. 刷新所有物品的 Lore (视觉反馈)
+            // 刷新所有物品的 Lore (视觉反馈)
             // 注意：这里调用的是属性 weaponManager (对应 Java 的 getWeaponManager())
             plugin.playerManager.weaponManager.refreshPlayerWeapons(player)
 
-            // 2. 【新增】刷新护甲 Lore (状态显示)
+            // 刷新护甲 Lore (状态显示)
             plugin.playerManager.armorManager.refreshPlayerArmors(player)
 
-            // 2. 重新计算所有属性 (数值反馈)
+            // 刷新结晶 Lore (状态显示)
+            plugin.playerManager.crystalManager.refreshPlayerCrystals(player)
+
+            // 重新计算所有属性 (数值反馈)
             plugin.playerManager.updateStats(player)
 
             // 3. (可选) 强制客户端刷新背包显示，解决偶尔的 Lore 显示延迟

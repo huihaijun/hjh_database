@@ -130,7 +130,14 @@ class ResourceManager(private val plugin: Hjh_database) {
             return am.getItemStack(id)
         }
 
-        // 4. 尝试从 LocalResources 获取 (杂项)
+        // 4. 尝试从 CrystalManager 获取结晶
+        val cm = plugin.playerManager.crystalManager
+        if (cm.allIds.contains(id)) {
+            // 调用 CrystalManager 中的 buildItem 方法生成结晶
+            return cm.buildItem(id)
+        }
+
+        // 5. 尝试从 LocalResources 获取 (杂项)
         val res = localResources[id]
         if (res != null) {
             return buildLocalItem(res)
@@ -252,6 +259,7 @@ class ResourceManager(private val plugin: Hjh_database) {
         list.addAll(localResources.keys) // 杂项ID
         list.addAll(plugin.playerManager.weaponManager.allIds) // 武器ID
         list.addAll(plugin.playerManager.armorManager.allIds) // 护甲ID
+        list.addAll(plugin.playerManager.crystalManager.allIds)
         return list
     }
 

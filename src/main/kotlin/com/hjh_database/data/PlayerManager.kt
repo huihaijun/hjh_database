@@ -3,6 +3,7 @@ package com.hjh_database.data
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzPlayerData
 import com.hjh_database.weapon.ArmorManager
+import com.hjh_database.weapon.CrystalManager
 import com.hjh_database.weapon.WeaponManager
 import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
@@ -21,6 +22,7 @@ class PlayerManager(private val plugin: Hjh_database) {
     // 保持原有变量名的访问性
     val weaponManager: WeaponManager
     val armorManager: ArmorManager
+    val crystalManager: CrystalManager // 【新增声明】
 
     // 【新增】等级配置文件对象
     private var levelsFile: File? = null
@@ -29,6 +31,7 @@ class PlayerManager(private val plugin: Hjh_database) {
     init {
         this.weaponManager = WeaponManager(plugin)
         this.armorManager = ArmorManager(plugin)
+        this.crystalManager = CrystalManager(plugin) // 【新增初始化】
         // 【新增】初始化时加载等级配置
         loadLevelConfig()
     }
@@ -185,6 +188,12 @@ class PlayerManager(private val plugin: Hjh_database) {
 
         val armorStats = armorManager.calculateArmorStats(player, data)
         armorStats.forEach { (k, v) ->
+            bonuses.merge(k, v) { a, b -> a + b }
+        }
+
+        // 【新增】仿照护甲，将饰品第一格的结晶属性也计算进去
+        val crystalStats = crystalManager.calculateCrystalStats(player, data)
+        crystalStats.forEach { (k, v) ->
             bonuses.merge(k, v) { a, b -> a + b }
         }
 

@@ -143,6 +143,19 @@ class MenuManager(private val plugin: Hjh_database) {
         book.itemMeta = meta
         inv.setItem(31, book)
 
+        // === 【新增】Slot 32: 个人饰品栏 ===
+        val accessoryButton = ItemStack(Material.SHULKER_SHELL)
+        val accessoryMeta = accessoryButton.itemMeta
+        accessoryMeta?.setDisplayName("§6✦ 饰品栏 ✦")
+        val accessoryLore: MutableList<String> = ArrayList()
+        accessoryLore.add("§7装备强大的饰品")
+        accessoryLore.add("")
+        accessoryLore.add("")
+        accessoryLore.add("§b▶ 点击打开")
+        accessoryMeta?.lore = accessoryLore
+        accessoryButton.itemMeta = accessoryMeta
+        inv.setItem(32, accessoryButton)
+
         player.openInventory(inv)
     }
 

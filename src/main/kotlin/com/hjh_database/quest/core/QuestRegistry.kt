@@ -6,6 +6,8 @@ import com.hjh_database.quest.impl.main.ren.Ren_03
 import com.hjh_database.quest.impl.main.ren.Ren_04
 import com.hjh_database.quest.impl.main.ren.Ren_05
 import com.hjh_database.quest.impl.main.ren.Ren_06
+import com.hjh_database.quest.impl.side.ren.Side_Ren_01
+
 //import com.hjh_database.quest.impl.main.ren.Ren_07
 //import com.hjh_database.quest.impl.main.ren.Ren_08
 //import com.hjh_database.quest.impl.main.ren.Ren_09
@@ -32,6 +34,6 @@ object QuestRegistry {
         // manager.register(Xian_01_Begin())
 
         // === 支线 ===
-        // manager.register(Side_Blacksmith())
+        manager.register(Side_Ren_01())
     }
 }

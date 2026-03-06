@@ -31,6 +31,7 @@ import com.hjh_database.quest.core.QuestManager
 import com.hjh_database.quest.gui.QuestGui
 import com.hjh_database.skill.element_zf.gui.ElementZfGui
 import com.hjh_database.spawner.SpawnerBlockManager
+import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
 
 
@@ -62,6 +63,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var jobTrialManager: JobTrialManager
     lateinit var elementZfGui: ElementZfGui
     lateinit var chonghuaManager: ChonghuaManager
+    lateinit var accessoryManager: AccessoryManager // 品栏管理器
 
 
     override fun onEnable() {
@@ -103,6 +105,8 @@ class Hjh_database : JavaPlugin() {
 
         // 羽毛系统（无需保存变量的直接初始化）
         com.hjh_database.feather.FeatherManager(this)
+        // 饰品栏
+        this.accessoryManager = AccessoryManager(this)
 
 
         // ==========================================
@@ -139,6 +143,9 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(AlchemyListener(this), this)
         pm.registerEvents(this.elementZfGui, this)
         pm.registerEvents(this.chonghuaManager, this)
+
+        // 饰品栏管理器监听
+        pm.registerEvents(this.accessoryManager, this)
 
 
         // ==========================================
