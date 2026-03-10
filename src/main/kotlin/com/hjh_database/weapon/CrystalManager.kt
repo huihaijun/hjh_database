@@ -24,6 +24,8 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
     val reqLv: Int = sec.getInt("req_lv", 1)
     // 【修复1】新增稀有度读取
     val rarity: Int = sec.getInt("rarity", 1)
+    // 【新增】读取结晶激活位置，默认是 0 (第一格)
+    val activateSlot: Int = sec.getInt("activate_slot", 0)
     val lore: List<String> = sec.getStringList("lore")
     val stats: MutableMap<String, Double> = HashMap()
 
@@ -151,8 +153,8 @@ class CrystalManager(private val plugin: Hjh_database) {
                             val crystalId = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)!!
                             val crystalData = loadedCrystals[crystalId] ?: continue
 
-                            // 只有在饰品栏第 0 格 (也就是第一格) 才是已装备状态
-                            val isEquipped = (i == 0)
+                            // 判断当前格子的索引是否等于这个结晶专属的激活槽位
+                            val isEquipped = (i == crystalData.activateSlot)
                             updateCrystalLore(item, crystalData, data, isEquipped)
 
                             items[i] = item
@@ -189,7 +191,14 @@ class CrystalManager(private val plugin: Hjh_database) {
             isActive = false
             statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 等级不足 (" + playerData.lv + "/" + crystalData.reqLv + ")")
         } else if (!isEquipped) {
-            statusLore.add(org.bukkit.ChatColor.GRAY.toString() + "○ 未装备 (请放入饰品栏第一格)")
+            // 把 0~8 的索引转换为中文的 一~九
+            val chineseNums = arrayOf("一", "二", "三", "四", "五", "六", "七", "八", "九")
+            val slotName = if (crystalData.activateSlot in 0..8) {
+                chineseNums[crystalData.activateSlot]
+            } else {
+                (crystalData.activateSlot + 1).toString() // 兜底防越界
+            }
+            statusLore.add(org.bukkit.ChatColor.GRAY.toString() + "○ 未装备 (请放入饰品栏第${slotName}格)")
         }
 
         val newLore = mutableListOf<String>()
@@ -244,8 +253,8 @@ class CrystalManager(private val plugin: Hjh_database) {
                 val crystalId = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)!!
                 val crystalData = loadedCrystals[crystalId] ?: continue
 
-                // 只有放在第一格 (索引 0) 才是真正的激活状态
-                val isEquipped = (i == 0)
+                // 判断当前格子的索引是否等于这个结晶专属的激活槽位
+                val isEquipped = (i == crystalData.activateSlot)
                 updateCrystalLore(item, crystalData, data, isEquipped)
             }
         }
@@ -258,28 +267,30 @@ class CrystalManager(private val plugin: Hjh_database) {
         val savedBytes = player.persistentDataContainer.get(accessoryInvKey, PersistentDataType.BYTE_ARRAY) ?: return stats
 
         try {
-            org.bukkit.util.io.BukkitObjectInputStream(java.io.ByteArrayInputStream(savedBytes)).use { ois ->
+            BukkitObjectInputStream(ByteArrayInputStream(savedBytes)).use { ois ->
                 val size = ois.readInt()
-                if (size > 0) {
-                    val firstSlotItem = ois.readObject() as? ItemStack ?: return stats
-                    val meta = firstSlotItem.itemMeta ?: return stats
+                // 【核心修改】遍历整个饰品栏的所有格子
+                for (i in 0 until size) {
+                    val item = ois.readObject() as? ItemStack ?: continue
+                    val meta = item.itemMeta ?: continue
 
+                    // 判断该物品是否为结晶
                     if (meta.persistentDataContainer.has(crystalKey, PersistentDataType.STRING)) {
                         val crystalId = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)!!
-                        val crystalData = loadedCrystals[crystalId] ?: return stats
+                        val crystalData = loadedCrystals[crystalId] ?: continue
 
-                        if (data.lv >= crystalData.reqLv) {
+                        // 【核心修改】不仅要校验等级，还要校验当前的格子索引 (i) 是否等于该结晶要求的激活位置
+                        if (i == crystalData.activateSlot && data.lv >= crystalData.reqLv) {
+
                             data.rarityDetails.add(crystalData.rarity)
                             totalRarity += crystalData.rarity.toDouble()
 
-                            // 【优化：自适应属性转化】
                             crystalData.stats.forEach { (k, v) ->
                                 val actualKey = if (k == "power") {
-                                    // 根据职业动态分配进攻属性 (0:战士, 1:弓箭, 2:术士, 3:医师)
                                     when (data.job) {
-                                        1 -> "archer_damage"
-                                        2, 3 -> "zf_str"
-                                        else -> "attack" // 默认（无职业或战士）给近战强度
+                                        1 -> "archerDamage"
+                                        2, 3 -> "zfStr"
+                                        else -> "attack"
                                     }
                                 } else {
                                     k

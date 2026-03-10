@@ -13,3 +13,10 @@ yinpiao:
   material: GOLD_NUGGET
   name: "&9银票"
   custom_model_data: 10003
+
+mijingyaoshi:
+  material: TRIAL_KEY
+  name: "&e秘境钥匙"
+  lore:
+    - "&7&o散发着神秘气息的钥匙"
+    - "&7&o可以叩开通关秘境后的宝库"

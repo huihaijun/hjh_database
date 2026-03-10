@@ -20,7 +20,7 @@ import java.io.File
 
 // 定义四大区域
 enum class Region(val displayName: String) {
-    EAST("东区"), SOUTH("南区"), WEST("西区"), NORTH("北区")
+    EAST("东方森林"), SOUTH("南方沙漠"), WEST("西方山脉"), NORTH("北方湖泊")
 }
 
 // 静态打卡点数据模型
@@ -134,6 +134,16 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         }, 20L, 20L)
     }
 
+    // --- 重载配置 ---
+    fun reload() {
+        // 重新加载静态打卡点配置文件
+        loadWaypointsConfig()
+        // 重新加载地图上管理员放置的实体方块记录 (可选)
+        placedCrystals.clear()
+        placedCheckins.clear()
+        loadPlacedBlocks()
+    }
+
     // --- YML 配置文件加载逻辑 ---
     private fun loadWaypointsConfig() {
         if (!waypointsFile.exists()) {
@@ -186,6 +196,7 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         // --- 东方 ---
         add("east_huangcheng", "EAST", "皇城", 179.5, 42.5, 62.5, 180.47f, 7.05f) // 东区皇城
         add("longxuzhen", "EAST", "龙须镇", 528.5, 33.5, 25.5, -417.88f, 1.50f)
+        add("chadiantan", "EAST", "茶点摊", 690.5, 70.5, 115.5, 1078.00f, 1.80f)
         add("shihuangling", "EAST", "始皇陵", 621.5, 9.5, -136.5, -629.68f, -1.05f)
         add("pobaidecunzhuang", "EAST", "破败的村庄", 556.5, 40.5, 341.5, -271.33f, 4.50f)
         add("qinglongjitan", "EAST", "青龙祭坛", 1696.5, 103.5, 867.5, -179.83f, -0.75f)

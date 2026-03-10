@@ -4,6 +4,7 @@ crystals:
     display: "&c初级火之结晶"
     material: SHULKER_SHELL
     rarity: 1
+    activate_slot: 0 # <--- 配置在第二格激活
     lore:
       - "&6限制职业:&b全职业可用&6  限制等级:&b5"
       - "&7&o蕴含着微弱火元素的潜影壳结晶"
@@ -15,3 +16,20 @@ crystals:
     stats:
       power: 2.0 # 统一的进攻属性
       crit_chance: 0.05
+
+  huishi:
+    display: "&9慧识[饰品]"
+    material: SHULKER_SHELL
+    rarity: 3
+    activate_slot: 1 # <--- 配置在第二格激活
+    lore:
+      - "&6限制职业:&b无&6  限制等级:&b10"
+      - "&7&o龙之鳞片化作的晶莹饰品"
+      - "&7&o佩戴时仿佛被灵识充盈"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f武器/阵法冷却 -5%"
+      - "&f速度 +5%"
+    req_lv: 10
+    stats:
+      cool_reduce: 0.05 #5%冷却缩减
+      speed_percent: 0.05 # 5%移速

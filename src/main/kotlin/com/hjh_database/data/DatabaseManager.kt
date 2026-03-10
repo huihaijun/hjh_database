@@ -39,6 +39,11 @@ class DatabaseManager(private val plugin: Hjh_database) {
         createPlayerStatusTable()
         // 新建重华晶系统数据库
         createChonghuaTable()
+        // 【新增】创建四圣兽副本记录表
+        createPlayerTestTable()
+        // 【新增】创建金宝箱记录表
+        createGoldenChestTable()
+
         // 2. 【核心修复】自动补全旧表缺失的字段
         updateTables()
     }
@@ -236,6 +241,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
         executeSql(sql)
     }
 
+
+
     // 【新增】玩家状态表逻辑
     // ==========================================
     private fun createPlayerStatusTable() {
@@ -280,6 +287,33 @@ class DatabaseManager(private val plugin: Hjh_database) {
         } catch (e: Exception) {
             plugin.logger.severe("创建重华晶数据表失败: ${e.message}")
         }
+    }
+
+    // 【新增】副本进度表 player_test
+    // ==========================================
+    private fun createPlayerTestTable() {
+        val sql = """
+            CREATE TABLE IF NOT EXISTS player_test (
+            uuid VARCHAR(36) PRIMARY KEY, 
+            player_name VARCHAR(32), 
+            qinglong INTEGER DEFAULT 0, 
+            baihu INTEGER DEFAULT 0, 
+            zhuque INTEGER DEFAULT 0, 
+            xuanwu INTEGER DEFAULT 0
+            );
+        """.trimIndent()
+        executeSql(sql)
+    }
+
+    private fun createGoldenChestTable() {
+        val sql = """
+        CREATE TABLE IF NOT EXISTS player_goldenchest (
+            uuid VARCHAR(36) PRIMARY KEY, 
+            player_name VARCHAR(16), 
+            dungeon_data TEXT
+        );
+    """.trimIndent()
+        executeSql(sql)
     }
 
     private fun executeSql(sql: String) {
@@ -463,6 +497,9 @@ class DatabaseManager(private val plugin: Hjh_database) {
                 saveAlchemyData(conn, data)
                 // === 【新增】保存玩家状态数据 ===
                 savePlayerStatus(conn, data)
+                // === 【新增】保存玩家金宝箱 ===
+                savePlayerGoldenChest(conn, data)
+
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存玩家数据失败: " + e.message)
@@ -667,6 +704,8 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
                     loadAlchemyData(conn, data)
                     // === 【新增】加载玩家状态数据 ===
                     loadPlayerStatus(conn, data)
+                    // === 【新增】加载玩家金宝箱数据 ===
+                    loadPlayerGoldenChest(conn, data)
                 }
             } catch (e: SQLException) {
                 plugin.logger.severe("加载玩家数据失败: " + e.message)
@@ -840,6 +879,33 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
         }
     }
 
+    // 保存玩家金宝箱数据
+    fun savePlayerGoldenChest(conn: Connection, data: PlayerData) {
+        val sql = """
+            INSERT INTO player_goldenchest (uuid, player_name, dungeon_data) 
+            VALUES (?, ?, ?) 
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, dungeon_data=?
+        """.trimIndent()
+
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                val json = data.getDungeonRecordsAsJson()
+                ps.setString(1, data.uuid.toString())
+                ps.setString(2, data.playerName)
+                ps.setString(3, json)
+
+                // 处理 ON CONFLICT 后的更新参数
+                ps.setString(4, data.playerName)
+                ps.setString(5, json)
+
+                ps.executeUpdate()
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("保存玩家 ${data.playerName} 的金宝箱数据失败: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
     /**
      * 读取状态 (返回 Pair<Int, String>)
      */
@@ -859,6 +925,30 @@ fun loadPlayerQuests(conn: Connection, data: PlayerData) {
         } catch (e: SQLException) {
             plugin.logger.warning("读取玩家状态失败: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    // 读取玩家金宝箱数据
+    fun loadPlayerGoldenChest(conn: Connection, data: PlayerData) {
+        val sql = "SELECT dungeon_data FROM player_goldenchest WHERE uuid = ?"
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        val json = rs.getString("dungeon_data")
+                        data.setDungeonRecordsFromJson(json)
+                    } else {
+                        // 如果数据库没这个玩家的记录，初始化为空
+                        data.setDungeonRecordsFromJson("{}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("读取玩家 ${data.playerName} 的金宝箱数据失败: ${e.message}")
+            e.printStackTrace()
+            // 发生异常时也初始化为空，防止报错
+            data.setDungeonRecordsFromJson("{}")
         }
     }
 

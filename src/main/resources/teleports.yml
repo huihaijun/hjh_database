@@ -204,9 +204,9 @@ points:
 
   决定成为职业-战士:
     world: "world"
-    x: 1247.5
-    y: 36.0
-    z: -391.5
+    x: 300.5
+    y: 46.0
+    z: 27.5
     yaw: 0.0
     pitch: 0.0
     actions:

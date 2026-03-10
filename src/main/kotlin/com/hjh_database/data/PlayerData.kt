@@ -2,6 +2,7 @@ package com.hjh_database.data
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.hjh_database.dungeon.DungeonRecord
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -25,7 +26,6 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // Key 对应 PlayerManager 里的属性名 (如 "attack", "max_health", "speed_percent")
     // 不需要存入数据库，玩家下线或重启后自动清空，非常适合技能 buff
     val tempBonuses = ConcurrentHashMap<String, Double>()
-
     var speed: Double = 0.2
     var maxHealth: Double = 20.0
     var currentHealth: Double = 20.0
@@ -178,6 +178,31 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var kaiwuLevel: Int = 1
     var kaiwuExp: Int = 0
     var kaiwuEnergy: Double = 100.0 // 精力值
+
+    // =================金宝箱系统==================
+    // 在 PlayerData 类的属性列表中添加：
+    var dungeonRecords: MutableMap<String, DungeonRecord> = HashMap()
+
+    // 用于存入数据库
+    fun getDungeonRecordsAsJson(): String {
+        if (dungeonRecords.isEmpty()) return "{}"
+        return Gson().toJson(dungeonRecords)
+    }
+
+    // 用于从数据库读取
+    fun setDungeonRecordsFromJson(json: String?) {
+        if (json.isNullOrEmpty() || json == "{}" || json == "null") {
+            this.dungeonRecords = HashMap()
+            return
+        }
+        try {
+            val type = object : TypeToken<Map<String, DungeonRecord>>() {}.type
+            this.dungeonRecords = Gson().fromJson(json, type)
+        } catch (e: Exception) {
+            this.dungeonRecords = HashMap()
+            e.printStackTrace()
+        }
+    }
 
 
 

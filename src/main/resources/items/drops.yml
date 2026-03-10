@@ -37,12 +37,7 @@ pojiupige:
     - "&7&o从魔物身上掉落的皮革"
     - "&7&o只能拿去卖点小钱了"
 
-zhizhuyan:
-  material: SPIDER_EYE
-  name: "&7蜘蛛眼"
-  lore:
-    - "&7&o蜘蛛身上的重要器官"
-    - "&7&o拿来炼药说不定也不错"
+
 
 renshen:
   material: GLISTERING_MELON_SLICE

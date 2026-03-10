@@ -298,5 +298,21 @@ object MobRegistry {
             ),
             affixes = listOf()
         ))
+        // === 副本 Boss 注册 ===
+        register(MobDefinition(
+            id = "qinglongshiwei",
+            name = "&a&l青龙侍卫",
+            type = EntityType.ZOMBIE,
+            health = 500.0,
+            damage = 5.0,   // 伤害你可以自己按需调整
+            armor = 20.0,   // 20点自定义护甲
+            speed = 0.2,   // 移速按需调整
+            maxNearby = 1,
+            exp = 50,       // 经验值
+            drops = listOf(), // 副本Boss暂不需要普通掉落，通过副本结算给奖励
+            affixes = listOf(),
+            helmet = Material.IRON_HELMET, // 纯装饰铁头盔
+            mainHand = Material.IRON_AXE   // 纯装饰铁斧
+        ))
     }
 }

@@ -351,6 +351,7 @@ weapons:
     display: "&a青铜弓[狙击]"
     rarity: 2  # 1级=白色1星
     material: BOW
+    custom_model_data: 121
     lore:
       - "&6限制职业:[弓] 限制等级:&b10"
       - "&7&o使用青铜制成的弓"
@@ -408,6 +409,7 @@ weapons:
     display: "&9焰铁弓[狙击]"
     rarity: 3  # 1级=白色1星
     material: BOW
+    custom_model_data: 131
     lore:
       - "&6限制职业:[弓] 限制等级:&b20"
       - "&7&o由焱沙大模出产的稀有焰铁所制成的弓"
@@ -471,6 +473,7 @@ weapons:
     display: "&d重锤弓[狙击]"
     rarity: 4  # 1级=白色1星
     material: BOW
+    custom_model_data: 141
     lore:
       - "&6限制职业:[弓] 限制等级:&b30"
       - "&7&o虽然重了些,但是可以藉由甩弓的力量"

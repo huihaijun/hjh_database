@@ -52,6 +52,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin alchemy <list|give|getcauldron> ... - 丹药系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettp <方块材质> <传送点ID> - 获取传送触发器")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getarrayblock -获取术士阵法升级方块 ")
+            // 【新增】副本系统提示
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dungeon <trigger|set> - 副本系统指令")
             return true
         }
 
@@ -65,6 +67,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.playerManager.armorManager.reload()
             plugin.playerManager.crystalManager.reload()
             plugin.weaponSkillManager.reload()
+            plugin.chonghuaManager.reload()
 
             // 重载 Resource 物品
             if (plugin.resourceManager != null) {
@@ -85,7 +88,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.alchemyManager.loadRecipes()
             // 重载传送点
             plugin.teleportManager.reload()
-            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport)已重载！")
+            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶)已重载！")
             return true
         }
 
@@ -664,6 +667,207 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
         }
 
+        // === dungeon (副本管理与金宝箱) ===
+        if (subCommand == "dungeon") {
+            if (args.size < 3) {
+                sender.sendMessage("§c[系统] 用法:")
+                sender.sendMessage("§c - /hjhadmin dungeon trigger <qinglong/baihu/zhuque/xuanwu>")
+                sender.sendMessage("§c - /hjhadmin dungeon set <玩家> <qinglong/baihu/zhuque/xuanwu> <0|1>")
+                sender.sendMessage("§c - /hjhadmin dungeon getchest <副本ID>  (获取金宝箱方块)")
+                sender.sendMessage("§c - /hjhadmin dungeon info <玩家> <副本ID>  (查询进度)")
+                sender.sendMessage("§c - /hjhadmin dungeon addclear/addopen <玩家> <副本ID> <数量>")
+                return true
+            }
+
+            val action = args[1].lowercase()
+
+            // 1. 获取触发器 (你原有的逻辑)
+            if (action == "trigger") {
+                if (sender !is Player) {
+                    sender.sendMessage("§c只有玩家可以使用 trigger 指令。")
+                    return true
+                }
+                val dungeonType = args[2].lowercase()
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.SOUL_LANTERN)
+                val meta = item.itemMeta
+
+                val displayName = when (dungeonType) {
+                    "qinglong" -> "§a§l青龙试炼触发器"
+                    "baihu" -> "§f§l白虎试炼触发器"
+                    "zhuque" -> "§c§l朱雀试炼触发器"
+                    "xuanwu" -> "§e§l玄武试炼触发器"
+                    else -> {
+                        sender.sendMessage("§c[系统] 未知的副本类型！(可选: qinglong, baihu, zhuque, xuanwu)")
+                        return true
+                    }
+                }
+
+                meta?.setDisplayName(displayName)
+                item.itemMeta = meta
+                sender.inventory.addItem(item)
+                sender.sendMessage("§a[系统] 已获得 $displayName！放置后玩家右键即可触发！")
+                return true
+            }
+
+            // 2. 设置玩家通关状态 (你原有的逻辑)
+            if (action == "set") {
+                if (args.size < 5) {
+                    sender.sendMessage("§c[系统] 用法: /hjhadmin dungeon set <玩家> <qinglong/baihu/zhuque/xuanwu> <0|1>")
+                    return true
+                }
+
+                val target = Bukkit.getPlayerExact(args[2])
+                if (target == null) {
+                    sender.sendMessage("§c[系统] 玩家不在线！")
+                    return true
+                }
+
+                val trialType = args[3].lowercase()
+                if (trialType !in listOf("qinglong", "baihu", "zhuque", "xuanwu")) {
+                    sender.sendMessage("§c[系统] 未知的副本类型！")
+                    return true
+                }
+
+                val state = args[4].toIntOrNull()
+                if (state == null || state !in 0..1) {
+                    sender.sendMessage("§c[系统] 状态值只能是 0 (未完成) 或 1 (已完成)")
+                    return true
+                }
+
+                // 异步写入数据库
+                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    try {
+                        plugin.databaseManager.dataSource?.connection?.use { conn ->
+                            val sql = """
+                                INSERT INTO player_test (uuid, player_name, $trialType) 
+                                VALUES (?, ?, ?) 
+                                ON CONFLICT(uuid) DO UPDATE SET $trialType = ?
+                            """.trimIndent()
+                            conn.prepareStatement(sql).use { ps ->
+                                ps.setString(1, target.uniqueId.toString())
+                                ps.setString(2, target.name)
+                                ps.setInt(3, state)
+                                ps.setInt(4, state)
+                                ps.executeUpdate()
+                            }
+                        }
+                        sender.sendMessage("§a[系统] 已成功将玩家 ${target.name} 的 $trialType 试炼状态设置为 $state ！")
+                    } catch (e: Exception) {
+                        sender.sendMessage("§c[错误] 数据库更新失败: ${e.message}")
+                        e.printStackTrace()
+                    }
+                })
+                return true
+            }
+
+            // ================= 新增：金宝箱相关指令 =================
+
+            // 3. 直接获取一个写好数据的金宝箱方块
+            if (action == "getchest") {
+                if (sender !is Player) {
+                    sender.sendMessage("§c只有玩家可以使用此指令。")
+                    return true
+                }
+                val dungeonId = args[2]
+
+                // 检查这个副本ID是否在 GoldenChestManager 里注册了
+                if (!plugin.goldenChestManager.chestRegistry.containsKey(dungeonId)) {
+                    val registered = plugin.goldenChestManager.chestRegistry.keys.joinToString(", ")
+                    sender.sendMessage("§c[系统] 未知的副本宝箱类型！已注册的: $registered")
+                    return true
+                }
+
+                // 给玩家一个宝库 (Vault) 物品
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.VAULT)
+                val meta = item.itemMeta
+                meta?.setDisplayName("§6§l[$dungeonId] 副本金宝箱")
+                meta?.lore = listOf("§7管理员物品：", "§7直接放置在地上将自动成为", "§7该副本的奖励宝库。")
+
+                // ★ 核心：把副本ID写进物品的 PDC 里
+                val key = org.bukkit.NamespacedKey(plugin, "vault_dungeon_id")
+                meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.STRING, dungeonId)
+                item.itemMeta = meta
+
+                sender.inventory.addItem(item)
+                sender.sendMessage("§a[系统] 已获得 §6§l[$dungeonId] 副本金宝箱§a！直接放置在地上即可生效。")
+                return true
+            }
+
+            // 4. 查询与修改玩家的金宝箱数据 (用于测试保底和通关逻辑)
+            if (action == "info") {
+                val target = Bukkit.getPlayerExact(args[2]) ?: return true
+                val dungeonId = args[3]
+
+                // 【新增】尝试获取配置中的中文名，如果没配置则直接显示原来的英文ID
+                val config = plugin.goldenChestManager.chestRegistry[dungeonId]
+                val dungeonName = config?.displayName ?: dungeonId
+
+                val pd = plugin.playerManager.getPlayerData(target) ?: return true
+                val rec = pd.dungeonRecords[dungeonId] ?: com.hjh_database.dungeon.DungeonRecord()
+
+                // 【修改】使用中文名替代英文ID展示
+                sender.sendMessage("§6[${target.name}] §e副本 §b$dungeonName §e的数据:")
+                sender.sendMessage("§7- 历史通关数: §a${rec.clears}")
+                sender.sendMessage("§7- 历史开箱数: §c${rec.opens}")
+                sender.sendMessage("§7- 剩余可开箱次数: §b${rec.availableOpens}")
+                return true
+            }
+
+            // 5. 重置玩家某件物品的掉落记录（用于测试 OneTimeOnly 和 保底重置）
+            if (action == "resetdrop") {
+                if (args.size < 5) {
+                    sender.sendMessage("§c[系统] 用法: /hjhadmin dungeon resetdrop <玩家> <副本ID> <物品ResourceId>")
+                    return true
+                }
+                val target = Bukkit.getPlayerExact(args[2]) ?: return true
+                val dungeonId = args[3]
+                val resourceId = args[4]
+
+                val pd = plugin.playerManager.getPlayerData(target) ?: return true
+                val rec = pd.dungeonRecords[dungeonId]
+                if (rec == null) {
+                    sender.sendMessage("§c[系统] 该玩家尚未有该副本的任何数据！")
+                    return true
+                }
+
+                // 移除已经掉落的次数
+                rec.dropCounts.remove(resourceId)
+                // 顺便把保底垫数也清零
+                rec.opensSinceLastDrop.remove(resourceId)
+
+                sender.sendMessage("§a[系统] 成功清除了玩家 ${target.name} 在副本 $dungeonId 中关于物品 [$resourceId] 的开出记录！现在TA可以再次抽到此生仅一次的物品了。")
+                return true
+            }
+
+            if (action == "addclear" || action == "addopen" || action == "addavail") {
+                val target = Bukkit.getPlayerExact(args[2]) ?: return true
+                val dungeonId = args[3]
+                val amount = args.getOrNull(4)?.toIntOrNull() ?: 1
+
+                val pd = plugin.playerManager.getPlayerData(target) ?: return true
+                val rec = pd.dungeonRecords.computeIfAbsent(dungeonId) { com.hjh_database.dungeon.DungeonRecord() }
+
+                when (action) {
+                    "addclear" -> {
+                        rec.clears += amount
+                        rec.availableOpens += amount // ★ 核心逻辑：通关一次，就发一次开箱机会
+                        sender.sendMessage("§a已为玩家 ${target.name} 副本 $dungeonId 增加 $amount 次通关记录与可开箱次数！")
+                    }
+                    "addopen" -> {
+                        rec.opens += amount
+                        sender.sendMessage("§a已为玩家 ${target.name} 副本 $dungeonId 增加 $amount 次历史开箱数。")
+                    }
+                    "addavail" -> {
+                        rec.availableOpens += amount // ★ 额外赠送开箱机会（不影响历史通关数）
+                        sender.sendMessage("§a已为玩家 ${target.name} 副本 $dungeonId 额外赠送 $amount 次可开箱次数！")
+                    }
+                }
+                return true
+            }
+
+            sender.sendMessage("§c[系统] 未知的 dungeon 子指令，请使用 trigger, set, getchest 等。")
+            return true
+        }
 
         return error(sender, "未知指令: $subCommand")
     }
@@ -683,7 +887,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             val rootCommands = listOf(
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get",
                 "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
-                "status", "gettp", "getarrayblock", "chonghua"
+                "status", "gettp", "getarrayblock", "chonghua","dungeon"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -772,6 +976,45 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             "race" -> {
                 if (args.size == 3) return ArrayList(raceReverseMap.keys).filter { it.startsWith(args[2]) }
+            }
+
+            "dungeon" -> {
+                if (args.size == 2) {
+                    val subCmds = listOf("trigger", "set", "getchest", "info", "addclear", "addopen","addavail","resetdrop")
+                    return subCmds.filter { it.startsWith(args[1].lowercase()) }
+                }
+
+                // 你原有的 trigger 补全
+                if (args.size == 3 && args[1].equals("trigger", ignoreCase = true)) {
+                    val dungeons = listOf("qinglong", "baihu", "zhuque", "xuanwu")
+                    return dungeons.filter { it.startsWith(args[2].lowercase()) }
+                }
+                // 你原有的 set 补全
+                if (args.size == 3 && args[1].equals("set", ignoreCase = true)) {
+                    return null
+                }
+                if (args.size == 4 && args[1].equals("set", ignoreCase = true)) {
+                    val dungeons = listOf("qinglong", "baihu", "zhuque", "xuanwu")
+                    return dungeons.filter { it.startsWith(args[3].lowercase()) }
+                }
+                if (args.size == 5 && args[1].equals("set", ignoreCase = true)) {
+                    return listOf("0", "1").filter { it.startsWith(args[4]) }
+                }
+
+                // ★ 新增的 getchest 补全：自动弹出所有已注册的金宝箱副本ID
+                val chestDungeons = plugin.goldenChestManager.chestRegistry.keys.toList()
+                if (args.size == 3 && args[1].equals("getchest", ignoreCase = true)) {
+                    return chestDungeons.filter { it.startsWith(args[2].lowercase()) }
+                }
+
+                // info / addclear / addopen 的补全
+                val isPlayerTargetCmd = args[1].equals("info", ignoreCase = true) ||
+                        args[1].equals("addclear", ignoreCase = true) ||
+                        args[1].equals("addopen", ignoreCase = true)
+                if (isPlayerTargetCmd) {
+                    if (args.size == 3) return null // 补全在线玩家
+                    if (args.size == 4) return chestDungeons.filter { it.startsWith(args[3].lowercase()) } // 补全副本ID
+                }
             }
         }
 

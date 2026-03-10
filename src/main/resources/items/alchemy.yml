@@ -1,0 +1,34 @@
+#炼丹所用材料
+dengxincao:
+  material: SEA_PICKLE
+  name: "&b灯心草"
+  #  rarity: 2
+  lore:
+    - "&7&o常见的杂草"
+    - "&7&o晒干后可作药引炼丹"
+    - "&e[炼丹用品]"
+
+zhixueye:
+  material: SMALL_DRIPLEAF
+  name: "&b止血叶"
+  #  rarity: 2
+  lore:
+    - "&7&o叶片肥厚,养分充足"
+    - "&7&o可止轻伤出血"
+    - "&e[炼丹用品]"
+
+qingxinhua:
+  material: OXEYE_DAISY
+  name: "&b清心花"
+  #  rarity: 2
+  lore:
+    - "&7&o花瓣散发清新香气"
+    - "&7&o可以沁人心脾"
+    - "&e[炼丹用品]"
+
+zhizhuyan:
+  material: SPIDER_EYE
+  name: "&b蜘蛛眼"
+  lore:
+    - "&7&o蜘蛛身上的重要器官"
+    - "&7&o拿来炼药说不定也不错"
