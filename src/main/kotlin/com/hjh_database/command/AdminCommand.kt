@@ -864,8 +864,36 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 }
                 return true
             }
-
             sender.sendMessage("§c[系统] 未知的 dungeon 子指令，请使用 trigger, set, getchest 等。")
+            return true
+        }
+
+        // === 仓库系统 (Warehouse) ===
+        if (subCommand == "getwarehouse") {
+            if (sender !is Player) return true
+            val chest = org.bukkit.inventory.ItemStack(org.bukkit.Material.CHEST)
+            val meta = chest.itemMeta
+            meta?.setDisplayName("§2§l个人仓库方块")
+            meta?.lore = listOf("§7放置后生成一个个人仓库交互点")
+            // 使用 PDC 标记特殊方块
+            val key = org.bukkit.NamespacedKey(plugin, "is_warehouse_block")
+            meta?.persistentDataContainer?.set(key, org.bukkit.persistence.PersistentDataType.BYTE, 1)
+            chest.itemMeta = meta
+            sender.inventory.addItem(chest)
+            sender.sendMessage("§a已获取仓库方块！")
+            return true
+        }
+
+        if (subCommand == "openwarehouse") {
+            if (args.size < 2) return error(sender, "用法: /hjhadmin openwarehouse <玩家>")
+            val targetName = args[1]
+            val target = Bukkit.getPlayerExact(targetName)
+            if (target == null) return error(sender, "玩家不在线")
+            // 强制打开目标玩家的仓库 GUI（需要你在 Manager 里提供打开逻辑，传入 target 的数据即可）
+            if (sender is Player) {
+                plugin.warehouseManager.openMainMenu(sender, target)
+                sender.sendMessage("§a正在查看 ${target.name} 的仓库")
+            }
             return true
         }
 
@@ -887,7 +915,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             val rootCommands = listOf(
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get",
                 "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
-                "status", "gettp", "getarrayblock", "chonghua","dungeon"
+                "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1015,6 +1043,14 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     if (args.size == 3) return null // 补全在线玩家
                     if (args.size == 4) return chestDungeons.filter { it.startsWith(args[3].lowercase()) } // 补全副本ID
                 }
+            }
+            "getwarehouse" -> {
+                // 获取仓库方块，不需要后续参数，返回空列表防止瞎补全
+                if (args.size == 2) return emptyList()
+            }
+            "openwarehouse" -> {
+                // 强制打开某人仓库，第二个参数为玩家名。返回 null 会自动调用 Bukkit 的在线玩家补全
+                if (args.size == 2) return null
             }
         }
 

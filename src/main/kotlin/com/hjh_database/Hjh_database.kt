@@ -67,8 +67,9 @@ class Hjh_database : JavaPlugin() {
     lateinit var elementZfGui: ElementZfGui
     lateinit var chonghuaManager: ChonghuaManager
     lateinit var accessoryManager: AccessoryManager // 饰品栏管理器
-    lateinit var qingLongManager: QingLongManager// 饰品栏管理器
+    lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
+    lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
 
 
     override fun onEnable() {
@@ -114,9 +115,10 @@ class Hjh_database : JavaPlugin() {
         this.accessoryManager = AccessoryManager(this)
         // 青龙试炼
         this.qingLongManager = QingLongManager(this)
-
-        // 1. 初始化金宝箱管理器
+        // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
+        // 【新增】初始化个人仓库管理器
+        this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI
@@ -159,6 +161,10 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(this.qingLongManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
+        // 【新增】个人仓库系统监听
+        pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
+        // 假设你的 GUI 监听器叫 WarehouseGuiListener 并且放在 listener 包下
+        pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseGuiListener(this), this)
 
 
         // ==========================================
@@ -193,8 +199,18 @@ class Hjh_database : JavaPlugin() {
         server.scheduler.runTaskLater(this, Runnable {
             for (player in server.onlinePlayers) {
                 playerManager.loadAndCache(player)
+                // 【新增】同时加载玩家的仓库数据！
+                warehouseManager.loadAndCache(player)
             }
         }, 10L)
+
+        // 【新增】每5分钟自动保存所有仓库数据 (20 ticks * 60 seconds * 5 minutes)
+        server.scheduler.runTaskTimerAsynchronously(this, Runnable {
+            // 直接调用 manager 里写好的批量保存方法，它里面已经处理好 conn 了！
+            warehouseManager.saveAllOnline()
+        }, 6000L, 6000L)
+
+
 
         // 替换掉原来的 logger.info("画江湖核心数据系统 (HJH) 已启动 - 数据库模式")
         val startupLogo = """
@@ -216,6 +232,11 @@ class Hjh_database : JavaPlugin() {
     override fun onDisable() {
         if (::playerManager.isInitialized) {
             playerManager.saveAllOnline()
+        }
+
+        // 【新增】关服时保存所有仓库数据
+        if (::warehouseManager.isInitialized) {
+            warehouseManager.saveAllOnline()
         }
 
         if (::databaseManager.isInitialized) {
