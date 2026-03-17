@@ -5,12 +5,14 @@ import com.hjh_database.alchemy.data.AlchemyRecipe
 import com.hjh_database.alchemy.data.AlchemyTier
 import net.kyori.adventure.text.Component
 import org.bukkit.Location
+import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.entity.Item
 import org.bukkit.entity.Player
 import org.bukkit.entity.TextDisplay
 import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Transformation
 import org.joml.Vector3f
@@ -34,6 +36,9 @@ class AlchemySession(
     private var displayEntity: TextDisplay? = null
     private var task: BukkitRunnable? = null
 
+    val config = recipe.tierData[tier]!!
+    val resultItem = config.result
+
     init {
         // 初始化追踪器
         val config = recipe.tierData[tier]!!
@@ -46,7 +51,9 @@ class AlchemySession(
     }
 
     fun start() {
-        player.sendMessage("§a[炼药] §f开始炼制 §e${recipe.displayName} (${tier.displayName})")
+        val config = recipe.tierData[tier]!!
+        val resultName = config.result.itemMeta?.displayName ?: "未知丹药"
+        player.sendMessage("§a[炼药] §f开始炼制 §e${resultName} (${tier.displayName})")
         player.sendMessage("§7请将材料丢入锅中... (离开5格将自动取消)")
 
         // 生成悬浮文字
@@ -96,7 +103,9 @@ class AlchemySession(
     }
 
     private fun updateDisplayText() {
-        val sb = StringBuilder("§6正在炼制: ${recipe.displayName}\n§f材料进度:\n")
+        val config = recipe.tierData[tier]!!
+        val resultName = config.result.itemMeta?.displayName ?: "未知丹药"
+        val sb = StringBuilder("§6正在炼制: §b${resultName}\n§f材料进度:\n")
 
         for (t in trackers) {
             // 获取显示的名称 (优先用 DisplayName)
@@ -217,19 +226,15 @@ class AlchemySession(
 
         val resultItem = recipe.tierData[tier]!!.result
 
-        // 给予成品
-        player.inventory.addItem(resultItem)
-
         // 【新增】计算并给予冶药经验
         val playerData = plugin.playerManager.getPlayerData(player)
         if (playerData != null) {
-            // 计算经验：初级=base, 中级=+10, 高级=+20
-            val extraExp = when (tier) {
-                AlchemyTier.LOW -> 0
-                AlchemyTier.MID -> 10
-                AlchemyTier.HIGH -> 20
-            }
-            val totalExp = recipe.baseExp + extraExp
+            // 【修复 1：经验获取逻辑】直接从你的成品读取 danyao.yml 的 base_exp
+            val resourceId = resultItem.itemMeta?.persistentDataContainer?.get(NamespacedKey(plugin, "resource_id"), PersistentDataType.STRING)
+            val resourceData = if (resourceId != null) plugin.resourceManager.getLocalResource(resourceId) else null
+
+            // 读取 base_exp，如果没有配置默认给 5 点
+            val totalExp = resourceData?.baseExp ?: 5
 
             if (totalExp > 0) {
                 playerData.addAlchemyExp(totalExp)
@@ -248,9 +253,18 @@ class AlchemySession(
         }
 
         // 消息与音效
-        player.sendMessage("§a[炼药] 炼制成功！获得 ${resultItem.itemMeta?.displayName}")
+        val resultName = resultItem.itemMeta?.displayName ?: "未知丹药"
+        player.sendMessage("§a[炼药] 炼制成功！获得 $resultName")
         player.playSound(player.location, Sound.BLOCK_BREWING_STAND_BREW, 1f, 1f)
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 2f)
+
+        // 【修复 2：防止成品数量减少】发放物品时，必须 clone()！
+        val itemToGive = resultItem.clone()
+        val leftovers = player.inventory.addItem(itemToGive)
+        // 如果背包满了，掉落在地上
+        for (leftover in leftovers.values) {
+            player.world.dropItem(player.location, leftover)
+        }
 
         // === 修改点 5：粒子特效 (白烟) ===
         // 在锅上方一点生成云雾粒子

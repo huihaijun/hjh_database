@@ -118,55 +118,6 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 sender.sendMessage("§a已获得冶药锅")
                 return true
             }
-
-            // 2. 列出丹药
-            if (alcSub == "list") {
-                sender.sendMessage("§e=== 已注册的丹药效果 ===")
-                plugin.alchemyManager.effects.keys.forEach { id ->
-                    val recipe = plugin.alchemyManager.recipes[id]
-                    val name = recipe?.displayName ?: "未配置"
-                    sender.sendMessage("§7- §f$id §7($name)")
-                }
-                return true
-            }
-
-            // 3. 给予丹药
-            // /hjhadmin alchemy give <player> <pill_id> [LOW/MID/HIGH]
-            if (alcSub == "give") {
-                if (args.size < 4) {
-                    sender.sendMessage("§c用法: /hjhadmin alchemy give <玩家> <丹药ID> [品质(默认LOW)]")
-                    return true
-                }
-
-                val target = Bukkit.getPlayer(args[2])
-                if (target == null) {
-                    sender.sendMessage("§c玩家不在线。")
-                    return true
-                }
-
-                val pillId = args[3]
-                // 默认品质为 LOW
-                val tierStr = if (args.size >= 5) args[4].uppercase() else "LOW"
-                val tier = try {
-                    AlchemyTier.valueOf(tierStr)
-                } catch (e: Exception) {
-                    sender.sendMessage("§c无效的品质，请使用: LOW, MID, HIGH")
-                    return true
-                }
-
-                // 调用 Manager 的方法生成物品
-                val item = plugin.alchemyManager.createPillItem(pillId, tier)
-
-                if (item != null) {
-                    target.inventory.addItem(item)
-                    sender.sendMessage("§a已给予 ${target.name} 丹药: $pillId ($tier)")
-                    target.sendMessage("§a[系统] 你获得了丹药: ${item.itemMeta?.displayName}")
-                } else {
-                    sender.sendMessage("§c给予失败！可能是该丹药ID不存在，或者该丹药没有配置 '${tier.name}' 品质的物品。")
-                }
-                return true
-            }
-            return true
         }
 
         // === get (获取 Resource 物品) ===

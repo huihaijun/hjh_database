@@ -5,12 +5,14 @@ import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
+import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
+import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
 import java.util.ArrayList
@@ -147,6 +149,13 @@ class ResourceManager(private val plugin: Hjh_database) {
     }
 
     /**
+     * 【新增】获取物品的原始数据对象 (用于炼丹系统读取 yml 中的等级、药毒等配置)
+     */
+    fun getLocalResource(id: String): ResourceItem? {
+        return localResources[id]
+    }
+
+    /**
      * 刷新已有物品 (用于 ResourceListener)
      */
     fun refreshItem(item: ItemStack?): Boolean {
@@ -190,8 +199,13 @@ class ResourceManager(private val plugin: Hjh_database) {
             val res = localResources[id]
             if (res != null) {
                 if (item.type != res.material) item.type = res.material
-                // 注意：由于杂项你写的是 applyResourceToMeta，它只会改 Name 和 Lore，原有的 NBT 可能还活着，
-                // 但为了统一安全，我们依然重新走一遍构建流程
+                // 【新增】刷新时同步堆叠组件
+                if (res.maxStackSize != null) {
+                    item.setData(DataComponentTypes.MAX_STACK_SIZE, res.maxStackSize.coerceIn(1, 99))
+                } else {
+                    // 如果配置里删掉了，就移除该组件恢复原版默认
+                    item.resetData(DataComponentTypes.MAX_STACK_SIZE)
+                }
                 val newMeta = item.itemMeta!!
                 applyResourceToMeta(newMeta, res)
                 item.itemMeta = newMeta
@@ -213,6 +227,14 @@ class ResourceManager(private val plugin: Hjh_database) {
     // 构建杂项物品
     private fun buildLocalItem(res: ResourceItem): ItemStack {
         val item = ItemStack(res.material)
+
+        // 【新增】设置最大堆叠数量组件
+        res.maxStackSize?.let { size ->
+            // 确保数值在 1-99 之间（Minecraft 限制）
+            val validatedSize = size.coerceIn(1, 99)
+            item.setData(DataComponentTypes.MAX_STACK_SIZE, validatedSize)
+        }
+
         val meta = item.itemMeta
         if (meta != null) {
             applyResourceToMeta(meta, res)
@@ -244,6 +266,17 @@ class ResourceManager(private val plugin: Hjh_database) {
         }
         if (res.isUnbreakable) {
             meta.isUnbreakable = true
+        }
+        // 【新增】如果配置了颜色，并且该物品支持药水颜色（PotionMeta）
+        if (res.colorHex != null && meta is PotionMeta) {
+            try {
+                // 过滤掉 "#" 号并转为 RGB 颜色
+                val cleanHex = res.colorHex.replace("#", "")
+                val rgb = cleanHex.toInt(16)
+                meta.color = Color.fromRGB(rgb)
+            } catch (e: Exception) {
+                plugin.logger.warning("物品 ${res.id} 的颜色配置错误: ${res.colorHex}")
+            }
         }
     }
 

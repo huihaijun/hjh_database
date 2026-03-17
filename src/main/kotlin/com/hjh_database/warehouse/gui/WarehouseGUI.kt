@@ -11,7 +11,7 @@ class WarehouseGUI {
 
     // 打开一级菜单
     fun openMainMenu(viewer: Player, targetData: WarehouseData) {
-        val inv = Bukkit.createInventory(null, 54, "§0个人仓库 - ${targetData.playerName}")
+        val inv = Bukkit.createInventory(null, 54, "§0个人仓库-${targetData.playerName}")
         val glass = ItemStack(Material.GRAY_STAINED_GLASS_PANE)
         val meta = glass.itemMeta
         meta?.setDisplayName(" ")
@@ -40,7 +40,7 @@ class WarehouseGUI {
     // 打开子菜单 (翻页)
     fun openSubMenu(viewer: Player, targetData: WarehouseData, subId: Int, page: Int) {
         // 标题可以带上页码，方便玩家识别和 Listener 拦截
-        val inv = Bukkit.createInventory(null, 54, "§0仓库: ${targetData.categoryNames[subId]} - 第${page + 1}页")
+        val inv = Bukkit.createInventory(null, 54, "§0仓库: ${targetData.categoryNames[subId]}-第${page + 1}页")
 
         // 1. 准备基础装饰物：灰色玻璃
         val glass = ItemStack(Material.GRAY_STAINED_GLASS_PANE)

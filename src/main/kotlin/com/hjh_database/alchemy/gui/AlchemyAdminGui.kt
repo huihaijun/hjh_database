@@ -27,7 +27,6 @@ class AlchemyAdminGui(private val plugin: Hjh_database, val player: Player, val 
         if (recipe != null) {
             loadItemsFromRecipe()
         }
-        updateButtons() // 刷新一次按钮状态
     }
 
     override fun getInventory(): Inventory {
@@ -39,83 +38,70 @@ class AlchemyAdminGui(private val plugin: Hjh_database, val player: Player, val 
     }
 
     private fun setupLayout() {
-        // 1. 铺设背景板（第4,5行分隔符）
-        val pane = ItemStack(Material.BLACK_STAINED_GLASS_PANE)
-        val meta = pane.itemMeta
-        meta.setDisplayName("§8分隔符")
-        pane.itemMeta = meta
+        // 1. 背景黑色玻璃板
+        val bg = ItemStack(Material.BLACK_STAINED_GLASS_PANE)
+        val meta = bg.itemMeta
+        meta.setDisplayName(" ")
+        bg.itemMeta = meta
+        for (i in 0 until 54) inventory.setItem(i, bg)
 
-        for (i in 27 until 45) {
-            inventory.setItem(i, pane)
+        // 2. 红色玻璃板作为分界线阻挡 (【修改】区分初、中、高级)
+        fun getDivider(name: String): ItemStack {
+            val pane = ItemStack(Material.RED_STAINED_GLASS_PANE)
+            val paneMeta = pane.itemMeta
+            paneMeta.setDisplayName(name)
+            pane.itemMeta = paneMeta
+            return pane
         }
 
-        // 2. 标记三个等级区域的提示 (可选)
-        // 0-8: LOW, 9-17: MID, 18-26: HIGH
+        val dividerLow = getDivider("§c=> 【初级】炼制结果 =>")
+        val dividerMid = getDivider("§c=> 【中级】炼制结果 =>")
+        val dividerHigh = getDivider("§c=> 【高级】炼制结果 =>")
+
+        // 3. 布局：初级 (第1行)
+        for (i in 0..4) inventory.setItem(i, null) // 材料区 0-4
+        for (i in 5..7) inventory.setItem(i, dividerLow) // 分界线 5-7
+        inventory.setItem(8, null) // 成品区 8
+
+        // 布局：中级 (第2行)
+        for (i in 9..13) inventory.setItem(i, null) // 材料区 9-13
+        for (i in 14..16) inventory.setItem(i, dividerMid) // 分界线 14-16
+        inventory.setItem(17, null) // 成品区 17
+
+        // 布局：高级 (第3行)
+        for (i in 18..22) inventory.setItem(i, null) // 材料区 18-22
+        for (i in 23..25) inventory.setItem(i, dividerHigh) // 分界线 23-25
+        inventory.setItem(26, null) // 成品区 26
+
+        // 4. 【找回的】保存按钮 (放在右下角)
+        val saveBtn = ItemStack(Material.EMERALD_BLOCK)
+        val saveMeta = saveBtn.itemMeta
+        saveMeta.setDisplayName("§a[ 保存配方 ]")
+        saveMeta.lore = listOf("§7点击保存当前编辑的配方")
+        saveBtn.itemMeta = saveMeta
+        inventory.setItem(53, saveBtn)
     }
 
     // 【新增】从配方数据回显到界面
     private fun loadItemsFromRecipe() {
         // 加载 Low (Start 0)
-        editingRecipe.tierData[AlchemyTier.LOW]?.let { loadTierToGui(it, 0) }
-        // 加载 Mid (Start 9)
-        editingRecipe.tierData[AlchemyTier.MID]?.let { loadTierToGui(it, 9) }
-        // 加载 High (Start 18)
-        editingRecipe.tierData[AlchemyTier.HIGH]?.let { loadTierToGui(it, 18) }
+        loadTierToGui(AlchemyTier.LOW, 0)
+        loadTierToGui(AlchemyTier.MID, 9)
+        loadTierToGui(AlchemyTier.HIGH, 18)
     }
 
-    private fun loadTierToGui(config: TierConfig, startSlot: Int) {
-        // 填充原材料 (0-4 格)
-        for ((index, ingredient) in config.ingredients.withIndex()) {
-            if (index < 5) {
-                inventory.setItem(startSlot + index, ingredient.clone())
-            }
+    private fun loadTierToGui(tier: AlchemyTier, startSlot: Int) {
+        val config = editingRecipe.tierData[tier] ?: return
+        // 放置材料到 0-4
+        for ((index, item) in config.ingredients.withIndex()) {
+            if (index < 5) inventory.setItem(startSlot + index, item.clone())
         }
-        // 填充成品 (第8格 -> startSlot + 8)
-        inventory.setItem(startSlot + 8, config.result.clone())
+        // 放置成品到第9格 (即 startSlot + 8)
+        if (config.result.type != Material.AIR) {
+            inventory.setItem(startSlot + 8, config.result.clone())
+        }
     }
 
-    // 更新按钮显示状态 (复用你之前的逻辑，这里只展示关键部分)
-    fun updateButtons() {
-        // 45: 医师限制
-        inventory.setItem(45, createButton(Material.IRON_SWORD, "§f医师专属: ${if (editingRecipe.onlyDoctor) "§a是" else "§c否"}", listOf("§7点击切换")))
-
-        // 46: 药毒时间
-        inventory.setItem(46, createButton(Material.ROTTEN_FLESH, "§f药毒时间: §e${editingRecipe.sicknessTime}秒", listOf("§7左键+5s, 右键-5s")))
-
-        // 47: 颜色
-        val chestplate = ItemStack(Material.LEATHER_CHESTPLATE)
-        val meta = chestplate.itemMeta as org.bukkit.inventory.meta.LeatherArmorMeta
-        meta.setColor(hexToColor(editingRecipe.colorHex))
-        meta.setDisplayName("§f当前颜色: ${editingRecipe.colorHex}")
-        meta.lore = listOf("§7点击切换预设颜色")
-        chestplate.itemMeta = meta
-        inventory.setItem(47, chestplate)
-
-        // 48: 等级要求
-        inventory.setItem(48, createButton(Material.EXPERIENCE_BOTTLE, "§f基础等级: §e${editingRecipe.requiredLevel}", listOf("§7左键+1, 右键-1")))
-
-        // 49: 保存
-        inventory.setItem(49, createButton(Material.WRITABLE_BOOK, "§a[保存配方]", listOf("§7保存所有更改")))
-
-        // 50：设置获得的经验
-        val expItem = ItemStack(Material.EXPERIENCE_BOTTLE)
-        val expMeta = expItem.itemMeta
-        expMeta.setDisplayName("§e设置冶药经验")
-        expMeta.lore = listOf(
-            "§7当前基础经验: §f${editingRecipe.baseExp}",
-            "§7(初级炼制获得的经验)",
-            "",
-            "§7中级炼制: §f${editingRecipe.baseExp + 10}",
-            "§7高级炼制: §f${editingRecipe.baseExp + 20}",
-            "",
-            "§a左键: +5  §c右键: -5"
-        )
-        expItem.itemMeta = expMeta
-        inventory.setItem(50, expItem) // Slot 51
-
-        // 53: 关闭
-        inventory.setItem(53, createButton(Material.BARRIER, "§c关闭", listOf("§7放弃更改")))
-    }
 
     // 辅助方法
     private fun createButton(mat: Material, name: String, lore: List<String>): ItemStack {
@@ -152,20 +138,21 @@ class AlchemyAdminGui(private val plugin: Hjh_database, val player: Player, val 
 
     private fun saveTierFromGui(tier: AlchemyTier, startSlot: Int) {
         val ingredients = ArrayList<ItemStack>()
-        // 扫描前5格
+        // 扫描材料格
         for (i in 0 until 5) {
             val item = inventory.getItem(startSlot + i)
             if (item != null && item.type != Material.AIR && !item.type.name.contains("STAINED_GLASS")) {
                 ingredients.add(item.clone())
             }
         }
-        // 扫描成品格 (第9格)
-        val result = inventory.getItem(startSlot + 8)
 
-        if (result != null && result.type != Material.AIR) {
-            editingRecipe.tierData[tier] = TierConfig(ingredients, result.clone())
+        // 读取成品格 (startSlot + 8)
+        val resultItem = inventory.getItem(startSlot + 8)?.clone() ?: ItemStack(Material.AIR)
+
+        if (ingredients.isNotEmpty() || resultItem.type != Material.AIR) {
+            editingRecipe.tierData[tier] = TierConfig(ingredients, resultItem)
         } else {
-            editingRecipe.tierData.remove(tier)
+            editingRecipe.tierData.remove(tier) // 如果全空，则删除该品阶
         }
     }
 }

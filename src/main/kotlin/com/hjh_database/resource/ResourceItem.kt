@@ -16,7 +16,14 @@ class ResourceItem(
     rawLore: List<String>?, // 构造参数：原始Lore（未处理颜色）
     private val _customModelData: Int?, // 私有属性：用于内部存储（区分 null 和 0）
     val isUnbreakable: Boolean,
-    val rarity: Int = 0 // 默认为 0，表示没有稀有度
+    val rarity: Int = 0, // 默认为 0，表示没有稀有度
+    val maxStackSize: Int? = null, // 【新增】可选的最大堆叠数
+    val colorHex: String? = null, // 【新增】用于存储药水的 Hex 颜色
+
+    val onlyDoctor: Boolean = false,
+    val reqLevel: Int = 1,
+    val baseExp: Int = 5,
+    val sicknessTime: Int = 10
 ) {
 
     // === 属性初始化逻辑 (自动处理颜色和默认值) ===
@@ -60,7 +67,15 @@ class ResourceItem(
         rawLore = sec.getStringList("lore"),
         _customModelData = if (sec.contains("custom_model_data")) sec.getInt("custom_model_data") else null,
         isUnbreakable = sec.getBoolean("unbreakable", false),
-        rarity = sec.getInt("rarity", 0)
+        rarity = sec.getInt("rarity", 0),
+        // 【新增】读取 max_stack_size，如果不配置则为 null
+        maxStackSize = if (sec.contains("max_stack_size")) sec.getInt("max_stack_size") else null,
+        // 【新增】从 yml 读取 color 字段
+        colorHex = sec.getString("color"),
+        reqLevel = sec.getInt("req_level", 1),
+        onlyDoctor = sec.getBoolean("only_doctor", false),
+        baseExp = sec.getInt("base_exp", 5),
+        sicknessTime = sec.getInt("sickness_time", 10)
     )
 
     // === 功能方法 ===

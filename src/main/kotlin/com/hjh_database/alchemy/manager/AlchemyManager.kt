@@ -45,9 +45,9 @@ class AlchemyManager(private val plugin: Hjh_database) {
 
         // 1. 如果内存/文件中完全没有这个配方，直接使用代码默认值并保存
         if (!recipes.containsKey(effect.id)) {
-            recipes[effect.id] = defaultRecipe
-            saveRecipes() // 立即保存默认配置到文件
-            plugin.logger.info("§a[丹药] 载入并保存默认配置: ${effect.id}")
+//            recipes[effect.id] = defaultRecipe
+//            saveRecipes() // 立即保存默认配置到文件
+//            plugin.logger.info("§a[丹药] 载入并保存默认配置: ${effect.id}")
         } else {
             // 2. 如果文件里有配置，检查是否缺失某些品质，只做增量补充，不覆盖已有修改
             val existing = recipes[effect.id]!!
@@ -78,10 +78,7 @@ class AlchemyManager(private val plugin: Hjh_database) {
 
             // 读取基础属性
             recipe.displayName = config.getString("$path.displayName", id) ?: id
-            recipe.sicknessTime = config.getInt("$path.sicknessTime", 0)
-            recipe.colorHex = config.getString("$path.colorHex", "#FFFFFF") ?: "#FFFFFF"
-            recipe.requiredLevel = config.getInt("$path.requiredLevel", 0)
-            recipe.onlyDoctor = config.getBoolean("$path.onlyDoctor", false)
+
 
             // 读取各品质配置
             val tiersSec = config.getConfigurationSection("$path.tiers")
@@ -109,12 +106,8 @@ class AlchemyManager(private val plugin: Hjh_database) {
         for ((id, recipe) in recipes) {
             val path = "recipes.$id"
             // 保存基础属性
+            // ======== 替换为 ========
             config.set("$path.displayName", recipe.displayName)
-            config.set("$path.sicknessTime", recipe.sicknessTime)
-            config.set("$path.colorHex", recipe.colorHex)
-            config.set("$path.requiredLevel", recipe.requiredLevel)
-            config.set("$path.onlyDoctor", recipe.onlyDoctor)
-
             // 保存各品质配置
             for ((tier, data) in recipe.tierData) {
                 val tPath = "$path.tiers.${tier.name}"

@@ -21,9 +21,10 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private val cauldronKey = NamespacedKey(plugin, "hjh_alchemy_cauldron")
     private val alchemyIdKey = NamespacedKey(plugin, "hjh_alchemy_id")
     private val alchemyTierKey = NamespacedKey(plugin, "hjh_alchemy_tier")
+    private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 【新增】兼容资源管理器自带的 ID 标签
     private val presetColors = listOf("#FF5555", "#AA0000", "#5555FF", "#0000AA", "#00AA00", "#55FF55", "#FFAA00", "#FFFF55", "#FF55FF", "#000000")
 
-    // ... onPlayerConsume 保持不变 ...
+
     @EventHandler
     fun onPlayerConsume(event: PlayerInteractEvent) {
         if (event.hand == EquipmentSlot.OFF_HAND) return
@@ -32,33 +33,49 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         if (!item.hasItemMeta()) return
         val meta = item.itemMeta ?: return
         val pdc = meta.persistentDataContainer
-        if (!pdc.has(alchemyIdKey, PersistentDataType.STRING)) return
 
+        // 【修改】优先读取 hjh_alchemy_id，如果找不到（比如 admin get 拿到的），则读取 resource_id 回底
+        var effectId = pdc.get(alchemyIdKey, PersistentDataType.STRING)
+        if (effectId == null) {
+            effectId = pdc.get(resourceIdKey, PersistentDataType.STRING)
+        }
+        if (effectId == null) return
+
+        val effect = plugin.alchemyManager.getEffect(effectId) ?: return
+
+        // 成功识别为丹药，立刻拦截原版动作，防止玩家进入“喝水动画”
         event.isCancelled = true
         val player = event.player
-        val effectId = pdc.get(alchemyIdKey, PersistentDataType.STRING) ?: return
+
+        // 获取品阶，没有被专门定义的统统按 LOW（初级）处理
         val tierName = pdc.get(alchemyTierKey, PersistentDataType.STRING) ?: "LOW"
         val tier = try { AlchemyTier.valueOf(tierName) } catch (e: Exception) { AlchemyTier.LOW }
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
-        val effect = plugin.alchemyManager.getEffect(effectId)
-        val recipe = plugin.alchemyManager.recipes[effectId]
 
-        if (effect == null || recipe == null) return
         if (playerData.isSick()) {
             val leftTime = (playerData.pillSicknessEnd - System.currentTimeMillis()) / 1000.0
             player.sendMessage("§c[药毒] 身体还在排斥药力，无法继续服用！(剩余 %.1f秒)".format(leftTime))
             return
         }
 
-        item.amount -= 1
+        // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
+        item.subtract(1)
+
         player.playSound(player.location, org.bukkit.Sound.ENTITY_GENERIC_DRINK, 1f, 1f)
         player.playSound(player.location, org.bukkit.Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 2f)
+
         val duration = effect.onConsume(player, playerData, tier)
         if (duration > 0) {
             val pill = ActivePill(effectId, tier, duration)
             playerData.activePills.add(pill)
         }
-        val sicknessMillis = recipe.sicknessTime * 1000L
+        // 【修改点】从玩家吃下的物品本身获取对应的药毒时间
+        val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
+        val resourceData = if (consumeResourceId != null) plugin.resourceManager.getLocalResource(consumeResourceId) else null
+
+        // 没写默认给 10 秒
+        val sicknessTime = resourceData?.sicknessTime ?: 10
+        val sicknessMillis = sicknessTime * 1000L
         playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
     }
 
@@ -142,73 +159,22 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         // 2. 管理员编辑器 (AlchemyAdminGui)
         // ==========================
         else if (holder is AlchemyAdminGui) {
-            if (event.clickedInventory != event.view.topInventory) return
-            if (clickedItem != null && clickedItem.type.name.contains("STAINED_GLASS_PANE")) {
-                event.isCancelled = true
+            // 如果玩家点击的是自己的背包 (bottomInventory)，直接允许操作！
+            if (event.clickedInventory == event.view.bottomInventory) {
+                event.isCancelled = false
+                return
             }
-
-            if (slot >= 45) {
+            // 锁定上半部分的 GUI
+            event.isCancelled = true
+            // 允许放物品的格子 (0-4, 8, 9-13, 17, 18-22, 26)
+            val allowedSlots = listOf(0,1,2,3,4,8, 9,10,11,12,13,17, 18,19,20,21,22,26)
+            if (event.clickedInventory == event.view.topInventory && allowedSlots.contains(slot)) {
+                event.isCancelled = false // 放开这几个格子
+            }
+            // 监听保存按钮
+            if (slot == 53 && event.clickedInventory == event.view.topInventory) {
                 event.isCancelled = true
-                player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
-
-                when (slot) {
-                    45 -> { // 医师
-                        holder.editingRecipe.onlyDoctor = !holder.editingRecipe.onlyDoctor
-                        holder.updateButtons()
-                    }
-                    46 -> { // 时间
-                        val change = if (event.isLeftClick) 5 else -5
-                        var newTime = holder.editingRecipe.sicknessTime + change
-                        if (newTime < 0) newTime = 0
-                        holder.editingRecipe.sicknessTime = newTime
-                        holder.updateButtons()
-                    }
-                    47 -> { // 颜色
-                        val currentHex = holder.editingRecipe.colorHex
-                        val index = presetColors.indexOf(currentHex)
-                        val nextIndex = if (index == -1) 0 else (index + 1) % presetColors.size
-                        holder.editingRecipe.colorHex = presetColors[nextIndex]
-                        holder.updateButtons()
-                    }
-                    48 -> { // 等级
-                        val change = if (event.isLeftClick) 1 else -1
-                        var newLv = holder.editingRecipe.requiredLevel + change
-                        if (newLv < 0) newLv = 0
-                        holder.editingRecipe.requiredLevel = newLv
-                        holder.updateButtons()
-                    }
-                    49 -> { // 保存
-                        holder.saveFromGui()
-                    }
-                    50 -> { // 设置经验
-                        val recipe = holder.editingRecipe
-                        if (event.isLeftClick) {
-                            recipe.baseExp += 5
-                        } else if (event.isRightClick) {
-                            recipe.baseExp -= 5
-                            if (recipe.baseExp < 0) recipe.baseExp = 0
-                        }
-                        // 刷新按钮显示
-                        val item = event.currentItem
-                        val meta = item?.itemMeta
-                        if (meta != null) {
-                            meta.lore = listOf(
-                                "§7当前基础经验: §f${recipe.baseExp}",
-                                "§7(初级炼制获得的经验)",
-                                "",
-                                "§7中级炼制: §f${recipe.baseExp + 10}",
-                                "§7高级炼制: §f${recipe.baseExp + 20}",
-                                "",
-                                "§a左键: +5  §c右键: -5"
-                            )
-                            item.itemMeta = meta
-                        }
-                    }
-                    53 -> { // 关闭
-                        // 返回列表界面，而不是完全关闭
-                        AlchemyAdminListGui(plugin, player).open()
-                    }
-                }
+                holder.saveFromGui()
             }
         }
 
@@ -237,13 +203,19 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
                     val config = recipe.tierData[tier]
                     if (config != null) {
                         val playerData = plugin.playerManager.getPlayerData(player) ?: return
-                        val reqLevel = recipe.requiredLevel + tier.levelOffset
+
+                        // 【修改点】通过成品物品读取需要的冶药法等级
+                        val resourceId = config.result.itemMeta?.persistentDataContainer?.get(resourceIdKey, PersistentDataType.STRING)
+                        val resourceData = if (resourceId != null) plugin.resourceManager.getLocalResource(resourceId) else null
+                        val reqLevel = resourceData?.reqLevel ?: 1
+
+                        // 判断玩家等级是否足够
                         if (playerData.alchemyLevel >= reqLevel) {
                             player.closeInventory()
                             // 开始炼药
                             plugin.alchemyManager.startSession(player, holder.cauldronLoc, recipe, tier)
                         } else {
-                            player.sendMessage("§c等级不足！")
+                            player.sendMessage("§c等级不足！该丹药需要冶药法等级: $reqLevel")
                         }
                     }
                 }
