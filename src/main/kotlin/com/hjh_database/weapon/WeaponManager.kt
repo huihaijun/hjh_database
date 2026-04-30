@@ -191,9 +191,11 @@ class WeaponManager(private val plugin: Hjh_database) {
             // =======================================================
             if (item.type == Material.CROSSBOW) {
                 if (isActive) {
-                    // 添加多重射击1 和 快速装填2 (true 代表无视原版附魔限制)
+                    // 【修改点】判断 ID 是否为 tingchao，赋予不同的快速装填等级
+                    val quickChargeLevel = if (id == "tingchao") 3 else 2
+
                     meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-                    meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+                    meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
                 } else {
                     // 失效时移除，防止玩家放回背包依然能射出多重箭
                     meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
@@ -338,8 +340,10 @@ class WeaponManager(private val plugin: Hjh_database) {
 
         // 【新增】如果拿出来的是弩，默认给它附魔
         if (item.type == Material.CROSSBOW) {
+            // 【修改点】针对 tingchao 给予 3 级快速装填
+            val quickChargeLevel = if (id == "tingchao") 3 else 2
             meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
         }
 
         // 【关键修复】显式设置空属性修改器，清除原版属性

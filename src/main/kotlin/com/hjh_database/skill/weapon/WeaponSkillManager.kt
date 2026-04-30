@@ -19,6 +19,7 @@ import com.hjh_database.skill.weapon.job_1.jiaolongnuSkill
 import com.hjh_database.skill.weapon.job_1.qingtonggongSkill
 import com.hjh_database.skill.weapon.job_1.riyueliuxingnuSkill
 import com.hjh_database.skill.weapon.job_1.tengmugongSkill
+import com.hjh_database.skill.weapon.job_1.tingchaoSkill
 import com.hjh_database.skill.weapon.job_1.yantiegongSkill
 import com.hjh_database.skill.weapon.job_1.zhongchuigongSkill
 import com.hjh_database.weapon.WeaponManager
@@ -106,6 +107,8 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["zhongchuigong"] = zhongchuigongSkill()
         skillRegistry["riyueliuxingnu"] = riyueliuxingnuSkill()
         skillRegistry["beidoumieshengong"] = beidoumieshengongSkill()
+        skillRegistry["tingchao"] = tingchaoSkill()
+
 
         skillRegistry["novice_bow"] = NoviceBowSkill()
     }

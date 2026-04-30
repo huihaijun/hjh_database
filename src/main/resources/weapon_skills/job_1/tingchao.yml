@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【听潮】发动！"
+  cooldown: 2.0

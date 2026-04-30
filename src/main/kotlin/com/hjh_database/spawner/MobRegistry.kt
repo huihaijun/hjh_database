@@ -298,6 +298,48 @@ object MobRegistry {
             ),
             affixes = listOf()
         ))
+        register(MobDefinition(
+            id = "yssl_jiangshi",
+            name = "&c试图抢劫贡品的僵尸",
+            type = EntityType.ZOMBIE,
+            health = 7.5,
+            damage = 2.0,
+            armor = 0.0,
+            speed = 0.2,
+            maxNearby = 3,
+            drops = listOf(
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+        ))
+        register(MobDefinition(
+            id = "yssl_kulou",
+            name = "&c试图抢劫贡品的骷髅",
+            type = EntityType.SKELETON,
+            health = 6.0,
+            damage = 3.5,
+            armor = 0.0,
+            speed = 0.25,
+            maxNearby = 3,
+            drops = listOf(
+            ),
+            affixes = listOf(),
+            helmet = Material.LEATHER_HELMET,
+            mainHand = Material.WOODEN_SWORD,
+        ))
+        register(MobDefinition(
+            id = "yssl_zhizhu",
+            name = "&c试图抢劫贡品的蜘蛛",
+            type = EntityType.SPIDER,
+            health = 6.5,
+            damage = 3.0,
+            armor = 0.0,
+            speed = 0.3,
+            maxNearby = 3,
+            drops = listOf(
+            ),
+            affixes = listOf(),
+        ))
         // === 副本 Boss 注册 ===
         register(MobDefinition(
             id = "qinglongshiwei",

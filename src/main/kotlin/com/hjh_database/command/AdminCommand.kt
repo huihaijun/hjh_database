@@ -54,6 +54,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getarrayblock -获取术士阵法升级方块 ")
             // 【新增】副本系统提示
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dungeon <trigger|set> - 副本系统指令")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medicaltest <玩家名> <view|add|remove> <试炼ID>")
             return true
         }
 
@@ -848,6 +849,88 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             return true
         }
 
+        // === medicaltest (医术试炼测试与管理) ===
+        if (subCommand == "medicaltest") {
+            if (!sender.hasPermission("hjh.admin")) {
+                sender.sendMessage("§c你没有权限执行此命令！")
+                return true
+            }
+
+            if (args.size < 3) {
+                sender.sendMessage("§c用法: /hjhadmin medicaltest <玩家> <view|add|remove> [试炼ID]")
+                return true
+            }
+
+            val targetName = args[1]
+            val action = args[2].lowercase()
+            val trialId = if (args.size >= 4) args[3].lowercase() else ""
+
+            val target = Bukkit.getPlayerExact(targetName)
+            if (target == null) {
+                // 保持你的风格，使用 return true 加 sendMessage
+                sender.sendMessage("§c玩家不在线或不存在，只能修改在线玩家的试炼记录！")
+                return true
+            }
+
+            val data = plugin.playerManager.getPlayerData(target)
+            if (data == null) {
+                sender.sendMessage("§c无法获取玩家 $targetName 的数据！")
+                return true
+            }
+
+            when (action) {
+                "view" -> {
+                    sender.sendMessage("§8[§aMedicalTest§8] §f玩家 ${target.name} 已完成的医术试炼: §e${data.completedMedicalTrials}")
+                }
+                "add" -> {
+                    if (trialId.isEmpty()) {
+                        sender.sendMessage("§c请输入要添加的试炼ID！")
+                        return true
+                    }
+                    data.completedMedicalTrials.add(trialId)
+
+                    // 异步保存，风格与你的 status/dungeon 完全一致
+                    plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                        try {
+                            plugin.databaseManager.dataSource?.connection?.use { conn ->
+                                // 【修改点】现在只需要传 conn 和 data 两个参数了
+                                plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
+                            }
+                        }catch (e: Exception) {
+                            sender.sendMessage("§c[错误] 数据库更新失败: ${e.message}")
+                            e.printStackTrace()
+                        }
+                    })
+                }
+                "remove" -> {
+                    if (trialId.isEmpty()) {
+                        sender.sendMessage("§c请输入要移除的试炼ID！")
+                        return true
+                    }
+                    data.completedMedicalTrials.remove(trialId)
+
+                    // 异步保存
+                    plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                        try {
+                            plugin.databaseManager.dataSource?.connection?.use { conn ->
+                                // 【修改点】现在只需要传 conn 和 data 两个参数了
+                                plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
+                            }
+                        } catch (e: Exception) {
+                            sender.sendMessage("§c[错误] 数据库更新失败: ${e.message}")
+                            e.printStackTrace()
+                        }
+                    })
+                }
+                else -> {
+                    sender.sendMessage("§c无效的动作: view, add, remove")
+                }
+            }
+            return true
+        }
+
+
+
         return error(sender, "未知指令: $subCommand")
     }
 
@@ -866,7 +949,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             val rootCommands = listOf(
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get",
                 "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
-                "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse"
+                "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
+                "medicaltest"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1002,6 +1086,20 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             "openwarehouse" -> {
                 // 强制打开某人仓库，第二个参数为玩家名。返回 null 会自动调用 Bukkit 的在线玩家补全
                 if (args.size == 2) return null
+            }
+            "medicaltest" -> {
+                // /hjhadmin medicaltest <玩家> <view|add|remove> [试炼ID]
+                if (args.size == 2) {
+                    return null // 返回 null 会自动调用 Bukkit 默认的在线玩家名补全
+                }
+                if (args.size == 3) {
+                    return listOf("view", "add", "remove").filter { it.startsWith(args[2].lowercase()) }
+                }
+                if (args.size == 4) {
+                    // 【修改】直接从医术试炼管理器中读取注册的试炼列表，实现自动填充
+                    val trials = plugin.medicalTrialManager.registeredTrialIds
+                    return trials.filter { it.startsWith(args[3].lowercase()) }
+                }
             }
         }
 

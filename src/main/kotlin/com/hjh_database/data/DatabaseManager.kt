@@ -48,6 +48,8 @@ class DatabaseManager(private val plugin: Hjh_database) {
         createGoldenChestTable()
         // 【新增】玩家仓库表
         createWarehouseTable()
+        // 【新增】医术试炼表
+        createMedicalTestTable()
 
 
         // 2. 【核心修复】自动补全旧表缺失的字段
@@ -368,6 +370,23 @@ class DatabaseManager(private val plugin: Hjh_database) {
         executeSql(sql)
     }
 
+    fun createMedicalTestTable() {
+        val sql = """
+        CREATE TABLE IF NOT EXISTS player_medicaltest (
+            uuid VARCHAR(36) PRIMARY KEY,
+            player_name VARCHAR(255),
+            completed_trials TEXT
+        )
+    """.trimIndent()
+        try {
+            dataSource?.connection?.use { conn ->
+                conn.createStatement().use { it.executeUpdate(sql) }
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("创建 player_medicaltest 表失败: ${e.message}")
+        }
+    }
+
 
     // ==========================================
     //            4. 核心玩家数据 存 / 取
@@ -550,6 +569,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
                 saveAlchemyData(conn, data)
                 savePlayerStatus(conn, data)
                 savePlayerGoldenChest(conn, data)
+                saveCompletedMedicalTrials(conn,data)
             }
         } catch (e: SQLException) {
             plugin.logger.severe("保存玩家数据失败: " + e.message)
@@ -662,6 +682,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     loadAlchemyData(conn, data)
                     loadPlayerStatus(conn, data)
                     loadPlayerGoldenChest(conn, data)
+                    loadCompletedMedicalTrials(conn, data)
 
                     // 7. 加载已完成的任务到缓存 (优化 RaceManager)
                     conn.prepareStatement(sqlCompletedQuests).use { ps ->
@@ -1096,5 +1117,53 @@ class DatabaseManager(private val plugin: Hjh_database) {
             plugin.logger.severe("读取仓库数据失败: ${e.message}")
         }
         return data
+    }
+
+    // ----------------- MedicalTrials 医术试炼表 -----------------
+    // 读取玩家已完成的医术试炼列表 (命名改为 load 以保持一致，传入 conn 避免死锁)
+    fun loadCompletedMedicalTrials(conn: Connection, data: PlayerData) { // 注意：这里不需要 return set 了，直接修改 data
+        val sql = "SELECT completed_trials FROM player_medicaltest WHERE uuid = ?"
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                ps.setString(1, data.uuid.toString())
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        val json = rs.getString("completed_trials")
+                        if (!json.isNullOrEmpty() && json != "[]" && json != "null") {
+                            val list = Gson().fromJson(json, Array<String>::class.java)
+                            // 把解析出来的数据存入 PlayerData
+                            data.completedMedicalTrials.addAll(list)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("读取医术试炼数据失败: ${e.message}")
+        }
+    }
+
+    // 保存玩家的医术试炼完成状态 (命名改为 save 以保持一致，传入 conn 避免死锁)
+    fun saveCompletedMedicalTrials(conn: Connection, data: PlayerData) {
+        val sql = """
+            INSERT INTO player_medicaltest (uuid, player_name, completed_trials) 
+            VALUES (?, ?, ?) 
+            ON CONFLICT(uuid) DO UPDATE SET player_name = ?, completed_trials = ?
+        """.trimIndent()
+
+        try {
+            conn.prepareStatement(sql).use { ps ->
+                // 直接从 data 中获取需要存的数据
+                val json = Gson().toJson(data.completedMedicalTrials)
+                ps.setString(1, data.uuid.toString())
+                ps.setString(2, data.playerName)
+                ps.setString(3, json)
+
+                ps.setString(4, data.playerName)
+                ps.setString(5, json)
+                ps.executeUpdate()
+            }
+        } catch (e: Exception) {
+            plugin.logger.severe("保存医术试炼数据失败: ${e.message}")
+        }
     }
 }

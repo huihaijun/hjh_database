@@ -17,68 +17,58 @@ class WarehouseGuiListener(private val plugin: Hjh_database) : Listener {
     fun onClick(e: InventoryClickEvent) {
         val player = e.whoClicked as? Player ?: return
         val view = e.view
-        val title = view.title
+        val title = org.bukkit.ChatColor.stripColor(view.title) ?: return
 
         // --- 1. 处理主菜单 ---
-        if (title.startsWith("§0个人仓库 - ")) {
-            e.isCancelled = true // 主菜单全盘禁止拿取
+        if (title.startsWith("个人仓库")) {
+            e.isCancelled = true // 全盘禁止拿取
             val clickedSlot = e.rawSlot
-
-            // 8个子仓库的槽位
             val slots = intArrayOf(19, 21, 23, 25, 28, 30, 32, 34)
             val subId = slots.indexOf(clickedSlot)
 
             if (subId != -1) {
                 if (e.click == ClickType.LEFT) {
-                    // 左键打开第一页
                     plugin.warehouseManager.openSubMenu(player, player, subId, 0)
                 } else if (e.click == ClickType.RIGHT) {
-                    // 右键重命名
                     player.closeInventory()
                     plugin.warehouseManager.renamingPlayers[player.uniqueId] = subId
-                    player.sendMessage("§e请输入该子仓库的新名称 (支持 & 颜色代码)，输入 '取消' 放弃修改。")
+                    player.sendMessage("§e请输入该子仓库的新名称（支持&颜色代码），输入 '取消' 可放弃操作。")
                 }
             }
             return
         }
 
-        // --- 2. 处理子菜单 (翻页与保护) ---
-        if (title.startsWith("§0仓库: ")) {
+        // --- 2. 处理二级子菜单 ---
+        if (title.startsWith("仓库")) {
+            val data = plugin.warehouseManager.getCachedData(player.uniqueId) ?: return
+            val parsed = parseSubMenuData(title, data)
+
+            // 如果真的解析失败了，启动安全锁：只要点的是最上面或最下面一排，统统取消！
+            if (parsed == null) {
+                if (e.rawSlot in 0..8 || e.rawSlot in 45..53) {
+                    e.isCancelled = true
+                }
+                return
+            }
+
+            val subId = parsed.first
+            val page = parsed.second
             val clickedSlot = e.rawSlot
 
-            // 拦截点击首尾行的动作
+            // 拦截顶部玻璃和底部导航栏区域
             if (clickedSlot in 0..8 || clickedSlot in 45..53) {
-                e.isCancelled = true
+                e.isCancelled = true // 必须取消，防止玩家拿走玻璃和翻页按钮
 
-                val item = e.currentItem ?: return
-                if (item.type != Material.GRAY_STAINED_GLASS_PANE && item.type != Material.AIR) {
-                    val data = plugin.warehouseManager.getCachedData(player.uniqueId) ?: return
-                    // 解析当前是哪个子仓库和页码
-                    val namePart = title.substringAfter("§0仓库: ").substringBefore(" - 第")
-                    val subId = data.categoryNames.indexOf(namePart)
-                    if (subId == -1) return
-
-                    val currentPageStr = title.substringAfter(" - 第").substringBefore("页")
-                    val currentPage = (currentPageStr.toIntOrNull() ?: 1) - 1
-                    // 处理按钮点击
-                    when (clickedSlot) {
-                        45 -> { // 上一页
-                            if (currentPage > 0) {
-                                savePageItems(player, e.inventory, subId, currentPage)
-                                plugin.warehouseManager.openSubMenu(player, player, subId, currentPage - 1)
-                            }
-                        }
-                        49 -> { // 返回主菜单
-                            savePageItems(player, e.inventory, subId, currentPage)
-                            plugin.warehouseManager.openMainMenu(player, player)
-                        }
-                        53 -> { // 下一页
-                            if (currentPage < 2) {
-                                savePageItems(player, e.inventory, subId, currentPage)
-                                plugin.warehouseManager.openSubMenu(player, player, subId, currentPage + 1)
-                            }
-                        }
-                    }
+                // 处理底部按钮的点击功能
+                if (clickedSlot == 45 && page > 0) {
+                    savePageItems(player, view.topInventory, subId, page)
+                    plugin.warehouseManager.openSubMenu(player, player, subId, page - 1)
+                } else if (clickedSlot == 49) {
+                    savePageItems(player, view.topInventory, subId, page)
+                    plugin.warehouseManager.openMainMenu(player, player)
+                } else if (clickedSlot == 53 && page < 2) { // 默认最大3页，也就是 page 最大为 2
+                    savePageItems(player, view.topInventory, subId, page)
+                    plugin.warehouseManager.openSubMenu(player, player, subId, page + 1)
                 }
             }
         }
@@ -87,31 +77,28 @@ class WarehouseGuiListener(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onClose(e: InventoryCloseEvent) {
         val player = e.player as? Player ?: return
-        val title = e.view.title
+        val view = e.view
+        val title = org.bukkit.ChatColor.stripColor(view.title) ?: return
 
-        // 关闭子仓库时，保存物品到缓存，并触发异步数据库保存
-        if (title.startsWith("§0") && title.contains(" - 第") && title.endsWith("页")) {
+        // 只有在关闭二级子菜单时，才需要触发保存物品的逻辑
+        if (title.startsWith("仓库")) {
             val data = plugin.warehouseManager.getCachedData(player.uniqueId) ?: return
-            val namePart = title.substring(2).substringBefore(" - 第")
-            val subId = data.categoryNames.indexOf(namePart)
-            if (subId == -1) return
+            val parsed = parseSubMenuData(title, data) ?: return // 解析失败则安全跳过
 
-            val currentPageStr = title.substringAfter(" - 第").substringBefore("页")
-            val currentPage = (currentPageStr.toIntOrNull() ?: 1) - 1
+            val subId = parsed.first
+            val page = parsed.second
 
-            // 提取中间 36 格物品保存到对应页码
-            savePageItems(player, e.inventory, subId, currentPage)
+            // 1. 将界面中的物品同步到内存缓存里
+            savePageItems(player, view.topInventory, subId, page)
 
-            // 触发异步保存 (防崩档)
-            // 异步保存数据
+            // 2. 异步将最新数据写入数据库
             plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                 try {
-                    // 【关键修复】先从 dataSource 获取连接 conn，然后再一起传给 saveWarehouse
                     plugin.databaseManager.dataSource?.connection?.use { conn ->
                         plugin.databaseManager.saveWarehouse(conn, data)
                     }
-                } catch (e: Exception) {
-                    plugin.logger.severe("GUI异步保存仓库数据失败: ${e.message}")
+                } catch (ex: Exception) {
+                    plugin.logger.severe("关闭界面保存仓库时出错: ${ex.message}")
                 }
             })
         }
@@ -171,6 +158,30 @@ class WarehouseGuiListener(private val plugin: Hjh_database) : Listener {
         for (i in 0..35) {
             val item = inventory.getItem(i + 9)
             data.items[subId][startIndex + i] = item
+        }
+    }
+
+    // --- 万能标题解析器：无视玩家奇葩命名、无视空格干扰 --
+    private fun parseSubMenuData(title: String, data: com.hjh_database.warehouse.data.WarehouseData): Pair<Int, Int>? {
+        try {
+            // 此时传入的 title 已经被去除了颜色代码，格式如: "仓库: 子仓库 1-第1页"
+
+            // 1. 获取页码 (通过截取最后一个 "-第" 和 "页" 之间的数字)
+            val pageStr = title.substringAfterLast("-第").substringBefore("页").trim()
+            val page = pageStr.toIntOrNull()?.minus(1) ?: return null
+
+            // 2. 获取子仓库名称 (截取 "仓库:" 和最后一个 "-第" 之间的内容)
+            val namePart = title.substringAfter("仓库:").substringBeforeLast("-第").trim()
+
+            // 3. 找出对应的 subId (比对时忽略颜色代码)
+            val subId = data.categoryNames.indexOfFirst {
+                org.bukkit.ChatColor.stripColor(it)?.trim() == namePart
+            }
+
+            if (subId == -1) return null
+            return Pair(subId, page)
+        } catch (e: Exception) {
+            return null
         }
     }
 }

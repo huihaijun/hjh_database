@@ -36,6 +36,7 @@ import com.hjh_database.skill.element_zf.gui.ElementZfGui
 import com.hjh_database.spawner.SpawnerBlockManager
 import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
+import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
 
 
 class Hjh_database : JavaPlugin() {
@@ -70,6 +71,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
+    lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
 
 
     override fun onEnable() {
@@ -119,6 +121,8 @@ class Hjh_database : JavaPlugin() {
         this.goldenChestManager = GoldenChestManager(this)
         // 【新增】初始化个人仓库管理器
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
+        // 【新增】初始化医术试炼管理器
+        this.medicalTrialManager = MedicalTrialManager(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI
@@ -165,6 +169,8 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
         // 假设你的 GUI 监听器叫 WarehouseGuiListener 并且放在 listener 包下
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseGuiListener(this), this)
+        // 【新增】医术试炼监听
+        pm.registerEvents(this.medicalTrialManager, this)
 
 
         // ==========================================
@@ -232,6 +238,11 @@ class Hjh_database : JavaPlugin() {
     override fun onDisable() {
         if (::playerManager.isInitialized) {
             playerManager.saveAllOnline()
+        }
+
+        // 【新增】关服时清理所有正在进行的医术试炼，防止 BossBar 残留或刷出幽灵实体
+        if (::medicalTrialManager.isInitialized) {
+            medicalTrialManager.cleanUpAllTrials()
         }
 
         // 【新增】关服时保存所有仓库数据

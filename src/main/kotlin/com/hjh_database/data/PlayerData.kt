@@ -187,6 +187,9 @@ class PlayerData(val uuid: UUID, val playerName: String) {
 
     fun isSick(): Boolean = System.currentTimeMillis() < pillSicknessEnd
 
+    // ----------------- 医术试炼 -----------------
+    var completedMedicalTrials: MutableSet<String> = HashSet()
+
     /**
      * 每秒调用的心跳函数 (由 AlchemyManager 驱动)
      */

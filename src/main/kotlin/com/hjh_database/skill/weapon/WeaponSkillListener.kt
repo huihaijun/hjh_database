@@ -2,10 +2,12 @@ package com.hjh_database.skill.weapon
 
 import com.hjh_database.Hjh_database
 import org.bukkit.NamespacedKey
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
@@ -54,6 +56,36 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
         // 【关键】传入射出的箭矢 (event.getProjectile())
         // 使用 !! 断言 manager 非空
         plugin.weaponSkillManager!!.tryCastSkill(player, weaponId, bow, event.projectile)
+    }
+
+    // 【新增】弓箭手触发 (下蹲近战命中)
+    @EventHandler
+    fun onBowMeleeTrigger(event: EntityDamageByEntityEvent) {
+        val player = event.damager as? Player ?: return
+        if (!player.isSneaking) return
+
+        // 获取受击实体
+        val victim = event.entity as? LivingEntity ?: return
+
+        val item = player.inventory.itemInMainHand
+        if (!item.hasItemMeta()) return
+
+        val weaponId = getWeaponId(item) ?: return
+
+        // ==========================================
+        // 【核心安全过滤】近战特化弓白名单
+        // 只有在这个列表里的武器，下蹲近战才会被发送给 Manager 处理主动技能
+        // ==========================================
+        val allowedMeleeBows = listOf("zhongchuigong", "未来你可能加的其他近战弓id")
+        if (weaponId !in allowedMeleeBows) {
+            return // 如果不是重锤弓等特殊弓，直接无视，不触发任何技能判定
+        }
+
+        val typeName = item.type.toString()
+        if (typeName.contains("BOW") || typeName.contains("CROSSBOW")) {
+            // 将受击的怪物(victim)作为 projectile 参数传给 Manager
+            plugin.weaponSkillManager!!.tryCastSkill(player, weaponId, item, victim)
+        }
     }
 
     private fun getWeaponId(item: ItemStack): String? {
