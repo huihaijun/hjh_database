@@ -73,6 +73,30 @@ enum class StoryNpcs(
     Villager.Profession.NITWIT,
     Villager.Type.PLAINS,
     243.5, 64.5, -205.5, 90f
+    ),
+
+    REN_WANGMAO(
+    "ren_wangmao",
+    "§a§l镇长-王卯",
+    Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    597.5, 45.5, 37.5, 0f
+    ),
+
+    QINGLONGFENHUN(
+    "qinglongfenhun",
+    "§a§l青龙分魂",
+    Villager.Profession.NITWIT,
+    Villager.Type.SNOW,
+    1696.5, 103.5, 852.5, 0f
+    ),
+
+    LVZHOUXIAOZHENDEZHENZHANG(
+    "lvzhouxiaozhendezhenzhang",
+    "§a§l绿洲小镇的镇长",
+        Villager.Profession.NITWIT,
+    Villager.Type.PLAINS,
+    -16.5, 48.5, 805.5, 0f
     );
 
 

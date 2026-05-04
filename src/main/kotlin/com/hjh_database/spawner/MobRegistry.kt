@@ -283,6 +283,7 @@ object MobRegistry {
             type = EntityType.SPIDER,
             health = 200.0,
             damage = 4.0,
+            exp = 50,       // 经验值
             armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.35,
             maxNearby = 1,
@@ -292,9 +293,7 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 2, 1.0),
                 MobDrop("zhizhuyan", 1, 3, 0.7),
                 //赤铜锭
-                MobDrop("chitongding", 1, 1, 0.25),
-                //三阶核心
-                MobDrop("armor_core_3", 1, 1, 0.25)
+                MobDrop("chitongding", 1, 1, 0.25)
             ),
             affixes = listOf()
         ))
@@ -339,6 +338,31 @@ object MobRegistry {
             drops = listOf(
             ),
             affixes = listOf(),
+        ))
+        register(MobDefinition(
+            id = "shenmushouwei",
+            name = "&6千斤的 神木守卫",
+            type = EntityType.ZOMBIE,
+            health = 300.0,
+            damage = 6.0,
+            armor = 15.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            exp = 50,       // 经验值
+            speed = 0.2,
+            maxNearby = 1,
+            drops = listOf(
+                MobDrop("wood", 2, 2, 1.0),
+                MobDrop("metal", 2, 2, 0.9),
+                MobDrop("hjh_tongqian", 2, 4, 0.8),
+                MobDrop("relive_stone", 1, 2, 1.0),
+                MobDrop("renshen", 1, 1, 0.5),
+                //三阶核心
+                MobDrop("armor_core_3", 1, 1, 0.25)
+            ),
+            affixes = listOf(),
+            helmet = Material.IRON_HELMET,
+            chestplate = Material.IRON_CHESTPLATE,
+            mainHand = Material.IRON_SWORD
+
         ))
         // === 副本 Boss 注册 ===
         register(MobDefinition(

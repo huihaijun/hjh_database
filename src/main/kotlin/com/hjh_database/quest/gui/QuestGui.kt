@@ -22,13 +22,13 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
 
     // === 1. 一级菜单：选择任务类型 ===
     fun openCategoryMenu(player: Player) {
-        val inv = Bukkit.createInventory(CategoryHolder(), 27, "§8任务列表 - 请选择分类")
+        val inv = Bukkit.createInventory(CategoryHolder(), 27, "§8任务列表")
 
         //放置四个分类按钮
-        inv.setItem(10, createIcon(Material.BOOK, "§e§l云游志", listOf("§7查看当前种族的主线剧情")))
-        inv.setItem(12, createIcon(Material.PAPER, "§b§l奇遇记", listOf("§7查看支线任务")))
-        inv.setItem(14, createIcon(Material.MAP, "§c§l赏金簿", listOf("§7查看赏金任务")))
-        inv.setItem(16, createIcon(Material.NETHER_STAR, "§6§l征伐书", listOf("§7查看挑战任务")))
+        inv.setItem(10, createIcon(Material.BOOK, "§b§l云游志", listOf("§7查看主线任务")))
+        inv.setItem(12, createIcon(Material.PAPER, "§4§l奇遇记", listOf("§7查看支线任务")))
+        inv.setItem(14, createIcon(Material.MAP, "§e§l赏金簿", listOf("§7查看赏金任务")))
+        inv.setItem(16, createIcon(Material.NETHER_STAR, "§c§l征伐书", listOf("§7查看挑战任务")))
 
         player.openInventory(inv)
     }
@@ -84,6 +84,16 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
             inv.setItem(index, icon)
         }
 
+        // [修改点]：在主线任务界面的最后一行增加刷新按钮
+        if (type == QuestType.MAIN) {
+            inv.setItem(48, createIcon(Material.NETHER_STAR, "§e§l刷新/接取新任务", listOf(
+                "§7当版本更新增加了新主线后",
+                "§7如果后续任务没显示，请点击此处",
+                "",
+                "§b▶ 点击检测并开启下一阶段"
+            )))
+        }
+
         // 底部返回按钮
         inv.setItem(49, createIcon(Material.ARROW, "§f返回上一级", listOf()))
 
@@ -122,12 +132,67 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
         // 2. 处理任务列表点击
         else if (holder is ListHolder) {
             e.isCancelled = true
+
+            val type = holder.type // 确保你的 ListHolder 构造函数里保存了 type
+
+            // [新增] 刷新按钮逻辑
+            if (e.rawSlot == 48 && type == QuestType.MAIN) {
+                refreshMainQuests(player)
+                player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f)
+                // 刷新完重新打开一遍 GUI 以看到新任务
+                openQuestListMenu(player, QuestType.MAIN)
+                return
+            }
+
             // 返回按钮
             if (e.rawSlot == 49) {
                 openCategoryMenu(player)
                 player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
             // 这里以后可以加：点击具体任务图标，进行任务追踪导航
+        }
+    }
+
+    // === [新增] 核心刷新逻辑方法 (写在 QuestGui 类末尾) ===
+    private fun refreshMainQuests(player: Player) {
+        val data = plugin.playerManager.getPlayerData(player) ?: return
+
+        // 获取所有主线任务并按 order 排序
+        val allMainQuests = plugin.questManager.getAllQuests()
+            .filter { it.type == QuestType.MAIN }
+            .sortedBy { it.order }
+
+        var unlockCount = 0
+        for (quest in allMainQuests) {
+            val status = data.questStatuses.getOrDefault(quest.id, com.hjh_database.quest.core.QuestStatus.LOCKED)
+
+            // 只有目前是 LOCKED 的任务才需要检测是否可以解锁
+            if (status == com.hjh_database.quest.core.QuestStatus.LOCKED) {
+                // 检查解锁条件：
+                // 1. 种族匹配
+                val raceMatch = quest.raceLimit == null || quest.raceLimit == data.race
+
+                // 2. 逻辑匹配：第一个任务(order=1) 或者 前一个任务(order-1) 已完成
+                val logicMatch = if (quest.order <= 1) {
+                    true
+                } else {
+                    val prevQuest = allMainQuests.find { it.order == quest.order - 1 }
+                    // 如果找到了前置任务，且前置任务状态是 COMPLETED
+                    prevQuest != null && data.questStatuses[prevQuest.id] == com.hjh_database.quest.core.QuestStatus.COMPLETED
+                }
+
+                if (raceMatch && logicMatch) {
+                    data.questStatuses[quest.id] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
+                    data.questProgress[quest.id] = 0
+                    unlockCount++
+                }
+            }
+        }
+
+        if (unlockCount > 0) {
+            player.sendMessage("§a[任务系统] 刷新成功！检测并接取了 §f$unlockCount §a个新任务。")
+        } else {
+            player.sendMessage("§7[任务系统] 刷新完毕，暂无满足接取条件的新任务。")
         }
     }
 

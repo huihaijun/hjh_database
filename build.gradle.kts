@@ -46,7 +46,7 @@ tasks {
     val copyToServer by registering(Copy::class) {
         // 【重要】把这里替换为你本地测试服务器 plugins 文件夹的绝对路径！
         // 注意：Windows 路径里的斜杠需要使用双反斜杠 \\ 或者单正斜杠 /
-        val pluginDir = "E:/mc 1.9/hjh1.21.3/plugins"
+        val pluginDir = "D:/mc/hjh1.21.3/plugins"
         // 如果你最终采纳了【方案二】(不再使用 Shadow，使用 libraries)：
         dependsOn(jar)
         from(jar)

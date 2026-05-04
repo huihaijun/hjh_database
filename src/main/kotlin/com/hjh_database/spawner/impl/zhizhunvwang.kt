@@ -28,7 +28,8 @@ class Zhizhunvwang(private val plugin: Hjh_database, private val boss: LivingEnt
                 // 1. 先获取 5 格范围内的玩家进行预警
                 val nearbyPlayers = boss.getNearbyEntities(5.0, 5.0, 5.0)
                     .filterIsInstance<Player>()
-                    .filter { !it.isDead && it.gameMode != org.bukkit.GameMode.SPECTATOR }
+                    // 【修改】排除创造模式
+                    .filter { !it.isDead && it.gameMode != org.bukkit.GameMode.SPECTATOR && it.gameMode != org.bukkit.GameMode.CREATIVE }
 
                 if (nearbyPlayers.isNotEmpty()) {
                     // 发送预警提示
@@ -45,7 +46,8 @@ class Zhizhunvwang(private val plugin: Hjh_database, private val boss: LivingEnt
                             // 重新索敌（因为 3 秒过去，玩家位置可能发生变化）
                             val target = boss.getNearbyEntities(5.0, 5.0, 5.0)
                                 .filterIsInstance<Player>()
-                                .filter { !it.isDead && it.gameMode != org.bukkit.GameMode.SPECTATOR }
+                                // 【修改】排除创造模式
+                                .filter { !it.isDead && it.gameMode != org.bukkit.GameMode.SPECTATOR && it.gameMode != org.bukkit.GameMode.CREATIVE }
                                 .minByOrNull { it.location.distanceSquared(boss.location) }
 
                             if (target != null) {
@@ -90,15 +92,16 @@ class Zhizhunvwang(private val plugin: Hjh_database, private val boss: LivingEnt
                 boss.world.spawnParticle(Particle.WHITE_ASH, currentLoc, 5, 0.1, 0.1, 0.1, 0.0)
 
                 // 2. 碰撞检测：检查当前粒子点周围 0.5 格内是否有玩家
-                val hitPlayers = boss.world.getNearbyEntities(currentLoc, 0.5, 0.5, 0.5).filterIsInstance<Player>()
+                val hitPlayers = boss.world.getNearbyEntities(currentLoc, 0.5, 0.5, 0.5)
+                    .filterIsInstance<Player>()
+                    // 【新增修改】如果不小心撞到了飞在空中的创造模式管理员，不要停止弹道也不要减速
+                    .filter { !it.isDead && it.gameMode != org.bukkit.GameMode.SPECTATOR && it.gameMode != org.bukkit.GameMode.CREATIVE }
 
                 if (hitPlayers.isNotEmpty()) {
                     for (p in hitPlayers) {
-                        // 命中！给予减速 2 (amplifier 为 1)，持续 4 秒 (80 ticks)
                         p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 80, 1))
                         p.sendMessage("§c你被蜘蛛女王的蛛丝击中了！移动速度降低！")
                     }
-                    // 击中后弹道消失
                     cancel()
                 }
             }

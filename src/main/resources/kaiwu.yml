@@ -13,7 +13,7 @@ level_exp_base: 100
 
 # 采集设置
 mining:
-  interrupt_distance: 5.0  # 允许的最大移动距离 (超过则打断)
+  interrupt_distance: 2.0  # 允许的最大移动距离 (超过则打断)
   # 枯竭状态下的掉落倍率 (0.5 表示 50%)
   depleted_multiplier: 0.5
   # 枯竭状态下是否延长采集时间 (倍率, 1.0为不变, 2.0为双倍时间)

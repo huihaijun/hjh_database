@@ -49,6 +49,10 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         object : BukkitRunnable() {
             override fun run() {
                 for (player in Bukkit.getOnlinePlayers()) {
+                    // === 【新增修改】忽略创造模式和旁观模式的玩家，不触发他们周围的刷怪笼 ===
+                    if (player.gameMode == org.bukkit.GameMode.CREATIVE || player.gameMode == org.bukkit.GameMode.SPECTATOR) {
+                        continue
+                    }
                     processPlayerSurroundings(player)
                 }
             }

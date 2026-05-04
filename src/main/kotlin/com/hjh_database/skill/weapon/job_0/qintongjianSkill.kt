@@ -50,14 +50,14 @@ class qintongjianSkill : WeaponSkill, Listener {
 
         manager?.registerToggle(player, "qintongjian") // 注册到管理器，防止切武器
 
-        val armorPercent = config.getDouble("armor_bonus_percent", 0.25)
+        val armorBonus = config.getDouble("armor_bonus", 20.0)
         val speedMalus = config.getDouble("speed_malus_percent", 0.25)
         val messageOn = config.getString("message_on", "&e&l[御守] &f进入防御姿态！护甲UP，移速DOWN")
 
         // === 新架构：直接写入临时属性 Map ===
 
-        // 1. 设置护甲百分比加成 (PlayerManager 会读取 armor_percent 并处理)
-        data.tempBonuses["armor_percent"] = armorPercent
+        // 1. 设置护甲数值加成 (PlayerManager 会读取 armor 并处理)
+        data.tempBonuses["armor"] = armorBonus
 
         // 2. 设置移速百分比减免 (注意：减速是负数，所以这里取负)
         // 例如 speedMalus 是 0.25，这里存入 -0.25，PlayerManager 计算时就是 speed * (1 + (-0.25)) = 0.75倍
@@ -87,7 +87,7 @@ class qintongjianSkill : WeaponSkill, Listener {
         if (activePlayers.remove(player.uniqueId) == null) return
 
         // 2. === 新架构：移除 Key 即可还原 ===
-        data.tempBonuses.remove("armor_percent")
+        data.tempBonuses.remove("armor")
         data.tempBonuses.remove("speed_percent")
 
         // 3. 刷新属性 (属性瞬间变回原样)

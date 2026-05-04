@@ -23,6 +23,39 @@ object MobFactory {
 
         val entity = world.spawnEntity(location, def.type) as? LivingEntity ?: return null
 
+        // (如果你之前加了这行，保留它) 防止原版机制刷没怪物
+        entity.removeWhenFarAway = false
+
+        // === 【新增修改】1. 强制设置为成年体，防止出现小僵尸、小牛、小猪灵等幼体 ===
+        if (entity is org.bukkit.entity.Ageable) {
+            entity.setAdult()
+        }
+        if (entity is org.bukkit.entity.Zombie) {
+            entity.setBaby(false)
+        }
+        if (entity is org.bukkit.entity.Piglin) {
+            entity.setBaby(false)
+        }
+
+        // === 【新增修改】2. 关闭拾取功能，彻底杜绝怪物捡起地上的防具/武器并自动穿上 ===
+        entity.canPickupItems = false
+
+        // === 【新增修改】3. 强制清理所有坐骑和乘客，杜绝蜘蛛骑士、小鸡骑士等“买一送一”的杂交怪 ===
+        // 如果这个实体被生成时自带了坐骑(比如它骑着小鸡/蜘蛛)，把坐骑直接删掉
+        val vehicle = entity.vehicle
+        if (vehicle != null) {
+            entity.leaveVehicle()
+            vehicle.remove()
+        }
+        // 如果这个实体生成时背上骑了东西(比如蜘蛛背上刷了骷髅)，把背上的东西删掉
+        val passengers = entity.passengers
+        if (passengers.isNotEmpty()) {
+            entity.eject()
+            for (passenger in passengers) {
+                passenger.remove()
+            }
+        }
+
         // 1. 基础显示与属性
         entity.customName = ChatColor.translateAlternateColorCodes('&', def.name)
         entity.isCustomNameVisible = true
@@ -46,6 +79,10 @@ object MobFactory {
         when (mobId) {
             "zhizhunvwang" -> {
                 com.hjh_database.spawner.impl.Zhizhunvwang(plugin, entity)
+            }
+            // 【新增神木守卫】
+            "shenmushouwei" -> {
+                com.hjh_database.spawner.impl.Shenmushouwei(plugin, entity)
             }
             // 以后如果有新 boss，继续往下加就行：
 //             "shiyanguai" -> Shiyanguai(plugin, entity)
