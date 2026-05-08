@@ -23,6 +23,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
 
     // 打开饰品栏
     fun openAccessoryMenu(player: Player) {
+
         val inv = Bukkit.createInventory(null, 9, INVENTORY_TITLE)
         val savedBytes = player.persistentDataContainer.get(invKey, PersistentDataType.BYTE_ARRAY)
 
@@ -46,9 +47,48 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
 
-        // 只在饰品栏界面触发，保证性能
         if (event.view.title == INVENTORY_TITLE) {
-            // 延迟 1 Tick 执行，等待物品在内存中真正掉落到新的格子里
+
+            // 【修改】同时拦截 Shift+右键(存入) 和 Shift+左键(取出)
+            val clickType = event.click
+            if (clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT) {
+                val item = event.currentItem
+                if (item != null) {
+                    val meta = item.itemMeta
+                    val crystalKey = NamespacedKey(plugin, "crystal_id")
+                    if (meta != null && meta.persistentDataContainer.has(crystalKey, PersistentDataType.STRING)) {
+                        val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)
+                        val cData = plugin.playerManager.crystalManager.loadedCrystals[cid]
+
+                        // 判断是否在正确的饰品槽位
+                        if (cData != null && event.rawSlot == cData.activateSlot) {
+
+                            // ============================================
+                            // 【新增】严格判定该饰品是否处于真正“已激活”状态
+                            // ============================================
+                            val pData = plugin.playerManager.getPlayerData(player)
+                            if (pData != null) {
+                                val jobMatch = cData.reqJob == 0 || pData.job == cData.reqJob
+                                if (pData.lv < cData.reqLv || !jobMatch) {
+                                    player.sendMessage("§c⚠ 该饰品未激活（等级不足或职业不符），无法使用饰品技能！")
+                                    event.isCancelled = true
+                                    return
+                                }
+                            }
+                            // ============================================
+
+                            // 只要 QuiverManager 里面注册了这个 id，它就会自动接管拦截和处理！
+                            val isExtract = (clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT)
+                            if (plugin.quiverManager.routeQuiverClick(player, item, isExtract, cData)) {
+                                event.isCancelled = true
+                                return
+                            }
+
+                        }
+                    }
+                }
+            }
+
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 val topInv = event.view.topInventory
                 plugin.playerManager.crystalManager.refreshOpenAccessoryMenu(player, topInv)
@@ -94,6 +134,39 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+    // ==========================================
+    // 后台读写饰品数据，供技能(如箭袋)在不打开界面时调用
+    // ==========================================
+    fun getAccessoryContents(player: Player): Array<ItemStack?>? {
+        val savedBytes = player.persistentDataContainer.get(invKey, PersistentDataType.BYTE_ARRAY) ?: return null
+        return try {
+            BukkitObjectInputStream(ByteArrayInputStream(savedBytes)).use { ois ->
+                val size = ois.readInt()
+                val array = arrayOfNulls<ItemStack>(size)
+                for (i in 0 until size) {
+                    array[i] = ois.readObject() as? ItemStack
+                }
+                array
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun saveAccessoryContents(player: Player, contents: Array<ItemStack?>) {
+        try {
+            val bos = ByteArrayOutputStream()
+            BukkitObjectOutputStream(bos).use { oos ->
+                oos.writeInt(contents.size)
+                for (item in contents) {
+                    oos.writeObject(item)
+                }
+            }
+            player.persistentDataContainer.set(invKey, PersistentDataType.BYTE_ARRAY, bos.toByteArray())
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

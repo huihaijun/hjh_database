@@ -4,39 +4,39 @@ skills:
     message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &e星云术&f！"
     levels:
       1:
-        cooldown: 2.0
+        cooldown: 5.0
         damage_percent: 2.5
-        range: 3.0
+        range: 4.0
         lingli_add: 1.0
         max_targets: 1
-        effect_radius: 3.0  # 【新增】1级半径小
+        effect_radius: 4.0  # 【新增】1级半径小
       2:
-        cooldown: 2.0
+        cooldown: 5.0
         damage_percent: 3.0
-        range: 5.0
+        range: 4.5
         lingli_add: 2.0
-        max_targets: 3
-        effect_radius: 4.0  # 【新增】范围变大
+        max_targets: 2
+        effect_radius: 4.5  # 【新增】范围变大
       3:
-        cooldown: 2.0
+        cooldown: 4.0
         damage_percent: 3.5
         range: 7.0
         lingli_add: 3.0
-        max_targets: 5
+        max_targets: 3
         effect_radius: 5.0  # 【新增】
       4:
-        cooldown: 2.0
+        cooldown: 4.0
         damage_percent: 4.0
         range: 9.0
         lingli_add: 4.0
-        max_targets: 7
+        max_targets: 4
         effect_radius: 6.0  # 【新增】
       5:
-        cooldown: 2.0
+        cooldown: 3.0
         damage_percent: 4.5
         range: 11.0
         lingli_add: 5.0
-        max_targets: 9
+        max_targets: 5
         effect_radius: 7.0  # 【新增】最大半径5格
 
   # === 【新增】木元素配置 ===
@@ -45,33 +45,33 @@ skills:
     message: "&e%player% &f炼化了 &a木元素&f，释放了法术 —— &a汲魂术&f！"
     levels:
       1:
-        cooldown: 5.0        # 冷却时间
+        cooldown: 8.0        # 冷却时间
         damage_percent: 2.5  # 造成 250% 伤害
-        heal_percent: 0.2    # 转化 20% 为生命值
+        heal_percent: 0.1   # 转化 10% 为生命值
         range: 5.0           # 施法距离
         lingli_add: 1.0
       2:
-        cooldown: 4.8
+        cooldown: 8.0
         damage_percent: 3.0
-        heal_percent: 0.22
+        heal_percent: 0.12
         range: 6.0
         lingli_add: 2.0
       3:
-        cooldown: 4.6
-        damage_percent: 3.5
-        heal_percent: 0.25
+        cooldown: 7.0
+        damage_percent: 3.0
+        heal_percent: 0.15
         range: 7.0
         lingli_add: 3.0
       4:
-        cooldown: 4.4
+        cooldown: 7.0
         damage_percent: 4.0
-        heal_percent: 0.28
+        heal_percent: 0.18
         range: 8.0
         lingli_add: 4.0
       5:
-        cooldown: 4.0
-        damage_percent: 4.5
-        heal_percent: 0.3
+        cooldown: 6.0
+        damage_percent: 4.0
+        heal_percent: 0.2
         range: 9.0
         lingli_add: 5.0
   # === 【新增】水元素配置 ===
@@ -80,38 +80,38 @@ skills:
     message: "&e%player% &f炼化了 &9水元素&f，释放了法术 —— &9霜冻术&f！"
     levels:
       1:
-        cooldown: 6.0         # 冷却 6秒
-        damage_percent: 1.0   # 100% 伤害
-        range: 4.0            # 距离 4格
-        slow_duration: 2.0    # 减速 2秒
+        cooldown: 8.0         # 冷却 6秒
+        damage_percent: 1.2   # 120% 伤害
+        range: 5.0            # 距离 5格
+        slow_duration: 3.0    # 减速 3秒
         slow_amplifier: 0     # 减速 I级 (0开始算)
         lingli_add: 1.0
       2:
-        cooldown: 5.8
-        damage_percent: 1.2   # 120%
-        range: 4.5
-        slow_duration: 2.5
+        cooldown: 8.0
+        damage_percent: 1.5   # 120%
+        range: 5.5
+        slow_duration: 4
         slow_amplifier: 0
         lingli_add: 2.0
       3:
-        cooldown: 5.6
-        damage_percent: 1.4
-        range: 5.0
-        slow_duration: 3.0
-        slow_amplifier: 1     # 减速 II级
-        lingli_add: 3.0
-      4:
-        cooldown: 5.4
-        damage_percent: 1.6
-        range: 5.5
-        slow_duration: 3.5
-        slow_amplifier: 1
-        lingli_add: 4.0
-      5:
-        cooldown: 5.0
+        cooldown: 7.5
         damage_percent: 1.8
         range: 6.0
         slow_duration: 4.0
+        slow_amplifier: 1     # 减速 II级
+        lingli_add: 3.0
+      4:
+        cooldown: 7.5
+        damage_percent: 2.0
+        range: 6.5
+        slow_duration: 4.5
+        slow_amplifier: 1
+        lingli_add: 4.0
+      5:
+        cooldown: 7.0
+        damage_percent: 4.5
+        range: 7.0
+        slow_duration: 4.5
         slow_amplifier: 2     # 减速 III级
         lingli_add: 5.0
   # === 【新增】火元素配置 ===
@@ -120,34 +120,34 @@ skills:
     message: "&e%player% &f炼化了 &c火元素&f，释放了法术 —— &c流火术&f！"
     levels:
       1:
-        cooldown: 4.0         # 冷却时间
+        cooldown: 10.0         # 冷却时间
         damage_percent: 3.0   # 300% 伤害 (初始)
-        range: 4.0           # 准心最远距离
+        range: 5.0           # 准心最远距离
         search_radius: 3.0    # 撞墙后，以此为中心找怪的半径
         lingli_add: 1.0
       2:
-        cooldown: 3.8
+        cooldown: 9.0
         damage_percent: 4.0
         range: 6.0
-        search_radius: 4.0
+        search_radius: 3.5
         lingli_add: 2.0
       3:
-        cooldown: 3.6
+        cooldown: 8.0
         damage_percent: 5.0
         range: 8.0
-        search_radius: 5.0
+        search_radius: 4.0
         lingli_add: 3.0
       4:
-        cooldown: 3.4
+        cooldown: 7.0
         damage_percent: 6.0
         range: 10.0
-        search_radius: 6.0
+        search_radius: 4.5
         lingli_add: 4.0
       5:
-        cooldown: 3.0
+        cooldown: 6.0
         damage_percent: 7.0
         range: 12.0
-        search_radius: 7.0
+        search_radius: 5.0
         lingli_add: 5.0
 
   # === 【新增】土元素配置 ===
@@ -156,37 +156,37 @@ skills:
     message: "&e%player% &f炼化了 &6土元素&f，释放了法术 —— &6裂地术&f！"
     levels:
       1:
-        cooldown: 15.0        # 控制技能冷却长一点
+        cooldown: 20.0        # 控制技能冷却长一点
         radius: 5.0           # 影响半径
         range: 5.0           # 施法距离
         duration: 5.0         # 持续 5秒
-        pull_strength: 0.03   # 牵引力度 (建议 0.05~0.15)
+        pull_strength: 0.40   # 牵引力度 (建议 0.05~0.15)
         lingli_add: 1.0
       2:
-        cooldown: 14.0
+        cooldown: 18.0
         radius: 5.5
         range: 7.0
         duration: 5.5
-        pull_strength: 0.04
+        pull_strength: 0.45
         lingli_add: 2.0
       3:
-        cooldown: 13.0
+        cooldown: 15.0
         radius: 6.0
         range: 9.0
         duration: 6.0
-        pull_strength: 0.05
+        pull_strength: 0.50
         lingli_add: 3.0
       4:
         cooldown: 12.0
         radius: 6.5
         range: 11.0
         duration: 6.5
-        pull_strength: 0.06
+        pull_strength: 0.55
         lingli_add: 4.0
       5:
         cooldown: 10.0
         radius: 7.0
         range: 13.0
-        duration: 8.0
-        pull_strength: 0.07
+        duration: 7.0
+        pull_strength: 0.60
         lingli_add: 5.0

@@ -147,11 +147,15 @@ armors:
       - "&8===========&2&n&l防具属性&8============"
       - "&f移速 +2%"
       - "&f抗击退 +3%"
+      - "&f护甲 +7"
+      - "&f最大生命 +4"
     req_job: 1
     req_lv: 10
     stats:
       knock_back_res: 0.03
       speed_percent: 0.02
+      armor: 7.0
+      max_health: 4.0
 
   tingfengpijia:
     display: "&a听风皮甲"
@@ -163,11 +167,13 @@ armors:
       - "&7&o远方风之国度工匠手工打造"
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
     req_job: 1
     req_lv: 10
     stats:
-      max_health: 1.0
+      max_health: 6.0
+      armor: 7.0
 
   fenglinku:
     display: "&a风鳞裤"
@@ -179,11 +185,13 @@ armors:
       - "&7&o远方风之国度工匠手工打造"
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
     req_job: 1
     req_lv: 10
     stats:
-      max_health: 1.0
+      max_health: 6.0
+      armor: 7.0
 
   fengyucaoxie:
     display: "&a风羽草鞋"
@@ -197,11 +205,15 @@ armors:
       - "&8===========&2&n&l防具属性&8============"
       - "&f移速 +3%"
       - "&f抗击退 +2%"
+      - "&f护甲 +7"
+      - "&f最大生命 +4"
     req_job: 1
     req_lv: 10
     stats:
       knock_back_res: 0.02
       speed_percent: 0.03
+      armor: 7.0
+      max_health: 4.0
 
   # === 术士二阶 ===
   fanxingmao:

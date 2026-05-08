@@ -22,11 +22,22 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
     val display: String = sec.getString("display", "&f未知结晶")!!
     val material: Material = Material.valueOf(sec.getString("material", "SHULKER_SHELL")!!)
     val reqLv: Int = sec.getInt("req_lv", 1)
+    // 【新增】读取职业限制，0 代表无限制
+    val reqJob: Int = sec.getInt("req_job", 0)
     // 【修复1】新增稀有度读取
     val rarity: Int = sec.getInt("rarity", 1)
     // 【新增】读取结晶激活位置，默认是 0 (第一格)
     val activateSlot: Int = sec.getInt("activate_slot", 0)
+    // 【新增】读取 CustomModelData，如果没有配置则默认为 0
+    val customModelData: Int = sec.getInt("custom_model_data", 0)
     val lore: List<String> = sec.getStringList("lore")
+
+    // 【新增】读取技能ID与箭袋专属数值 (默认值防空)
+    val skillId: String? = sec.getString("skill_id")
+    val maxArrows: Int = sec.getInt("quiver_data.max_arrows", 1024)
+    val replenishThreshold: Int = sec.getInt("quiver_data.replenish_threshold", 16)
+    val replenishAmount: Int = sec.getInt("quiver_data.replenish_amount", 32)
+
     val stats: MutableMap<String, Double> = HashMap()
 
     init {
@@ -186,11 +197,27 @@ class CrystalManager(private val plugin: Hjh_database) {
         var isActive = isEquipped
         val statusLore = mutableListOf<String>()
 
+        // 【新增】应用自定义模型数据
+        // 如果 custom_model_data 为 0，通常代表使用默认模型
+        if (crystalData.customModelData != 0) {
+            meta.setCustomModelData(crystalData.customModelData)
+        } else {
+            // 如果是 0，则清除 CustomModelData（防止物品之前的模型残留）
+            meta.setCustomModelData(null)
+        }
+
         // 状态判定
-        if (isEquipped && playerData.lv < crystalData.reqLv) {
-            isActive = false
-            statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 等级不足 (" + playerData.lv + "/" + crystalData.reqLv + ")")
-        } else if (!isEquipped) {
+        if (isEquipped) {
+            if (crystalData.reqJob > 0 && playerData.job != crystalData.reqJob) {
+                isActive = false
+                statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 职业不符")
+            } else if (playerData.lv < crystalData.reqLv) {
+                isActive = false
+                statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 等级不足 (" + playerData.lv + "/" + crystalData.reqLv + ")")
+            }
+        }
+
+        if (!isEquipped) {
             // 把 0~8 的索引转换为中文的 一~九
             val chineseNums = arrayOf("一", "二", "三", "四", "五", "六", "七", "八", "九")
             val slotName = if (crystalData.activateSlot in 0..8) {
@@ -198,7 +225,7 @@ class CrystalManager(private val plugin: Hjh_database) {
             } else {
                 (crystalData.activateSlot + 1).toString() // 兜底防越界
             }
-            statusLore.add(org.bukkit.ChatColor.GRAY.toString() + "○ 未装备 (请放入饰品栏第${slotName}格)")
+            statusLore.add(org.bukkit.ChatColor.GRAY.toString() + "○ 未激活 (请放入饰品栏第${slotName}格)")
         }
 
         val newLore = mutableListOf<String>()
@@ -213,13 +240,31 @@ class CrystalManager(private val plugin: Hjh_database) {
         }
         newLore.add("${colorCode}稀有度: ${WeaponManager.getRarityStars(crystalData.rarity)}")
 
+        // 【修复】不再写死 ID，只要最大箭矢数量大于 0，就自动识别为箭袋饰品
+        val isQuiver = crystalData.maxArrows > 0
+        var currentArrows = 0
+
+        if (isQuiver) {
+            val arrowKey = NamespacedKey(plugin, "quiver_arrows")
+            currentArrows = meta.persistentDataContainer.get(arrowKey, PersistentDataType.INTEGER) ?: 0
+        }
+
         for (line in crystalData.lore) {
-            newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', line))
+            var finalLine = line
+            // 只要是箭袋，就把【所有】的占位符都替换掉
+            if (isQuiver) {
+                finalLine = finalLine.replace("{arrows}", currentArrows.toString())
+                    .replace("{max_arrows}", crystalData.maxArrows.toString())
+                    .replace("{threshold}", crystalData.replenishThreshold.toString())
+                    .replace("{amount}", crystalData.replenishAmount.toString())
+            }
+            // 经过这行代码转换，你的 &a 就会变成正确的颜色代码，同时拼接进最终的 Lore
+            newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
         }
 
         newLore.add(" ")
         if (isActive) {
-            newLore.add(org.bukkit.ChatColor.GREEN.toString() + "✔ 已激活 - 结晶生效中")
+            newLore.add(org.bukkit.ChatColor.GREEN.toString() + "✔ 已激活 - 饰品生效中")
         } else {
             newLore.addAll(statusLore)
         }
@@ -269,18 +314,17 @@ class CrystalManager(private val plugin: Hjh_database) {
         try {
             BukkitObjectInputStream(ByteArrayInputStream(savedBytes)).use { ois ->
                 val size = ois.readInt()
-                // 【核心修改】遍历整个饰品栏的所有格子
                 for (i in 0 until size) {
                     val item = ois.readObject() as? ItemStack ?: continue
                     val meta = item.itemMeta ?: continue
 
-                    // 判断该物品是否为结晶
                     if (meta.persistentDataContainer.has(crystalKey, PersistentDataType.STRING)) {
                         val crystalId = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)!!
                         val crystalData = loadedCrystals[crystalId] ?: continue
 
-                        // 【核心修改】不仅要校验等级，还要校验当前的格子索引 (i) 是否等于该结晶要求的激活位置
-                        if (i == crystalData.activateSlot && data.lv >= crystalData.reqLv) {
+                        // 【核心修改】不仅要校验等级和位置，还要校验职业 (reqJob == 0 即为无限制)
+                        val jobMatch = crystalData.reqJob == 0 || data.job == crystalData.reqJob
+                        if (i == crystalData.activateSlot && data.lv >= crystalData.reqLv && jobMatch) {
 
                             data.rarityDetails.add(crystalData.rarity)
                             totalRarity += crystalData.rarity.toDouble()

@@ -33,3 +33,67 @@ crystals:
     stats:
       cool_reduce: 0.05 #5%冷却缩减
       speed_percent: 0.05 # 5%移速
+
+  jiandai:
+    display: "&9箭袋[饰品]"
+    material: ENDER_EYE
+    rarity: 3
+    custom_model_data: 30056
+    activate_slot: 8
+#    ===========箭袋的设置==========
+    skill_id: "jiandai" # 标识激活哪个技能类
+    quiver_data:        # 抽象出的箭袋数值，未来新箭袋可以填不同的值
+      max_arrows: 1024    #放最大量
+      replenish_threshold: 16   #门槛
+      replenish_amount: 32   #每次拿多少
+    lore:
+      - "&6限制职业:[弓]  限制等级:&b15"
+      - "&7&o老猎户自己研发的神奇箭袋"
+      - "&7&o可以存放箭矢,减少弓箭手的负担"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f箭矢强度 +1"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&f将背包内的所有箭矢存入箭袋,最多&b1024&f支"
+      - "&f射击时若背包箭矢少于&b16&f支,则补充&b32&f支"
+      - "&e[于&b饰品栏&f&e中&b下蹲+左键&e此饰品]"
+      - "&f将箭袋中的箭矢&b全部取出&f"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储箭矢: &a{arrows} &f/ &a1024"
+    req_lv: 15
+    req_job: 1
+    stats:
+      archer_damage: 1.0 # 统一的进攻属性
+
+  ranhuojiandai:
+    display: "&d燃火箭袋[饰品]"
+    material: ENDER_EYE
+    rarity: 4
+    custom_model_data: 30056
+    activate_slot: 8
+    #    ===========箭袋的设置==========
+    skill_id: "ranhuojiandai" # 标识激活哪个技能类
+    quiver_data: # 抽象出的箭袋数值，未来新箭袋可以填不同的值
+      max_arrows: 2048    #放最大量
+      replenish_threshold: 16   #门槛
+      replenish_amount: 32   #每次拿多少
+    lore:
+      - "&6限制职业:[弓]  限制等级:&b25"
+      - "&7&o采用焱砂大漠魔物身上的皮革包裹的箭袋"
+      - "&7&o似乎能让存放的箭矢具备掠火之力"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f箭矢强度 +5"
+      - "&f移动速度 +10%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&f将背包内的所有箭矢存入箭袋,最多&b{max_arrows}&f支"
+      - "&f射击时若背包箭矢少于&b{threshold}&f支,则补充&b{amount}&f支"
+      - "&e[于&b饰品栏&f&e中&b下蹲+左键&e此饰品]"
+      - "&f将箭袋中的箭矢&b全部取出&f"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储箭矢: &a{arrows} &f/ &a{max_arrows}"
+    req_lv: 25
+    req_job: 1
+    stats:
+      archer_damage: 5.0 # 统一的进攻属性
+      speed_percent: 0.1 # 5%移速

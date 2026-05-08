@@ -1,5 +1,7 @@
 package com.hjh_database
 
+import com.hjh_database.accessory.skill.JiandaiSkill
+import com.hjh_database.accessory.skill.QuiverManager
 import com.hjh_database.alchemy.listener.AlchemyListener
 import com.hjh_database.alchemy.manager.AlchemyManager
 import com.hjh_database.chonghua.ChonghuaManager
@@ -11,6 +13,7 @@ import com.hjh_database.data.PlayerManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.qinglong.QingLongManager
+import com.hjh_database.dungeon.zhuque.ZhuQueManager
 import com.hjh_database.dz.command.DzCommand
 import com.hjh_database.dz.listener.StationListener
 import com.hjh_database.dz.manager.DzLevelManager
@@ -69,9 +72,13 @@ class Hjh_database : JavaPlugin() {
     lateinit var chonghuaManager: ChonghuaManager
     lateinit var accessoryManager: AccessoryManager // 饰品栏管理器
     lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
+    lateinit var zhuQueManager: ZhuQueManager// 朱雀试炼管理器
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
+    // 新增：箭袋管理器
+    lateinit var jiandaiSkill: JiandaiSkill
+    val quiverManager = QuiverManager(this)
 
 
     override fun onEnable() {
@@ -115,8 +122,12 @@ class Hjh_database : JavaPlugin() {
         com.hjh_database.feather.FeatherManager(this)
         // 饰品栏
         this.accessoryManager = AccessoryManager(this)
+        jiandaiSkill = JiandaiSkill(this)
+        server.pluginManager.registerEvents(quiverManager, this)
         // 青龙试炼
         this.qingLongManager = QingLongManager(this)
+        // 朱雀试炼
+        this.zhuQueManager = ZhuQueManager(this)
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
         // 【新增】初始化个人仓库管理器
@@ -161,8 +172,11 @@ class Hjh_database : JavaPlugin() {
 
         // 饰品栏管理器监听
         pm.registerEvents(this.accessoryManager, this)
+        server.pluginManager.registerEvents(accessoryManager, this)
         // 青龙试炼监听
         pm.registerEvents(this.qingLongManager, this)
+        // 朱雀试炼监听
+        pm.registerEvents(this.zhuQueManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
         // 【新增】个人仓库系统监听

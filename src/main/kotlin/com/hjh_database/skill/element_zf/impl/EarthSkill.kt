@@ -65,35 +65,39 @@ class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
                     return
                 }
 
-                // === 音效循环 (每秒播放一次低频轰鸣) ===
-                if (ticks % 20 == 0) {
-                    if (center.world != null) {
-                        center.world!!.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 2.0f, 0.5f)
-                    }
-                }
-
-                // === 增强版特效 ===
+                // === 增强版特效 (保持每 tick 播放，保证视觉连贯性) ===
                 playZoneEffect(center, radius)
 
-                // === 物理牵引逻辑 ===
-                if (center.world != null) {
-                    val entities = center.world!!.getNearbyEntities(center, radius, radius, radius)
+                // === 音效与物理牵引逻辑 (每 20 ticks / 1秒 触发一次) ===
+                if (ticks % 20 == 0) {
+                    if (center.world != null) {
+                        // 播放音效
+                        center.world!!.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 2.0f, 0.5f)
 
-                    for (entity in entities) {
-                        if (entity === player || entity !is LivingEntity) continue
+                        // 物理牵引
+                        val entities = center.world!!.getNearbyEntities(center, radius, radius, radius)
 
-                        val tags = entity.scoreboardTags
-                        if (!tags.contains("panling") || !tags.contains("monster")) continue
+                        for (entity in entities) {
+                            if (entity === player || entity !is LivingEntity) continue
 
-                        if (entity.location.distance(center) > radius) continue
+                            val tags = entity.scoreboardTags
+                            if (!tags.contains("panling") || !tags.contains("monster")) continue
 
-                        val dir = center.toVector().subtract(entity.location.toVector())
-                        dir.setY(0)
+                            if (entity.location.distance(center) > radius) continue
 
-                        if (dir.lengthSquared() < 0.25) continue
+                            val dir = center.toVector().subtract(entity.location.toVector())
+                            dir.setY(0.0)
 
-                        dir.normalize().multiply(strength)
-                        entity.velocity = entity.velocity.add(dir)
+                            if (dir.lengthSquared() < 0.25) continue
+
+                            // 计算并赋予牵引速度
+                            dir.normalize().multiply(strength)
+
+                            // 稍微加一点向上的力，让拉扯效果更明显一点（可选）
+                            // dir.setY(0.2)
+
+                            entity.velocity = entity.velocity.add(dir)
+                        }
                     }
                 }
 

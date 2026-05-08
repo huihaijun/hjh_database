@@ -296,15 +296,6 @@ class PlayerManager(private val plugin: Hjh_database) {
             data.speed *= (1.0 + bonuses["speed_percent"]!!)
         }
 
-        if (bonuses.containsKey("attack_percent")) {
-            val multi = 1.0 + bonuses["attack_percent"]!!
-            data.attack *= multi
-        }
-        if (bonuses.containsKey("armor_percent")) {
-            val multi = 1.0 + bonuses["armor_percent"]!!
-            data.armor *= multi
-        }
-
         syncToVanilla(player, data)
     }
 

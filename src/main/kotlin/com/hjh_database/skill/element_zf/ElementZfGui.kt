@@ -201,7 +201,7 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
                     val ll = config.getDouble("$path.lingli_add", 0.0)
                     lore.add("§7向准心方向 §f${range}格 §7距离建立阵眼，")
                     lore.add("§e${dur}秒 §7内卷起沙尘，将阵眼范围内 §f${radius}格 §7的怪物")
-                    lore.add("§7持续向阵眼中央牵引，冷却 §b${cd}秒§7。")
+                    lore.add("§7每秒向阵眼中央牵引，冷却 §b${cd}秒§7。")
                     lore.add("§7释放后增加 §a${ll}点 §7灵力。")
                 }
             }

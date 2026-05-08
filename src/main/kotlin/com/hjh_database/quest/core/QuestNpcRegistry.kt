@@ -94,9 +94,33 @@ enum class StoryNpcs(
     LVZHOUXIAOZHENDEZHENZHANG(
     "lvzhouxiaozhendezhenzhang",
     "§a§l绿洲小镇的镇长",
-        Villager.Profession.NITWIT,
-    Villager.Type.PLAINS,
+    Villager.Profession.NONE,
+    Villager.Type.SWAMP,
     -16.5, 48.5, 805.5, 0f
+    ),
+
+    WUZHEHONGLUAN(
+    "wuzhehongluan",
+    "§a§l巫者红鸾",
+    Villager.Profession.NITWIT,
+    Villager.Type.SAVANNA,
+    11.5, 48.5, 813.5, 0f
+    ),
+
+    LIANXIN(
+    "lianxin",
+    "§a§l莲心",
+    Villager.Profession.NITWIT,
+    Villager.Type.SAVANNA,
+    375.5, 50.5, 767.5, 0f
+    ),
+
+    JITAN_LIANXIN(
+        "jitan_lianxin",
+        "§a§l莲心",
+        Villager.Profession.NITWIT,
+        Villager.Type.SAVANNA,
+        244.5, 17.5, 720.5, 0f
     );
 
 

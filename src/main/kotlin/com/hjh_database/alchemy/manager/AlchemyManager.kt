@@ -78,7 +78,8 @@ class AlchemyManager(private val plugin: Hjh_database) {
 
             // 读取基础属性
             recipe.displayName = config.getString("$path.displayName", id) ?: id
-
+            // 【在这里添加读取药毒时间的逻辑】
+            recipe.sicknessTime = config.getInt("$path.sickness_time", 0)
 
             // 读取各品质配置
             val tiersSec = config.getConfigurationSection("$path.tiers")
@@ -108,6 +109,8 @@ class AlchemyManager(private val plugin: Hjh_database) {
             // 保存基础属性
             // ======== 替换为 ========
             config.set("$path.displayName", recipe.displayName)
+            // 【在这里添加保存药毒时间的逻辑】
+            config.set("$path.sickness_time", recipe.sicknessTime)
             // 保存各品质配置
             for ((tier, data) in recipe.tierData) {
                 val tPath = "$path.tiers.${tier.name}"

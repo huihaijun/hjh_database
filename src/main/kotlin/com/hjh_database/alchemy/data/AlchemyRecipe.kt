@@ -10,7 +10,8 @@ data class AlchemyRecipe(
     val tierData: MutableMap<AlchemyTier, TierConfig> = HashMap(),
 
     var colorHex: String = "#FFFFFF", // 颜色显示
-    var baseExp: Int = 0 // 基础经验值 (默认0)
+    var baseExp: Int = 0, // 基础经验值 (默认0)
+    var sicknessTime: Int = 0         // 【新增】药毒时间 (单位：秒)
 )
 
 data class TierConfig(

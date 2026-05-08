@@ -10,13 +10,12 @@ import com.hjh_database.quest.impl.main.ren.Ren_07
 import com.hjh_database.quest.impl.main.ren.Ren_08
 import com.hjh_database.quest.impl.main.ren.Ren_09
 import com.hjh_database.quest.impl.main.south.South_01
+import com.hjh_database.quest.impl.main.south.South_02
+import com.hjh_database.quest.impl.main.south.South_03
+import com.hjh_database.quest.impl.main.south.South_04
+import com.hjh_database.quest.impl.main.south.South_05
 import com.hjh_database.quest.impl.side.ren.Side_Ren_01
 
-//import com.hjh_database.quest.impl.main.ren.Ren_07
-//import com.hjh_database.quest.impl.main.ren.Ren_08
-//import com.hjh_database.quest.impl.main.ren.Ren_09
-//import com.hjh_database.quest.impl.main.ren.Ren_10
-//import com.hjh_database.quest.impl.main.ren.Ren_11
 
 object QuestRegistry {
     fun registerAll(manager: QuestManager) {
@@ -33,6 +32,11 @@ object QuestRegistry {
 
         // === 南方主线任务 ===
         manager.register(South_01())
+        manager.register(South_02())
+        manager.register(South_03())
+        manager.register(South_04())
+        manager.register(South_05())
+//        manager.register(South_06())
 
 
 

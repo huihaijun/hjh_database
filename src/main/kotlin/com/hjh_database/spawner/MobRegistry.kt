@@ -380,5 +380,49 @@ object MobRegistry {
             helmet = Material.IRON_HELMET, // 纯装饰铁头盔
             mainHand = Material.IRON_AXE   // 纯装饰铁斧
         ))
+        // === 朱雀试炼 ===
+        register(MobDefinition(
+            id = "zhuqueshiwei",
+            name = "&c&l朱雀侍卫",
+            type = EntityType.PHANTOM,
+            health = 30000.0,
+            damage = 15.0,   // 伤害你可以自己按需调整
+            armor = 100.0,   // 20点自定义护甲
+            speed = 0.2,   // 移速按需调整
+            maxNearby = 1,
+            exp = 500,       // 经验值
+            drops = listOf(), // 副本Boss暂不需要普通掉落，通过副本结算给奖励
+            affixes = listOf(),
+        ))
+        register(MobDefinition(
+            id = "zhuque_yanbing_zombie",
+            name = "&c朱雀炎兵-僵尸",
+            type = EntityType.ZOMBIE,
+            health = 25.0,
+            damage = 4.0,
+            armor = 15.0,
+            exp=10,
+            speed = 0.2,
+            maxNearby = 1,
+            drops = listOf(),
+            affixes = listOf(),
+            helmet = Material.GOLDEN_HELMET, // 纯装饰
+            mainHand = Material.DIAMOND_SWORD   // 纯装饰铁斧
+        ))
+        register(MobDefinition(
+            id = "zhuque_yanbing_kulou",
+            name = "&c朱雀炎兵-骷髅",
+            type = EntityType.SKELETON,
+            health = 15.0,
+            damage = 3.0,
+            armor = 8.0,
+            exp=10,
+            speed = 0.25,
+            maxNearby = 1,
+            drops = listOf(),
+            affixes = listOf(),
+            helmet = Material.GOLDEN_HELMET, // 纯装饰
+            mainHand = Material.BOW   // 纯装饰
+        ))
     }
 }
