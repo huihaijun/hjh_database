@@ -1,11 +1,11 @@
-package com.hjh_database.accessory.skill
+package com.hjh_database.accessory.skill.quiver
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityShootBowEvent
 
-class RanhuoJiandaiSkill(plugin: Hjh_database) : BaseQuiver(plugin) {
+class RanhuoJiandaiSkill(plugin: Hjh_database) : BaseQuiverSkill(plugin) {
 
     // 接收 PlayerData
     override fun onShootEffect(event: EntityShootBowEvent, player: Player, data: PlayerData) {

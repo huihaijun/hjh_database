@@ -46,6 +46,18 @@ class GoldenChestManager(private val plugin: Hjh_database) {
                 ChestLootItem("huishi", 1, 1, 100.0)
             )
         )
+        // 静态注册 朱雀试炼
+        chestRegistry["zhuque_test"] = GoldenChestConfig(
+            dungeonId = "zhuque_test",
+            displayName = "朱雀试炼", // 【新增】中文名指代副本名
+            keyResourceId = "mijingyaoshi", // 钥匙ID 当前为秘境钥匙
+            keyCost = 1,
+            maxDrops = 1, // 每次开箱弹出1个物品
+            lootTable = listOf(
+                // 权重 100.0，朱雀饰品
+                ChestLootItem("yanxin", 1, 1, 100.0)
+            )
+        )
     }
 
     // 核心抽卡逻辑

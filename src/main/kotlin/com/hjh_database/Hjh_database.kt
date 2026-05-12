@@ -1,7 +1,7 @@
 package com.hjh_database
 
-import com.hjh_database.accessory.skill.JiandaiSkill
-import com.hjh_database.accessory.skill.QuiverManager
+import com.hjh_database.accessory.AccessorySkillManager
+import com.hjh_database.accessory.skill.quiver.JiandaiSkill
 import com.hjh_database.alchemy.listener.AlchemyListener
 import com.hjh_database.alchemy.manager.AlchemyManager
 import com.hjh_database.chonghua.ChonghuaManager
@@ -40,6 +40,7 @@ import com.hjh_database.spawner.SpawnerBlockManager
 import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
 import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
+import com.hjh_database.spawner.impl.DesertSouthSkill
 
 
 class Hjh_database : JavaPlugin() {
@@ -78,7 +79,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
     // 新增：箭袋管理器
     lateinit var jiandaiSkill: JiandaiSkill
-    val quiverManager = QuiverManager(this)
+    val accessorySkillManager = AccessorySkillManager(this)
 
 
     override fun onEnable() {
@@ -123,7 +124,7 @@ class Hjh_database : JavaPlugin() {
         // 饰品栏
         this.accessoryManager = AccessoryManager(this)
         jiandaiSkill = JiandaiSkill(this)
-        server.pluginManager.registerEvents(quiverManager, this)
+        server.pluginManager.registerEvents(accessorySkillManager, this)
         // 青龙试炼
         this.qingLongManager = QingLongManager(this)
         // 朱雀试炼
@@ -134,6 +135,8 @@ class Hjh_database : JavaPlugin() {
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
         // 【新增】初始化医术试炼管理器
         this.medicalTrialManager = MedicalTrialManager(this)
+        // 南方沙漠 着火机制
+        DesertSouthSkill.init(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI

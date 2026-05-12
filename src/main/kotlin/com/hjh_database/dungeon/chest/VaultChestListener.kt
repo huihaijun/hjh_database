@@ -48,17 +48,31 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
         // 验证可开箱次数
         if (record.availableOpens <= 0) {
-            // 【修改】获取中文名，给玩家更好的提示
             val displayName = config.displayName
             player.sendMessage("§7你当前的秘境§b[$displayName]§7开箱次数不足……")
             return
         }
 
-        // 2. 检查并扣除钥匙 (依照 ResourceId)
-        if (!takeCustomKey(player, config.keyResourceId, config.keyCost)) {
-            player.sendMessage("§c你没有足够的钥匙开启此宝箱！")
+        // 2. 【修改点】要求玩家必须主手持有对应钥匙才能开箱
+        val mainHandItem = player.inventory.itemInMainHand
+        if (!mainHandItem.hasItemMeta()) {
+            player.sendMessage("§c你需要将对应的钥匙拿在主手，对准宝库才可开启！")
             return
         }
+
+        val heldKeyId = mainHandItem.itemMeta?.persistentDataContainer?.get(resourceIdKey, PersistentDataType.STRING)
+        if (heldKeyId != config.keyResourceId) {
+            player.sendMessage("§c你需要将秘境 §b[${config.displayName}] §c的专属钥匙拿在主手才能开启！")
+            return
+        }
+
+        if (mainHandItem.amount < config.keyCost) {
+            player.sendMessage("§c你主手中的钥匙数量不足！(需要 ${config.keyCost} 把)")
+            return
+        }
+
+        // 扣除主手钥匙
+        mainHandItem.amount -= config.keyCost
 
         // 3. 【修改点】消耗1次可开箱次数，并增加1次总开箱次数统计
         record.availableOpens -= 1
@@ -78,13 +92,12 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
-        // 2. 【新增】强制触发 Vault 开箱物理动画 (方块状态改为 UNLOCKING)
+        // 强制触发 Vault 开箱物理动画
         try {
             val vaultData = block.blockData as org.bukkit.block.data.type.Vault
             vaultData.vaultState = org.bukkit.block.data.type.Vault.State.UNLOCKING
             block.blockData = vaultData
 
-            // 延迟1.5秒后将动画恢复为 INACTIVE (关闭嘴巴)
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 val resetData = block.blockData as org.bukkit.block.data.type.Vault
                 resetData.vaultState = org.bukkit.block.data.type.Vault.State.INACTIVE
@@ -98,7 +111,18 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
         player.playSound(block.location, Sound.BLOCK_VAULT_ACTIVATE, 1.0f, 1.0f)
         player.playSound(block.location, Sound.BLOCK_VAULT_OPEN_SHUTTER, 1.0f, 1.0f)
 
-        // 【新增】用于记录本次获得物品的列表，方便最后发消息
+        // Y轴加了1.5，让粒子和物品在箱子上方稍高的地方爆开
+        val particleLoc = block.location.clone().add(0.5, 1.5, 0.5)
+        // 绿色的幸运星光粒子
+        block.world.spawnParticle(org.bukkit.Particle.HAPPY_VILLAGER, particleLoc, 40, 0.5, 0.5, 0.5, 0.1)
+        // 紫色的神秘魔法粒子
+        block.world.spawnParticle(org.bukkit.Particle.WITCH, particleLoc, 50, 0.5, 0.5, 0.5, 0.1)
+        // 橙红色的火焰粒子，增加爆满的视觉张力
+        block.world.spawnParticle(org.bukkit.Particle.FLAME, particleLoc, 30, 0.4, 0.4, 0.4, 0.08)
+        // 播放额外庆祝音效
+        player.playSound(block.location, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.5f)
+
+        // 【新增】用于记录本次获得物品的列表
         val obtainedMessages = mutableListOf<String>()
 
         droppedItems.forEach { loot ->

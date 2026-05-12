@@ -282,7 +282,7 @@ object MobRegistry {
             name = "&6神速的 蜘蛛女王",
             type = EntityType.SPIDER,
             health = 200.0,
-            damage = 4.0,
+            damage = 8.0,
             exp = 50,       // 经验值
             armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.35,
@@ -344,9 +344,9 @@ object MobRegistry {
             name = "&6千斤的 神木守卫",
             type = EntityType.ZOMBIE,
             health = 300.0,
-            damage = 6.0,
+            damage = 10.0,
             armor = 15.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
-            exp = 50,       // 经验值
+            exp = 100,       // 经验值
             speed = 0.2,
             maxNearby = 1,
             drops = listOf(
@@ -367,10 +367,10 @@ object MobRegistry {
         // === 副本 Boss 注册 ===
         register(MobDefinition(
             id = "qinglongshiwei",
-            name = "&a&l青龙侍卫",
+            name = "&c&l青龙侍卫",
             type = EntityType.ZOMBIE,
             health = 500.0,
-            damage = 5.0,   // 伤害你可以自己按需调整
+            damage = 10.0,   // 伤害你可以自己按需调整
             armor = 20.0,   // 20点自定义护甲
             speed = 0.2,   // 移速按需调整
             maxNearby = 1,
@@ -386,7 +386,7 @@ object MobRegistry {
             name = "&c&l朱雀侍卫",
             type = EntityType.PHANTOM,
             health = 30000.0,
-            damage = 15.0,   // 伤害你可以自己按需调整
+            damage = 10.0,   // 伤害你可以自己按需调整
             armor = 100.0,   // 20点自定义护甲
             speed = 0.2,   // 移速按需调整
             maxNearby = 1,
@@ -396,10 +396,10 @@ object MobRegistry {
         ))
         register(MobDefinition(
             id = "zhuque_yanbing_zombie",
-            name = "&c朱雀炎兵-僵尸",
+            name = "&6朱雀炎兵-僵尸",
             type = EntityType.ZOMBIE,
             health = 25.0,
-            damage = 4.0,
+            damage = 8.0,
             armor = 15.0,
             exp=10,
             speed = 0.2,
@@ -411,10 +411,10 @@ object MobRegistry {
         ))
         register(MobDefinition(
             id = "zhuque_yanbing_kulou",
-            name = "&c朱雀炎兵-骷髅",
+            name = "&6朱雀炎兵-骷髅",
             type = EntityType.SKELETON,
             health = 15.0,
-            damage = 3.0,
+            damage = 5.0,
             armor = 8.0,
             exp=10,
             speed = 0.25,
@@ -423,6 +423,318 @@ object MobRegistry {
             affixes = listOf(),
             helmet = Material.GOLDEN_HELMET, // 纯装饰
             mainHand = Material.BOW   // 纯装饰
+        ))
+//        南方区域大世界怪物
+        register(MobDefinition(
+            id = "etuzhihun",
+            name = "&c燃烧的 恶土之魂",
+            type = EntityType.MAGMA_CUBE,
+            health = 12.0,
+            damage = 2.5,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=35,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.6),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 20%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.2),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+        ))
+        register(MobDefinition(
+            id = "huoyanmo",
+            name = "&c燃烧的 火焰魔",
+            type = EntityType.BLAZE,
+            health = 15.0,
+            damage = 5.0,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=35,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.6),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 20%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.05),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+        ))
+        register(MobDefinition(
+            id = "huangshatubing",
+            name = "&c黄沙土兵",
+            type = EntityType.HUSK,
+            health = 20.0,
+            damage = 4.0,
+            armor = 8.0,
+            speed = 0.2,
+            exp=35,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.6),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 20%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.05),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.STONE_SWORD   // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "heiguzhanshi",
+            name = "&c燃烧的 黑骨战士",
+            type = EntityType.WITHER_SKELETON,
+            health = 14.0,
+            damage = 6.0,
+            armor = 4.0,
+            speed = 0.22,
+            exp=40,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.IRON_AXE   // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "mazeituanshibing",
+            name = "&c燃烧的 马贼团士兵",
+            type = EntityType.ZOMBIE,
+            health = 21.0,
+            damage = 4.0,
+            armor = 6.0,
+            speed = 0.2,
+            exp=45,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落货物
+                MobDrop("wangyuanwaibeiqiangzoudehuowu", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.NETHER_BRICK  // 纯装饰 这个是小刀
+        ))
+        register(MobDefinition(
+            id = "shamogongshou",
+            name = "&c燃烧的 沙漠弓手",
+            type = EntityType.SKELETON,
+            health = 12.0,
+            damage = 6.0,
+            armor = 2.0,
+            speed = 0.2,
+            exp=45,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 10%掉落人参
+                MobDrop("renshen", 1, 1, 0.1),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.BOW   // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "mazeituantuanzhang",
+            name = "&6燃烧千斤的 马贼团团长",
+            type = EntityType.HUSK,
+            health = 300.0,
+            damage = 10.0,
+            armor = 8.0,
+            speed = 0.2,
+            exp=45,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 1.0),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.8),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.4),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 1.0),
+                // 货物
+                MobDrop("wangyuanwaibeiqiangzoudehuowu", 3, 4, 1.0),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 2, 0.6),
+                // 掉落三阶武器材料
+                MobDrop("yanjingshi", 1, 1, 0.3),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            chestplate = Material.IRON_CHESTPLATE,
+            mainHand = Material.DIAMOND_SWORD   // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "wenxian_huoyanmo",
+            name = "&c携带文献的 火焰魔",
+            type = EntityType.BLAZE,
+            health = 18.0,
+            damage = 4.0,
+            armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=60,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落货物
+                MobDrop("shangxianwenxian", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+        ))
+        register(MobDefinition(
+            id = "wenxian_etuhun",
+            name = "&c携带文献的 恶土魂",
+            type = EntityType.MAGMA_CUBE,
+            health = 14.0,
+            damage = 3.0,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=60,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.6),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 30%掉落货物
+                MobDrop("shangxianwenxian", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+        ))
+        register(MobDefinition(
+            id = "wenxian_zombie",
+            name = "&c携带文献的 僵尸",
+            type = EntityType.ZOMBIE,
+            health = 24.0,
+            damage = 6.0,
+            armor = 8.0,
+            speed = 0.2,
+            exp=60,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落货物
+                MobDrop("shangxianwenxian", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+            helmet = Material.LEATHER_HELMET, // 纯装饰
+            mainHand = Material.STONE_SHOVEL  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "shamofengbao",
+            name = "&6千斤的 沙漠风暴",
+            type = EntityType.BREEZE,
+            health = 350.0,
+            damage = 5.0,
+            armor = 4.0,
+            speed = 0.1,
+            exp=45,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落土元素
+                MobDrop("earth", 3, 4, 1.0),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.4),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 1.0),
+                // 货物
+                MobDrop("wangyuanwaibeiqiangzoudehuowu", 3, 4, 1.0),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 2, 0.6),
+                // 掉落三阶材料
+                MobDrop("huangfengyan", 1, 1, 0.3),
+            ),
+            affixes = listOf(), // 南方词条
         ))
     }
 }

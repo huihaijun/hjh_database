@@ -37,8 +37,6 @@ pojiupige:
     - "&7&o从魔物身上掉落的皮革"
     - "&7&o只能拿去卖点小钱了"
 
-
-
 renshen:
   material: GLISTERING_MELON_SLICE
   name: "&f人参"
@@ -52,6 +50,57 @@ shanshengongpin:
   lore:
     - "&7&o怪物抢走的山神庙贡品"
     - "&7&o收集一些交给庙公吧"
+
+meitan:
+  material: COAL
+  name: "&7煤炭"
+  lore:
+    - "&7&o从南方魔物身上抢来的黑炭"
+    - "&7&o摸起来还有点烫手"
+    - "&7&o估计能买个说得过去的价钱"
+
+wangyuanwaibeiqiangzoudehuowu:
+  material: ORANGE_DYE
+  name: "&b王员外被抢走的货物"
+  lore:
+    - "&7&o王员外被马贼抢走的货物"
+    - "&7&o收集一些交给他吧"
+
+shangxianwenxian:
+  material: ORANGE_DYE
+  name: "&b上仙被抢走的文献"
+  lore:
+    - "&7&o篆元上仙被怪物偷走的研究文献"
+    - "&7&o收集一些一起还给他吧"
+
+yanshazhixin:
+  material: HONEYCOMB
+  name: "&b焱砂之心"
+  rarity: 3
+  lore:
+    - "&7&o从南方怪物身上掉落的奇怪物品"
+    - "&7&o似乎能感受到流淌着的火焰"
+    - "&7&o这东西在南方的商人那好像还是硬通货"
+    - "&7&o估计能换到一些好东西"
+
+yanjingshi:
+  material: FIRE_CHARGE
+  name: "&9炎晶石"
+  rarity: 3
+  lore:
+    - "&7&o黑里透红的神奇晶石"
+    - "&7&o石头里的熔岩似乎总想奔涌而出"
+    - "&7&o此物在锻造中能够赋予武器熊熊的火焰 "
+
+huangfengyan:
+  material: CONDUIT
+  name: "&9黄风眼"
+  rarity: 3
+  lore:
+    - "&7&o相传是南方魔物沙漠风暴的栖息之所"
+    - "&7&o小小一块风眼,竟可容纳如此风力"
+    - "&7&o锻造时将其融入,能让铠甲更加坚固"
+
 
 
 

@@ -34,8 +34,23 @@ crystals:
       cool_reduce: 0.05 #5%冷却缩减
       speed_percent: 0.05 # 5%移速
 
-  jiandai:
-    display: "&9箭袋[饰品]"
+  yanxin:
+    display: "&9炎心[饰品]"
+    material: TORCH
+    rarity: 3
+    activate_slot: 2 # <--- 配置在第3格激活
+    lore:
+      - "&6限制职业:&b无&6  限制等级:&b20"
+      - "&7&o朱雀神力凝聚的圣火之芯"
+      - "&7&o掌心传来阵阵温暖与光明,仿佛生机永不停息"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f最大生命 +10"
+    req_lv: 15
+    stats:
+      max_health: 10.0
+
+  cubujiandai:
+    display: "&9粗布箭袋[饰品]"
     material: ENDER_EYE
     rarity: 3
     custom_model_data: 30056
@@ -48,8 +63,8 @@ crystals:
       replenish_amount: 32   #每次拿多少
     lore:
       - "&6限制职业:[弓]  限制等级:&b15"
-      - "&7&o老猎户自己研发的神奇箭袋"
-      - "&7&o可以存放箭矢,减少弓箭手的负担"
+      - "&7&o老猎户自己研发的神奇箭袋,虽然略显粗糙"
+      - "&7&o却能容纳万千箭矢,让弓手在战场更加从容"
       - "&8===========&2&n&l饰品属性&8============="
       - "&f箭矢强度 +1"
       - "&8===========&2&n&l饰品技能&8============="
@@ -62,8 +77,42 @@ crystals:
       - "&f存储箭矢: &a{arrows} &f/ &a1024"
     req_lv: 15
     req_job: 1
-    stats:
-      archer_damage: 1.0 # 统一的进攻属性
+    activation:
+      accessory_8: # 饰品栏第9格 (索引8)
+        stats:
+          archer_damage: 1.0 # 统一的进攻属性
+
+  qingshidunpai:
+    display: "&9轻石盾牌[饰品]"
+    material: SHIELD
+    rarity: 3
+#    custom_model_data: 30056
+    skill_id: "qingshidunpai" # 标识激活哪个技能类
+    lore:
+      - "&6限制职业:[战]  限制等级:&b15"
+      - "&7&o用一些石,木左拼右凑锻造出来的盾牌"
+      - "&7&o虽然防御不佳,但轻快,不足以太过拖累行动"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f护甲 +3"
+      - "&e[于&b副手&e激活时]"
+      - "&f护甲 +6    最大生命 +6"
+      - "&c移动速度 -5%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b副手&e时右键] &f冷却:&b5&f秒"
+      - "&f抵挡下次的受到的近战/远程伤害(仍会被某些武器破盾)"
+      - "&f抵挡成功后进入冷却"
+    req_lv: 15
+    req_job: 0
+    activation:
+      accessory_8: # 饰品栏第9格 (索引8)
+        stats:
+          armor: 3.0
+      offhand: # 副手
+        stats:
+          armor: 6.0
+          max_health: 6.0
+          speed_percent: -0.05 # -5%移速
 
   ranhuojiandai:
     display: "&d燃火箭袋[饰品]"
@@ -94,6 +143,8 @@ crystals:
       - "&f存储箭矢: &a{arrows} &f/ &a{max_arrows}"
     req_lv: 25
     req_job: 1
-    stats:
-      archer_damage: 5.0 # 统一的进攻属性
-      speed_percent: 0.1 # 5%移速
+    activation:
+      accessory_8: # 饰品栏第9格 (索引8)
+        stats:
+          archer_damage: 3.0 # 统一的进攻属性
+          speed_percent: 0.1 # 10%移速

@@ -75,12 +75,13 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 1
-  #      armor: 1.0
+      max_health: 6.0
+      armor: 7.0
 
   zhanlangyingjia:
     display: "&a战狼硬甲"
@@ -92,13 +93,13 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
-      - "&f护甲 +2"
+      - "&f最大生命 +6"
+      - "&f护甲 +8"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 1.0
-      armor: 2
+      max_health: 6.0
+      armor: 8.0
   #      knock_back_res: 0.1 # 10% 抗击退
 
   zhanlangpiku:
@@ -111,11 +112,13 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f护甲 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
     req_job: 0
     req_lv: 10
     stats:
-      armor: 1.0
+      max_health: 6.0
+      armor: 8.0
 
   zhanlangchangtongxue:
     display: "&a战狼长筒靴"
@@ -127,10 +130,14 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
       - "&f抗击退 +5%"
     req_job: 0
     req_lv: 10
     stats:
+      max_health: 6.0
+      armor: 7.0
       knock_back_res: 0.05   # 额外加成：+5% 抗击退
 
 
@@ -344,3 +351,36 @@ armors:
     req_lv: 10
     stats:
       knock_back_res: 0.02
+
+  # === 医师三阶 ===
+  chunfengguan:
+    display: "&9春风冠"
+    material: CHAINMAIL_HELMET
+    rarity: 3
+    model_id: "yishi_1" # 【新增】用于控制穿在身上的模型贴图。对应你在设备 JSON 里写的名字。
+    lore:
+      - "&6限制职业:[医] 限制等级:&b20"
+      - "&7&o春意盎然,生机勃勃的医师套装"
+      - "&7&o衣布还散发着淡淡的草药清香"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f抗击退 +1%"
+    req_job: 3
+    req_lv: 20
+    stats:
+      knock_back_res: 0.01
+
+  chunfengpao:
+    display: "&9春风袍"
+    material: CHAINMAIL_CHESTPLATE
+    rarity: 3
+    model_id: "yishi_1" # 【新增】用于控制穿在身上的模型贴图。对应你在设备 JSON 里写的名字。
+    lore:
+      - "&6限制职业:[医] 限制等级:&b20"
+      - "&7&o春意盎然,生机勃勃的医师套装"
+      - "&7&o衣布还散发着淡淡的草药清香"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +1"
+    req_job: 3
+    req_lv: 20
+    stats:
+      max_health: 1.0

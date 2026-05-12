@@ -17,14 +17,30 @@ armor_core_3:
     - "&7&o稀有的防具核心"
     - "&7&o是用来锻造三阶防具的原材料"
 
+weapon_book_3:
+  material: BOOK
+  rarity: 3
+  name: "&9三阶武器制作书"
+  lore:
+    - "&7&o写满了锻造武器所需材料和方法的书籍"
+    - "&7&o凭借它可以锻造出三阶武器"
+
+armor_book_3:
+  material: BOOK
+  rarity: 3
+  name: "&9三阶防具制作书"
+  lore:
+    - "&7&o写满了锻造防具所需材料和方法的书籍"
+    - "&7&o凭借它可以锻造出三阶防具"
+
 chitongding:
   material: GOLD_NUGGET
   custom_model_data: 10055
   rarity: 3
   name: "&b赤铜锭"
   lore:
-    - "&7&o稀有的武器材料"
-    - "&7&o在铁匠铺可以制作三阶武器"
+    - "&7&o比较稀有的金属材料"
+    - "&7&o用它打造装饰的饰品往往色泽鲜艳"
 
 kaishandao_chuxing:
   material: GOLD_NUGGET

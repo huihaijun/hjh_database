@@ -26,6 +26,8 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     // 【新增】用于手动测试方块坐标传递的 Keys
     private val keyManualTargetItem = NamespacedKey(plugin, "hjh_spawner_manual_target_item")
     private val keyManualTargetBlock = NamespacedKey(plugin, "hjh_spawner_manual_target_block")
+    // 【新增】用于快速铺怪笼的 NBT Key
+    private val keyFastItem = NamespacedKey(plugin, "hjh_spawner_fast")
 
     // 放置刷怪笼逻辑 (保持不变)
     @EventHandler
@@ -35,6 +37,34 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
         val meta = item.itemMeta ?: return
         val pdc = meta.persistentDataContainer
         val spawner = event.blockPlaced.state as? CreatureSpawner ?: return
+
+        // ★★★ 新增：如果这是"快速铺怪"刷怪笼 (Fast) ★★★
+        if (pdc.has(keyFastItem, PersistentDataType.STRING)) {
+            val mobId = pdc.get(keyFastItem, PersistentDataType.STRING) ?: return
+            // 目标坐标：就是当前玩家尝试放置此方块的坐标
+            val targetLoc = event.blockPlaced.location
+            val targetStr = "${targetLoc.world?.name},${targetLoc.x},${targetLoc.y},${targetLoc.z}"
+            // 实际刷怪笼物理坐标：目标坐标正下方2格
+            val actualLoc = targetLoc.clone().subtract(0.0, 2.0, 0.0)
+            // 取消原本的放置事件 (防止把刷怪笼放在表面)
+            event.isCancelled = true
+            // 处理物品消耗 (如果玩家不是创造模式)
+            if (event.player.gameMode != org.bukkit.GameMode.CREATIVE) {
+                event.itemInHand.amount -= 1
+            }
+            // 强行替换下方2格的方块为刷怪笼
+            actualLoc.block.type = org.bukkit.Material.SPAWNER
+            val actualSpawner = actualLoc.block.state as? CreatureSpawner
+            if (actualSpawner != null) {
+                // 使用 SpawnerBlockManager 写入数据
+                plugin.spawnerBlockManager?.writeToSpawner(actualSpawner, mobId, targetStr)
+                actualSpawner.update()
+            }
+            event.player.sendMessage("§a成功放置快速铺怪笼！(ID: $mobId)")
+            event.player.sendMessage("§7物理刷怪笼已被埋入地下: §f${actualLoc.blockX}, ${actualLoc.blockY}, ${actualLoc.blockZ}")
+            event.player.sendMessage("§7生成的怪物将直接刷在你的放置点: §f${targetLoc.blockX}, ${targetLoc.blockY}, ${targetLoc.blockZ}")
+            return
+        }
 
         // 1. 如果是“手动测试方块”
         if (pdc.has(keyManualMobIdItem, PersistentDataType.STRING)) {

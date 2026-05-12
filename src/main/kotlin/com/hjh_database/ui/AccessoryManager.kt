@@ -9,7 +9,6 @@ import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryDragEvent
-import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.util.io.BukkitObjectInputStream
@@ -49,7 +48,6 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
 
         if (event.view.title == INVENTORY_TITLE) {
 
-            // 【修改】同时拦截 Shift+右键(存入) 和 Shift+左键(取出)
             val clickType = event.click
             if (clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT) {
                 val item = event.currentItem
@@ -60,30 +58,25 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
                         val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)
                         val cData = plugin.playerManager.crystalManager.loadedCrystals[cid]
 
-                        // 判断是否在正确的饰品槽位
-                        if (cData != null && event.rawSlot == cData.activateSlot) {
+                        // 【修改】判断当前点击的槽位，是否在该饰品的激活列表里
+                        val slotKey = "accessory_${event.rawSlot}"
+                        if (cData != null && cData.activations.containsKey(slotKey)) {
 
-                            // ============================================
-                            // 【新增】严格判定该饰品是否处于真正“已激活”状态
-                            // ============================================
                             val pData = plugin.playerManager.getPlayerData(player)
                             if (pData != null) {
-                                val jobMatch = cData.reqJob == 0 || pData.job == cData.reqJob
-                                if (pData.lv < cData.reqLv || !jobMatch) {
+                                if (!cData.isActivated(pData)) {
                                     player.sendMessage("§c⚠ 该饰品未激活（等级不足或职业不符），无法使用饰品技能！")
                                     event.isCancelled = true
                                     return
                                 }
                             }
-                            // ============================================
 
-                            // 只要 QuiverManager 里面注册了这个 id，它就会自动接管拦截和处理！
+                            // 路由接管
                             val isExtract = (clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT)
-                            if (plugin.quiverManager.routeQuiverClick(player, item, isExtract, cData)) {
+                            if (plugin.accessorySkillManager.routeAccessoryClick(player, item, isExtract, cData)) {
                                 event.isCancelled = true
                                 return
                             }
-
                         }
                     }
                 }

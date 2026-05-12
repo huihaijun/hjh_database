@@ -476,22 +476,27 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === spawner (刷怪笼 / 手动测试笼 工具) ===
         if (subCommand == "spawner") {
-            // 指令: /hjhadmin spawner <get|button> <MobID> [x] [y] [z]
-            if (args.size < 3 || (args[1].lowercase() != "get" && args[1].lowercase() != "button")) {
-                sender.sendMessage("§c用法: /hjhadmin spawner <get|button> <MobID> [x] [y] [z]")
+            // 指令: /hjhadmin spawner <get|button|fast> <MobID> [x] [y] [z]
+            if (args.size < 3 || (args[1].lowercase() != "get" && args[1].lowercase() != "button" && args[1].lowercase() != "fast")) {
+                sender.sendMessage("§c用法: /hjhadmin spawner <get|button|fast> <MobID> [x] [y] [z]")
                 return true
             }
+
             val action = args[1].lowercase()
             val mobId = args[2]
+
             if (MobRegistry.get(mobId) == null) {
                 sender.sendMessage("§c错误: 未找到 ID 为 $mobId 的怪物配置。请检查 MobRegistry。")
                 return true
             }
+
             // 计算目标坐标 (如果有)
             var targetLocStr: String? = null
             var locDisplay = "§7生成位置: §f未知"
+
             if (sender is Player) {
                 var loc = sender.location
+
                 // 如果填了参数
                 if (args.size >= 6) {
                     try {
@@ -506,13 +511,15 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                         return true
                     }
                 } else {
-                    // 【核心修改】：无论是 get 还是 button，不填坐标都记录输入指令时的当前位置
+                    // 对于 get 和 button，不填坐标都记录输入指令时的当前位置
                     targetLocStr = "${loc.world.name},${loc.x},${loc.y},${loc.z}"
                     locDisplay = "§7生成位置: §a${String.format("%.1f, %.1f, %.1f", loc.x, loc.y, loc.z)} §c(指令记录位置)"
                 }
+
                 val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.SPAWNER)
                 val meta = item.itemMeta
                 val pdc = meta?.persistentDataContainer
+
                 if (action == "get") {
                     meta?.setDisplayName("§e定点刷怪笼: §f$mobId")
                     val lore = ArrayList<String>()
@@ -520,10 +527,10 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     lore.add("§7怪物ID: $mobId")
                     lore.add("§e放置后生效")
                     meta?.lore = lore
+
                     // 将数据存入 ItemStack PDC，以便放置时读取
                     val keyId = org.bukkit.NamespacedKey(plugin, "hjh_spawner_mobid")
                     pdc?.set(keyId, org.bukkit.persistence.PersistentDataType.STRING, mobId)
-
                     if (targetLocStr != null) {
                         val keyLoc = org.bukkit.NamespacedKey(plugin, "hjh_spawner_target")
                         pdc?.set(keyLoc, org.bukkit.persistence.PersistentDataType.STRING, targetLocStr)
@@ -543,7 +550,6 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     meta?.lore = lore
 
                     pdc?.set(org.bukkit.NamespacedKey(plugin, "hjh_spawner_manual_mobid_item"), org.bukkit.persistence.PersistentDataType.STRING, mobId)
-
                     if (targetLocStr != null) {
                         pdc?.set(org.bukkit.NamespacedKey(plugin, "hjh_spawner_manual_target_item"), org.bukkit.persistence.PersistentDataType.STRING, targetLocStr)
                     }
@@ -551,6 +557,23 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     item.itemMeta = meta
                     sender.inventory.addItem(item)
                     sender.sendMessage("§a已获取测试用手动方块！")
+
+                } else if (action == "fast") {
+                    // ★★★ 新增：快速铺怪模式 (不绑定死坐标，放置时动态获取) ★★★
+                    meta?.setDisplayName("§d快速铺怪笼: §f$mobId")
+                    val lore = ArrayList<String>()
+                    lore.add("§7怪物ID: $mobId")
+                    lore.add("§7生成位置: §a你实际放置方块的位置")
+                    lore.add("§7物理位置: §a放置位置下方2格")
+                    lore.add("§e放置时自动向下埋设并绑定刷怪点")
+                    meta?.lore = lore
+
+                    val keyFast = org.bukkit.NamespacedKey(plugin, "hjh_spawner_fast")
+                    pdc?.set(keyFast, org.bukkit.persistence.PersistentDataType.STRING, mobId)
+
+                    item.itemMeta = meta
+                    sender.inventory.addItem(item)
+                    sender.sendMessage("§a已获取快速铺怪笼 (fast模式)！")
                 }
             }
             return true
@@ -987,8 +1010,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             "spawner" -> {
                 // 【修复】：移除了重复的代码块
-                if (args.size == 2) return listOf("get", "button").filter { it.startsWith(args[1].lowercase()) }
-                if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true))) {
+                if (args.size == 2) return listOf("get", "button","fast").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true)|| args[1].equals("fast", ignoreCase = true))) {
                     return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
                 }
             }
@@ -1070,13 +1093,21 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     return chestDungeons.filter { it.startsWith(args[2].lowercase()) }
                 }
 
-                // info / addclear / addopen 的补全
+                // 【修改点】info / addclear / addopen / addavail / resetdrop 的补全
                 val isPlayerTargetCmd = args[1].equals("info", ignoreCase = true) ||
                         args[1].equals("addclear", ignoreCase = true) ||
-                        args[1].equals("addopen", ignoreCase = true)
+                        args[1].equals("addopen", ignoreCase = true) ||
+                        args[1].equals("addavail", ignoreCase = true) ||
+                        args[1].equals("resetdrop", ignoreCase = true)
+
                 if (isPlayerTargetCmd) {
                     if (args.size == 3) return null // 补全在线玩家
                     if (args.size == 4) return chestDungeons.filter { it.startsWith(args[3].lowercase()) } // 补全副本ID
+
+                    // 【新增】为 resetdrop 提供第 5 参数(物品ID)的补全
+                    if (args.size == 5 && args[1].equals("resetdrop", ignoreCase = true)) {
+                        return plugin.resourceManager?.getAllItemNames()?.filter { it.startsWith(args[4]) } ?: emptyList()
+                    }
                 }
             }
             "getwarehouse" -> {

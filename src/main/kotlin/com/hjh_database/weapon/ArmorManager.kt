@@ -158,6 +158,28 @@ class ArmorManager(private val plugin: Hjh_database) {
                 meta.setCustomModelData(aData.customModelData) // 顺手刷新一下模型数据
             }
 
+            // ==========================================
+            // 【新增】应用 1.21.3 专属的装备实体贴图 (asset_id)
+            // ==========================================
+            if (aData.assetId != null) {
+                try {
+                    val equippable = meta.equippable
+                    if (equippable != null) {
+                        // 【核心修复】这里也必须显式指定装备槽位！防止刷新 Lore 时组件退化为 HEAD
+                        equippable.slot = aData.material.equipmentSlot
+
+                        val parts = aData.assetId!!.split(":")
+                        val namespace = if (parts.size > 1) parts[0] else "minecraft"
+                        val keyId = if (parts.size > 1) parts[1] else parts[0]
+                        equippable.model = NamespacedKey(namespace, keyId)
+                        meta.setEquippable(equippable)
+                    }
+                } catch (e: Exception) {
+                    plugin.logger.warning("应用防具模型失败！请检查服务端核心版本！")
+                }
+            }
+            // ==========================================
+
             item.itemMeta = meta
             changed = true
         }
@@ -236,6 +258,28 @@ class ArmorManager(private val plugin: Hjh_database) {
             meta.setCustomModelData(data.customModelData)
         }
 
+        // ==========================================
+        // 【新增】应用 1.21.3 专属的装备实体贴图 (asset_id)
+        // ==========================================
+        if (data.assetId != null) {
+            try {
+                val equippable = meta.equippable
+                if (equippable != null) {
+                    // 【关键修复】显式指定装备槽位！
+                    // 防止 Spigot/Paper 在写入组件时将其重置为默认的 HEAD
+                    equippable.slot = data.material.equipmentSlot
+                    val parts = data.assetId!!.split(":")
+                    val namespace = if (parts.size > 1) parts[0] else "minecraft"
+                    val keyId = if (parts.size > 1) parts[1] else parts[0]
+                    equippable.model = NamespacedKey(namespace, keyId)
+                    meta.setEquippable(equippable)
+                }
+            } catch (e: Exception) {
+                plugin.logger.warning("无法为 ${data.id} 设置 model_id: ${e.message}")
+            }
+        }
+        // ==========================================
+
         // 2. 写入 NBT (注意：护甲用的是 armorKey)
         meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, id)
         meta.persistentDataContainer.set(armorKey, PersistentDataType.STRING, id)
@@ -285,6 +329,9 @@ class ArmorManager(private val plugin: Hjh_database) {
         var display: String? = sec.getString("display", "Armor")
         var material: Material = Material.matchMaterial(sec.getString("material", "LEATHER_CHESTPLATE")!!) ?: Material.LEATHER_CHESTPLATE
         var customModelData: Int = sec.getInt("custom_model_data", 0)
+        // 【新增这一行】读取 yaml 里的 asset_id
+        var assetId: String? = sec.getString("model_id")
+
         var lore: List<String>? = sec.getStringList("lore")
         @JvmField var reqJob: Int = sec.getInt("req_job", -1)
         @JvmField var reqLv: Int = sec.getInt("req_lv", 1)

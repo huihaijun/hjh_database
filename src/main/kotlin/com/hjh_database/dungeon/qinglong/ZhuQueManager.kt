@@ -136,10 +136,11 @@ class ZhuQueManager(private val plugin: Hjh_database) : Listener {
 
         val dialogues = listOf(
             "§f你们来了……",
-            "§f这里是很热，朱雀大人司掌南方沙漠，酷热的环境也让他赋予了这片大地生机",
-            "§f朱雀喜欢旺盛的§b生命§f，向朱雀大人展示你们顽强的生命，就可以通过他的考验",
-            "§f听！那是经常伴飞与朱雀大人的侍卫的声音！",
-            "§f朱雀大人的侍卫生命力同样旺盛，你们估计打不败他，坚持一定时间向他证明你们的生命力，也一样可以过关！",
+            "§f此地酷热难耐，但§4§n朱雀大人§f司掌的正是这南方大漠，这滚滚热浪，亦是他赋予这片荒土生机的证明",
+            "§f朱雀最欣赏旺盛的§b生命力§f，无需多言，只需向他证明你们的顽强，便可通过试炼",
+            "§f…听！那是常伴朱雀大人身侧的侍卫之鸣！",
+            "§f那侍卫与朱雀大人同息共命，生命力同样源源不绝，凭你们的力量暂时是§b击不倒§f它的",
+            "§f撑住，用你们的韧性向它证明，你们经得起烈焰的淬炼！",
             "§c抬头！他来了……祝你们好运"
         )
 
@@ -149,8 +150,9 @@ class ZhuQueManager(private val plugin: Hjh_database) : Listener {
                 if (!isDungeonActive) { cancel(); return }
                 if (step < dialogues.size) {
                     players.forEach { p ->
-                        p.sendMessage("§a§l朱雀分魂：")
-                        p.sendMessage("- ${dialogues[step]}")
+                        // 直接将前缀和对话内容拼接在同一行
+                        p.sendMessage("§a§l朱雀分魂：${dialogues[step]}")
+
                         if (step == 3) {
                             p.playSound(p.location, Sound.ENTITY_PHANTOM_SWOOP, 1.5f, 1.2f) // 凤凰(幻翼)的鸣叫
                         } else {
@@ -158,7 +160,7 @@ class ZhuQueManager(private val plugin: Hjh_database) : Listener {
                         }
                     }
                     step++
-                } else {
+                }else {
                     spawnBoss(arenaCenter.world!!)
                     cancel()
                 }
@@ -188,7 +190,7 @@ class ZhuQueManager(private val plugin: Hjh_database) : Listener {
         boss!!.addPotionEffect(PotionEffect(PotionEffectType.FIRE_RESISTANCE, Int.MAX_VALUE, 0, false, false))
 
         mainBossBar = Bukkit.createBossBar("§c§l朱雀侍卫", BarColor.RED, BarStyle.SOLID)
-        timeBossBar = Bukkit.createBossBar("§e副本剩余时间: $dungeonTimeLeft 秒", BarColor.YELLOW, BarStyle.SEGMENTED_12)
+        timeBossBar = Bukkit.createBossBar("§e朱雀试炼剩余时间: $dungeonTimeLeft 秒", BarColor.YELLOW, BarStyle.SEGMENTED_12)
         val players = getDungeonPlayers()
         players.forEach { p ->
             mainBossBar?.addPlayer(p)
@@ -252,7 +254,7 @@ class ZhuQueManager(private val plugin: Hjh_database) : Listener {
                 // 每秒倒计时扣除
                 if (tickCount % 20 == 0) {
                     dungeonTimeLeft--
-                    timeBossBar?.setTitle("§e副本剩余时间: $dungeonTimeLeft 秒")
+                    timeBossBar?.setTitle("§e朱雀试炼剩余时间: $dungeonTimeLeft 秒")
                     timeBossBar?.progress = (dungeonTimeLeft / 300.0).coerceIn(0.0, 1.0)
 
                     if (dungeonTimeLeft <= 0) {

@@ -1,6 +1,7 @@
 package com.hjh_database.spawner
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.spawner.impl.Shamofengbao
 import org.bukkit.ChatColor
 import org.bukkit.Location
 import org.bukkit.Material
@@ -36,6 +37,11 @@ object MobFactory {
         if (entity is org.bukkit.entity.Piglin) {
             entity.setBaby(false)
         }
+        // ★★★ 【新增】强制史莱姆与岩浆怪默认生成最大尺寸(4) ★★★
+        if (entity is org.bukkit.entity.Slime) {
+            entity.size = 4
+        }
+
 
         // === 【新增修改】2. 关闭拾取功能，彻底杜绝怪物捡起地上的防具/武器并自动穿上 ===
         entity.canPickupItems = false
@@ -62,7 +68,7 @@ object MobFactory {
 
         entity.getAttribute(Attribute.MAX_HEALTH)?.baseValue = def.health
         entity.health = def.health
-        entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = def.damage
+//        entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = def.damage
         entity.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = def.speed
 
         // 2. 护甲系统适配
@@ -84,6 +90,11 @@ object MobFactory {
             "shenmushouwei" -> {
                 com.hjh_database.spawner.impl.Shenmushouwei(plugin, entity)
             }
+            // 【新增神木守卫】
+            "mazeituantuanzhang" -> {
+                com.hjh_database.spawner.impl.Mazeituantuanzhang(plugin, entity)
+            }
+            "shamofengbao" -> Shamofengbao(plugin, entity)
             // 以后如果有新 boss，继续往下加就行：
 //             "shiyanguai" -> Shiyanguai(plugin, entity)
             // "kulouwang" -> Kulouwang(plugin, entity)
