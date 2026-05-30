@@ -17,6 +17,10 @@ abstract class QuestBase(
     abstract val description: List<String>
     open val raceLimit: Int? = null // 限制种族ID
 
+    open fun canAccept(player: Player, data: PlayerData): Boolean {
+        return raceLimit == null || raceLimit == data.race
+    }
+
     // === 显示逻辑 ===
     fun getDisplayLore(progress: Int): List<String> {
         val list = ArrayList<String>()

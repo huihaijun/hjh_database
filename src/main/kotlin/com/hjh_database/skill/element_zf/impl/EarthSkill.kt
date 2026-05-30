@@ -1,7 +1,7 @@
 package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
-import com.hjh_database.skill.element_zf.ElementSkill
+import com.hjh_database.skill.element_zf.AbstractElementSkill
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Location
 import org.bukkit.Material
@@ -15,26 +15,22 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import kotlin.math.min
 
-class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
+// 【改动1】继承 AbstractElementSkill，去掉 private val
+class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
-    override fun cast(player: Player, level: Int, config: ConfigurationSection?): Boolean {
-        // 1. 读取配置
-        val safeConfig = config!!
+    // 【改动2】将 cast 改为 onCast
+    override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
 
-        var path = "levels.$level"
-        if (!safeConfig.contains(path)) path = "levels.1"
-
+        // 1. 直接读取配置，不再需要判断路径是否存在
         val range = safeConfig.getDouble("$path.range", 10.0)
         val radius = safeConfig.getDouble("$path.radius", 5.0)
         val duration = safeConfig.getDouble("$path.duration", 5.0)
         val strength = safeConfig.getDouble("$path.pull_strength", 0.08)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
 
-        // 2. 消耗物品
-        val handItem = player.inventory.itemInMainHand
-        handItem.amount = handItem.amount - 1
+        // ！！！ 原本的扣除物品代码已删除，交由父类 AbstractElementSkill 处理 ！！！
 
-        // 3. 增加灵力
+        // 2. 增加灵力
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
         if (lingliAdd > 0) {
@@ -46,15 +42,15 @@ class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
             }
         }
 
-        // 4. 确定阵法中心
+        // 3. 确定阵法中心
         val center = getTargetLocation(player, range)
 
-        // 5. 提示 & 启动音效
+        // 4. 提示 & 启动音效
         // center.world 可能为空，但在 Bukkit 运行时通常安全，使用 !! 确保调用
         center.world!!.playSound(center, Sound.ENTITY_ZOMBIE_BREAK_WOODEN_DOOR, 1.0f, 0.5f)
         center.world!!.playSound(center, Sound.BLOCK_GRAVEL_BREAK, 1.0f, 0.6f)
 
-        // 6. 开启持续任务
+        // 5. 开启持续任务
         object : BukkitRunnable() {
             var ticks = 0
             val maxTicks = (duration * 20).toInt()
@@ -108,6 +104,9 @@ class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
         return true
     }
 
+    // ============================================
+    // 下方的 getTargetLocation 和 playZoneEffect 完完全全保持你源码的原样！
+    // ============================================
     private fun getTargetLocation(player: Player, range: Double): Location {
         val eye = player.eyeLocation
         val direction = eye.direction
@@ -141,9 +140,8 @@ class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
             val x = center.x + radius * Math.cos(angle)
             val z = center.z + radius * Math.sin(angle)
 
-            // 【已修复】这里必须使用 BLOCK_DUST 才能接收 BlockData
             world.spawnParticle(
-                Particle.BLOCK, // 原来是 Particle.DUST (会导致崩溃)
+                Particle.BLOCK,
                 x, center.y + 0.1, z,
                 1, 0.0, 0.0, 0.0, 0.0,
                 Material.DIRT.createBlockData()
@@ -166,9 +164,8 @@ class EarthSkill(private val plugin: Hjh_database) : ElementSkill {
 
             // 偶尔产生地面裂纹粒子
             if (Math.random() < 0.1) {
-                // 【已修复】SCRAPE 粒子不支持 BlockData，改为 BLOCK_DUST 使用粗土效果
                 world.spawnParticle(
-                    Particle.BLOCK, // 原来是 Particle.SCRAPE (会导致崩溃)
+                    Particle.BLOCK,
                     x, center.y + 0.1, z,
                     1, 0.0, 0.0, 0.0, 0.0,
                     Material.COARSE_DIRT.createBlockData()

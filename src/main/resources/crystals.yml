@@ -1,27 +1,9 @@
 crystals:
-  # 结晶的ID
-  fire_crystal_1:
-    display: "&c初级火之结晶"
-    material: SHULKER_SHELL
-    rarity: 1
-    activate_slot: 0 # <--- 配置在第二格激活
-    lore:
-      - "&6限制职业:&b全职业可用&6  限制等级:&b5"
-      - "&7&o蕴含着微弱火元素的潜影壳结晶"
-      - "&c必须放置在饰品栏第一格才可激活！"
-      - "&8===========&2&n&l结晶属性&8============="
-      - "&f进攻属性 +2.0"
-      - "&f暴击率 +5%"
-    req_lv: 5
-    stats:
-      power: 2.0 # 统一的进攻属性
-      crit_chance: 0.05
-
+  #================圣兽饰品================
   huishi:
     display: "&9慧识[饰品]"
     material: SHULKER_SHELL
     rarity: 3
-    activate_slot: 1 # <--- 配置在第二格激活
     lore:
       - "&6限制职业:&b无&6  限制等级:&b10"
       - "&7&o龙之鳞片化作的晶莹饰品"
@@ -30,15 +12,17 @@ crystals:
       - "&f武器/阵法冷却 -5%"
       - "&f速度 +5%"
     req_lv: 10
-    stats:
-      cool_reduce: 0.05 #5%冷却缩减
-      speed_percent: 0.05 # 5%移速
+    req_job: -1
+    activation:
+      accessory_1: # 饰品栏第2格 (索引1)
+        stats:
+          cool_reduce: 0.05 #5%冷却缩减
+          speed_percent: 0.05 # 5%移速
 
   yanxin:
     display: "&9炎心[饰品]"
     material: TORCH
     rarity: 3
-    activate_slot: 2 # <--- 配置在第3格激活
     lore:
       - "&6限制职业:&b无&6  限制等级:&b20"
       - "&7&o朱雀神力凝聚的圣火之芯"
@@ -46,9 +30,16 @@ crystals:
       - "&8===========&2&n&l饰品属性&8============="
       - "&f最大生命 +10"
     req_lv: 15
-    stats:
-      max_health: 10.0
+    req_job: -1
+    activation:
+      accessory_2: # 饰品栏第3格 (索引2)
+        stats:
+          max_health: 10.0 # 统一的进攻属性
 
+
+
+
+#================职业饰品================
   cubujiandai:
     display: "&9粗布箭袋[饰品]"
     material: ENDER_EYE
@@ -68,10 +59,10 @@ crystals:
       - "&8===========&2&n&l饰品属性&8============="
       - "&f箭矢强度 +1"
       - "&8===========&2&n&l饰品技能&8============="
-      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&e[于&b饰品栏&e中&b下蹲+右键&e此饰品]"
       - "&f将背包内的所有箭矢存入箭袋,最多&b1024&f支"
       - "&f射击时若背包箭矢少于&b16&f支,则补充&b32&f支"
-      - "&e[于&b饰品栏&f&e中&b下蹲+左键&e此饰品]"
+      - "&e[于&b饰品栏&e中&b下蹲+左键&e此饰品]"
       - "&f将箭袋中的箭矢&b全部取出&f"
       - "&8===========&2&n&l当前状态&8============="
       - "&f存储箭矢: &a{arrows} &f/ &a1024"
@@ -114,6 +105,85 @@ crystals:
           max_health: 6.0
           speed_percent: -0.05 # -5%移速
 
+  huiliuyi:
+    display: "&9回流仪[饰品]"
+    material: RECOVERY_COMPASS
+    rarity: 3
+    skill_id: "huiliuyi"
+    lore:
+      - "&6限制职业:[术] 限制等级:&b15"
+      - "&7&o精密复杂的仪器,内部流淌着元素与灵力"
+      - "&7&o开启后,能够抽取持有者的灵力"
+      - "&7&o转化为世间百态的元素"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f阵法强度 +1"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&f开启/关闭&b[回流]&f状态"
+      - "&b[回流]&f:若自身灵力大于&b50%&f,释放元素阵法时"
+      - "&f有&b35%&f概率不消耗元素,改为消耗&b(阵法等级*10)&f点灵力"
+    req_lv: 15
+    req_job: 2
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 1.0
+
+  taolizhi:
+    display: "&9桃李枝[饰品]"
+    material: SWEET_BERRIES
+    rarity: 3
+    skill_id: "taolizhi"
+    taolizhi_data:
+      max_storage: 100.0
+      trigger_storage: 20.0
+      cooldown: 3.0
+      range: 10.0
+      zf_multiplier: 1.5
+      storage_multiplier: 0.5
+    lore:
+      - "&6限制职业:[医] 限制等级:&b15"
+      - "&7&o一枝桃李满琼枝,仁心所至,生机自来"
+      - "&7&o悬壶济世之时,溢出的仁心之力会凝为灵力之鸟"
+      - "&7&o灵鸟护主,振翅间击退来犯之敌"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f最大生命 +4  阵法强度 +1"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&e激活时] &f冷却:&b3&f秒"
+      - "&f当释放医术回复生命时,会将&b溢出&f的回复值存入此枝(最多&b100&f点)"
+      - "&f当存储值到达或超过&b20&f点时,会消耗全部存储值召唤&b1&f只&b[灵鸟]&f"
+      - "&f对离自己&b10&f格范围内最近的&b1&f名怪物发起冲击"
+      - "&f造成(&b150%阵法强度&f+&b50%消耗存储值&f)点伤害"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储生命: &a{stored} &f/ &a{max_storage}"
+    req_lv: 15
+    req_job: 3
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 1.0
+          max_health: 4.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   ranhuojiandai:
     display: "&d燃火箭袋[饰品]"
     material: ENDER_EYE
@@ -134,10 +204,10 @@ crystals:
       - "&f箭矢强度 +5"
       - "&f移动速度 +10%"
       - "&8===========&2&n&l饰品技能&8============="
-      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&e[于&b饰品栏&e中&b下蹲+右键&e此饰品]"
       - "&f将背包内的所有箭矢存入箭袋,最多&b{max_arrows}&f支"
       - "&f射击时若背包箭矢少于&b{threshold}&f支,则补充&b{amount}&f支"
-      - "&e[于&b饰品栏&f&e中&b下蹲+左键&e此饰品]"
+      - "&e[于&b饰品栏&e中&b下蹲+左键&e此饰品]"
       - "&f将箭袋中的箭矢&b全部取出&f"
       - "&8===========&2&n&l当前状态&8============="
       - "&f存储箭矢: &a{arrows} &f/ &a{max_arrows}"

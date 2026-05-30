@@ -14,6 +14,14 @@ import java.util.ArrayList
 
 class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuManager) {
 
+    // --- 新增：缓存上一次保存的配置，作为新建节点的默认值 ---
+    private var lastTimeSeconds = 10.0
+    private var lastEnergyCost = 10.0
+    private var lastExp = 20.0
+    private var lastReqLevel = 1.0
+    private var lastCooldownSec = 300.0
+    private var lastDepletedSec = 300.0 // 初始占位符，首次打开时读取 config 的默认值
+
     fun openEditor(player: Player, locKey: String) {
         // 创建 54 格 GUI
         val inv: Inventory = Bukkit.createInventory(null, 54, "§0开物点编辑: $locKey")
@@ -23,6 +31,8 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
 
         // 读取全局默认值作为初始显示
         val defaultDepleted = plugin.config.getInt("kaiwu.mining.depleted_duration", 300)
+        // 【新增】如果没初始化过，将配置里的默认值赋给缓存
+        if (lastDepletedSec < 0) lastDepletedSec = defaultDepleted.toDouble()
 
         // --- 1. 放置掉落物 (如果有) ---
         if (node != null && node.drops.isNotEmpty()) {
@@ -40,7 +50,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         inv.setItem(
             46, createSettingIcon(
                 Material.CLOCK, "§e采集耗时",
-                if (node != null) node.timeSeconds else 2.0, "秒", "左键+0.5 / 右键-0.5"
+                node?.timeSeconds ?: lastTimeSeconds, "秒", "左键+0.5 / 右键-0.5"
             )
         )
 
@@ -48,7 +58,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         inv.setItem(
             47, createSettingIcon(
                 Material.COOKED_BEEF, "§c精力消耗",
-                if (node != null) node.energyCost else 5.0, "点", "左键+1 / 右键-1"
+                node?.energyCost ?: lastEnergyCost, "点", "左键+1 / 右键-1"
             )
         )
 
@@ -56,7 +66,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         inv.setItem(
             48, createSettingIcon(
                 Material.EXPERIENCE_BOTTLE, "§b获得经验",
-                (if (node != null) node.exp else 10).toDouble(), "点", "左键+5 / 右键-5"
+                node?.exp?.toDouble() ?: lastExp, "点", "左键+5 / 右键-5"
             )
         )
 
@@ -64,7 +74,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         inv.setItem(
             49, createSettingIcon(
                 Material.LADDER, "§6需求等级",
-                (if (node != null) node.reqLevel else 1).toDouble(), "级", "左键+1 / 右键-1"
+                node?.reqLevel?.toDouble() ?: lastReqLevel, "级", "左键+1 / 右键-1"
             )
         )
 
@@ -72,15 +82,15 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         inv.setItem(
             50, createSettingIcon(
                 Material.COMPASS, "§d重生冷却 (挖空后)",
-                (if (node != null) node.cooldownSec else 60).toDouble(), "秒", "左键+10 / 右键-10"
+                node?.cooldownSec?.toDouble() ?: lastCooldownSec, "秒", "左键+10 / 右键-10"
             )
         )
 
-        // [51] 【新增】枯竭恢复 (自然回满时间)
+        // [51] 枯竭恢复 (自然回满时间)
         inv.setItem(
             51, createSettingIcon(
                 Material.ENCHANTED_BOOK, "§a自然恢复 (枯竭后)",
-                (if (node != null) node.depletedSec else defaultDepleted).toDouble(), "秒", "左键+10 / 右键-10"
+                node?.depletedSec?.toDouble() ?: lastDepletedSec, "秒", "左键+10 / 右键-10"
             )
         )
 
@@ -150,6 +160,14 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         val cooldown = parseVal(inv.getItem(50)).toInt()
         // 【新增】读取第 51 格
         val depleted = parseVal(inv.getItem(51)).toInt()
+
+        // --- 【新增】每次关闭保存时，更新上一次配置缓存 ---
+        lastTimeSeconds = time
+        lastEnergyCost = energy
+        lastExp = exp.toDouble()
+        lastReqLevel = reqLv.toDouble()
+        lastCooldownSec = cooldown.toDouble()
+        lastDepletedSec = depleted.toDouble()
 
         manager.saveNodeFromEditor(locKey, drops, time, energy, exp, reqLv, cooldown, depleted)
         e.player.sendMessage("§a[开物术] 资源点配置已保存！")

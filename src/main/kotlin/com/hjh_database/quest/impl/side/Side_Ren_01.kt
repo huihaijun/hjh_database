@@ -1,7 +1,9 @@
 package com.hjh_database.quest.impl.side.ren
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.data.PlayerData
 import com.hjh_database.quest.core.QuestBase
+import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.quest.core.QuestType
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -14,6 +16,11 @@ class Side_Ren_01 : QuestBase("side_ren_1", "[支线]重华晶的奥秘", QuestT
 
     // 只有人族可接
     override val raceLimit = 2
+
+    override fun canAccept(player: Player, data: PlayerData): Boolean {
+        return super.canAccept(player, data) &&
+                (data.completedQuests.contains("main_ren_6") || data.questStatuses["main_ren_6"] == QuestStatus.COMPLETED)
+    }
 
     // 任务追踪描述
     override fun getProgressText(progress: Int): List<String> {

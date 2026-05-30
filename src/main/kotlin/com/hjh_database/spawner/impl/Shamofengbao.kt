@@ -5,6 +5,8 @@ import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.damage.DamageSource
+import org.bukkit.damage.DamageType
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
@@ -15,6 +17,8 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.ProjectileLaunchEvent
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
@@ -75,8 +79,10 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                 boss.world.spawnParticle(Particle.FALLING_DUST, loc.clone().add(0.0, 1.5, 0.0), 8, 1.5, 1.5, 1.5, 0.0, Material.SAND.createBlockData())
                 boss.world.spawnParticle(Particle.BLOCK, loc, 5, 1.0, 0.2, 1.0, 0.0, Material.SAND.createBlockData())
 
-                // 【修复3】破解弓箭手无法攻击的问题！
-                // 高频扫描周围 4 格的箭矢，趁着它原版风场把箭弹开前拦截它
+                // 【修复3】破解弓箭手无法攻击的问题，同时保留箭矢命中事件链。
+                // 原版 Breeze 会把箭矢弹开，所以这里仍然高频扫描并拦截箭。
+                // 关键变化：不要直接 boss.damage(...) 结束，而是先补发一次“箭矢 -> Boss”的伤害事件，
+                // 让 yantiegongSkill 等依赖 AbstractArrow 命中的武器技能可以正常叠层/引爆。
                 val nearbyArrows = boss.getNearbyEntities(4.0, 4.0, 4.0).filterIsInstance<AbstractArrow>()
                 for (arrow in nearbyArrows) {
                     if (arrow.isValid && !arrow.isOnGround) {
@@ -86,30 +92,76 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                         if (arrow.hasMetadata("hjh_breeze_hit")) continue
                         arrow.setMetadata("hjh_breeze_hit", org.bukkit.metadata.FixedMetadataValue(plugin, true))
 
-                        // 读取你写在 CombatListener 里的弓箭面板伤害
-                        val pdc = arrow.persistentDataContainer
-                        val baseDamage = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: 5.0
-                        val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
-
-                        var finalDamage = baseDamage
-                        if (ThreadLocalRandom.current().nextDouble() < critChance) {
-                            finalDamage *= 1.5
-                            boss.world.spawnParticle(Particle.CRIT, boss.location.add(0.0, 1.0, 0.0), 10, 0.5, 0.5, 0.5, 0.1)
-                        }
-
-                        // ★ 核心绕过逻辑：
-                        // 将这发伤害包装为“玩家(shooter)发起的魔法伤害(HJH_MAGIC_DAMAGE)”
-                        // 1. 因为 damager 是玩家而不是 Projectile，旋风人的底层免疫被完美骗过。
-                        // 2. 因为带有 HJH_MAGIC_DAMAGE，你的 CombatListener 不会用近战面板去覆盖它，而是当做真实伤害。
-                        boss.setMetadata("HJH_MAGIC_DAMAGE", org.bukkit.metadata.FixedMetadataValue(plugin, finalDamage))
-                        boss.damage(finalDamage, shooter)
-
-                        boss.world.playSound(boss.location, Sound.ENTITY_ARROW_HIT, 1.0f, 1.0f)
-                        arrow.remove() // 直接吞掉箭矢
+                        handleInterceptedArrowHit(arrow, shooter)
                     }
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L) // 改为每 tick 扫描，确保箭矢万无一失
+    }
+
+
+    /**
+     * 处理被 Breeze 风场拦截的玩家箭矢。
+     *
+     * 设计目标：
+     * 1. 仍然绕过 Breeze 原版“弹箭/免疫箭”的问题，让弓箭手能打到沙漠风暴；
+     * 2. 先补发 EntityDamageByEntityEvent，且 damager 保持为 AbstractArrow，
+     *    这样 yantiegongSkill 这类监听箭矢命中的技能可以正常触发；
+     * 3. 最终基础箭伤仍用 HJH_MAGIC_DAMAGE 包一层，由 Player 作为 damager 结算，
+     *    避免再次被 Breeze 底层投射物机制吃掉。
+     */
+    private fun handleInterceptedArrowHit(arrow: AbstractArrow, shooter: Player) {
+        val pdc = arrow.persistentDataContainer
+        val baseDamage = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: 5.0
+        val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
+
+        var finalDamage = baseDamage
+        if (ThreadLocalRandom.current().nextDouble() < critChance) {
+            finalDamage *= 1.5
+            boss.world.spawnParticle(Particle.CRIT, boss.location.clone().add(0.0, 1.0, 0.0), 10, 0.5, 0.5, 0.5, 0.1)
+        }
+
+        // 先补发“箭矢命中 Boss”的事件。
+        // yantiegongSkill.onArrowHit 里要求 event.damager 是 AbstractArrow，
+        // 所以这里必须用 arrow 作为 damager，不能直接用 shooter。
+        val damageSource = DamageSource.builder(DamageType.ARROW)
+            .withDirectEntity(arrow)
+            .withCausingEntity(shooter)
+            .build()
+
+        val hitEvent = EntityDamageByEntityEvent(
+            arrow,
+            boss,
+            EntityDamageEvent.DamageCause.PROJECTILE,
+            damageSource,
+            finalDamage
+        )
+        plugin.server.pluginManager.callEvent(hitEvent)
+
+        // 如果其他插件/监听器明确取消了这次箭矢命中，则只移除箭，不再造成基础箭伤。
+        if (!hitEvent.isCancelled && boss.isValid && !boss.isDead && hitEvent.finalDamage > 0.0) {
+            damageBossAsBypassedArrowDamage(shooter, hitEvent.finalDamage)
+            boss.world.playSound(boss.location, Sound.ENTITY_ARROW_HIT, 1.0f, 1.0f)
+        }
+
+        arrow.remove()
+    }
+
+    /**
+     * 用玩家作为最终 damager 结算基础箭伤，避免再次触发 Breeze 对 Projectile 的免疫/弹开逻辑。
+     * 注意：这里用 try/finally 清理 HJH_MAGIC_DAMAGE，防止这个 metadata 残留到后续其他伤害。
+     */
+    private fun damageBossAsBypassedArrowDamage(shooter: Player, amount: Double) {
+        boss.setMetadata("HJH_MAGIC_DAMAGE", org.bukkit.metadata.FixedMetadataValue(plugin, amount))
+        boss.noDamageTicks = 0
+        try {
+            boss.damage(amount, shooter)
+        } finally {
+            if (boss.hasMetadata("HJH_MAGIC_DAMAGE")) {
+                boss.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            }
+            boss.noDamageTicks = 0
+        }
     }
 
     @EventHandler

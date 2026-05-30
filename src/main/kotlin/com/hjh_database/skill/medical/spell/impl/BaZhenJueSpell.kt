@@ -6,7 +6,6 @@ import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -109,8 +108,7 @@ class BaZhenJueSpell(private val plugin: Hjh_database) : MedicalSpell {
 
                     for (target in currentNearby) {
                         if (!target.isDead && target.location.distance(center) <= radius) {
-                            val maxHp = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-                            target.health = (target.health + healAmount).coerceAtMost(maxHp)
+                            plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "bazhenjue")
 
                             // 阵法恢复的专属粒子 (海豚飞溅水花，显得温和)
                             target.world.spawnParticle(Particle.SPLASH, target.location.clone().add(0.0, 1.0, 0.0), 20, 0.4, 0.4, 0.4, 0.0)

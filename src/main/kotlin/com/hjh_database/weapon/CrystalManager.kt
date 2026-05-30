@@ -29,9 +29,16 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
     val lore: List<String> = sec.getStringList("lore")
 
     val skillId: String? = sec.getString("skill_id")
-    val maxArrows: Int = sec.getInt("quiver_data.max_arrows", 1024)
+    val maxArrows: Int = if (sec.isConfigurationSection("quiver_data")) sec.getInt("quiver_data.max_arrows", 1024) else 0
     val replenishThreshold: Int = sec.getInt("quiver_data.replenish_threshold", 16)
     val replenishAmount: Int = sec.getInt("quiver_data.replenish_amount", 32)
+
+    val medicalOverflowMaxStorage: Double = sec.getDouble("taolizhi_data.max_storage", 100.0)
+    val medicalOverflowTriggerStorage: Double = sec.getDouble("taolizhi_data.trigger_storage", 20.0)
+    val medicalOverflowCooldownSeconds: Double = sec.getDouble("taolizhi_data.cooldown", 3.0)
+    val medicalOverflowRange: Double = sec.getDouble("taolizhi_data.range", 10.0)
+    val medicalOverflowZfMultiplier: Double = sec.getDouble("taolizhi_data.zf_multiplier", 1.5)
+    val medicalOverflowStorageMultiplier: Double = sec.getDouble("taolizhi_data.storage_multiplier", 0.5)
 
     // 【核心改动】支持多槽位与多属性映射表
     val activations = mutableMapOf<String, ActivationConfig>()
@@ -114,7 +121,15 @@ class CrystalManager(private val plugin: Hjh_database) {
         newLore.add("${colorCode}稀有度: ${WeaponManager.getRarityStars(data.rarity)}")
 
         for (line in data.lore) {
-            newLore.add(ChatColor.translateAlternateColorCodes('&', line))
+            val finalLine = line
+                .replace("{arrows}", "0")
+                .replace("{max_arrows}", data.maxArrows.toString())
+                .replace("{threshold}", data.replenishThreshold.toString())
+                .replace("{amount}", data.replenishAmount.toString())
+                .replace("{stored}", "0")
+                .replace("{max_storage}", formatNumber(data.medicalOverflowMaxStorage))
+                .replace("{trigger_storage}", formatNumber(data.medicalOverflowTriggerStorage))
+            newLore.add(ChatColor.translateAlternateColorCodes('&', finalLine))
         }
         meta.lore = newLore
 
@@ -206,7 +221,7 @@ class CrystalManager(private val plugin: Hjh_database) {
         }
     }
 
-    private fun updateCrystalLore(item: ItemStack, crystalData: CrystalData, playerData: PlayerData, currentSlotKey: String) {
+    fun updateCrystalLore(item: ItemStack, crystalData: CrystalData, playerData: PlayerData, currentSlotKey: String) {
         val meta = item.itemMeta ?: return
 
         // 1. 首先判断当前槽位是否在配置的激活范围内
@@ -219,10 +234,10 @@ class CrystalManager(private val plugin: Hjh_database) {
             meta.setCustomModelData(null)
         }
 
-        // 2. 【核心修复点】既然槽位对了，就必须严格检查职业和等级
+        // 2. 【核心修复点】正确处理无职业限制 (-1) 的情况
         if (isActive) {
-            // 删掉了 > 0 的判断，因为 0 代表战士，也需要严格匹配
-            if (playerData.job != crystalData.reqJob) {
+            // 如果要求职业不是-1（有特定职业要求），并且玩家职业不符合
+            if (crystalData.reqJob != -1 && playerData.job != crystalData.reqJob) {
                 isActive = false
                 statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 职业不符")
             } else if (playerData.lv < crystalData.reqLv) {
@@ -263,6 +278,9 @@ class CrystalManager(private val plugin: Hjh_database) {
             currentArrows = meta.persistentDataContainer.get(arrowKey, PersistentDataType.INTEGER) ?: 0
         }
 
+        val medicalOverflowKey = NamespacedKey(plugin, "medical_overflow_stored")
+        val currentMedicalOverflow = meta.persistentDataContainer.get(medicalOverflowKey, PersistentDataType.DOUBLE) ?: 0.0
+
         for (line in crystalData.lore) {
             var finalLine = line
             if (isQuiver) {
@@ -271,6 +289,10 @@ class CrystalManager(private val plugin: Hjh_database) {
                     .replace("{threshold}", crystalData.replenishThreshold.toString())
                     .replace("{amount}", crystalData.replenishAmount.toString())
             }
+            finalLine = finalLine
+                .replace("{stored}", formatNumber(currentMedicalOverflow))
+                .replace("{max_storage}", formatNumber(crystalData.medicalOverflowMaxStorage))
+                .replace("{trigger_storage}", formatNumber(crystalData.medicalOverflowTriggerStorage))
             newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
         }
 
@@ -292,6 +314,10 @@ class CrystalManager(private val plugin: Hjh_database) {
 
         meta.lore = newLore
         item.itemMeta = meta
+    }
+
+    private fun formatNumber(value: Double): String {
+        return if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
     }
 
     fun refreshOpenAccessoryMenu(player: Player, topInv: org.bukkit.inventory.Inventory) {
@@ -330,9 +356,9 @@ class CrystalManager(private val plugin: Hjh_database) {
                 val crystalId = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)!!
                 val crystalData = loadedCrystals[crystalId] ?: return
 
-                val jobMatch = data.job == crystalData.reqJob
+// 【核心修复点】直接调用已经封装好的 isActivated 方法，彻底杜绝硬编码遗漏
                 // 校验：等级足够、职业匹配，且该槽位在配置文件的激活列表里
-                if (data.lv >= crystalData.reqLv && jobMatch && crystalData.activations.containsKey(slotKey)) {
+                if (crystalData.isActivated(data) && crystalData.activations.containsKey(slotKey)) {
 
                     data.rarityDetails.add(crystalData.rarity)
                     totalRarity += crystalData.rarity.toDouble()

@@ -123,3 +123,20 @@ geimoshengrendexin:
     - "&c阅读后信件自动销毁,请注意保管！"
     - "&e[任务物品]"
 
+gushashi:
+  material: ancient_debris
+  name: "&9古沙石"
+  rarity: 3
+  lore:
+    - "&7&o上古遗存于大漠深处的奇石"
+    - "&7&o历经千年风沙,内里坚不可摧"
+    - "&7&o仍是锻造武器的不二选择"
+
+huoshanshi:
+  material: obsidian
+  name: "&d火山石"
+  rarity: 4
+  lore:
+    - "&7&o火山怒吼后的凝固遗骸"
+    - "&7&o于山口与山脚沉睡百年,余温不散"
+    - "&7&o锻造成器,可迸发极强的能力"

@@ -4,21 +4,31 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
+import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.ItemFlag
+import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.inventory.meta.SkullMeta
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
 import java.util.ArrayList
 
 class MenuManager(private val plugin: Hjh_database) {
+    companion object {
+        const val TIANJI_TOKEN_RESOURCE_ID = "tianjiling"
+        const val SUICIDE_BUTTON_SLOT = 47
+        const val PORTABLE_WAREHOUSE_BUTTON_SLOT = 51
+    }
+
     private lateinit var file: File
     private lateinit var config: FileConfiguration
     private val tokenKey: NamespacedKey = NamespacedKey(plugin, "hjh_token_item")
+    private val resourceIdKey: NamespacedKey = NamespacedKey(plugin, "resource_id")
 
     // 用于 PDC 识别的 Key
     private val keyId = NamespacedKey(plugin, "id")
@@ -58,6 +68,21 @@ class MenuManager(private val plugin: Hjh_database) {
     }
 
     fun getTianjiToken(): ItemStack {
+        val resourceToken = try {
+            plugin.resourceManager.getItem(TIANJI_TOKEN_RESOURCE_ID)
+        } catch (_: UninitializedPropertyAccessException) {
+            null
+        }
+
+        if (resourceToken != null) {
+            val meta = resourceToken.itemMeta
+            if (meta != null) {
+                meta.persistentDataContainer.set(tokenKey, PersistentDataType.STRING, "true")
+                resourceToken.itemMeta = meta
+            }
+            return resourceToken
+        }
+
         val matStr = config.getString("token_item.material", "CLOCK")
         var mat = Material.getMaterial(matStr!!)
         if (mat == null) mat = Material.CLOCK
@@ -156,7 +181,39 @@ class MenuManager(private val plugin: Hjh_database) {
         accessoryButton.itemMeta = accessoryMeta
         inv.setItem(32, accessoryButton)
 
+        inv.setItem(SUICIDE_BUTTON_SLOT, createSuicideButton())
+        inv.setItem(PORTABLE_WAREHOUSE_BUTTON_SLOT, createMenuButton(Material.ENDER_CHEST, "§b随身宝箱", listOf(
+            "§7§o天机阁巧匠以须弥芥子之术,将钱庄库房藏入此令",
+            "§7§o持令者无论身在何方,皆可随心存取,不受时空所限",
+            "§7§o踏入§b§o[秘境]§7§o之中,此力便不可施展"
+        )))
+
         player.openInventory(inv)
+    }
+
+    private fun createMenuButton(material: Material, name: String, lore: List<String>): ItemStack {
+        val item = ItemStack(material)
+        val meta = item.itemMeta
+        meta?.setDisplayName(name)
+        meta?.lore = lore
+        item.itemMeta = meta
+        return item
+    }
+
+    private fun createSuicideButton(): ItemStack {
+        val item = ItemStack(Material.POTION)
+        val meta = item.itemMeta
+        meta?.setDisplayName(format("&4自尽"))
+        meta?.lore = listOf(
+            format("&7&o服下鹤顶丹自尽，随时随地就义"),
+            format("&c[双击确认]")
+        )
+        if (meta is PotionMeta) {
+            meta.color = Color.BLACK
+        }
+        meta?.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+        item.itemMeta = meta
+        return item
     }
 
     fun openDaoTianMenu(player: Player) {
@@ -224,8 +281,10 @@ class MenuManager(private val plugin: Hjh_database) {
     }
 
     fun isTianjiToken(item: ItemStack?): Boolean {
-        if (item == null || item.itemMeta == null) return false
-        return item.itemMeta!!.persistentDataContainer.has(tokenKey, PersistentDataType.STRING)
+        if (item == null || item.type.isAir || item.itemMeta == null) return false
+        val pdc = item.itemMeta!!.persistentDataContainer
+        if (pdc.has(tokenKey, PersistentDataType.STRING)) return true
+        return pdc.get(resourceIdKey, PersistentDataType.STRING) == TIANJI_TOKEN_RESOURCE_ID
     }
 
     private fun format(msg: String): String {

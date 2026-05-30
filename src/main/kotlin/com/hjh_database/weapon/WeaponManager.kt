@@ -40,6 +40,16 @@ class WeaponManager(private val plugin: Hjh_database) {
         return loadedWeapons[id]
     }
 
+    fun getWeaponDataFromItem(item: ItemStack?): WeaponData? {
+        if (item == null || item.type == Material.AIR || !item.hasItemMeta()) return null
+        val meta = item.itemMeta ?: return null
+        var id = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
+        if (id == null) {
+            id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING)
+        }
+        return id?.let { loadedWeapons[it] }
+    }
+
     fun reload() {
         loadedWeapons.clear()
         file = File(plugin.dataFolder, "weapons.yml")
@@ -86,8 +96,10 @@ class WeaponManager(private val plugin: Hjh_database) {
         if (wData.reqJob != -1) {
             if (data.job == null || data.job != wData.reqJob) return null
         }
-        // 4. 检查等级
-        if ((data.lv ?: 0) < wData.reqLv) return null
+        // 4. 检查等级 (修改点：如果 status 为 4，则绕过等级检查)
+        if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) {
+            return null
+        }
 
         return wData
     }
@@ -139,8 +151,8 @@ class WeaponManager(private val plugin: Hjh_database) {
                     statusLore.add(ChatColor.RED.toString() + "⚠ 职业不符")
                 }
             }
-            // 3. 检查等级
-            if ((data.lv ?: 0) < wData.reqLv) {
+            // 3. 检查等级 (修改点：status 为 4 时跳过此判定)
+            if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) {
                 isActive = false
                 statusLore.add(ChatColor.RED.toString() + "⚠ 等级不足 (" + data.lv + "/" + wData.reqLv + ")")
             }
@@ -285,8 +297,8 @@ class WeaponManager(private val plugin: Hjh_database) {
             if (wData.activateSlot != -1 && wData.activateSlot != slot) continue
             // 2. 职业不符，跳过
             if (wData.reqJob != -1 && (data.job == null || data.job != wData.reqJob)) continue
-            // 3. 等级不够，跳过
-            if ((data.lv ?: 0) < wData.reqLv) continue
+            // 3. 等级不够 (修改点：如果 status 是 4，即便等级不够也不跳过，继续执行)
+            if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) continue
 
             // === 激活成功 ===
             // ★【新增】这里是激活成功的地方，把稀有度记入 List

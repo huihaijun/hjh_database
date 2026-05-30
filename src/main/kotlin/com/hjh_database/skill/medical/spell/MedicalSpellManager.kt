@@ -28,8 +28,10 @@ import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import java.io.File
 import java.util.UUID
@@ -158,6 +160,23 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
                 setVisualCooldown(player, skillId, cooldownTicks)
             }
         }
+    }
+
+    fun applyMedicalHeal(caster: Player, target: LivingEntity, amount: Double, spellId: String? = null): Double {
+        if (amount <= 0.0 || target.isDead) return 0.0
+
+        val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return 0.0
+        val oldHealth = target.health
+        val actualHeal = amount.coerceAtMost(maxHealth - oldHealth).coerceAtLeast(0.0)
+        val overflowHeal = (amount - actualHeal).coerceAtLeast(0.0)
+
+        if (actualHeal > 0.0) {
+            target.health = (oldHealth + actualHeal).coerceAtMost(maxHealth)
+        }
+
+        val event = MedicalHealEvent(caster, target, spellId, amount, actualHeal, overflowHeal)
+        plugin.server.pluginManager.callEvent(event)
+        return actualHeal
     }
 
     /**

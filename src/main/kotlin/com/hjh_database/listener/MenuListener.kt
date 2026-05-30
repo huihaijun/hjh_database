@@ -3,33 +3,53 @@ package com.hjh_database.listener
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.ui.MenuManager.ElementType
+import com.hjh_database.ui.MenuManager.Companion.PORTABLE_WAREHOUSE_BUTTON_SLOT
+import com.hjh_database.ui.MenuManager.Companion.SUICIDE_BUTTON_SLOT
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.Event
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 
 class MenuListener(private val plugin: Hjh_database) : Listener {
+    private val suicideConfirmClicks = mutableMapOf<java.util.UUID, Long>()
 
     // 1. 监听玩家右键 (打开菜单)
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
-        // 增加对物理方块点击的过滤，防止点空气报错（虽然 Bukkit 通常处理得好）
-        if (event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK) {
-            val item = event.item ?: return // item 可能为 null
+        if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
 
-            // 配合 MenuManager 中的 PDC 检测逻辑
-            if (plugin.menuManager.isTianjiToken(item)) {
-                plugin.menuManager.openMainMenu(event.player)
-                event.isCancelled = true
+        val player = event.player
+        if (event.hand == EquipmentSlot.OFF_HAND) {
+            if (plugin.menuManager.isTianjiToken(player.inventory.itemInMainHand)) {
+                cancelTokenUse(event)
             }
+            return
         }
+
+        if (event.hand != EquipmentSlot.HAND) return
+
+        val item = player.inventory.itemInMainHand
+        if (plugin.menuManager.isTianjiToken(item)) {
+            cancelTokenUse(event)
+            plugin.menuManager.openMainMenu(player)
+        }
+    }
+
+    private fun cancelTokenUse(event: PlayerInteractEvent) {
+        event.isCancelled = true
+        event.setUseItemInHand(Event.Result.DENY)
+        event.setUseInteractedBlock(Event.Result.DENY)
     }
 
     // 2. 监听背包点击
@@ -40,6 +60,14 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
 
         // 1. 处理主菜单
         if (title.contains("天机")) {
+            val topSize = event.view.topInventory.size
+            if (event.rawSlot >= topSize) {
+                if (event.isShiftClick) {
+                    event.isCancelled = true
+                }
+                return
+            }
+
             event.isCancelled = true
 
             // 【新增】Slot 30: 任务记录 -> 打开任务分类 GUI
@@ -60,6 +88,14 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 player.closeInventory()
                 plugin.accessoryManager.openAccessoryMenu(player)
                 player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
+            }
+
+            else if (event.rawSlot == SUICIDE_BUTTON_SLOT) {
+                handleSuicideButton(player)
+            }
+
+            else if (event.rawSlot == PORTABLE_WAREHOUSE_BUTTON_SLOT) {
+                openPortableWarehouse(player)
             }
         }
         // 2. 处理道天图录菜单
@@ -92,6 +128,51 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    fun onInventoryDrag(event: InventoryDragEvent) {
+        val title = event.view.title
+        if (!title.contains("天机")) return
+
+        val topSize = event.view.topInventory.size
+        if (event.rawSlots.any { it < topSize }) {
+            event.isCancelled = true
+        }
+    }
+
+    private fun handleSuicideButton(player: Player) {
+        val now = System.currentTimeMillis()
+        val lastClick = suicideConfirmClicks[player.uniqueId] ?: 0L
+
+        if (now - lastClick <= 3000L) {
+            suicideConfirmClicks.remove(player.uniqueId)
+            player.closeInventory()
+            player.sendMessage("§4[天机令] §c你服下鹤顶丹，气息渐绝……")
+            player.playSound(player.location, Sound.ENTITY_WITHER_DEATH, 0.8f, 1.3f)
+            player.health = 0.0
+            return
+        }
+
+        suicideConfirmClicks[player.uniqueId] = now
+        player.sendMessage("§c[天机令] 再次点击 §4自尽 §c确认就义。")
+        player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.6f)
+    }
+
+    private fun openPortableWarehouse(player: Player) {
+        if (isInDungeon(player)) {
+            player.sendMessage("§c[天机令] 秘境之中天机紊乱，无法开启随身宝箱。")
+            player.playSound(player.location, Sound.BLOCK_CHEST_LOCKED, 1f, 1f)
+            return
+        }
+
+        player.openInventory(player.enderChest)
+        player.playSound(player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
+    }
+
+    private fun isInDungeon(player: Player): Boolean {
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        return data.status == 5
     }
 
     private fun handleElementClick(player: Player, type: ElementType, click: ClickType) {

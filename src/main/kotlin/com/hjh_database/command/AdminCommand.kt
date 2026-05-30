@@ -27,6 +27,15 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
     // 反向查找 (使用 Kotlin 的 associate 替代 Stream)
     private val jobReverseMap = jobMap.entries.associate { (k, v) -> v to k }
     private val raceReverseMap = raceMap.entries.associate { (k, v) -> v to k }
+    private val statusPresets = mapOf(
+        0 to "新人进入服务器",
+        1 to "新人-过前置描述-未进入盘古大陆",
+        2 to "新人-已进入大陆-过剧情ing",
+        3 to "大陆中",
+        4 to "新人-已进入大陆-职业体验中",
+        5 to "副本中",
+        6 to "奈何桥中"
+    )
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (!sender.isOp) {
@@ -37,7 +46,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         if (args.isEmpty()) {
             sender.sendMessage(ChatColor.YELLOW.toString() + "=== HJH 管理员指令 ===")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin reload - 重载配置")
-            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin get <物品ID/名称> [数量] - 获取Resource物品")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin <get|give> <物品ID/名称> [数量] - 获取Resource物品")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettestgear <玩家> - 获取测试装备")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin givetoken <玩家> - 给予天机令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin level <玩家> [set|add] [数值] - 查看或修改玩家等级")
@@ -122,14 +131,14 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         }
 
         // === get (获取 Resource 物品) ===
-        if (subCommand == "get") {
+        if (subCommand == "get" || subCommand == "give") {
             if (sender !is Player) {
                 sender.sendMessage(ChatColor.RED.toString() + "只有玩家可以使用此命令。")
                 return true
             }
             val player = sender
 
-            if (args.size < 2) return error(sender, "用法: /hjhadmin get <物品ID或名字> [数量]")
+            if (args.size < 2) return error(sender, "用法: /hjhadmin <get|give> <物品ID或名字> [数量]")
 
             val itemName = args[1]
             val item = plugin.resourceManager.getItem(itemName)
@@ -285,6 +294,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 1. 查询状态 (只有2个参数时)
             if (args.size == 2) {
                 sender.sendMessage("§8[§aStatus§8] §f${target.name}: §e${data.status} §7(${data.statusDescription})")
+                sender.sendMessage("§7可用预设: ${formatStatusPresets()}")
                 return true
             }
             // 2. 修改状态 (参数 >= 4 且 第三个参数是 set)
@@ -308,7 +318,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 })
                 return true
             }
-            return error(sender, "用法: /hjhadmin status <玩家> [set <数值>]")
+            return error(sender, "用法: /hjhadmin status <玩家> [set <数值>]，可用预设: ${formatStatusPresets()}")
         }
 
         // === gettp (获取传送触发方块) ===
@@ -970,7 +980,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         // === 1. 一级补全 ===
         if (args.size == 1) {
             val rootCommands = listOf(
-                "job", "race", "givetoken", "level", "reload", "gettestgear", "get",
+                "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
                 "medicaltest"
@@ -1019,7 +1029,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             "status" -> {
                 if (args.size == 2) return null // 玩家名
                 if (args.size == 3) return listOf("set").filter { it.startsWith(args[2].lowercase()) }
-                if (args.size == 4 && args[2].equals("set", true)) return listOf("0", "1", "2", "3", "4").filter { it.startsWith(args[3]) }
+                if (args.size == 4 && args[2].equals("set", true)) return statusPresets.keys.map { it.toString() }.filter { it.startsWith(args[3]) }
             }
 
             "gettp" -> {
@@ -1027,7 +1037,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 if (args.size == 3) return plugin.teleportManager.points.keys.toList().filter { it.startsWith(args[2]) }
             }
 
-            "get" -> {
+            "get", "give" -> {
                 if (args.size == 2 && plugin.resourceManager != null) {
                     val currentInput = args[1].lowercase()
                     return plugin.resourceManager.getAllItemNames().filter { it.lowercase().startsWith(currentInput) }
@@ -1140,5 +1150,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         if (args.size == 2) return null
 
         return ArrayList()
+    }
+
+    private fun formatStatusPresets(): String {
+        return statusPresets.entries.joinToString("§7, ") { "§e${it.key}§7=${it.value}" }
     }
 }

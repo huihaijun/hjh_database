@@ -2,12 +2,12 @@ package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.medical.spell.impl.YuHeHuaSpell
+import com.hjh_database.weapon.WeaponManager
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -55,7 +55,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
             .checkActiveWeapon(p, activeSlotItem, 0)
 
         // 如果第0格不是激活的武器，或者第0格虽然激活了但不是医旗 -> 禁止施法
-        if (activeWd == null || !plugin.medicalManager.isMedicalBanner(activeSlotItem)) {
+        if (activeWd == null || !isMedicalFlag(activeSlotItem, activeWd)) {
             // 这里可以不发消息（静默失败），或者提示玩家“请先在第一格装备已激活的医旗”
             return
         }
@@ -93,17 +93,11 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         // 如果已经在充能，不再重复开启
         if (chargingTasks.containsKey(p.uniqueId)) return
 
-        // 1. 检查手持物品是否为激活的医旗
+        // 1. 检查快捷栏第一格是否有已经激活的医旗，回灵数值以这把医旗为准
         val handItem = p.inventory.itemInMainHand
-        val slot = p.inventory.heldItemSlot
+        if (!isAnyMedicalFlag(handItem)) return
 
-        val wd = plugin.playerManager.weaponManager
-            .checkActiveWeapon(p, handItem, slot)
-
-        // 必须是有效的武器，且配置了回蓝属性 > 0
-        if (wd == null || wd.manaRegen <= 0) return
-        // 必须是医旗 (可选检查，防止其他职业武器也回蓝，如果想让所有武器都支持Shift回蓝则去掉这行)
-        if (!plugin.medicalManager.isMedicalBanner(handItem)) return
+        val activeWd = getActiveManaFlag(p) ?: return
 
         // 2. 发送开始提示
         p.sendMessage("§a[医术] §7你已开始凝聚灵力...")
@@ -118,12 +112,10 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                 }
                 // 持续检查：手中物品是否还在？是否还是那把医旗？
                 val currentItem = p.inventory.itemInMainHand
-                val currentSlot = p.inventory.heldItemSlot
-                val currentWd = plugin.playerManager.weaponManager
-                    .checkActiveWeapon(p, currentItem, currentSlot)
+                val currentWd = getActiveManaFlag(p)
 
                 // 如果切换了物品，或者物品失效
-                if (currentWd == null || currentWd.manaRegen <= 0) {
+                if (!isAnyMedicalFlag(currentItem) || currentWd == null || currentWd.manaRegen <= 0) {
                     stopCharging(p)
                     return
                 }
@@ -159,6 +151,24 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    private fun getActiveManaFlag(player: Player): WeaponManager.WeaponData? {
+        val activeSlotItem = player.inventory.getItem(0)
+        val activeWd = plugin.playerManager.weaponManager.checkActiveWeapon(player, activeSlotItem, 0) ?: return null
+        if (activeWd.manaRegen <= 0.0) return null
+        return if (isMedicalFlag(activeSlotItem, activeWd)) activeWd else null
+    }
+
+    private fun isAnyMedicalFlag(item: org.bukkit.inventory.ItemStack?): Boolean {
+        if (item == null || !item.type.name.endsWith("_BANNER")) return false
+        if (plugin.medicalManager.isMedicalBanner(item)) return true
+        val wd = plugin.playerManager.weaponManager.getWeaponDataFromItem(item) ?: return false
+        return isMedicalFlag(item, wd)
+    }
+
+    private fun isMedicalFlag(item: org.bukkit.inventory.ItemStack?, wd: WeaponManager.WeaponData): Boolean {
+        return item != null && item.type.name.endsWith("_BANNER") && wd.reqJob == 3
+    }
+
     // === 拾取愈合花逻辑保持不变 ===
     @EventHandler
     fun onPickup(e: EntityPickupItemEvent) {
@@ -173,9 +183,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
             e.isCancelled = true
             e.item.remove()
             val heal = item.itemMeta!!.persistentDataContainer.get(keyHeal, PersistentDataType.DOUBLE)!!
-            val maxHealth = p.getAttribute(Attribute.MAX_HEALTH)!!.value
-            val newHealth = (p.health + heal).coerceAtMost(maxHealth)
-            p.health = newHealth
+            plugin.medicalSpellManager.applyMedicalHeal(p, p, heal, "yuhehua")
             p.world.spawnParticle(Particle.HEART, p.location.add(0.0, 2.0, 0.0), 3, 0.3, 0.3, 0.3, 0.05)
             p.playSound(p.location, Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2.0f)
             p.sendMessage("§d[医术] §7你拾取了愈合花，生命值恢复了 §a" + String.format("%.1f", heal) + " §7点！")

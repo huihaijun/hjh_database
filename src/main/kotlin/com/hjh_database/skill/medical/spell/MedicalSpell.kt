@@ -2,7 +2,10 @@ package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.data.PlayerData
 import org.bukkit.configuration.ConfigurationSection
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
 
 interface MedicalSpell {
     /**
@@ -14,4 +17,23 @@ interface MedicalSpell {
      * @return true 表示释放成功 (扣灵力/进CD)，false 表示释放失败或被取消
      */
     fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean
+}
+
+class MedicalHealEvent(
+    val caster: Player,
+    val target: LivingEntity,
+    val spellId: String?,
+    val requestedHeal: Double,
+    val actualHeal: Double,
+    val overflowHeal: Double
+) : Event() {
+    override fun getHandlers(): HandlerList = HANDLERS
+
+    companion object {
+        @JvmStatic
+        val HANDLERS = HandlerList()
+
+        @JvmStatic
+        fun getHandlerList(): HandlerList = HANDLERS
+    }
 }

@@ -1,49 +1,33 @@
 package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
-import com.hjh_database.data.PlayerData
-import com.hjh_database.skill.element_zf.ElementSkill
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
-import org.bukkit.ChatColor
-import org.bukkit.Location
+import com.hjh_database.skill.element_zf.AbstractElementSkill
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.World
 import org.bukkit.configuration.ConfigurationSection
-import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.metadata.FixedMetadataValue
-import org.bukkit.util.Vector
 import kotlin.math.ceil
 import kotlin.math.min
 
-class WoodSkill(private val plugin: Hjh_database) : ElementSkill {
+// 【改动1】继承 AbstractElementSkill，去掉 private val
+class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
-    override fun cast(player: Player, level: Int, config: ConfigurationSection?): Boolean {
-        // 1. 读取配置
-        // 显式断言 config 非空，保持原 Java 逻辑（如果为 null 原代码也会空指针）
-        val safeConfig = config!!
+    // 【改动2】将 cast 改为 onCast
+    override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
 
-        var path = "levels.$level"
-        if (!safeConfig.contains(path)) path = "levels.1"
-
+        // 1. 读取配置 (父类已处理非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 2.5)
         val healPercent = safeConfig.getDouble("$path.heal_percent", 0.2)
         val range = safeConfig.getDouble("$path.range", 5.0)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
 
-        // 【新增】2. 消耗物品 (不管有没有目标，先扣物品)
-        val handItem = player.inventory.itemInMainHand
-        handItem.amount = handItem.amount - 1
+        // ！！！ 消耗物品逻辑已交由父类处理，此处彻底删除 ！！！
 
-        // 3. 获取玩家数据 (为后续加灵力和算伤害做准备)
-        // 【关键点】显式使用 !! 断言，将 PlayerData? 转为 PlayerData
+        // 2. 获取玩家数据并增加灵力 (空放也加)
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
-        // 【新增】4. 增加灵力 (空放也加)
         if (lingliAdd > 0) {
             val currentLingli = data.lingli
             val maxLingli = data.maxLingli
@@ -54,15 +38,11 @@ class WoodSkill(private val plugin: Hjh_database) : ElementSkill {
             }
         }
 
-//        player.spigot().sendMessage(
-//            ChatMessageType.ACTION_BAR,
-//            TextComponent(ChatColor.GOLD.toString() + "当前灵力值: " + String.format("%.1f", data.lingli))
-//        )
-
-        // 5. 寻找目标
+        // 3. 寻找目标
         val target = findTarget(player, range)
 
-        // 【修改】不再判空返回 false，而是判断如果有目标才造成伤害
+        // 4. 造成伤害与吸血
+        // 如果有目标才造成伤害
         if (target != null) {
             // 计算伤害
             val baseDamage = data.zfStr
@@ -85,10 +65,14 @@ class WoodSkill(private val plugin: Hjh_database) : ElementSkill {
         } else {
             // (可选) 如果空放，可以播放一个失败的音效或者只在脚下播点特效，这里暂不处理，保持安静
         }
-        // 6. 提示与返回 (返回 true 代表释放成功，进入冷却)
-//        player.sendMessage("§a§l[汲魂] §f阵法释放成功！");
+
+        // 返回 true 代表释放成功，进入冷却
         return true
     }
+
+    // ============================================
+    // 下方的 findTarget 和 playEffects 完完全全保持你源码的原样！
+    // ============================================
 
     /**
      * 寻找前方最近的有效目标

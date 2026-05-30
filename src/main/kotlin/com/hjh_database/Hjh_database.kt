@@ -175,7 +175,6 @@ class Hjh_database : JavaPlugin() {
 
         // 饰品栏管理器监听
         pm.registerEvents(this.accessoryManager, this)
-        server.pluginManager.registerEvents(accessoryManager, this)
         // 青龙试炼监听
         pm.registerEvents(this.qingLongManager, this)
         // 朱雀试炼监听

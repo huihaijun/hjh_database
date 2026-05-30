@@ -1,7 +1,7 @@
 package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
-import com.hjh_database.skill.element_zf.ElementSkill
+import com.hjh_database.skill.element_zf.AbstractElementSkill
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
@@ -15,16 +15,13 @@ import org.bukkit.potion.PotionEffectType
 import org.bukkit.util.Vector
 import kotlin.math.min
 
-class WaterSkill(private val plugin: Hjh_database) : ElementSkill {
+// 【改动1】继承 AbstractElementSkill，去掉 private val
+class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
-    override fun cast(player: Player, level: Int, config: ConfigurationSection?): Boolean {
-        // 1. 读取配置
-        // 【关键点】显式断言 config 非空
-        val safeConfig = config!!
+    // 【改动2】将 cast 改为 onCast
+    override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
 
-        var path = "levels.$level"
-        if (!safeConfig.contains(path)) path = "levels.1"
-
+        // 1. 读取配置 (父类已处理好了非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 1.0)
         val range = safeConfig.getDouble("$path.range", 4.0)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
@@ -32,15 +29,11 @@ class WaterSkill(private val plugin: Hjh_database) : ElementSkill {
         val slowDurationSeconds = safeConfig.getDouble("$path.slow_duration", 2.0)
         val slowAmplifier = safeConfig.getInt("$path.slow_amplifier", 1)
 
-        // 【新增】2. 消耗物品
-        val handItem = player.inventory.itemInMainHand
-        handItem.amount = handItem.amount - 1
+        // ！！！ 消耗物品逻辑已交由父类处理，此处彻底删除 ！！！
 
-        // 3. 获取数据
-        // 【关键点】显式使用 !! 断言，将 PlayerData? 转为 PlayerData，防止 Nullable receiver 报错
+        // 2. 获取数据并增加灵力
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
-        // 【新增】4. 增加灵力
         if (lingliAdd > 0) {
             val currentLingli = data.lingli
             val maxLingli = data.maxLingli
@@ -50,10 +43,11 @@ class WaterSkill(private val plugin: Hjh_database) : ElementSkill {
             }
         }
 
-        // 5. 寻找目标
+        // 3. 寻找目标
         val targets = findTargets(player, range)
 
-        // 【修改】如果有目标，才循环造成伤害；没有目标就跳过，但不打断流程
+        // 4. 造成伤害与控制
+        // 如果有目标，才循环造成伤害；没有目标就跳过，但不打断流程
         if (targets.isNotEmpty()) {
             val baseDamage = data.zfStr
             val finalDamage = baseDamage * damagePercent
@@ -75,12 +69,15 @@ class WaterSkill(private val plugin: Hjh_database) : ElementSkill {
             }
         }
 
-        // 6. 提示与特效 (空放也会播放扇形特效)
-//        player.sendMessage("§b§l[霜冻] §f阵法释放成功！");
+        // 5. 提示与特效 (空放也会播放扇形特效)
         playConeEffects(player, range)
 
         return true // 总是进入冷却
     }
+
+    // ============================================
+    // 下方的 findTargets 和 playConeEffects 完完全全保持你源码的原样！
+    // ============================================
 
     private fun findTargets(player: Player, range: Double): List<LivingEntity> {
         val entities = player.getNearbyEntities(range, range, range)
@@ -103,7 +100,7 @@ class WaterSkill(private val plugin: Hjh_database) : ElementSkill {
     }
 
     /**
-     * 【核心优化】播放锥形/扇形 冰霜喷射特效
+     * 播放锥形/扇形 冰霜喷射特效
      */
     private fun playConeEffects(player: Player, range: Double) {
         // 起点：玩家眼睛稍微往下一点，模拟嘴巴/手部吹气

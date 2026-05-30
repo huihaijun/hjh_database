@@ -434,7 +434,7 @@ object MobRegistry {
             armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=35,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.6),
@@ -460,7 +460,7 @@ object MobRegistry {
             armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=35,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.6),
@@ -486,7 +486,7 @@ object MobRegistry {
             armor = 8.0,
             speed = 0.2,
             exp=35,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -514,7 +514,7 @@ object MobRegistry {
             armor = 4.0,
             speed = 0.22,
             exp=40,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -544,7 +544,7 @@ object MobRegistry {
             armor = 6.0,
             speed = 0.2,
             exp=45,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -574,7 +574,7 @@ object MobRegistry {
             armor = 2.0,
             speed = 0.2,
             exp=45,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -603,7 +603,7 @@ object MobRegistry {
             damage = 10.0,
             armor = 8.0,
             speed = 0.2,
-            exp=45,
+            exp=80,
             maxNearby = 1,
             drops = listOf(
                 // 掉落火元素
@@ -635,7 +635,7 @@ object MobRegistry {
             armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -663,7 +663,7 @@ object MobRegistry {
             armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.6),
@@ -689,7 +689,7 @@ object MobRegistry {
             armor = 8.0,
             speed = 0.2,
             exp=60,
-            maxNearby = 1,
+            maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
                 MobDrop("fire", 1, 2, 0.8),
@@ -711,14 +711,96 @@ object MobRegistry {
             mainHand = Material.STONE_SHOVEL  // 纯装饰
         ))
         register(MobDefinition(
+            id = "wenquan_huoyanmo",
+            name = "&c骚扰客栈的 火焰魔",
+            type = EntityType.BLAZE,
+            health = 18.0,
+            damage = 4.0,
+            armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=60,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.1),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落货物
+                MobDrop("wenquankezhanbujipin", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+        ))
+        register(MobDefinition(
+            id = "wenquan_etuhun",
+            name = "&c骚扰客栈的 恶土魂",
+            type = EntityType.MAGMA_CUBE,
+            health = 14.0,
+            damage = 3.0,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.2,
+            exp=60,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.6),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.9),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.3),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 30%掉落货物
+                MobDrop("wenquankezhanbujipin", 1, 2, 0.3),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+        ))
+        register(MobDefinition(
+            id = "wenquan_huangshatubing",
+            name = "&c骚扰客栈的 黄沙土兵",
+            type = EntityType.HUSK,
+            health = 25.0,
+            damage = 6.0,
+            armor = 9.0,
+            speed = 0.2,
+            exp=50,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落火元素
+                MobDrop("fire", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.6),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 20%掉落货物
+                MobDrop("wenquankezhanbujipin", 1, 2, 0.2),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 1, 1, 0.2),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH),
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.STONE_SWORD   // 纯装饰
+        ))
+        register(MobDefinition(
             id = "shamofengbao",
             name = "&6千斤的 沙漠风暴",
             type = EntityType.BREEZE,
-            health = 350.0,
-            damage = 5.0,
-            armor = 4.0,
-            speed = 0.1,
-            exp=45,
+            health = 400.0,
+            damage = 8.0,
+            armor = 15.0,
+            speed = 0.15,
+            exp=80,
             maxNearby = 1,
             drops = listOf(
                 // 掉落土元素
@@ -727,14 +809,12 @@ object MobRegistry {
                 MobDrop("jinyuanbao", 1, 1, 0.4),
                 // 10%掉落重生石
                 MobDrop("relive_stone", 1, 1, 1.0),
-                // 货物
-                MobDrop("wangyuanwaibeiqiangzoudehuowu", 3, 4, 1.0),
                 // 焱砂之心
-                MobDrop("yanshazhixin", 1, 2, 0.6),
-                // 掉落三阶材料
-                MobDrop("huangfengyan", 1, 1, 0.3),
+                MobDrop("yanshazhixin", 2, 3, 0.6),
+                // 掉落三阶材料 黄风眼
+                MobDrop("huangfengyan", 1, 1, 0.35),
             ),
-            affixes = listOf(), // 南方词条
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
         ))
     }
 }

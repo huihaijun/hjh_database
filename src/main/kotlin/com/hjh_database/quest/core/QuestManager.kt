@@ -96,6 +96,33 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
         plugin.databaseManager.saveQuestData(player, questId, QuestStatus.IN_PROGRESS, 0)
     }
 
+    fun refreshAvailableQuests(player: Player, type: QuestType): Int {
+        val data = plugin.playerManager.getPlayerData(player) ?: return 0
+        val quests = getAllQuests()
+            .filter { it.type == type }
+            .sortedBy { it.order }
+
+        var unlocked = 0
+        for (quest in quests) {
+            val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED
+            if (status != QuestStatus.LOCKED) continue
+            if (!quest.canAccept(player, data)) continue
+            if (!hasRequiredPreviousQuest(data, quest, quests)) continue
+
+            acceptQuest(player, quest.id)
+            unlocked++
+        }
+
+        return unlocked
+    }
+
+    private fun hasRequiredPreviousQuest(data: PlayerData, quest: QuestBase, quests: List<QuestBase>): Boolean {
+        if (quest.order <= 1) return true
+
+        val prevQuest = quests.find { it.order == quest.order - 1 } ?: return false
+        return data.questStatuses[prevQuest.id] == QuestStatus.COMPLETED || data.completedQuests.contains(prevQuest.id)
+    }
+
     // === 事件监听分发 ===
 
     @EventHandler

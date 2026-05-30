@@ -1,10 +1,7 @@
 package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
-import com.hjh_database.skill.element_zf.ElementSkill
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
+import com.hjh_database.skill.element_zf.AbstractElementSkill
 import org.bukkit.*
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
@@ -15,16 +12,13 @@ import org.bukkit.util.Vector
 import kotlin.math.cos
 import kotlin.math.sin
 
-class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
+// 【改动1】继承 AbstractElementSkill，去掉 private val
+class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
-    override fun cast(player: Player, level: Int, config: ConfigurationSection?): Boolean {
-        // config 在 Manager 传入时可能为空
-        val safeConfig = config!!
+    // 【改动2】将 cast 改为 onCast
+    override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
 
-        // 1. 获取配置数值
-        var path = "levels.$level"
-        if (!safeConfig.contains(path)) path = "levels.1"
-
+        // 1. 获取配置数值 (父类已处理好了非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 2.5)
         val range = safeConfig.getDouble("$path.range", 3.0)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
@@ -32,25 +26,33 @@ class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
         val maxTargets = safeConfig.getInt("$path.max_targets", 1)
         val effectRadius = safeConfig.getDouble("$path.effect_radius", 2.5 + (level * 0.5))
 
-        // 2. 消耗物品
-        val handItem = player.inventory.itemInMainHand
-        handItem.amount = handItem.amount - 1
+        // ！！！ 消耗物品逻辑已交由父类处理，此处删除 ！！！
 
-        // 3. 增加灵力 & 提示
-        // 【修复点】：添加 !! 断言，确保 data 不为 null
+        // 2. 增加灵力 & 提示
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
         data.lingli = data.lingli + lingliAdd
-
         // 修改完数据后，必须告诉数据库管理器保存数据
-        // 【修复点】：由于上面加了 !!，这里的 data 已经是非空类型，不会再报错
         plugin.databaseManager.savePlayer(data)
 
-        // 4. 计算目标位置 (星云中心)
+        // 3. 计算目标位置 (星云中心)
         val hitLoc = getHitLocation(player, range)
         val cloudCenter = hitLoc.clone().add(0.0, 0.1, 0.0) // 稍微抬高防止贴地
 
-        // 【新增】播放指向性光束特效 (金色射线)
+        // ============================================
+        // 【新增改动】播放星云密布、神秘空灵的组合音效
+        // ============================================
+        val world = cloudCenter.world
+        if (world != null) {
+            // 附魔台：深邃神秘的基础施法音
+            world.playSound(cloudCenter, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 0.8f)
+            // 紫水晶：清脆空灵，模拟星星点点的闪烁感 (高音调)
+            world.playSound(cloudCenter, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.2f, 1.5f)
+            // 信标：宇宙空间般的空旷嗡鸣感 (高音调)
+            world.playSound(cloudCenter, Sound.BLOCK_BEACON_AMBIENT, 1.5f, 2.0f)
+        }
+
+        // 4. 播放指向性光束特效 (金色射线)
         playTargetingBeam(player, hitLoc)
 
         // 5. 寻找目标怪物并造成伤害
@@ -74,7 +76,7 @@ class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
         val damage = data.zfStr * damagePercent
 
         for (victim in victims) {
-            // === 【核心修改】 法术伤害逻辑 ===
+            // === 法术伤害逻辑 ===
             // 1. 贴标签：告诉 CombatListener 这是法术伤害，请无视护甲
             victim.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
 
@@ -91,6 +93,10 @@ class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
 
         return true
     }
+
+    // ============================================
+    // 下方的所有辅助方法完完全全保持你源码的原样！
+    // ============================================
 
     /**
      * 获取视线撞击点
@@ -123,7 +129,7 @@ class MetalSkill(private val plugin: Hjh_database) : ElementSkill {
     }
 
     /**
-     * 【新增】播放指向性光束
+     * 播放指向性光束
      * 从玩家眼部下方射出一道粒子直到目标点
      */
     private fun playTargetingBeam(player: Player, endLoc: Location) {

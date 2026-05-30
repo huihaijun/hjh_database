@@ -101,6 +101,13 @@ huangfengyan:
     - "&7&o小小一块风眼,竟可容纳如此风力"
     - "&7&o锻造时将其融入,能让铠甲更加坚固"
 
+wenquankezhanbujipin:
+  material: ORANGE_DYE
+  name: "&b温泉客栈需要的补给品"
+  lore:
+    - "&7&o从怪物身上找到的补给品"
+    - "&7&o收集一些给温泉客栈吧"
+
 
 
 

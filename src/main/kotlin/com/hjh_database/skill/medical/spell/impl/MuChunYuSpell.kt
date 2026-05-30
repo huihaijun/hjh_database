@@ -6,7 +6,6 @@ import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitRunnable
@@ -67,8 +66,7 @@ class MuChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                     // 结算治疗
                     for (target in targets) {
                         if (!target.isDead) {
-                            val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-                            target.health = (target.health + healAmount).coerceAtMost(maxHealth)
+                            plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "muchunyu")
                             // 在被治疗的人身上冒几个开心的绿星粒子
                             target.world.spawnParticle(Particle.HAPPY_VILLAGER, target.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.3, 0.3, 0.0)
                         }

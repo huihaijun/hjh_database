@@ -84,13 +84,12 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
             inv.setItem(index, icon)
         }
 
-        // [修改点]：在主线任务界面的最后一行增加刷新按钮
-        if (type == QuestType.MAIN) {
+        if (canRefresh(type)) {
             inv.setItem(48, createIcon(Material.NETHER_STAR, "§e§l刷新/接取新任务", listOf(
-                "§7当版本更新增加了新主线后",
+                "§7当版本更新增加了新${type.displayName}后",
                 "§7如果后续任务没显示，请点击此处",
                 "",
-                "§b▶ 点击检测并开启下一阶段"
+                "§b▶ 点击检测并接取新任务"
             )))
         }
 
@@ -135,12 +134,10 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
 
             val type = holder.type // 确保你的 ListHolder 构造函数里保存了 type
 
-            // [新增] 刷新按钮逻辑
-            if (e.rawSlot == 48 && type == QuestType.MAIN) {
-                refreshMainQuests(player)
+            if (e.rawSlot == 48 && canRefresh(type)) {
+                refreshQuests(player, type)
                 player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f)
-                // 刷新完重新打开一遍 GUI 以看到新任务
-                openQuestListMenu(player, QuestType.MAIN)
+                openQuestListMenu(player, type)
                 return
             }
 
@@ -153,42 +150,12 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // === [新增] 核心刷新逻辑方法 (写在 QuestGui 类末尾) ===
-    private fun refreshMainQuests(player: Player) {
-        val data = plugin.playerManager.getPlayerData(player) ?: return
+    private fun canRefresh(type: QuestType): Boolean {
+        return type == QuestType.MAIN || type == QuestType.SIDE
+    }
 
-        // 获取所有主线任务并按 order 排序
-        val allMainQuests = plugin.questManager.getAllQuests()
-            .filter { it.type == QuestType.MAIN }
-            .sortedBy { it.order }
-
-        var unlockCount = 0
-        for (quest in allMainQuests) {
-            val status = data.questStatuses.getOrDefault(quest.id, com.hjh_database.quest.core.QuestStatus.LOCKED)
-
-            // 只有目前是 LOCKED 的任务才需要检测是否可以解锁
-            if (status == com.hjh_database.quest.core.QuestStatus.LOCKED) {
-                // 检查解锁条件：
-                // 1. 种族匹配
-                val raceMatch = quest.raceLimit == null || quest.raceLimit == data.race
-
-                // 2. 逻辑匹配：第一个任务(order=1) 或者 前一个任务(order-1) 已完成
-                val logicMatch = if (quest.order <= 1) {
-                    true
-                } else {
-                    val prevQuest = allMainQuests.find { it.order == quest.order - 1 }
-                    // 如果找到了前置任务，且前置任务状态是 COMPLETED
-                    prevQuest != null && data.questStatuses[prevQuest.id] == com.hjh_database.quest.core.QuestStatus.COMPLETED
-                }
-
-                if (raceMatch && logicMatch) {
-                    data.questStatuses[quest.id] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
-                    data.questProgress[quest.id] = 0
-                    unlockCount++
-                }
-            }
-        }
-
+    private fun refreshQuests(player: Player, type: QuestType) {
+        val unlockCount = plugin.questManager.refreshAvailableQuests(player, type)
         if (unlockCount > 0) {
             player.sendMessage("§a[任务系统] 刷新成功！检测并接取了 §f$unlockCount §a个新任务。")
         } else {

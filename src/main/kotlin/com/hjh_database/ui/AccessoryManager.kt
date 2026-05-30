@@ -45,9 +45,13 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
-
         if (event.view.title == INVENTORY_TITLE) {
-
+            // 【修复1】屏蔽副手(按F键)和数字键(按1-9)快捷交换，防止刷物品和二次触发Bug
+            if (event.click == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND ||
+                event.click == org.bukkit.event.inventory.ClickType.NUMBER_KEY) {
+                event.isCancelled = true
+                return
+            }
             val clickType = event.click
             if (clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT) {
                 val item = event.currentItem

@@ -6,7 +6,6 @@ import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffect
@@ -66,8 +65,7 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             }
 
             // 执行群体治疗
-            val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-            target.health = (target.health + healAmount).coerceAtMost(maxHealth)
+            plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "huichunyu")
 
             // 为每个被治疗的目标播放绿色的星芒粒子
             target.world.spawnParticle(
@@ -80,7 +78,7 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
         // 为血量最低的玩家附加基于其最大生命值的黄心护盾
         lowestHpPlayer?.let { lowest ->
-            val targetMaxHealth = lowest.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
+            val targetMaxHealth = lowest.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
             val shieldAmount = targetMaxHealth * shieldMultiplier
 
             // 动态计算药水等级解锁黄心上限

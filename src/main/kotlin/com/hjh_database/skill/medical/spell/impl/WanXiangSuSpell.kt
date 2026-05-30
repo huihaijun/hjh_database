@@ -5,7 +5,6 @@ import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffect
@@ -56,8 +55,7 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
             if (target.isDead) continue
 
             // 1. 瞬间抬血
-            val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-            target.health = (target.health + healAmount).coerceAtMost(maxHealth)
+            plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "wanxiangsu")
 
             // 2. 生命恢复 II
             target.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, durationTicks.toInt(), 1, false, false, true))

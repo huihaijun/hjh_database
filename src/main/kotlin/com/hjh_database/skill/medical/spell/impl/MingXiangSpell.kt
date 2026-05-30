@@ -5,7 +5,6 @@ import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -82,8 +81,7 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
                 // 每 10 ticks (0.5秒) 触发一次恢复
                 if (ticks > 0 && ticks % 10 == 0) {
                     // --- 恢复生命值 ---
-                    val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
-                    player.health = (player.health + regenAmount).coerceAtMost(maxHealth)
+                    plugin.medicalSpellManager.applyMedicalHeal(player, player, regenAmount, "mingxiang")
 
                     // ==================== 修改区域 2：灵力恢复 ====================
                     // 调用你专属的 addLingli 方法，内部自带上限和下限防溢出处理

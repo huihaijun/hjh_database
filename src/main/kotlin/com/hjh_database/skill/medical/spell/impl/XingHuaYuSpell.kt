@@ -6,7 +6,6 @@ import com.hjh_database.skill.medical.spell.MedicalSpell
 import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffect
@@ -99,8 +98,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                             val targets = player.world.getNearbyEntities(centerLoc, 2.5, 4.0, 2.5)
                             for (entity in targets) {
                                 if (entity is Player && !entity.isDead) {
-                                    val maxHealth = entity.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-                                    entity.health = (entity.health + healAmount).coerceAtMost(maxHealth)
+                                    plugin.medicalSpellManager.applyMedicalHeal(player, entity, healAmount, "xinghuayu")
                                     // 飘点爱心
                                     entity.world.spawnParticle(Particle.HEART, entity.location.clone().add(0.0, 2.0, 0.0), 1, 0.3, 0.3, 0.3, 0.0)
                                 }
