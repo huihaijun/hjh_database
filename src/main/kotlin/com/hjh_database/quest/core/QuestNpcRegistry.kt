@@ -121,6 +121,28 @@ enum class StoryNpcs(
         Villager.Profession.NITWIT,
         Villager.Type.SAVANNA,
         244.5, 17.5, 720.5, 0f
+    ),
+
+    SHAOBIN(
+        "shaobin",
+        "§a§l邵斌",
+        Villager.Profession.FISHERMAN,
+        Villager.Type.DESERT,
+        -833.5, 83.5, 438.5, 0f
+    ),
+    TUIXIUDELAOLIEHU(
+        "tuixiudelaoliehu",
+        "§a§l退休的老猎户",
+        Villager.Profession.NITWIT,
+        Villager.Type.PLAINS,
+        508.5, 51.5, 33.5, 0f
+    ),
+    SUYUANZHENREN(
+        "suyuanzhenren",
+        "§a§l溯源真人",
+        Villager.Profession.NITWIT,
+        Villager.Type.TAIGA,
+        191.5, 48.5, -271.5, 0f
     );
 
 

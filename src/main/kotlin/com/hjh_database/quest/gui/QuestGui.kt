@@ -52,7 +52,10 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
 
             // 如果你希望显示未解锁的任务(灰色)，就把这行注释掉
             // 但根据你的要求，我们通常只显示 进行中 和 已完成
-            status != QuestStatus.LOCKED
+            if (status == QuestStatus.LOCKED) return@filter false
+
+            // 职业/等级不再匹配的未完成任务不显示，避免弓箭手看到战士专属支线等情况。
+            status == QuestStatus.COMPLETED || quest.canAccept(player, data)
         }.sortedBy { it.order }
 
         // 遍历任务并生成图标

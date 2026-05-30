@@ -140,3 +140,35 @@ huoshanshi:
     - "&7&o火山怒吼后的凝固遗骸"
     - "&7&o于山口与山脚沉睡百年,余温不散"
     - "&7&o锻造成器,可迸发极强的能力"
+
+taoyuanshengniurou:
+  material: BEEF
+  name: "&b桃源生牛肉"
+  lore:
+    - "&7&o世外桃源养殖的优质牛肉"
+    - "&7&o肉质紧实,烤熟一定是天下美味!"
+    - "&e[任务物品]"
+
+wanmeideniupai:
+  material: COOKED_BEEF
+  name: "&b完美的牛排"
+  lore:
+    - "&7&o完美烹饪得到的烤牛排,香气扑鼻"
+    - "&7&o去交给老战士吧,可不要自己吃了!"
+    - "&e[任务物品]"
+
+buwanmeideniupai:
+  material: COOKED_BEEF
+  name: "&b不完美的牛排"
+  lore:
+    - "&7&o要么太老,要么太生,这样是不能通过考验的"
+    - "&7&o问问老战士还有什么补救方法吗……"
+    - "&e[任务物品]"
+
+laozhanshidemeitan:
+  material: COAL
+  name: "&b老战士的煤炭"
+  lore:
+    - "&7&o老战士邵斌囤积的煤炭"
+    - "&7&o用来烧火烤肉,解解嘴馋"
+    - "&e[任务物品]"

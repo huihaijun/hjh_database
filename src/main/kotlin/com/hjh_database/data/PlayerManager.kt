@@ -2,6 +2,7 @@ package com.hjh_database.data
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzPlayerData
+import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.weapon.ArmorManager
 import com.hjh_database.weapon.CrystalManager
 import com.hjh_database.weapon.WeaponManager
@@ -96,9 +97,22 @@ class PlayerManager(private val plugin: Hjh_database) {
 
         // 升级保存
         if (leveledUp) {
+            tryAutoAcceptLevelQuests(player, data)
             plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                 plugin.databaseManager.savePlayer(data)
             })
+        }
+    }
+
+    private fun tryAutoAcceptLevelQuests(player: Player, data: PlayerData) {
+        val questIds = listOf("side_warrior_shield_book", "side_archer_quiver_book", "side_warlock_backflow_book")
+        for (questId in questIds) {
+            val quest = plugin.questManager.getQuest(questId) ?: continue
+            val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED
+            if (status == QuestStatus.LOCKED && quest.canAccept(player, data)) {
+                plugin.questManager.acceptQuest(player, quest.id)
+                player.sendMessage("§a[任务系统] 新任务已接取: ${quest.title}")
+            }
         }
     }
 

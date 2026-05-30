@@ -16,7 +16,6 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
-import org.bukkit.util.Vector
 
 abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
     private val storedKey = NamespacedKey(plugin, "medical_overflow_stored")
@@ -35,8 +34,8 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
         if (storedToAdd > 0.0) {
             meta.persistentDataContainer.set(storedKey, PersistentDataType.DOUBLE, newStored)
             item.itemMeta = meta
-            event.caster.sendMessage("§a[饰品-${getItemName(item)}§a]发动！溢出的§b${formatNumber(storedToAdd)}§a点生命值已存入饰品。")
         }
+        event.caster.sendMessage("§a[饰品-${getItemName(item)}§a]当前存入生命值：§b${formatNumber(newStored)}§a/§b${formatNumber(maxStorage)}")
 
         val now = System.currentTimeMillis()
         val cooldownEnd = meta.persistentDataContainer.get(cooldownKey, PersistentDataType.LONG) ?: 0L
@@ -49,6 +48,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
                 meta.persistentDataContainer.set(storedKey, PersistentDataType.DOUBLE, newStored)
                 meta.persistentDataContainer.set(cooldownKey, PersistentDataType.LONG, now + (getCooldownSeconds(crystalData) * 1000.0).toLong())
                 item.itemMeta = meta
+                event.caster.sendMessage("§a[饰品-${getItemName(item)}§a]发动！召唤了一只灵鸟！")
                 launchSpiritBird(event.caster, target, consumed, crystalData)
             }
         }
@@ -85,7 +85,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
         bird.isCustomNameVisible = true
         bird.isInvulnerable = true
         bird.setAI(false)
-        bird.velocity = target.location.toVector().subtract(spawnLoc.toVector()).normalize().multiply(0.7)
+        bird.velocity = org.bukkit.util.Vector(0.0, 0.0, 0.0)
 
         player.world.playSound(player.location, Sound.ENTITY_PARROT_FLY, 1.0f, 1.4f)
         val damage = plugin.playerManager.getPlayerData(player)?.let {
@@ -94,6 +94,9 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
 
         object : BukkitRunnable() {
             var ticks = 0
+            val start = spawnLoc.clone()
+            val distance = start.distance(target.location)
+            val flightTicks = ((distance * 2.0).toInt()).coerceIn(14, 28)
 
             override fun run() {
                 if (bird.isDead || target.isDead || !player.isOnline) {
@@ -103,14 +106,21 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
                 }
 
                 val targetLoc = target.location.clone().add(0.0, 0.8, 0.0)
-                val direction = targetLoc.toVector().subtract(bird.location.toVector())
-                if (direction.lengthSquared() <= 1.2 || ticks >= 40) {
+                if (ticks >= flightTicks || bird.location.distanceSquared(targetLoc) <= 0.8) {
                     impact(player, target, bird, damage)
                     cancel()
                     return
                 }
 
-                bird.velocity = direction.normalize().multiply(0.85)
+                val progress = (ticks + 1).toDouble() / flightTicks.toDouble()
+                val eased = progress * progress * (3.0 - 2.0 * progress)
+                val arc = kotlin.math.sin(Math.PI * progress) * 1.1
+                val nextLoc = start.clone().add(targetLoc.toVector().subtract(start.toVector()).multiply(eased))
+                nextLoc.y += arc
+                nextLoc.direction = targetLoc.toVector().subtract(nextLoc.toVector()).normalize()
+
+                bird.teleport(nextLoc)
+                bird.velocity = org.bukkit.util.Vector(0.0, 0.0, 0.0)
                 bird.world.spawnParticle(
                     Particle.DUST,
                     bird.location,

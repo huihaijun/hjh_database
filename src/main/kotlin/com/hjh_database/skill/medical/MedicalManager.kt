@@ -199,11 +199,9 @@ class MedicalManager(private val plugin: Hjh_database) {
         // 修改显示名称：原名 + [医术名]
         val skillDisplayName = getSkillName(skillId)
         if (resultMeta.hasDisplayName()) {
-            // 使用 §r 重置颜色，避免前面名字的颜色影响到后面
-            resultMeta.setDisplayName(resultMeta.displayName + "§r[" + skillDisplayName + "§r]")
+            resultMeta.setDisplayName(buildEtchedBannerName(resultMeta.displayName, skillDisplayName))
         } else {
-            // 如果原本没名字，就给个默认的（防止空指针或无名）
-            resultMeta.setDisplayName("§f医旗§r[" + skillDisplayName + "§r]")
+            resultMeta.setDisplayName(buildEtchedBannerName("§f医旗", skillDisplayName))
         }
 
         // 1. 设置技能 ID
@@ -255,9 +253,9 @@ class MedicalManager(private val plugin: Hjh_database) {
         // 2. 重新拼接名字
         val skillDisplayName = getSkillName(skillId)
         if (meta.hasDisplayName()) {
-            meta.setDisplayName(meta.displayName + "§r[" + skillDisplayName + "§r]")
+            meta.setDisplayName(buildEtchedBannerName(meta.displayName, skillDisplayName))
         } else {
-            meta.setDisplayName("§f医旗§r[" + skillDisplayName + "§r]")
+            meta.setDisplayName(buildEtchedBannerName("§f医旗", skillDisplayName))
         }
 
         // 3. 隐藏原版旗帜图案等提示
@@ -287,6 +285,11 @@ class MedicalManager(private val plugin: Hjh_database) {
         }
 
         banner.itemMeta = meta
+    }
+
+    fun buildEtchedBannerName(baseName: String, skillDisplayName: String): String {
+        val cleanBase = baseName.substringBefore("§r[")
+        return "$cleanBase§r[$skillDisplayName§r]"
     }
 
     // === 分离逻辑 ===

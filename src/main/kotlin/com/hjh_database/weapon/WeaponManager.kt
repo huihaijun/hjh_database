@@ -235,6 +235,12 @@ class WeaponManager(private val plugin: Hjh_database) {
                 // Kotlin 调用 Java getter 简化为属性访问
                 if (plugin.medicalManager != null) {
                     val skillName = plugin.medicalManager!!.getSkillName(medSkillId!!)
+                    if (wData.display != null) {
+                        val baseName = ChatColor.translateAlternateColorCodes('&', wData.display!!)
+                        meta.setDisplayName(plugin.medicalManager.buildEtchedBannerName(baseName, skillName))
+                    } else if (meta.hasDisplayName()) {
+                        meta.setDisplayName(plugin.medicalManager.buildEtchedBannerName(meta.displayName, skillName))
+                    }
                     newLore.add("§6[医术] §e" + if (skillName != null) skillName else medSkillId)
 
                     // 【核心逻辑补充】从 MedicalManager 读取原始技能书的详细Lore
