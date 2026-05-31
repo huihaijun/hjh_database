@@ -7,14 +7,19 @@ import com.hjh_database.alchemy.data.AlchemyTier
 import com.hjh_database.alchemy.gui.AlchemyAdminGui
 import com.hjh_database.alchemy.gui.AlchemyAdminListGui // 导入新 GUI
 import com.hjh_database.alchemy.gui.AlchemyPlayerGui
+import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.persistence.PersistentDataType
+import java.io.File
 
 class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
@@ -23,6 +28,30 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private val alchemyTierKey = NamespacedKey(plugin, "hjh_alchemy_tier")
     private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 【新增】兼容资源管理器自带的 ID 标签
     private val presetColors = listOf("#FF5555", "#AA0000", "#5555FF", "#0000AA", "#00AA00", "#55FF55", "#FFAA00", "#FFFF55", "#FF55FF", "#000000")
+    private val cauldronDataFile = File(plugin.dataFolder, "alchemy_cauldrons.yml")
+    private val registeredCauldrons = mutableSetOf<String>()
+
+    init {
+        loadRegisteredCauldrons()
+    }
+
+    @EventHandler
+    fun onCauldronPlace(event: BlockPlaceEvent) {
+        if (event.blockPlaced.type != Material.CAULDRON) return
+        val meta = event.itemInHand.itemMeta ?: return
+        if (!meta.persistentDataContainer.has(cauldronKey, PersistentDataType.INTEGER)) return
+
+        registeredCauldrons.add(locationKey(event.blockPlaced.location))
+        saveRegisteredCauldrons()
+    }
+
+    @EventHandler
+    fun onCauldronBreak(event: BlockBreakEvent) {
+        if (event.block.type != Material.CAULDRON) return
+        if (registeredCauldrons.remove(locationKey(event.block.location))) {
+            saveRegisteredCauldrons()
+        }
+    }
 
 
     @EventHandler
@@ -85,6 +114,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         if (block.type != Material.CAULDRON) return
+        if (!registeredCauldrons.contains(locationKey(block.location))) return
 
         val player = event.player
         val item = event.item
@@ -221,5 +251,25 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+    }
+
+    private fun loadRegisteredCauldrons() {
+        if (!cauldronDataFile.exists()) return
+
+        val config = YamlConfiguration.loadConfiguration(cauldronDataFile)
+        registeredCauldrons.clear()
+        registeredCauldrons.addAll(config.getStringList("cauldrons"))
+    }
+
+    private fun saveRegisteredCauldrons() {
+        cauldronDataFile.parentFile?.mkdirs()
+        val config = YamlConfiguration()
+        config.set("cauldrons", registeredCauldrons.sorted())
+        config.save(cauldronDataFile)
+    }
+
+    private fun locationKey(location: Location): String {
+        val worldId = location.world?.uid ?: "unknown"
+        return "$worldId:${location.blockX}:${location.blockY}:${location.blockZ}"
     }
 }

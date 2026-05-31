@@ -142,7 +142,7 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
                     }
                 }
             }
-            MobFactory.spawnMob(plugin, spawnLoc, mobId)
+            MobFactory.spawnMob(plugin, spawnLoc, mobId, removeWhenFarAway = true)
         }
     }
 

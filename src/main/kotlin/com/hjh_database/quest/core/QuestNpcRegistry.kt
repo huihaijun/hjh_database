@@ -143,6 +143,13 @@ enum class StoryNpcs(
         Villager.Profession.NITWIT,
         Villager.Type.TAIGA,
         191.5, 48.5, -271.5, 0f
+    ),
+    DANYESHIFU(
+        "danyeshifu",
+        "§a§l旦野师傅",
+        Villager.Profession.NITWIT,
+        Villager.Type.TAIGA,
+        255.5, 48.5, 45.5, 0f
     );
 
 

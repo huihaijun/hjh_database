@@ -18,14 +18,14 @@ object MobFactory {
     private val KEY_CUSTOM_ARMOR = NamespacedKey.fromString("hjh_database:hjh_mob_armor")!!
     private val KEY_MOB_AFFIXES = NamespacedKey.fromString("hjh_database:mob_affixes")!!
 
-    fun spawnMob(plugin: Hjh_database, location: Location, mobId: String): LivingEntity? {
+    fun spawnMob(plugin: Hjh_database, location: Location, mobId: String, removeWhenFarAway: Boolean = false): LivingEntity? {
         val def = MobRegistry.get(mobId) ?: return null
         val world = location.world ?: return null
 
         val entity = world.spawnEntity(location, def.type) as? LivingEntity ?: return null
 
         // (如果你之前加了这行，保留它) 防止原版机制刷没怪物
-        entity.removeWhenFarAway = false
+        entity.removeWhenFarAway = removeWhenFarAway
 
         // === 【新增修改】1. 强制设置为成年体，防止出现小僵尸、小牛、小猪灵等幼体 ===
         if (entity is org.bukkit.entity.Ageable) {

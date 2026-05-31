@@ -15,6 +15,8 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
     private val keyTarget = NamespacedKey(plugin, "hjh_spawner_target_block")
     // 下次生成的冷却时间标记
     private val keyNextSpawn = NamespacedKey(plugin, "hjh_spawner_next_spawn")
+    private val spawnRange = 16.0
+    private val spawnRangeSquared = spawnRange * spawnRange
 
     init {
         // 记得在 onEnable 调用 MobRegistry.init()
@@ -84,12 +86,13 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         // =========================================================================
         // 1. 检查玩家激活距离 (对应原版 NBT: RequiredPlayerRange: 18s)
         // =========================================================================
-        val loc = spawner.location
+        val spawnerCenter = spawner.location.clone().add(0.5, 0.5, 0.5)
         // 这里的 16.0 控制激活距离。它代表检测以刷怪笼为中心，正负 16 格半径内的玩家。
-        val hasPlayerNearby = loc.world!!.getNearbyEntities(loc, 16.0, 16.0, 16.0)
-            .any { it is org.bukkit.entity.Player && !it.isDead &&
+        val hasPlayerNearby = spawnerCenter.world!!.players
+            .any { !it.isDead &&
                     it.gameMode != org.bukkit.GameMode.SPECTATOR &&
-                    it.gameMode != org.bukkit.GameMode.CREATIVE }
+                    it.gameMode != org.bukkit.GameMode.CREATIVE &&
+                    it.location.distanceSquared(spawnerCenter) <= spawnRangeSquared }
         // 如果周围没玩家，直接 return。这会让刷怪笼“休眠”卡在当前冷却状态，不会重置时间也不会刷怪
         if (!hasPlayerNearby) return
 
@@ -117,8 +120,11 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         // =========================================================================
         // 【修改点】：检测中心重新改为 spawnLoc (怪物生成点)！
         // 【修改点】：检测半径从 4.0 扩大至 20.0 格！适用于同一区域拥有密集刷怪笼的情况。
-        val nearby = spawnLoc.world!!.getNearbyEntities(spawnLoc, 20.0, 20.0, 20.0)
-            .count { it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId }
+        val nearby = spawnerCenter.world!!.getNearbyEntities(spawnerCenter, spawnRange, spawnRange, spawnRange)
+            .count {
+                it.location.distanceSquared(spawnerCenter) <= spawnRangeSquared &&
+                        it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId
+            }
 
         if (nearby >= def.maxNearby) {
             val minDelay = def.minSpawnDelay
@@ -135,7 +141,7 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         }
 
         // 5. 生成怪物 (传入 plugin 以便 Factory 访问 ResourceManager 等)
-        MobFactory.spawnMob(plugin, spawnLoc, mobId)
+        MobFactory.spawnMob(plugin, spawnLoc, mobId, removeWhenFarAway = true)
 
         // =========================================================================
         // 6. 设置下次冷却时间

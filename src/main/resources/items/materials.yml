@@ -172,3 +172,11 @@ laozhanshidemeitan:
     - "&7&o老战士邵斌囤积的煤炭"
     - "&7&o用来烧火烤肉,解解嘴馋"
     - "&e[任务物品]"
+
+shoujicaoliaodetong:
+  material: COMPOSTER
+  name: "&b收集草药的桶"
+  lore:
+    - "&7&o用来给旦野师傅收集草药的桶"
+    - "&7&o确实如他所说有点脏乱"
+    - "&e[任务物品]"

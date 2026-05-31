@@ -105,7 +105,7 @@ class PlayerManager(private val plugin: Hjh_database) {
     }
 
     private fun tryAutoAcceptLevelQuests(player: Player, data: PlayerData) {
-        val questIds = listOf("side_warrior_shield_book", "side_archer_quiver_book", "side_warlock_backflow_book")
+        val questIds = listOf("side_warrior_shield_book", "side_archer_quiver_book", "side_warlock_backflow_book", "side_medical_taolizhi_book")
         for (questId in questIds) {
             val quest = plugin.questManager.getQuest(questId) ?: continue
             val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED

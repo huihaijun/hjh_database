@@ -103,6 +103,65 @@ qingnangqi_chuxing:
     - "&7&o就能锻造出医师武器——&a青囊旗"
     - "&e注意:&f锻造前,请先将医术从医旗上剥离"
 
+chitongjian_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9赤铜剑雏形[破军]"
+  lore:
+    - "&7&o用来制作战士武器——&9赤铜剑&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&9赤铜剑"
+
+jutongzhanchui_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9巨铜战锤雏形[金钟]"
+  lore:
+    - "&7&o用来制作战士武器——&9巨铜战锤&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&9巨铜战锤"
+
+honglingnu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9红翎弩雏形[游侠]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&9红翎弩&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&9红翎弩"
+
+yantiegong_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9焰铁弓雏形[狙击]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&9焰铁弓&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&9焰铁弓"
+
+yantielu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9焰铁炉雏形"
+  lore:
+    - "&7&o用来制作术士武器——&9焰铁炉&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士武器——&9焰铁炉"
+
+linghuowenqi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9灵火纹旗雏形"
+  lore:
+    - "&7&o用来制作医师武器——&9灵火纹旗&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师武器——&9灵火纹旗"
 qingshidunpaizhizuoshu:
   material: BOOK
   rarity: 3
@@ -111,6 +170,16 @@ qingshidunpaizhizuoshu:
     - "&7&o用来制作战士饰品——轻石盾牌的制作书"
     - "&7&o详细记载了锻造的工艺和材料"
     - "&7&o交给铁匠铺的人,说不定就能知道锻造之法"
+
+qingshidunpai_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9轻石盾牌雏形[饰品]"
+  lore:
+    - "&7&o用来制作战士饰品——&9轻石盾牌&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士饰品——&9轻石盾牌"
 
 cubujiandaizhizuoshu:
   material: BOOK
@@ -121,6 +190,16 @@ cubujiandaizhizuoshu:
     - "&7&o详细记载了锻造的工艺和材料"
     - "&7&o交给铁匠铺的人,说不定就能知道锻造之法"
 
+cubujiandai_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9粗布箭袋雏形[饰品]"
+  lore:
+    - "&7&o用来制作弓箭手饰品——&9粗布箭袋&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手饰品——&9粗布箭袋"
+
 huiliuyizhizuoshu:
   material: BOOK
   rarity: 3
@@ -129,3 +208,32 @@ huiliuyizhizuoshu:
     - "&7&o用来制作术士饰品——回流仪的制作书"
     - "&7&o详细记载了锻造的工艺和材料"
     - "&7&o交给铁匠铺的人,说不定就能知道锻造之法"
+
+huiliuyi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9回流仪雏形[饰品]"
+  lore:
+    - "&7&o用来制作术士饰品——&9回流仪&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士饰品——&9回流仪"
+
+taolizhizhizuoshu:
+  material: BOOK
+  rarity: 3
+  name: "&9[桃李枝]制作书"
+  lore:
+    - "&7&o用来制作医师饰品——桃李枝的制作书"
+    - "&7&o详细记载了锻造的工艺和材料"
+    - "&7&o交给铁匠铺的人,说不定就能知道锻造之法"
+
+taolizhi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 3
+  name: "&9桃李枝雏形[饰品]"
+  lore:
+    - "&7&o用来制作医师饰品——&9桃李枝&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师饰品——&9桃李枝"
