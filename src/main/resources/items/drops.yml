@@ -101,6 +101,15 @@ huangfengyan:
     - "&7&o小小一块风眼,竟可容纳如此风力"
     - "&7&o锻造时将其融入,能让铠甲更加坚固"
 
+ehundan:
+  material: ARMADILLO_SCUTE
+  name: "&d恶魂丹"
+  rarity: 4
+  lore:
+    - "&7&o从沙漠魔兽凶神太岁体内取出的恶丹"
+    - "&7&o浑身散发着污秽的气息"
+    - "&7&o取其魔力注入饰品,可以带给佩戴者强大的力量"
+
 wenquankezhanbujipin:
   material: ORANGE_DYE
   name: "&b温泉客栈需要的补给品"

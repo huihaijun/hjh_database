@@ -16,6 +16,8 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
+import org.bukkit.event.inventory.InventoryType
+import org.bukkit.event.player.PlayerRecipeBookSettingsChangeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
@@ -83,7 +85,7 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
 
-            // === 【新增】Slot 32: 个人饰品栏 ===
+            // Slot 32: 个人饰品栏
             else if (event.rawSlot == 32) {
                 player.closeInventory()
                 plugin.accessoryManager.openAccessoryMenu(player)
@@ -128,6 +130,28 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    fun onRecipeBookSettingsChange(event: PlayerRecipeBookSettingsChangeEvent) {
+        if (event.recipeBookType != PlayerRecipeBookSettingsChangeEvent.RecipeBookType.CRAFTING) return
+        if (!event.isOpen) return
+
+        val player = event.player
+        if (player.openInventory.type != InventoryType.CRAFTING) return
+
+        val data = plugin.playerManager.getPlayerData(player)
+        if (data == null || data.status in setOf(0, 1, 2, 4)) {
+            player.sendMessage("§c当前状态不可使用【饰品栏】功能！")
+            player.playSound(player.location, Sound.BLOCK_CHEST_LOCKED, 1f, 1f)
+            return
+        }
+
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            player.closeInventory()
+            plugin.accessoryManager.openAccessoryMenu(player)
+            player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+        })
     }
 
     @EventHandler

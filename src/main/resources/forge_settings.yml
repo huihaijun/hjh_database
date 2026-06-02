@@ -14,13 +14,13 @@ categories:
     lore:
       - "§7打造坚固的护甲"
   artifact:
-    name: "§d§l法宝/饰品"
-    icon: TOTEM_OF_UNDYING
+    name: "§d§l法宝＆饰品锻造"
+    icon: END_CRYSTAL
     lore:
-      - "§7特殊的辅助装备"
+      - "§7特殊的法宝与饰品"
   misc:
     name: "§a§l杂项/材料"
-    icon: STICK
+    icon: WOODEN_HOE
     lore:
       - "§7基础材料处理"
 

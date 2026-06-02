@@ -141,6 +141,15 @@ huoshanshi:
     - "&7&o于山口与山脚沉睡百年,余温不散"
     - "&7&o锻造成器,可迸发极强的能力"
 
+taoyuansichou:
+  material: nether_wart
+  name: "&9桃源丝绸"
+  rarity: 3
+  lore:
+    - "&7&o蕴藏于传说中世外桃源的奇珍丝绸"
+    - "&7&o质地光滑如玉,丝缕坚韧不断,寻常刀剑亦难伤其分毫"
+    - "&7&o因其珍贵至极,唯有封存于此木匣之中,方可长久留存"
+
 taoyuanshengniurou:
   material: BEEF
   name: "&b桃源生牛肉"

@@ -56,7 +56,7 @@ class DzPlayerData(
         // 3. 升级反馈 (音效与提示)
         if (hasLeveledUp) {
             // sendMessage 支持 varargs，逻辑保持不变
-            player.sendMessage("§6§l锻造升级！", "§e当前等级: §fLv.$forgeLevel")
+            player.sendMessage("§6§l锻造升级！", "§e当前锻造等级: §fLv.$forgeLevel")
             player.playSound(player.location, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f)
             player.sendMessage("§8[§6锻造§8] §a恭喜！你的锻造等级提升到了 §eLv.$forgeLevel")
         }

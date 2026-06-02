@@ -22,13 +22,16 @@ import java.util.ArrayList
 class RecipeCraftingGui(
     private val plugin: Hjh_database,
     private val player: Player,
+    private val category: String,
     private val recipe: DzRecipe? // 允许传入 null 以配合原逻辑检查
 ) : InventoryHolder, Listener {
 
     private var inv: Inventory? = null // 为了配合原逻辑(异常时为null)，这里必须是可空
 
     private val INPUT_SLOTS = intArrayOf(11, 12, 13, 14, 15)
+    private val MATERIAL_INFO_SLOT = 0
     private val PREVIEW_SLOT = 24
+    private val BACK_BUTTON_SLOT = 45
     private val BUTTON_SLOT = 49
 
     init {
@@ -38,7 +41,7 @@ class RecipeCraftingGui(
             // Kotlin init 块无法像 Java构造函数那样直接 return 停止对象创建，
             // 但 inv 为 null 会导致 open() 不执行，逻辑效果一致。
         } else {
-            this.inv = Bukkit.createInventory(this, 54, "锻造: " + recipe.id)
+            this.inv = Bukkit.createInventory(this, 54, "锻造:${plainItemName(recipe.result)}")
             setupGui()
             plugin.server.pluginManager.registerEvents(this, plugin)
         }
@@ -59,7 +62,9 @@ class RecipeCraftingGui(
 
         // 显示成品预览
         // recipe 在 setupGui 被调用时一定不为 null (见 init)
+        inventory.setItem(MATERIAL_INFO_SLOT, createMaterialInfoButton())
         inventory.setItem(PREVIEW_SLOT, recipe!!.result)
+        inventory.setItem(BACK_BUTTON_SLOT, createBackButton())
 
         updateButtonState()
     }
@@ -104,9 +109,9 @@ class RecipeCraftingGui(
             errors.add("§c锻造等级不足 (需要: Lv." + recipe.reqForgeLevel + ")")
         }
 
-        // 4. 检查执照
+        // 4. 检查锻造资质
         if (forgeData.forgeLicense < recipe.reqLicense) {
-            errors.add("§c执照等级不足 (需要: " + recipe.reqLicense + "级)")
+            errors.add("§c锻造资质不足 (需要: " + recipe.reqLicense + "级)")
         }
 
         // 5. 检查材料 (ItemUtil ID对比)
@@ -137,6 +142,54 @@ class RecipeCraftingGui(
         }
 
         return errors
+    }
+
+    private fun createMaterialInfoButton(): ItemStack {
+        val item = ItemStack(Material.BREWING_STAND)
+        val meta = item.itemMeta
+        if (meta != null) {
+            meta.setDisplayName("§6锻造材料一览")
+            val lore = ArrayList<String>()
+            val safeRecipe = recipe
+            if (safeRecipe == null || safeRecipe.ingredients.isEmpty()) {
+                lore.add("§7无额外材料")
+            } else {
+                for (ingredient in safeRecipe.ingredients) {
+                    if (ingredient.type == Material.AIR) continue
+                    lore.add("§f${getItemDisplayName(ingredient)} §7x§e${ingredient.amount}")
+                }
+                if (lore.isEmpty()) lore.add("§7无额外材料")
+            }
+            meta.lore = lore
+            item.itemMeta = meta
+        }
+        return item
+    }
+
+    private fun createBackButton(): ItemStack {
+        val item = ItemStack(Material.RED_BED)
+        val meta = item.itemMeta
+        if (meta != null) {
+            meta.setDisplayName("§c返回配方预览")
+            meta.lore = listOf("§7退还已放入的材料并返回")
+            item.itemMeta = meta
+        }
+        return item
+    }
+
+    private fun getItemDisplayName(item: ItemStack): String {
+        val meta = item.itemMeta
+        return if (meta != null && meta.hasDisplayName()) {
+            meta.displayName
+        } else {
+            "§f${item.type.name.lowercase().split("_").joinToString(" ") { part -> part.replaceFirstChar { it.uppercase() } }}"
+        }
+    }
+
+    private fun plainItemName(item: ItemStack): String {
+        val meta = item.itemMeta
+        val name = if (meta != null && meta.hasDisplayName()) meta.displayName else item.type.name
+        return ChatColor.stripColor(name) ?: name
     }
 
     private fun updateButtonState() {
@@ -206,6 +259,13 @@ class RecipeCraftingGui(
             return
         } else if (slot < 54) {
             event.isCancelled = true
+        }
+
+        if (slot == BACK_BUTTON_SLOT) {
+            val safeRecipe = recipe ?: return
+            player.closeInventory()
+            RecipePreviewGui(plugin, player, category, safeRecipe.id).open()
+            return
         }
 
         if (slot == BUTTON_SLOT) {

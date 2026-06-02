@@ -338,13 +338,14 @@ class WeaponManager(private val plugin: Hjh_database) {
         if (data.display != null) {
             meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', data.display!!))
         }
+        val coloredLore: MutableList<String> = ArrayList()
+        coloredLore.add(getRarityLore(data.rarity))
         if (data.lore != null) {
-            val coloredLore: MutableList<String> = ArrayList()
             for (line in data.lore!!) {
                 coloredLore.add(ChatColor.translateAlternateColorCodes('&', line))
             }
-            meta.lore = coloredLore
         }
+        meta.lore = coloredLore
         if (data.customModelData != 0) {
             meta.setCustomModelData(data.customModelData)
         }
@@ -352,6 +353,7 @@ class WeaponManager(private val plugin: Hjh_database) {
         // 2. 写入 NBT
         meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, id)
         meta.persistentDataContainer.set(weaponKey, PersistentDataType.STRING, id)
+        meta.persistentDataContainer.set(NamespacedKey(plugin, "rarity"), PersistentDataType.INTEGER, data.rarity)
 
         // 3. 属性标记 (1.21.3 修复 +4 攻击力显示问题)
         meta.isUnbreakable = true
@@ -394,6 +396,19 @@ class WeaponManager(private val plugin: Hjh_database) {
     // 因为 val loadedWeapons 属性已经自动生成了该方法。
 
     companion object {
+        fun getRarityLore(rarity: Int): String {
+            val color = when (rarity) {
+                1 -> "§f"
+                2 -> "§a"
+                3 -> "§9"
+                4 -> "§d"
+                5 -> "§e"
+                6 -> "§c"
+                else -> "§7"
+            }
+            return color + "稀有度: " + getRarityStars(rarity)
+        }
+
         // 获取稀有度显示的星星
         fun getRarityStars(rarity: Int): String {
             val sb = StringBuilder()

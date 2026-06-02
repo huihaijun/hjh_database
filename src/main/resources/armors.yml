@@ -3,18 +3,19 @@ armors:
   chuxinzhepimao:
     display: "&f初心者皮帽"
     material: LEATHER_HELMET
-    color: "#FFFFFF" # 支持 Hex 格式
+    color: "#FFFFFF"
     lore:
       - "&6限制职业:&b无&6 限制等级:&b无"
       - "&7&o初入大陆的新手的系列防具"
       - "&7&o可以提供最基础的保护"
       - "&8===========&2&n&l防具属性&8============"
       - "&f最大生命 +0.5"
+      - "&f护甲 +2"
     req_job: -1
     req_lv: 1
     stats:
       max_health: 0.5
-#      armor: 1.0
+      armor: 2.0
 
   chuxinzhehujia:
     display: "&f初心者护甲"
@@ -25,14 +26,13 @@ armors:
       - "&7&o初入大陆的新手的系列防具"
       - "&7&o可以提供最基础的保护"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
-      - "&f护甲 +0.5"
+      - "&f最大生命 +1.5"
+      - "&f护甲 +4"
     req_job: -1
     req_lv: 1
     stats:
-      max_health: 1.0
-      armor: 0.5
-#      knock_back_res: 0.1 # 10% 抗击退
+      max_health: 1.5
+      armor: 4.0
 
   chuxinzhehutui:
     display: "&f初心者护腿"
@@ -43,11 +43,13 @@ armors:
       - "&7&o初入大陆的新手的系列防具"
       - "&7&o可以提供最基础的保护"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f护甲 +0.5"
+      - "&f最大生命 +1"
+      - "&f护甲 +4"
     req_job: -1
     req_lv: 1
     stats:
-      armor: 0.35
+      max_health: 1.0
+      armor: 4.0
 
   chuxinzhepixue:
     display: "&f初心者皮靴"
@@ -58,30 +60,34 @@ armors:
       - "&7&o初入大陆的新手的系列防具"
       - "&7&o可以提供最基础的保护"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f移速 +5%"
+      - "&f最大生命 +1"
+      - "&f护甲 +2"
     req_job: -1
     req_lv: 1
     stats:
-      speed_percent: 0.05   # 额外加成：+5% 速度
+      max_health: 1.0
+      armor: 2.0
 
   # === 战士二阶 ===
   zhanlangtouzhao:
     display: "&a战狼头罩"
     material: LEATHER_HELMET
     rarity: 2
-    color: "#BF0000" # 支持 Hex 格式
+    color: "#BF0000"
     lore:
       - "&6限制职业:[战] 限制等级:&b10"
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +6"
+      - "&f最大生命 +5"
       - "&f护甲 +7"
+      - "&f抗击退 +5%"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 6.0
+      max_health: 5.0
       armor: 7.0
+      knock_back_res: 0.05
 
   zhanlangyingjia:
     display: "&a战狼硬甲"
@@ -93,14 +99,13 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +6"
-      - "&f护甲 +8"
+      - "&f最大生命 +8"
+      - "&f护甲 +9"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 6.0
-      armor: 8.0
-  #      knock_back_res: 0.1 # 10% 抗击退
+      max_health: 8.0
+      armor: 9.0
 
   zhanlangpiku:
     display: "&a战狼皮裤"
@@ -112,12 +117,12 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +6"
-      - "&f护甲 +7"
+      - "&f最大生命 +7"
+      - "&f护甲 +8"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 6.0
+      max_health: 7.0
       armor: 8.0
 
   zhanlangchangtongxue:
@@ -130,39 +135,38 @@ armors:
       - "&7&o用草原狼的皮毛制成的皮套装"
       - "&7&o毛皮很柔软不妨碍施展动作"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +6"
-      - "&f护甲 +7"
+      - "&f最大生命 +4"
+      - "&f护甲 +6"
       - "&f抗击退 +5%"
+      - "&f移速 +2%"
     req_job: 0
     req_lv: 10
     stats:
-      max_health: 6.0
-      armor: 7.0
-      knock_back_res: 0.05   # 额外加成：+5% 抗击退
-
+      max_health: 4.0
+      armor: 6.0
+      knock_back_res: 0.05
+      speed_percent: 0.02
 
   # === 弓箭手二阶 ===
   fengxinghue:
     display: "&a风行护额"
     material: LEATHER_HELMET
     rarity: 2
-    color: "#136901" # 支持 Hex 格式
+    color: "#136901"
     lore:
       - "&6限制职业:[弓] 限制等级:&b10"
       - "&7&o远方风之国度工匠手工打造"
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f移速 +2%"
-      - "&f抗击退 +3%"
-      - "&f护甲 +7"
       - "&f最大生命 +4"
+      - "&f护甲 +6"
+      - "&f移速 +2%"
     req_job: 1
     req_lv: 10
     stats:
-      knock_back_res: 0.03
-      speed_percent: 0.02
-      armor: 7.0
       max_health: 4.0
+      armor: 6.0
+      speed_percent: 0.02
 
   tingfengpijia:
     display: "&a听风皮甲"
@@ -175,12 +179,12 @@ armors:
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
       - "&f最大生命 +6"
-      - "&f护甲 +7"
+      - "&f护甲 +8"
     req_job: 1
     req_lv: 10
     stats:
       max_health: 6.0
-      armor: 7.0
+      armor: 8.0
 
   fenglinku:
     display: "&a风鳞裤"
@@ -193,12 +197,12 @@ armors:
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
       - "&f最大生命 +6"
-      - "&f护甲 +7"
+      - "&f护甲 +8"
     req_job: 1
     req_lv: 10
     stats:
       max_health: 6.0
-      armor: 7.0
+      armor: 8.0
 
   fengyucaoxie:
     display: "&a风羽草鞋"
@@ -210,34 +214,34 @@ armors:
       - "&7&o远方风之国度工匠手工打造"
       - "&7&o穿戴后能像风一般行动迅速"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f移速 +3%"
-      - "&f抗击退 +2%"
-      - "&f护甲 +7"
       - "&f最大生命 +4"
+      - "&f护甲 +6"
+      - "&f移速 +4%"
     req_job: 1
     req_lv: 10
     stats:
-      knock_back_res: 0.02
-      speed_percent: 0.03
-      armor: 7.0
       max_health: 4.0
+      armor: 6.0
+      speed_percent: 0.04
 
   # === 术士二阶 ===
   fanxingmao:
     display: "&a繁星帽"
     material: LEATHER_HELMET
     rarity: 2
-    color: "#8A039E" # 支持 Hex 格式
+    color: "#8A039E"
     lore:
       - "&6限制职业:[术] 限制等级:&b10"
       - "&7&o灵感源于天空繁星的套装"
       - "&7&o穿戴后仿佛能洞悉星辰奥秘"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f抗击退 +3%"
+      - "&f最大生命 +4"
+      - "&f护甲 +5"
     req_job: 2
     req_lv: 10
     stats:
-      knock_back_res: 0.03
+      max_health: 4.0
+      armor: 5.0
 
   fanxingpiyi:
     display: "&a繁星皮衣"
@@ -249,11 +253,13 @@ armors:
       - "&7&o灵感源于天空繁星的套装"
       - "&7&o穿戴后仿佛能洞悉星辰奥秘"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +7"
     req_job: 2
     req_lv: 10
     stats:
-      max_health: 1.0
+      max_health: 6.0
+      armor: 7.0
 
   fanxingpiku:
     display: "&a繁星皮裤"
@@ -265,11 +271,13 @@ armors:
       - "&7&o灵感源于天空繁星的套装"
       - "&7&o穿戴后仿佛能洞悉星辰奥秘"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +5"
+      - "&f护甲 +6"
     req_job: 2
     req_lv: 10
     stats:
-      max_health: 1.0
+      max_health: 5.0
+      armor: 6.0
 
   fanxingxie:
     display: "&a繁星鞋"
@@ -281,28 +289,34 @@ armors:
       - "&7&o灵感源于天空繁星的套装"
       - "&7&o穿戴后仿佛能洞悉星辰奥秘"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f抗击退 +2%"
+      - "&f最大生命 +3"
+      - "&f护甲 +4"
+      - "&f移速 +2%"
     req_job: 2
     req_lv: 10
     stats:
-      knock_back_res: 0.02
+      max_health: 3.0
+      armor: 4.0
+      speed_percent: 0.02
 
   # === 医师二阶 ===
   lanniaomao:
     display: "&a蓝鸟帽"
     material: LEATHER_HELMET
     rarity: 2
-    color: "#0045DB" # 支持 Hex 格式
+    color: "#0045DB"
     lore:
       - "&6限制职业:[医] 限制等级:&b10"
       - "&7&o象征新人医师的吉祥物——蓝鸟"
       - "&7&o衣质松软,适合挥舞医旗"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f抗击退 +1%"
+      - "&f最大生命 +5"
+      - "&f护甲 +4"
     req_job: 3
     req_lv: 10
     stats:
-      knock_back_res: 0.01
+      max_health: 5.0
+      armor: 4.0
 
   lanniaoyi:
     display: "&a蓝鸟衣"
@@ -314,11 +328,13 @@ armors:
       - "&7&o象征新人医师的吉祥物——蓝鸟"
       - "&7&o衣质松软,适合挥舞医旗"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +7"
+      - "&f护甲 +6"
     req_job: 3
     req_lv: 10
     stats:
-      max_health: 1.0
+      max_health: 7.0
+      armor: 6.0
 
   lanniaoku:
     display: "&a蓝鸟裤"
@@ -330,11 +346,13 @@ armors:
       - "&7&o象征新人医师的吉祥物——蓝鸟"
       - "&7&o衣质松软,适合挥舞医旗"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f护甲 +1"
+      - "&f最大生命 +6"
+      - "&f护甲 +5"
     req_job: 3
     req_lv: 10
     stats:
-      armor: 1.0
+      max_health: 6.0
+      armor: 5.0
 
   lanniaoxie:
     display: "&a蓝鸟鞋"
@@ -346,41 +364,310 @@ armors:
       - "&7&o象征新人医师的吉祥物——蓝鸟"
       - "&7&o衣质松软,适合挥舞医旗"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f抗击退 +2%"
+      - "&f最大生命 +4"
+      - "&f护甲 +3"
+      - "&f移速 +2%"
     req_job: 3
     req_lv: 10
     stats:
-      knock_back_res: 0.02
+      max_health: 4.0
+      armor: 3.0
+      speed_percent: 0.02
+
+  # === 战士三阶 ===
+  zhutiekui:
+    display: "&9朱铁盔"
+    material: IRON_HELMET
+    rarity: 3
+    lore:
+      - "&6限制职业:[战] 限制等级:&b20"
+      - "&7&o赤铁锻甲,炽热如焰,坚不可摧"
+      - "&7&o抚之若有热流涌动,似沉睡的猛兽等待苏醒"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +7"
+      - "&f护甲 +12"
+      - "&f抗击退 +5%"
+    req_job: 0
+    req_lv: 20
+    stats:
+      max_health: 7.0
+      armor: 12.0
+      knock_back_res: 0.05
+
+  zhutiexiongjia:
+    display: "&9朱铁胸甲"
+    material: IRON_CHESTPLATE
+    rarity: 3
+    lore:
+      - "&6限制职业:[战] 限制等级:&b20"
+      - "&7&o赤铁锻甲,炽热如焰,坚不可摧"
+      - "&7&o抚之若有热流涌动,似沉睡的猛兽等待苏醒"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +12"
+      - "&f护甲 +18"
+      - "&f抗击退 +10%"
+    req_job: 0
+    req_lv: 20
+    stats:
+      max_health: 12.0
+      armor: 18.0
+      knock_back_res: 0.10
+
+  zhutiehutui:
+    display: "&9朱铁护腿"
+    material: IRON_LEGGINGS
+    rarity: 3
+    lore:
+      - "&6限制职业:[战] 限制等级:&b20"
+      - "&7&o赤铁锻甲,炽热如焰,坚不可摧"
+      - "&7&o抚之若有热流涌动,似沉睡的猛兽等待苏醒"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +10"
+      - "&f护甲 +14"
+    req_job: 0
+    req_lv: 20
+    stats:
+      max_health: 10.0
+      armor: 14.0
+
+  zhutiezhanxue:
+    display: "&9朱铁战靴"
+    material: IRON_BOOTS
+    rarity: 3
+    lore:
+      - "&6限制职业:[战] 限制等级:&b20"
+      - "&7&o赤铁锻甲,炽热如焰,坚不可摧"
+      - "&7&o抚之若有热流涌动,似沉睡的猛兽等待苏醒"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +5"
+      - "&f护甲 +10"
+      - "&f抗击退 +5%"
+      - "&f移速 +4%"
+    req_job: 0
+    req_lv: 20
+    stats:
+      max_health: 5.0
+      armor: 10.0
+      knock_back_res: 0.05
+      speed_percent: 0.04
+
+  # === 弓箭手三阶 ===
+  jifengmao:
+    display: "&9疾风帽"
+    material: GOLDEN_HELMET
+    rarity: 3
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b20"
+      - "&7&o轻便如风,来去若影"
+      - "&7&o身法似那沙漠中的疾风沙砾"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +6"
+      - "&f护甲 +10"
+      - "&f抗击退 +5%"
+      - "&f移速 +3%"
+    req_job: 1
+    req_lv: 20
+    stats:
+      max_health: 6.0
+      armor: 10.0
+      knock_back_res: 0.05
+      speed_percent: 0.03
+
+  jifengxiongjia:
+    display: "&9疾风胸甲"
+    material: GOLDEN_CHESTPLATE
+    rarity: 3
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b20"
+      - "&7&o轻便如风,来去若影"
+      - "&7&o身法似那沙漠中的疾风沙砾"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +10"
+      - "&f护甲 +16"
+    req_job: 1
+    req_lv: 20
+    stats:
+      max_health: 10.0
+      armor: 16.0
+
+  jifenghutui:
+    display: "&9疾风护腿"
+    material: GOLDEN_LEGGINGS
+    rarity: 3
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b20"
+      - "&7&o轻便如风,来去若影"
+      - "&7&o身法似那沙漠中的疾风沙砾"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +8"
+      - "&f护甲 +14"
+    req_job: 1
+    req_lv: 20
+    stats:
+      max_health: 8.0
+      armor: 14.0
+
+  jifengxie:
+    display: "&9疾风鞋"
+    material: GOLDEN_BOOTS
+    rarity: 3
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b20"
+      - "&7&o轻便如风,来去若影"
+      - "&7&o身法似那沙漠中的疾风沙砾"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +6"
+      - "&f护甲 +8"
+      - "&f移速 +7%"
+    req_job: 1
+    req_lv: 20
+    stats:
+      max_health: 6.0
+      armor: 8.0
+      speed_percent: 0.07
+
+  # === 术士三阶 ===
+  haoyuemao:
+    display: "&9皓月帽"
+    material: CHAINMAIL_HELMET
+    rarity: 3
+    lore:
+      - "&6限制职业:[术] 限制等级:&b20"
+      - "&7&o皓月当空,银河如练"
+      - "&7&o袍中暗藏元素流转之秘,如天地法则般深邃"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +5"
+      - "&f护甲 +9"
+    req_job: 2
+    req_lv: 20
+    stats:
+      max_health: 5.0
+      armor: 9.0
+
+  haoyuepao:
+    display: "&9皓月袍"
+    material: CHAINMAIL_CHESTPLATE
+    rarity: 3
+    lore:
+      - "&6限制职业:[术] 限制等级:&b20"
+      - "&7&o皓月当空,银河如练"
+      - "&7&o袍中暗藏元素流转之秘,如天地法则般深邃"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +9"
+      - "&f护甲 +14"
+    req_job: 2
+    req_lv: 20
+    stats:
+      max_health: 9.0
+      armor: 14.0
+
+  haoyueku:
+    display: "&9皓月裤"
+    material: CHAINMAIL_LEGGINGS
+    rarity: 3
+    lore:
+      - "&6限制职业:[术] 限制等级:&b20"
+      - "&7&o皓月当空,银河如练"
+      - "&7&o袍中暗藏元素流转之秘,如天地法则般深邃"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +7"
+      - "&f护甲 +12"
+    req_job: 2
+    req_lv: 20
+    stats:
+      max_health: 7.0
+      armor: 12.0
+
+  haoyuelv:
+    display: "&9皓月履"
+    material: CHAINMAIL_BOOTS
+    rarity: 3
+    lore:
+      - "&6限制职业:[术] 限制等级:&b20"
+      - "&7&o皓月当空,银河如练"
+      - "&7&o袍中暗藏元素流转之秘,如天地法则般深邃"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +5"
+      - "&f护甲 +7"
+      - "&f移速 +4%"
+    req_job: 2
+    req_lv: 20
+    stats:
+      max_health: 5.0
+      armor: 7.0
+      speed_percent: 0.04
 
   # === 医师三阶 ===
   chunfengguan:
     display: "&9春风冠"
     material: CHAINMAIL_HELMET
     rarity: 3
-    model_id: "yishi_1" # 【新增】用于控制穿在身上的模型贴图。对应你在设备 JSON 里写的名字。
+    model_id: "yishi_1"
     lore:
       - "&6限制职业:[医] 限制等级:&b20"
-      - "&7&o春意盎然,生机勃勃的医师套装"
-      - "&7&o衣布还散发着淡淡的草药清香"
+      - "&7&o汇聚草木生机与天地灵气的医师装束"
+      - "&7&o如春风拂过,处处皆是生机"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f抗击退 +1%"
+      - "&f最大生命 +7"
+      - "&f护甲 +8"
     req_job: 3
     req_lv: 20
     stats:
-      knock_back_res: 0.01
+      max_health: 7.0
+      armor: 8.0
 
   chunfengpao:
     display: "&9春风袍"
     material: CHAINMAIL_CHESTPLATE
     rarity: 3
-    model_id: "yishi_1" # 【新增】用于控制穿在身上的模型贴图。对应你在设备 JSON 里写的名字。
+    model_id: "yishi_1"
     lore:
       - "&6限制职业:[医] 限制等级:&b20"
-      - "&7&o春意盎然,生机勃勃的医师套装"
-      - "&7&o衣布还散发着淡淡的草药清香"
+      - "&7&o汇聚草木生机与天地灵气的医师装束"
+      - "&7&o如春风拂过,处处皆是生机"
       - "&8===========&2&n&l防具属性&8============"
-      - "&f最大生命 +1"
+      - "&f最大生命 +11"
+      - "&f护甲 +14"
     req_job: 3
     req_lv: 20
     stats:
-      max_health: 1.0
+      max_health: 11.0
+      armor: 14.0
+
+  chunfengku:
+    display: "&9春风裤"
+    material: CHAINMAIL_LEGGINGS
+    rarity: 3
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b20"
+      - "&7&o汇聚草木生机与天地灵气的医师装束"
+      - "&7&o如春风拂过,处处皆是生机"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +9"
+      - "&f护甲 +11"
+    req_job: 3
+    req_lv: 20
+    stats:
+      max_health: 9.0
+      armor: 11.0
+
+  chunfenglv:
+    display: "&9春风履"
+    material: CHAINMAIL_BOOTS
+    rarity: 3
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b20"
+      - "&7&o汇聚草木生机与天地灵气的医师装束"
+      - "&7&o如春风拂过,处处皆是生机"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +5"
+      - "&f护甲 +7"
+      - "&f移速 +4%"
+    req_job: 3
+    req_lv: 20
+    stats:
+      max_health: 5.0
+      armor: 7.0
+      speed_percent: 0.04

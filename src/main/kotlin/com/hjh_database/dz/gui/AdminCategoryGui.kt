@@ -23,8 +23,8 @@ class AdminCategoryGui(private val plugin: Hjh_database, private val player: Pla
     init {
         setItem(10, Material.IRON_SWORD, "weapon", "§c武器配方管理")
         setItem(12, Material.DIAMOND_CHESTPLATE, "armor", "§b防具配方管理")
-        setItem(14, Material.TOTEM_OF_UNDYING, "artifact", "§6神器配方管理")
-        setItem(16, Material.APPLE, "misc", "§a杂项配方管理")
+        setItem(14, Material.END_CRYSTAL, "artifact", "§6法宝＆饰品配方管理")
+        setItem(16, Material.WOODEN_HOE, "misc", "§a杂项配方管理")
 
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }

@@ -63,7 +63,7 @@ class RecipeEditorGui(
             sm.lore = Arrays.asList(
                 "§71. 放入成品和材料",
                 "§72. 点击此按钮",
-                "§73. 在聊天栏输入等级职业等参数"
+                "§73. 在聊天栏输入锻造等级、职业等参数"
             )
             save.itemMeta = sm
         }
@@ -155,8 +155,8 @@ class RecipeEditorGui(
             player.sendMessage("§7(提示: 这是一个自定义RPG物品配方)")
         }
         player.sendMessage("§a请在聊天栏输入 4 个参数 (空格分隔):")
-        player.sendMessage("§7格式: <职业> <等级> <经验奖励> <执照要求>")
-        player.sendMessage("§7示例: 1 10 50 0  (代表:弓手 10级 50经验 0执照)")
+        player.sendMessage("§7格式: <职业> <锻造等级> <经验奖励> <锻造资质要求>")
+        player.sendMessage("§7示例: 1 10 50 0  (代表:弓手 锻造等级10 50经验 锻造资质0)")
         player.sendMessage("§e输入 'cancel' 取消保存")
         player.sendMessage("§a========================================")
     }

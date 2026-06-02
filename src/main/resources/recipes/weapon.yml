@@ -1,24 +1,144 @@
-RED_WOOL:
-  result_id: RED_WOOL
+kaishandao:
+  result_id: kaishandao:1
   ingredients:
-    - novice_sword
-    - AIR
-    - AIR
-    - AIR
-    - AIR
-  req_job: -1
-  req_level: -1
-  req_license: 0
-  exp_reward: 0
-baojiceshi_bow:
-  result_id: baojiceshi_bow
-  ingredients:
-    - RED_WOOL
-    - AIR
-    - AIR
-    - AIR
-    - AIR
-  req_job: -1
-  req_level: -1
+  - kaishandao_chuxing:1
+  - taomujian:1
+  - cucaoshi:8
+  - longlinmu:10
+  - wood:10
+  req_job: 0
+  req_level: 1
   req_license: 0
   exp_reward: 10
+qintongjian:
+  result_id: qintongjian:1
+  ingredients:
+  - qingtongjian_chuxing:1
+  - taomujian:1
+  - cucaoshi:10
+  - longlinmu:10
+  - wood:10
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 10
+heitienu:
+  result_id: heitienu:1
+  ingredients:
+  - heitienu_chuxing:1
+  - tengmugong:1
+  - cucaoshi:8
+  - longlinmu:10
+  - wood:10
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 10
+qingtonggong:
+  result_id: qingtonggong:1
+  ingredients:
+  - qingtonggong_chuxing:1
+  - tengmugong:1
+  - cucaoshi:8
+  - longlinmu:10
+  - wood:10
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 10
+shufalu:
+  result_id: shufalu:1
+  ingredients:
+  - shufalu_chuxing:1
+  - xuetulu:1
+  - cucaoshi:8
+  - longlinmu:10
+  - wood:10
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 10
+qingnangqi:
+  result_id: qingnangqi:5
+  ingredients:
+  - qingnangqi_chuxing:1
+  - subuqi:5
+  - cucaoshi:4
+  - longlinmu:5
+  - wood:10
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 20
+chitongjian:
+  result_id: chitongjian:1
+  ingredients:
+  - kaishandao:1
+  - chitongjian_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+jutongzhanchui:
+  result_id: jutongzhanchui:1
+  ingredients:
+  - qintongjian:1
+  - jutongzhanchui_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+honglingnu:
+  result_id: honglingnu:1
+  ingredients:
+  - heitienu:1
+  - honglingnu_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+yantiegong:
+  result_id: yantiegong:1
+  ingredients:
+  - qingtonggong:1
+  - yantiegong_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+yantielu:
+  result_id: yantielu:1
+  ingredients:
+  - shufalu:1
+  - yantielu_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+linghuowenqi:
+  result_id: linghuowenqi:5
+  ingredients:
+  - qingnangqi:5
+  - linghuowenqi_chuxing:1
+  - yanjingshi:2
+  - gushashi:10
+  - fire:32
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 100

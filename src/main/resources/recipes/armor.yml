@@ -1,0 +1,240 @@
+zhanlangtouzhao:
+  result_id: zhanlangtouzhao:1
+  ingredients:
+  - chuxinzhepimao:1
+  - armor_core_2:1
+  - bupi:2
+  - water:2
+  - AIR:1
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+zhanlangyingjia:
+  result_id: zhanlangyingjia:1
+  ingredients:
+  - chuxinzhehujia:1
+  - armor_core_2:1
+  - bupi:2
+  - wood:2
+  - AIR:1
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+zhanlangpiku:
+  result_id: zhanlangpiku:1
+  ingredients:
+  - chuxinzhehutui:1
+  - armor_core_2:1
+  - bupi:2
+  - water:2
+  - AIR:1
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+zhanlangchangtongxue:
+  result_id: zhanlangchangtongxue:1
+  ingredients:
+  - chuxinzhepixue:1
+  - armor_core_2:1
+  - bupi:2
+  - wood:2
+  - AIR:1
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fanxingmao:
+  result_id: fanxingmao
+  ingredients:
+  - chuxinzhepimao
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fanxingpiyi:
+  result_id: fanxingpiyi
+  ingredients:
+  - chuxinzhehujia
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fanxingpiku:
+  result_id: fanxingpiku
+  ingredients:
+  - chuxinzhehutui
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fanxingxie:
+  result_id: fanxingxie
+  ingredients:
+  - chuxinzhepixue
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fengxinghue:
+  result_id: fengxinghue
+  ingredients:
+  - chuxinzhepimao
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+tingfengpijia:
+  result_id: tingfengpijia
+  ingredients:
+  - chuxinzhehujia
+  - armor_core_2
+  - bupi:2
+  - water:2
+  - AIR
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fenglinku:
+  result_id: fenglinku
+  ingredients:
+  - chuxinzhehutui
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+fengyucaoxie:
+  result_id: fengyucaoxie
+  ingredients:
+  - chuxinzhepixue
+  - armor_core_2
+  - bupi:2
+  - water:2
+  - AIR
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 3
+lanniaomao:
+  result_id: lanniaomao
+  ingredients:
+  - chuxinzhepimao
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 5
+lanniaoyi:
+  result_id: lanniaoyi
+  ingredients:
+  - chuxinzhehujia
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 5
+lanniaoku:
+  result_id: lanniaoku
+  ingredients:
+  - chuxinzhehutui
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 5
+lanniaoxie:
+  result_id: lanniaoxie
+  ingredients:
+  - chuxinzhepixue
+  - armor_core_2
+  - bupi:2
+  - wood:2
+  - AIR
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 5
+zhutiekui:
+  result_id: zhutiekui:1
+  ingredients:
+  - zhanlangtouzhao:1
+  - armor_core_3:1
+  - taoyuansichou:2
+  - huangfengyan:1
+  - fire:16
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+zhutiexiongjia:
+  result_id: zhutiexiongjia:1
+  ingredients:
+  - zhanlangyingjia:1
+  - armor_core_3:1
+  - taoyuansichou:2
+  - huangfengyan:1
+  - fire:16
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+zhutiehutui:
+  result_id: zhutiehutui:1
+  ingredients:
+  - zhanlangpiku:1
+  - armor_core_3:1
+  - taoyuansichou:2
+  - huangfengyan:1
+  - fire:16
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+zhutiezhanxue:
+  result_id: zhutiezhanxue:1
+  ingredients:
+  - zhanlangchangtongxue:1
+  - armor_core_3:1
+  - taoyuansichou:2
+  - huangfengyan:1
+  - fire:16
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 30

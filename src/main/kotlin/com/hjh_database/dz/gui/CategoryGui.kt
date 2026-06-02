@@ -41,9 +41,9 @@ class CategoryGui(
             YamlConfiguration() // 空配置，将触发兜底逻辑
         }
 
-        val title = settings.getString("gui.title", "锻造台 - 选择分类")
+        val title = settings.getString("gui.title", "锻造台")
         // createInventory title 不能为 null，虽然 default 不会为 null，但为了安全
-        this.inv = Bukkit.createInventory(this, 27, title ?: "锻造台 - 选择分类")
+        this.inv = Bukkit.createInventory(this, 27, title ?: "锻造台")
 
         setupGui()
         plugin.server.pluginManager.registerEvents(this, plugin)
@@ -66,8 +66,8 @@ class CategoryGui(
         if (catSec == null || catSec.getKeys(false).isEmpty()) {
             addCategoryItem(10, Material.IRON_SWORD, "weapon", "§c§l[武器锻造]", "§7打造各种神兵利器")
             addCategoryItem(12, Material.IRON_CHESTPLATE, "armor", "§9§l[防具锻造]", "§7打造坚固的盔甲")
-            addCategoryItem(14, Material.NETHER_STAR, "artifact", "§6§l[法宝锻造]", "§7打造特殊的法宝")
-            addCategoryItem(16, Material.CHEST, "misc", "§e§l[杂项锻造]", "§7打造材料与其他物品")
+            addCategoryItem(14, Material.END_CRYSTAL, "artifact", "§6§l[法宝＆饰品锻造]", "§7打造特殊的法宝与饰品")
+            addCategoryItem(16, Material.WOODEN_HOE, "misc", "§e§l[杂项锻造]", "§7打造材料与其他物品")
         } else {
             // 正常读取配置 (槽位如果不配，自己算一个简单的排列)
             val slots = intArrayOf(10, 12, 14, 16, 11, 13, 15)

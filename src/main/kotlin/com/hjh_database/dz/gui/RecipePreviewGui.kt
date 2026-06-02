@@ -42,7 +42,7 @@ class RecipePreviewGui(
             this.inv = Bukkit.createInventory(this, 9, "错误")
             // Kotlin init 块不能 return，但通过 if-else 跳过后续初始化逻辑
         } else {
-            this.inv = Bukkit.createInventory(this, 54, "配方预览: ")
+            this.inv = Bukkit.createInventory(this, 54, "${plainItemName(this.recipe.result)}配方预览")
             setupGui()
             plugin.server.pluginManager.registerEvents(this, plugin)
         }
@@ -79,8 +79,8 @@ class RecipePreviewGui(
                 im.setDisplayName("§e§l配方要求")
                 im.lore = Arrays.asList(
                     "§7职业: " + DzUtil.getJobName(recipe.reqJob),
-                    "§7等级: " + recipe.reqForgeLevel,
-                    "§7执照: " + recipe.reqLicense,
+                    "§7锻造等级: " + recipe.reqForgeLevel,
+                    "§7锻造资质: " + recipe.reqLicense,
                     "§7锻造成功奖励经验: " + recipe.expReward
                 )
                 info.itemMeta = im
@@ -137,8 +137,14 @@ class RecipePreviewGui(
             if (recipe != null) {
                 player.closeInventory()
                 // 跳转到锻造台
-                RecipeCraftingGui(plugin, player, recipe).open()
+                RecipeCraftingGui(plugin, player, category, recipe).open()
             }
         }
+    }
+
+    private fun plainItemName(item: ItemStack): String {
+        val meta = item.itemMeta
+        val name = if (meta != null && meta.hasDisplayName()) meta.displayName else item.type.name
+        return ChatColor.stripColor(name) ?: name
     }
 }

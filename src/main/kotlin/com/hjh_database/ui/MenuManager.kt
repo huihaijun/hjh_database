@@ -168,7 +168,7 @@ class MenuManager(private val plugin: Hjh_database) {
         book.itemMeta = meta
         inv.setItem(31, book)
 
-        // === 【新增】Slot 32: 个人饰品栏 ===
+        // === Slot 32: 个人饰品栏 ===
         val accessoryButton = ItemStack(Material.SHULKER_SHELL)
         val accessoryMeta = accessoryButton.itemMeta
         accessoryMeta?.setDisplayName("§6✦ 饰品栏 ✦")

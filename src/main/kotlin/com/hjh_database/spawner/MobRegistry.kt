@@ -816,5 +816,29 @@ object MobRegistry {
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
         ))
+        register(MobDefinition(
+            id = "xiongshentaisui",
+            name = "&6千斤的 凶神太岁",
+            type = EntityType.MAGMA_CUBE,
+            health = 300.0,
+            damage = 10.0,
+            armor = 30.0,
+            speed = 0.2,
+            exp=100,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落土元素
+                MobDrop("earth", 3, 4, 1.0),
+                // 10%掉落金元宝
+                MobDrop("jinyuanbao", 1, 1, 0.4),
+                // 10%掉落重生石
+                MobDrop("relive_stone", 1, 1, 1.0),
+                // 焱砂之心
+                MobDrop("yanshazhixin", 3, 4, 0.6),
+                // 掉落恶魂丹
+                MobDrop("ehundan", 1, 1, 0.4),
+            ),
+            affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+        ))
     }
 }

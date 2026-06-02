@@ -109,6 +109,17 @@ waypoints:
       z: 808.5
       yaw: 273.32
       pitch: 4.8
+  wenquankezhan:
+    region: SOUTH
+    name: 温泉客栈
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -445.5
+      y: 95.5
+      z: 346.5
+      yaw: 2970.32
+      pitch: 0.0
   huoyanmowangdechaoxue:
     region: SOUTH
     name: 火焰魔王的巢穴

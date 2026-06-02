@@ -247,13 +247,14 @@ class ArmorManager(private val plugin: Hjh_database) {
         if (data.display != null) {
             meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', data.display!!))
         }
+        val coloredLore: MutableList<String> = ArrayList()
+        coloredLore.add(WeaponManager.getRarityLore(data.rarity))
         if (data.lore != null) {
-            val coloredLore: MutableList<String> = ArrayList()
             for (line in data.lore!!) {
                 coloredLore.add(ChatColor.translateAlternateColorCodes('&', line))
             }
-            meta.lore = coloredLore
         }
+        meta.lore = coloredLore
         if (data.customModelData != 0) {
             meta.setCustomModelData(data.customModelData)
         }
@@ -283,6 +284,7 @@ class ArmorManager(private val plugin: Hjh_database) {
         // 2. 写入 NBT (注意：护甲用的是 armorKey)
         meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, id)
         meta.persistentDataContainer.set(armorKey, PersistentDataType.STRING, id)
+        meta.persistentDataContainer.set(NamespacedKey(plugin, "rarity"), PersistentDataType.INTEGER, data.rarity)
 
         // 3. 属性标记 (1.21.3 推荐加入 HIDE_ADDITIONAL_TOOLTIP)
         meta.isUnbreakable = true

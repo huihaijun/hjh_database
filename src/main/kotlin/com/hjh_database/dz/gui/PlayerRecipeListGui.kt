@@ -4,7 +4,9 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzRecipe
 import com.hjh_database.util.DzUtil
 import org.bukkit.Bukkit
+import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
@@ -14,9 +16,9 @@ import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
 import java.util.ArrayList
 import java.util.HashMap
-import kotlin.math.min
 
 class PlayerRecipeListGui(
     private val plugin: Hjh_database,
@@ -24,9 +26,10 @@ class PlayerRecipeListGui(
     private val category: String
 ) : InventoryHolder, Listener {
 
-    private val inv: Inventory = Bukkit.createInventory(this, 54, "锻造列表: $category")
-    private var page = 1
+    private val inv: Inventory = Bukkit.createInventory(this, 54, getCategoryTitle(category))
+    private var page = 0
     private val displayRecipes: MutableList<DzRecipe> = ArrayList()
+    private val rarityPages: MutableList<Int> = ArrayList()
 
     // 【终极方案】不再依赖物品NBT，而是直接记录 槽位 -> 配方ID 的映射
     // 这样无论物品是否被刷新、Lore是否被清洗，都不会影响点击判定
@@ -55,6 +58,9 @@ class PlayerRecipeListGui(
             }
             displayRecipes.add(r)
         }
+        displayRecipes.sortWith(recipeComparator())
+        rarityPages.clear()
+        rarityPages.addAll(displayRecipes.map { getRecipeRarity(it) }.distinct().sorted())
     }
 
     private fun setupPage() {
@@ -70,41 +76,32 @@ class PlayerRecipeListGui(
         }
         for (i in 45 until 54) inv.setItem(i, filler)
 
-        // 2. 设置翻页按钮 (保持原逻辑)
-        if (page > 1) {
-            val prev = ItemStack(Material.ARROW)
-            val pm = prev.itemMeta
-            if (pm != null) {
-                pm.setDisplayName("§a上一页")
-                prev.itemMeta = pm
-            }
-            inv.setItem(45, prev)
+        val currentRarity = rarityPages.getOrNull(page)
+
+        // 2. 设置翻页按钮：按稀有度翻页
+        if (page > 0) {
+            setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}")
         }
-        if ((page * 45) < displayRecipes.size) {
-            val next = ItemStack(Material.ARROW)
-            val nm = next.itemMeta
-            if (nm != null) {
-                nm.setDisplayName("§a下一页")
-                next.itemMeta = nm
-            }
-            inv.setItem(53, next)
+        if (page < rarityPages.lastIndex) {
+            setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}")
         }
 
         // 3. 返回按钮 (保持原逻辑)
-        val back = ItemStack(Material.BARRIER)
-        val bm = back.itemMeta
-        if (bm != null) {
-            bm.setDisplayName("§c返回分类")
-            back.itemMeta = bm
+        setBtn(49, Material.BARRIER, "§c返回分类")
+
+        if (currentRarity == null) {
+            setBtn(22, Material.GRAY_DYE, "§7暂无可锻造配方")
+            return
         }
-        inv.setItem(49, back)
+
+        setBtn(4, Material.NETHER_STAR, "${formatRarityName(currentRarity)} §7配方")
 
         // ====================================================
         // 【核心修改区域】 配方列表渲染
         // ====================================================
 
-        val startIndex = (page - 1) * 45
-        val endIndex = min(startIndex + 45, displayRecipes.size)
+        val pageRecipes = displayRecipes.filter { getRecipeRarity(it) == currentRarity }
+        val slots = layoutSlots(pageRecipes.size)
 
         // A. 预先获取玩家数据 (用于显示 ✔/✘ 状态，不用于拦截)
         // 获取锻造数据
@@ -116,9 +113,9 @@ class PlayerRecipeListGui(
         val rpgData = plugin.playerManager.getData(player.uniqueId)
         val myJob = rpgData?.job ?: 0
 
-        for (i in startIndex until endIndex) {
-            val recipe = displayRecipes[i]
-            val slot = i - startIndex
+        for ((index, recipe) in pageRecipes.withIndex()) {
+            if (index >= slots.size) break
+            val slot = slots[index]
 
             // 记录槽位 -> 配方ID 的映射
             slotMap[slot] = recipe.id
@@ -149,13 +146,13 @@ class PlayerRecipeListGui(
                 // 2. 锻造等级需求
                 val lvOk = myForgeLv >= recipe.reqForgeLevel
                 val lvStatus = if (lvOk) "§a✔" else "§c✘"
-                lore.add("§7等级: §fLv.${recipe.reqForgeLevel} $lvStatus")
+                lore.add("§7锻造等级: §fLv.${recipe.reqForgeLevel} $lvStatus")
 
-                // 3. 锻造资质/执照需求 (新增)
+                // 3. 锻造资质需求
                 if (recipe.reqLicense > 0) {
                     val licOk = myLicense >= recipe.reqLicense
                     val licStatus = if (licOk) "§a✔" else "§c✘"
-                    lore.add("§7资质: §f${recipe.reqLicense}级执照 $licStatus")
+                    lore.add("§7锻造资质: §f${recipe.reqLicense}级 $licStatus")
                 }
 
                 // 4. 经验奖励
@@ -176,15 +173,96 @@ class PlayerRecipeListGui(
     }
 
     // 原代码中有 setBtn 定义但未使用（只在内部直接 new 实现了），为保持一致性保留
-    private fun setBtn(slot: Int, mat: Material, name: String) {
+    private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String) {
         val item = ItemStack(mat)
         val meta = item.itemMeta
         if (meta != null) {
             meta.setDisplayName(name)
+            if (lore.isNotEmpty()) meta.lore = lore.toList()
             item.itemMeta = meta
         }
         inv.setItem(slot, item)
     }
+
+    private fun recipeComparator(): Comparator<DzRecipe> {
+        return compareBy<DzRecipe> { getRecipeRarity(it) }
+            .thenBy { if (category == "armor") armorPieceOrder(it.result.type) else 0 }
+            .thenBy { stripColor(getItemDisplayName(it.result)) }
+    }
+
+    private fun getRecipeRarity(recipe: DzRecipe): Int {
+        val meta = recipe.result.itemMeta ?: return 1
+        val key = NamespacedKey(plugin, "rarity")
+        meta.persistentDataContainer.get(key, PersistentDataType.INTEGER)?.let { return it }
+
+        val idKey = NamespacedKey(plugin, "resource_id")
+        val weaponKey = NamespacedKey(plugin, "weapon_id")
+        val armorKey = NamespacedKey(plugin, "armor_id")
+        val itemId = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
+            ?: meta.persistentDataContainer.get(armorKey, PersistentDataType.STRING)
+            ?: meta.persistentDataContainer.get(idKey, PersistentDataType.STRING)
+
+        if (itemId != null) {
+            when (category) {
+                "weapon" -> plugin.playerManager.weaponManager.loadedWeapons[itemId]?.rarity?.let { return it }
+                "armor" -> plugin.playerManager.armorManager.loadedArmors[itemId]?.rarity?.let { return it }
+            }
+        }
+
+        val lore = meta.lore ?: return 1
+        val rarityLine = lore.firstOrNull { ChatColor.stripColor(it)?.contains("稀有度") == true } ?: return 1
+        return rarityLine.count { it == '★' }.coerceAtLeast(1)
+    }
+
+    private fun armorPieceOrder(material: Material): Int {
+        return when {
+            material.name.endsWith("_HELMET") -> 0
+            material.name.endsWith("_CHESTPLATE") -> 1
+            material.name.endsWith("_LEGGINGS") -> 2
+            material.name.endsWith("_BOOTS") -> 3
+            else -> 4
+        }
+    }
+
+    private fun layoutSlots(size: Int): List<Int> {
+        if (size <= 0) return emptyList()
+        val rows = listOf(
+            listOf(19, 20, 21, 22, 23, 24, 25),
+            listOf(28, 29, 30, 31, 32, 33, 34),
+            listOf(10, 11, 12, 13, 14, 15, 16),
+            listOf(37, 38, 39, 40, 41, 42, 43)
+        )
+        val result = mutableListOf<Int>()
+        var remaining = size
+        for (row in rows) {
+            if (remaining <= 0) break
+            val take = remaining.coerceAtMost(row.size)
+            val start = (row.size - take) / 2
+            result.addAll(row.subList(start, start + take))
+            remaining -= take
+        }
+        return result
+    }
+
+    private fun formatRarityName(rarity: Int): String {
+        val color = when (rarity) {
+            1 -> "§f"
+            2 -> "§a"
+            3 -> "§9"
+            4 -> "§d"
+            5 -> "§e"
+            6 -> "§c"
+            else -> "§7"
+        }
+        return "${color}${rarity}阶"
+    }
+
+    private fun getItemDisplayName(item: ItemStack): String {
+        val meta = item.itemMeta
+        return if (meta != null && meta.hasDisplayName()) meta.displayName else item.type.name
+    }
+
+    private fun stripColor(text: String): String = ChatColor.stripColor(text) ?: text
 
     fun open() {
         player.openInventory(inv)
@@ -211,14 +289,14 @@ class PlayerRecipeListGui(
 
         // 1. 功能按钮区
         if (slot == 45) {
-            if (page > 1) {
+            if (page > 0) {
                 page--
                 setupPage()
             }
             return
         }
         if (slot == 53) {
-            if ((page * 45) < displayRecipes.size) {
+            if (page < rarityPages.lastIndex) {
                 page++
                 setupPage()
             }
@@ -244,6 +322,18 @@ class PlayerRecipeListGui(
                 if (event.currentItem?.type != Material.AIR) {
                     // println("[GUI未命中] Slot:$slot 有物品但无映射!")
                 }
+            }
+        }
+    }
+
+    companion object {
+        fun getCategoryTitle(category: String): String {
+            return when (category) {
+                "weapon" -> "锻造武器"
+                "armor" -> "锻造防具"
+                "artifact" -> "锻造法宝饰品"
+                "misc" -> "锻造杂项"
+                else -> "锻造"
             }
         }
     }
