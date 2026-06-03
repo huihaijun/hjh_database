@@ -452,31 +452,18 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                     sender.sendMessage("§e[系统] 已新建模版: ${npcData.id}")
                 }
 
-                // 找到所有使用该 ID 的旧实例 UUID
-                val oldInstances = manager.instances.filterValues { it.templateId == npcData.id }.keys
-
-                // 遍历删除旧实体和数据
-                if (oldInstances.isNotEmpty()) {
-                    for (uuid in oldInstances) {
-                        // 尝试从世界中移除实体
-                        Bukkit.getEntity(uuid)?.remove()
-                        // 从内存 Map 中移除
-                        manager.instances.remove(uuid)
-                    }
-                    sender.sendMessage("§e[系统] 检测到旧的 ${npcData.displayName}，已清除。")
-                }
-
-                // 3. 【修改部分】直接生成新的 NPC (不再 else 跳过)
                 try {
                     val loc = npcData.getLocation()
-                    // 确保区块加载
-                    if (!loc.chunk.isLoaded) loc.chunk.load()
+                    val removedCount = manager.removeInstancesByTemplate(npcData.id, loc)
+                    if (removedCount > 0) {
+                        sender.sendMessage("§e[系统] 检测到旧的 ${npcData.displayName}，已清除 $removedCount 个实体。")
+                    }
 
                     manager.spawnNpc(loc, npcData.id)
                     sender.sendMessage("§a[系统] 已在 ${loc.blockX},${loc.blockY},${loc.blockZ} 生成 ${npcData.displayName}")
                     count++
                 } catch (e: Exception) {
-                    sender.sendMessage("§c[错误] 生成 $e{npcData.id} 失败: ${e.message}")
+                    sender.sendMessage("§c[错误] 生成 ${npcData.id} 失败: ${e.message}")
                 }
             }
 

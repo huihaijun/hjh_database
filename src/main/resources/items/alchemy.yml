@@ -1,4 +1,15 @@
 #炼丹所用材料
+yy_yuhedan:
+  material: GOLD_NUGGET
+  name: "&b[药引]愈合丹"
+  lore:
+    - "&f▶ &b愈合丹 &f药引"
+    - "&8  | &7&o常用的治愈型丹药"
+    - "&8  | &7&o服下后可以短暂愈合伤口"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
 dengxincao:
   material: SEA_PICKLE
   name: "&b灯心草"

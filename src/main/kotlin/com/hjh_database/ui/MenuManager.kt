@@ -287,6 +287,10 @@ class MenuManager(private val plugin: Hjh_database) {
         return pdc.get(resourceIdKey, PersistentDataType.STRING) == TIANJI_TOKEN_RESOURCE_ID
     }
 
+    fun isMainMenuTitle(title: String): Boolean {
+        return title == format(config.getString("gui.title", "&6&l天机令")!!)
+    }
+
     private fun format(msg: String): String {
         return ChatColor.translateAlternateColorCodes('&', msg)
     }

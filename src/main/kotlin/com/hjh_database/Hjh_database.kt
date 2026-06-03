@@ -40,6 +40,7 @@ import com.hjh_database.spawner.SpawnerBlockManager
 import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
 import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
+import com.hjh_database.spawner.impl.CustomMagmaCubeListener
 import com.hjh_database.spawner.impl.DesertSouthSkill
 
 
@@ -165,6 +166,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(WeaponSkillListener(this), this)
         pm.registerEvents(com.hjh_database.kaiwu.KaiWuListener(this), this)
         pm.registerEvents(MedicalSpellListener(this), this)
+        pm.registerEvents(CustomMagmaCubeListener(), this)
 
         // 3. 独立系统与GUI监听
         pm.registerEvents(com.hjh_database.skill.medical.gui.MedicalEtchGui(this), this)

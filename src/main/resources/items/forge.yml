@@ -23,7 +23,7 @@ weapon_book_3:
   name: "&9三阶武器制作书"
   lore:
     - "&7&o写满了锻造武器所需材料和方法的书籍"
-    - "&7&o凭借它可以锻造出三阶武器"
+    - "&7&o凭借它可以掌握锻造三阶武器的方法"
 
 armor_book_3:
   material: BOOK
@@ -31,7 +31,23 @@ armor_book_3:
   name: "&9三阶防具制作书"
   lore:
     - "&7&o写满了锻造防具所需材料和方法的书籍"
-    - "&7&o凭借它可以锻造出三阶防具"
+    - "&7&o凭借它可以掌握锻造三阶防具的方法"
+
+access_book_3:
+  material: BOOK
+  rarity: 3
+  name: "&9三阶饰品制作书"
+  lore:
+    - "&7&o写满了锻造饰品所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造出三阶饰品的方法"
+
+access_book_4:
+  material: BOOK
+  rarity: 4
+  name: "&d四阶饰品制作书"
+  lore:
+    - "&7&o写满了锻造饰品所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造出四阶饰品的方法"
 
 chitongding:
   material: GOLD_NUGGET
@@ -162,6 +178,8 @@ linghuowenqi_chuxing:
     - "&7&o用来制作医师武器——&9灵火纹旗&7&o的雏形"
     - "&7&o将其放置在锻造台上,根据配方加入其他材料"
     - "&7&o就能锻造出医师武器——&9灵火纹旗"
+    - "&e注意:&f锻造前,请先将医术从医旗上剥离"
+
 qingshidunpaizhizuoshu:
   material: BOOK
   rarity: 3

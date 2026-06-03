@@ -6,6 +6,7 @@ import com.hjh_database.npc.data.CustomTrade
 import com.hjh_database.npc.data.NpcInstance
 import com.hjh_database.npc.data.NpcTemplate
 import org.bukkit.Bukkit
+import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.Registry
@@ -249,6 +250,7 @@ class NpcManager(private val plugin: Hjh_database) {
     fun spawnNpc(location: Location, templateId: String): Villager? {
         val template = templates[templateId] ?: return null
         val world = location.world ?: return null
+        if (!location.chunk.isLoaded) location.chunk.load()
         val villager = world.spawn(location, Villager::class.java) { v ->
             v.profession = template.profession
             v.villagerType = template.type
@@ -260,6 +262,73 @@ class NpcManager(private val plugin: Hjh_database) {
         instances[villager.uniqueId] = NpcInstance(villager.uniqueId, templateId, location)
         saveData()
         return villager
+    }
+
+    fun removeInstancesByTemplate(templateId: String, targetLocation: Location? = null): Int {
+        val oldInstances = instances.values
+            .filter { it.templateId == templateId }
+            .toList()
+        val checkedChunks = HashSet<String>()
+        val removedUuids = HashSet<UUID>()
+        var removedCount = 0
+
+        for (instance in oldInstances) {
+            if (removeNpcEntity(instance.uuid, instance.location)) {
+                removedCount++
+                removedUuids.add(instance.uuid)
+            }
+
+            val chunk = loadChunk(instance.location)
+            if (chunk != null && checkedChunks.add(chunkKey(chunk))) {
+                removedCount += removeTemplateEntitiesInChunk(chunk, templateId, removedUuids)
+            }
+
+            instances.remove(instance.uuid)
+        }
+
+        val targetChunk = targetLocation?.let { loadChunk(it) }
+        if (targetChunk != null && checkedChunks.add(chunkKey(targetChunk))) {
+            removedCount += removeTemplateEntitiesInChunk(targetChunk, templateId, removedUuids)
+        }
+
+        if (oldInstances.isNotEmpty() || removedCount > 0) {
+            saveData()
+        }
+        return removedCount
+    }
+
+    private fun removeNpcEntity(uuid: UUID, location: Location? = null): Boolean {
+        location?.let { loadChunk(it) }
+        val entity = Bukkit.getEntity(uuid) ?: return false
+        entity.remove()
+        return true
+    }
+
+    private fun loadChunk(location: Location): Chunk? {
+        val world = location.world ?: return null
+        val chunk = world.getChunkAt(location)
+        if (!chunk.isLoaded) chunk.load()
+        return chunk
+    }
+
+    private fun chunkKey(chunk: Chunk): String {
+        return "${chunk.world.uid}:${chunk.x}:${chunk.z}"
+    }
+
+    private fun removeTemplateEntitiesInChunk(chunk: Chunk, templateId: String, removedUuids: MutableSet<UUID>): Int {
+        var count = 0
+        for (entity in chunk.entities) {
+            if (entity !is Villager) continue
+            if (entity.uniqueId in removedUuids) continue
+            val entityTemplateId = entity.persistentDataContainer.get(npcKey, PersistentDataType.STRING) ?: continue
+            if (entityTemplateId != templateId) continue
+
+            entity.remove()
+            if (removedUuids.add(entity.uniqueId)) {
+                count++
+            }
+        }
+        return count
     }
 
     private fun stripAiGoals(mob: Mob) {
@@ -276,7 +345,7 @@ class NpcManager(private val plugin: Hjh_database) {
     fun removeNpc(uuid: UUID) {
         val instance = instances[uuid]
         instances.remove(uuid)
-        Bukkit.getEntity(uuid)?.remove()
+        removeNpcEntity(uuid, instance?.location)
         if (instance != null) {
             val tid = instance.templateId
             if (tid.startsWith("npc_") || tid.startsWith("converted_")) {

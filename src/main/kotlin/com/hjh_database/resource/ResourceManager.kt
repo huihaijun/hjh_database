@@ -2,7 +2,6 @@ package com.hjh_database.resource
 
 import com.hjh_database.Hjh_database
 import io.papermc.paper.datacomponent.DataComponentTypes
-import io.papermc.paper.datacomponent.item.UseCooldown
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Color
@@ -209,6 +208,7 @@ class ResourceManager(private val plugin: Hjh_database) {
                 val newMeta = item.itemMeta!!
                 applyResourceToMeta(newMeta, res)
                 item.itemMeta = newMeta
+                applyResourceCooldownGroup(item, res)
                 isRefreshed = true
             }
         }
@@ -241,21 +241,23 @@ class ResourceManager(private val plugin: Hjh_database) {
             meta.persistentDataContainer.set(keyId, PersistentDataType.STRING, res.id!!)
             item.itemMeta = meta
         }
-        // ================= 新增：统一注入冷却组组件 =================
-        // 如果它是五行元素，出厂就自带 Cooldown 冷却组组件，保证新老物品都能堆叠
-        val elements = listOf("metal", "wood", "water", "fire", "earth")
-        if (elements.contains(res.id)) {
-            // 【精准匹配】：根据你的 groupKeys，这里拼接上 "_group" 后缀
-            // 使用 plugin.name.lowercase() 动态获取命名空间，确保 100% 和 Bukkit 的 NamespacedKey 一致
-            val exactKeyString = "${plugin.name.lowercase()}:${res.id}_group"
-
-            val cooldownComponent = io.papermc.paper.datacomponent.item.UseCooldown.useCooldown(0.1f)
-                .cooldownGroup(net.kyori.adventure.key.Key.key(exactKeyString))
-                .build()
-
-            item.setData(io.papermc.paper.datacomponent.DataComponentTypes.USE_COOLDOWN, cooldownComponent)
-        }
+        applyResourceCooldownGroup(item, res)
         return item
+    }
+
+    private fun applyResourceCooldownGroup(item: ItemStack, res: ResourceItem) {
+        val groupId = when {
+            listOf("metal", "wood", "water", "fire", "earth").contains(res.id) -> "${res.id}_group"
+            res.hasSicknessTime -> "alchemy_pill_sickness"
+            else -> return
+        }
+
+        val exactKeyString = "${plugin.name.lowercase()}:$groupId"
+        val cooldownComponent = io.papermc.paper.datacomponent.item.UseCooldown.useCooldown(0.1f)
+            .cooldownGroup(net.kyori.adventure.key.Key.key(exactKeyString))
+            .build()
+
+        item.setData(DataComponentTypes.USE_COOLDOWN, cooldownComponent)
     }
 
     private fun applyResourceToMeta(meta: ItemMeta, res: ResourceItem) {

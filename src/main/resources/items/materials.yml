@@ -7,28 +7,21 @@ copper_ore:
     - "&7&o甘甜无比，沁人心脾，村长最喜欢用它泡茶喝了"
     - "&e[任务物品]"
 
-hjh_xsyg:
-  material: FISHING_ROD
-  name: "&b新手鱼竿"
+tianjihe:
+  material: HEAVY_CORE
+  name: "&b天机核"
   lore:
-    - "&7&o用简单的木头和线制作的鱼竿"
-    - "&7&o轻盈无比，连小孩子都能用"
+    - "&7&o蕴藏天机阁无限奥秘的核心"
+    - "&7&o其内部运转的机械让万人着迷"
     - "&e[任务物品]"
 
-hjh_ygmg:
-  material: STICK
-  name: "&b鱼竿木棍"
+tiezhen:
+  material: BREEZE_ROD
+  name: "&b铁针"
   lore:
-    - "&7&o用来制作鱼竿的木棍"
+    - "&7&o铁质的枕头,用处还挺多的"
     - "&e[任务物品]"
-    -
-hjh_ygx:
-  material: GLASS_BOTTLE
-  name: "&b鱼竿线"
-  lore:
-    - "&7&o用来制作鱼竿的线"
-    - "&7&o存放很久了，用一团纸包着"
-    - "&e[任务物品]"
+
 
 hjh_xsyy:
   material: GOLD_NUGGET
@@ -189,3 +182,24 @@ shoujicaoliaodetong:
     - "&7&o用来给旦野师傅收集草药的桶"
     - "&7&o确实如他所说有点脏乱"
     - "&e[任务物品]"
+
+wangyuanwai_qiannianlingzhi:
+  material: POTATO
+  name: "&b王员外的千年灵芝"
+  lore:
+    - "&7&o王员外不慎被抢走的千年灵芝"
+    - "&7&o喜寒厌热,十分娇贵,拿到后快还给他吧"
+
+wenquan_caoyaoguan:
+  material: BOWL
+  name: "&b温泉客栈装草药的罐子"
+  lore:
+    - "&7&o温泉客栈老板盛放草药的罐子"
+    - "&7&o按照他的要求倒入到温泉里吧!"
+
+shangxian_shuazi:
+  material: BRUSH
+  name: "&b上仙的刷子"
+  lore:
+    - "&7&o用来擦去石碑上灰尘的刷子"
+    - "&7&o按照上仙的要求去帮帮他"

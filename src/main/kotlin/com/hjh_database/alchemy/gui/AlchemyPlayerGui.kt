@@ -38,7 +38,6 @@ class AlchemyPlayerGui(
     }
 
     private fun loadRecipes() {
-        val playerData = plugin.playerManager.getPlayerData(player) ?: return
         val allRecipes = plugin.alchemyManager.recipes.values
         var slot = 0
         for (recipe in allRecipes) {
@@ -47,21 +46,10 @@ class AlchemyPlayerGui(
 
             // 获取初级成品（或者第一个存在的成品），以此来判断职业限制
             val firstTier = recipe.tierData.values.firstOrNull() ?: continue
-            val resultItem = firstTier.result
-
-            // 【修改点】从成品物品中提取资源ID，并从 ResourceManager 获取配置
-            val resourceId = resultItem.itemMeta?.persistentDataContainer?.get(NamespacedKey(plugin, "resource_id"), PersistentDataType.STRING)
-            val resourceData = if (resourceId != null) plugin.resourceManager.getLocalResource(resourceId) else null
-
-            val onlyDoctor = resourceData?.onlyDoctor ?: false
-
-            // 1. 检查职业限制 (如果仅限医师，且玩家不是医师，则跳过)
-            if (onlyDoctor && playerData.job != 3) continue
-
-            // 2. 检查是否有至少一个等级的配置
+            // 1. 检查是否有至少一个等级的配置
             if (recipe.tierData.isEmpty()) continue
 
-            // 3. 构建图标 (使用初级成品作为图标，如果没有初级就用第一个有的)
+            // 2. 构建图标 (使用初级成品作为图标，如果没有初级就用第一个有的)
             val iconItem = firstTier.result.clone()
             val meta = iconItem.itemMeta
 
@@ -91,17 +79,17 @@ class AlchemyPlayerGui(
         val currentLevel = playerData.alchemyLevel
 
         // 放置三个品质的按钮
-        setTierButton(tierInv, recipe, AlchemyTier.LOW, 11, currentLevel)
-        setTierButton(tierInv, recipe, AlchemyTier.MID, 13, currentLevel)
-        setTierButton(tierInv, recipe, AlchemyTier.HIGH, 15, currentLevel)
+        setTierButton(tierInv, recipe, AlchemyTier.LOW, 11, currentLevel, playerData.job)
+        setTierButton(tierInv, recipe, AlchemyTier.MID, 13, currentLevel, playerData.job)
+        setTierButton(tierInv, recipe, AlchemyTier.HIGH, 15, currentLevel, playerData.job)
 
         player.openInventory(tierInv)
     }
 
-    private fun setTierButton(inv: Inventory, recipe: AlchemyRecipe, tier: AlchemyTier, slot: Int, playerLevel: Int) {
+    private fun setTierButton(inv: Inventory, recipe: AlchemyRecipe, tier: AlchemyTier, slot: Int, playerLevel: Int, playerJob: Int?) {
         val config = recipe.tierData[tier]
         if (config == null) {
-            inv.setItem(slot, createItem(Material.BARRIER, "§c${tier.displayName} (未配置)"))
+            inv.setItem(slot, createItem(Material.BARRIER, "§c${tier.displayName} (当前丹药无此等级)"))
             return
         }
 
@@ -110,7 +98,8 @@ class AlchemyPlayerGui(
         val resourceData = if (resourceId != null) plugin.resourceManager.getLocalResource(resourceId) else null
 
         val reqLevel = resourceData?.reqLevel ?: 1
-        val canCraft = playerLevel >= reqLevel
+        val isDoctorOnlyTier = tier == AlchemyTier.HIGH
+        val canCraft = playerLevel >= reqLevel && (!isDoctorOnlyTier || playerJob == 3)
 
         val lore = ArrayList<String>()
         lore.add("§7需要炼药等级: $reqLevel")
@@ -126,7 +115,11 @@ class AlchemyPlayerGui(
         val resAmount = config.result.amount
         lore.add("§a产出: §b$resName §fx$resAmount")
 
-        if (canCraft) lore.add("§a点击开始炼制") else lore.add("§c等级不足")
+        when {
+            canCraft -> lore.add("§a点击开始炼制")
+            playerLevel < reqLevel -> lore.add("§c等级不足")
+            isDoctorOnlyTier -> lore.add("§c高级丹药仅医师可炼制")
+        }
 
         val icon = if (canCraft) tier.icon else Material.GRAY_DYE
         inv.setItem(slot, createItem(icon, tier.displayName, lore))

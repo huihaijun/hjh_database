@@ -61,7 +61,7 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
         val player = event.whoClicked as? Player ?: return
 
         // 1. 处理主菜单
-        if (title.contains("天机")) {
+        if (plugin.menuManager.isMainMenuTitle(title)) {
             val topSize = event.view.topInventory.size
             if (event.rawSlot >= topSize) {
                 if (event.isShiftClick) {
@@ -157,7 +157,7 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onInventoryDrag(event: InventoryDragEvent) {
         val title = event.view.title
-        if (!title.contains("天机")) return
+        if (!plugin.menuManager.isMainMenuTitle(title)) return
 
         val topSize = event.view.topInventory.size
         if (event.rawSlots.any { it < topSize }) {

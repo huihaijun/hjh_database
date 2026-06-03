@@ -7,6 +7,9 @@ import com.hjh_database.alchemy.data.AlchemyTier
 import com.hjh_database.alchemy.gui.AlchemyAdminGui
 import com.hjh_database.alchemy.gui.AlchemyAdminListGui // 导入新 GUI
 import com.hjh_database.alchemy.gui.AlchemyPlayerGui
+import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.UseCooldown
+import net.kyori.adventure.key.Key
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -27,6 +30,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private val alchemyIdKey = NamespacedKey(plugin, "hjh_alchemy_id")
     private val alchemyTierKey = NamespacedKey(plugin, "hjh_alchemy_tier")
     private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 【新增】兼容资源管理器自带的 ID 标签
+    private val pillCooldownKey = NamespacedKey(plugin, "alchemy_pill_sickness")
     private val presetColors = listOf("#FF5555", "#AA0000", "#5555FF", "#0000AA", "#00AA00", "#55FF55", "#FFAA00", "#FFFF55", "#FF55FF", "#000000")
     private val cauldronDataFile = File(plugin.dataFolder, "alchemy_cauldrons.yml")
     private val registeredCauldrons = mutableSetOf<String>()
@@ -87,8 +91,21 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             return
         }
 
+        // 【修改点】从玩家吃下的物品本身获取对应的药毒时间
+        val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
+        val resourceData = if (consumeResourceId != null) plugin.resourceManager.getLocalResource(consumeResourceId) else null
+
+        // 没写默认给 10 秒
+        val sicknessTime = resourceData?.sicknessTime ?: 10
+        val sicknessMillis = sicknessTime * 1000L
+
+        val cooldownTicks = (sicknessMillis / 50L).toInt()
+        applyPillCooldownComponent(item)
+
         // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
         item.subtract(1)
+        player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
+        setPillSicknessCooldown(player, item.type, cooldownTicks)
 
         player.playSound(player.location, org.bukkit.Sound.ENTITY_GENERIC_DRINK, 1f, 1f)
         player.playSound(player.location, org.bukkit.Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 2f)
@@ -98,13 +115,6 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             val pill = ActivePill(effectId, tier, duration)
             playerData.activePills.add(pill)
         }
-        // 【修改点】从玩家吃下的物品本身获取对应的药毒时间
-        val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
-        val resourceData = if (consumeResourceId != null) plugin.resourceManager.getLocalResource(consumeResourceId) else null
-
-        // 没写默认给 10 秒
-        val sicknessTime = resourceData?.sicknessTime ?: 10
-        val sicknessMillis = sicknessTime * 1000L
         playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
     }
 
@@ -239,6 +249,11 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
                         val resourceData = if (resourceId != null) plugin.resourceManager.getLocalResource(resourceId) else null
                         val reqLevel = resourceData?.reqLevel ?: 1
 
+                        if (tier == AlchemyTier.HIGH && playerData.job != 3) {
+                            player.sendMessage("§c高级丹药仅医师可以炼制。")
+                            return
+                        }
+
                         // 判断玩家等级是否足够
                         if (playerData.alchemyLevel >= reqLevel) {
                             player.closeInventory()
@@ -250,6 +265,53 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
                     }
                 }
             }
+        }
+    }
+
+    private fun applyPillCooldownComponent(item: org.bukkit.inventory.ItemStack) {
+        if (item.type == Material.AIR) return
+
+        try {
+            val cooldownComponent = UseCooldown.useCooldown(0.1f)
+                .cooldownGroup(Key.key(pillCooldownKey.toString()))
+                .build()
+
+            item.setData(DataComponentTypes.USE_COOLDOWN, cooldownComponent)
+        } catch (e: Exception) {
+            // 只影响视觉冷却组件，服用逻辑不应被阻断。
+        }
+    }
+
+    private fun setPillSicknessCooldown(player: org.bukkit.entity.Player, material: Material, ticks: Int) {
+        if (ticks <= 0 || material == Material.AIR) return
+
+        if (!sendPacketCooldown(player, pillCooldownKey, ticks)) {
+            player.setCooldown(material, ticks)
+        }
+    }
+
+    private fun sendPacketCooldown(player: org.bukkit.entity.Player, key: NamespacedKey, ticks: Int): Boolean {
+        try {
+            val craftPlayerMethod = player.javaClass.getMethod("getHandle")
+            val nmsPlayer = craftPlayerMethod.invoke(player)
+            val connectionField = nmsPlayer.javaClass.fields.firstOrNull {
+                it.type.name.contains("ServerGamePacketListenerImpl") || it.name == "c" || it.name == "connection"
+            } ?: throw NoSuchFieldException("No connection field")
+            val connection = connectionField.get(nmsPlayer)
+
+            val resourceLocationClass = Class.forName("net.minecraft.resources.ResourceLocation")
+            val parseMethod = resourceLocationClass.getMethod("parse", String::class.java)
+            val nmsKey = parseMethod.invoke(null, key.toString())
+
+            val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundCooldownPacket")
+            val packetConstructor = packetClass.getConstructor(resourceLocationClass, Int::class.javaPrimitiveType)
+            val packet = packetConstructor.newInstance(nmsKey, ticks)
+
+            val sendMethod = connection.javaClass.getMethod("send", Class.forName("net.minecraft.network.protocol.Packet"))
+            sendMethod.invoke(connection, packet)
+            return true
+        } catch (e: Exception) {
+            return false
         }
     }
 

@@ -136,7 +136,6 @@ class AlchemyManager(private val plugin: Hjh_database) {
         try {
             meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ATTRIBUTES)
             meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ADDITIONAL_TOOLTIP) // 1.20.5+
-            meta.setMaxStackSize(99) // 1.20.5+
         } catch (e: Error) { /* 忽略版本差异 */ }
 
         // 写入 NBT 数据

@@ -23,7 +23,8 @@ class ResourceItem(
     val onlyDoctor: Boolean = false,
     val reqLevel: Int = 1,
     val baseExp: Int = 5,
-    val sicknessTime: Int = 10
+    val sicknessTime: Int = 10,
+    val hasSicknessTime: Boolean = false
 ) {
 
     // === 属性初始化逻辑 (自动处理颜色和默认值) ===
@@ -75,7 +76,8 @@ class ResourceItem(
         reqLevel = sec.getInt("req_level", 1),
         onlyDoctor = sec.getBoolean("only_doctor", false),
         baseExp = sec.getInt("base_exp", 5),
-        sicknessTime = sec.getInt("sickness_time", 10)
+        sicknessTime = sec.getInt("sickness_time", 10),
+        hasSicknessTime = sec.contains("sickness_time")
     )
 
     // === 功能方法 ===

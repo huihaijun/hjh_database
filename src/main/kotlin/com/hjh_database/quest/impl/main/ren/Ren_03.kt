@@ -4,11 +4,8 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.quest.core.QuestBase
 import com.hjh_database.quest.core.QuestType
 import com.hjh_database.quest.core.StoryNpcs
-import org.bukkit.Material
-import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.entity.Player
-import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 import java.util.HashMap
 
@@ -22,7 +19,7 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
         return when (progress) {
             0 -> listOf("§c寻找 §e村长 §c对话")
             1 -> listOf("§a已与村长对话", "§c前往 §e铁匠铺 §c寻找掌柜")
-            2 -> listOf("§a已获得材料", "§c制作 §b[新手鱼竿] §c并交给村长")
+            2 -> listOf("§a已获得材料", "§c制作 §6[天机令] §c并主手持有左键村长")
             else -> listOf("§a任务已完成")
         }
     }
@@ -46,23 +43,24 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
         "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f但人族能走到今天，不光靠自己，更靠“团结”二字。",
         "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f万众一心，山海可平。五族之中，唯我们最懂齐心之力。所以寿命虽短，却能创造诸多奇迹。",
         "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f想学团结，先学助人。",
-        "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f你去村里铁匠铺，请掌柜打一竿鱼竿。东头孩子前两日缠着我要去钓鱼。",
+        "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f你去村里铁匠铺，请掌柜打一口§e钟表§f来。屋里正好缺个看时辰的物件。",
         "§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f铺子就在你来时的路边，招牌显眼。怎么打造，掌柜自会教你。"
     )
 
-    // 2. 铁匠对话 (需要确认 QuestNpcRegistry 中是否有 REN_SMITH，如果没有请记得添加)
-    // 假设 ID 为 ren_smith
+    // 2. 铁匠对话
     private val scriptSmith = listOf(
-        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f村长让你来打鱼竿？",
-        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f孩子们前几日才闹过，你这就来了，真是热心肠啊！",
-        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f正好我这儿还剩些木料和线，你拿去用吧。锻造台在那边。",
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f§e钟表§f？没听说最近有安排打造钟表啊……",
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f哦——！村长说的“钟”，莫不是指§6天机令§f？",
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f这东西可了不得！是咱们在§d天机阁§f当差的族人亲手炼制的宝贝。",
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f持此令者，可§b通晓三界之事§f，§a规划下一步方向§f，甚至能§d随时存取物件§f——可谓是每个族人行走天下必备的至宝！",
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f正好，我这儿还剩些材料，你来得巧。锻造台在那边。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f不会？锻造可是咱人族吃饭的手艺！我只教一次，以后可别说不会啊。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f首先，找到锻造台，伸手一触，界面自开。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f台上分四类：武器、防具、法宝、杂项。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f每件物品都有配方，点进去就能看到所需材料。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f你锻造手艺越高，能造的东西就越多。每次成功，都会涨经验、提等级。",
         "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f完成特定任务或造出珍品，还能提升“锻造资质”——这可是将来打造神器的重要凭证！",
-        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f材料给你，鱼竿就在“杂项”里。打好后，送去给村长吧。"
+        "§e[${StoryNpcs.REN_SMITH.displayName}§e] §f材料给你，§6天机令§f就在“杂项”里。打好后，送去给村长吧。"
     )
 
     // ==========================================
@@ -91,17 +89,17 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
                 return true
             }
 
-            // 阶段 2: 交鱼竿
+            // 阶段 2: 交天机令
             if (currentProgress == 2) {
-                // 检查背包里有没有 [新手鱼竿] (ID: hjh_xsyg)
-                if (checkAndRemoveQuestItem(player, "hjh_xsyg", "新手鱼竿", Material.FISHING_ROD)) {
+                // 只检查主手，不扣除天机令，避免和天机令右键菜单产生交付后的道具丢失问题。
+                if (hasTianjiTokenInMainHand(player)) {
 
-                    player.sendMessage("§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f做得好！这鱼竿轻便结实，孩子们一定喜欢。")
+                    player.sendMessage("§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f做得好！天机令已成，往后行走天下，也算多了一份凭依。")
 
                     // 完成任务
                     plugin.questManager.completeQuest(player, plugin.playerManager.getPlayerData(player)!!, this)
                 } else {
-                    player.sendMessage("§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f鱼竿做好了吗？就在铁匠铺的锻造台里制作。")
+                    player.sendMessage("§e[${StoryNpcs.REN_CHIEF.displayName}§e] §f天机令打好了吗？做好后主手持有它，再来左键找我。")
 //                    player.sendMessage("§7(提示：如果你弄丢了材料，可以找铁匠铺掌柜再要一份)")
                 }
                 return true
@@ -117,15 +115,14 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
                     // 对话结束回调：给材料，进下一阶段
                     giveMaterials(player)
                     plugin.questManager.updateProgress(player, id, 2)
-                    player.sendMessage("§a[任务] -> 已获得材料，请寻找附近的锻造台制作鱼竿。")
+                    player.sendMessage("§a[任务] -> 已获得材料，请寻找附近的锻造台制作天机令。")
                 }
                 return true
             }
 
             // 阶段 2: 补领材料 (人性化设计)
             if (currentProgress == 2) {
-                // 如果玩家身上没有鱼竿，也没有材料，可以补发 (此处简化逻辑，只做提示)
-                player.sendMessage("§e[${StoryNpcs.REN_SMITH.displayName}§e] §f快去试试锻造台吧，就在旁边。")
+                player.sendMessage("§e[${StoryNpcs.REN_SMITH.displayName}§e] §f快去试试锻造台吧，§6天机令§f就在“杂项”里。")
                 return true
             }
         }
@@ -144,22 +141,21 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
         val rm = Hjh_database.instance.resourceManager
 
         // 从资源管理器获取物品
-        val stick = rm.getItem("hjh_ygmg") // 鱼竿木棍
-        val line = rm.getItem("hjh_ygx")   // 鱼竿线
+        val core = rm.getItem("tianjihe") // 天机核
+        val needle = rm.getItem("tiezhen") // 铁针
 
-        if (stick == null || line == null) {
+        if (core == null || needle == null) {
             player.sendMessage("§c[错误] 无法获取任务物品配置，请联系管理员！")
             return
         }
 
-        // === 修改点1：设置线的数量为 3 ===
-        line.amount = 3
+        needle.amount = 2
 
         // 发送给玩家
         val inv = player.inventory
 
         // 尝试添加物品，addItem 会返回装不下的物品 Map (自动处理堆叠)
-        val leftovers = inv.addItem(stick, line)
+        val leftovers = inv.addItem(core, needle)
 
         // 如果有装不下的，丢在脚下
         if (leftovers.isNotEmpty()) {
@@ -169,63 +165,18 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
             }
         }
 
-        player.sendMessage("§e[系统] 获得 ${stick.itemMeta?.displayName ?: "木棍"} x1")
-        player.sendMessage("§e[系统] 获得 ${line.itemMeta?.displayName ?: "线"} x3")
+        player.sendMessage("§e[系统] 获得 ${core.itemMeta?.displayName ?: "天机核"} x1")
+        player.sendMessage("§e[系统] 获得 ${needle.itemMeta?.displayName ?: "铁针"} x2")
 
         player.playSound(player.location, Sound.ENTITY_ITEM_PICKUP, 1f, 1f)
     }
 
-    /**
-     * 检查并扣除任务物品
-     * 优先匹配 ResourceID (PDC)，其次匹配 DisplayName (防止锻造后NBT丢失)
-     */
-    private fun checkAndRemoveQuestItem(player: Player, resourceId: String, namePart: String, type: Material): Boolean {
-        val plugin = Hjh_database.instance
-        // 注意：Resource ID 的 Key，需要和 ResourceManager 里的 keyId 保持一致
-        // 在 ResourceManager 中是: NamespacedKey(plugin, "resource_id")
-        val resourceKey = NamespacedKey(plugin, "resource_id")
+    private fun hasTianjiTokenInMainHand(player: Player): Boolean {
+        val item = player.inventory.itemInMainHand
+        if (Hjh_database.instance.menuManager.isTianjiToken(item)) return true
 
-        // 1. 先检查是否存在
-        var foundSlot = -1
-
-        for ((slot, item) in player.inventory.withIndex()) {
-            if (item == null || item.type != type) continue
-            val meta = item.itemMeta ?: continue
-
-            var isMatch = false
-
-            // 判定 A: 检查 PDC ID (最准确)
-            if (meta.persistentDataContainer.has(resourceKey, PersistentDataType.STRING)) {
-                val id = meta.persistentDataContainer.get(resourceKey, PersistentDataType.STRING)
-                if (id == resourceId) {
-                    isMatch = true
-                }
-            }
-
-            // 判定 B: 如果没有PDC (可能是锻造结果丢失了NBT)，检查名字 (作为保底)
-            if (!isMatch && meta.hasDisplayName()) {
-                if (meta.displayName.contains(namePart)) {
-                    isMatch = true
-                }
-            }
-
-            if (isMatch) {
-                foundSlot = slot
-                break
-            }
-        }
-
-        // 2. 如果找到了，扣除一个
-        if (foundSlot != -1) {
-            val item = player.inventory.getItem(foundSlot)
-            if (item != null) {
-                item.amount = item.amount - 1
-                player.playSound(player.location, Sound.ENTITY_ITEM_BREAK, 1f, 1f)
-                return true
-            }
-        }
-
-        return false
+        val meta = item.itemMeta ?: return false
+        return meta.hasDisplayName() && meta.displayName.contains("天机令")
     }
 
     /**

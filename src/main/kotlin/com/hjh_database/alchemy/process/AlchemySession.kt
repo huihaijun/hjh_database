@@ -259,7 +259,11 @@ class AlchemySession(
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 2f)
 
         // 【修复 2：防止成品数量减少】发放物品时，必须 clone()！
-        val itemToGive = resultItem.clone()
+        val itemToGive = if (plugin.alchemyManager.getEffect(recipe.id) != null) {
+            plugin.alchemyManager.createPillItem(recipe.id, tier) ?: resultItem.clone()
+        } else {
+            resultItem.clone()
+        }
         val leftovers = player.inventory.addItem(itemToGive)
         // 如果背包满了，掉落在地上
         for (leftover in leftovers.values) {

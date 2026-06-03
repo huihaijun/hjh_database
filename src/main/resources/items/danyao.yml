@@ -33,6 +33,40 @@ yuhedan0:
     - "&e[右键] &f药丹疾病：&b3&f秒"
     - "&f瞬间恢复自身&b8&f点生命值"
 
+yuhedan1:
+  material: POTION
+  name: "&b愈合丹[中级]"
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 1           # 需要的冶药等级
+  base_exp: 10           # 炼制成功给的经验
+  sickness_time: 6    #药毒时间 单位秒
+  max_stack_size: 64
+  #  rarity: 2
+  lore:
+    - "&7&o常用的治愈型丹药"
+    - "&7&o服下后可以短暂愈合伤口"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b6&f秒"
+    - "&f瞬间恢复自身&b16&f点生命值"
+
+yuhedan2:
+  material: POTION
+  name: "&b愈合丹[高级]"
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 1           # 需要的冶药等级
+  base_exp: 15           # 炼制成功给的经验
+  sickness_time: 10
+  max_stack_size: 64
+  #  rarity: 2
+  lore:
+    - "&7&o常用的治愈型丹药"
+    - "&7&o服下后可以短暂愈合伤口"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b10&f秒"
+    - "&f瞬间恢复自身&b24&f点生命值"
+
 lianxindan:
   material: POTION
   name: "&6莲心丹"

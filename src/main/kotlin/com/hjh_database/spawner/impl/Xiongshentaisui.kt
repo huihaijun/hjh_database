@@ -21,7 +21,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.PlayerDeathEvent
-import org.bukkit.event.entity.SlimeSplitEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
@@ -41,6 +40,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     companion object {
         const val PLAYER_DEBUFF_METADATA = "hjh_xiongshentaisui_quicksand_player"
         const val BOSS_BUFF_METADATA = "hjh_xiongshentaisui_quicksand_boss"
+        private const val QUICKSAND_DAMAGE_METADATA = "hjh_xiongshentaisui_quicksand_damage"
 
         private val MAGIC_CAUSES = EnumSet.of(
             EntityDamageEvent.DamageCause.MAGIC,
@@ -73,7 +73,6 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     private val channelTicks = 3 * 20
     private val fieldTicks = 6 * 20
     private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
-    private val recentBossHits = HashMap<UUID, Long>()
     private var disposed = false
 
     init {
@@ -158,9 +157,9 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
                     return
                 }
 
-                drawActiveFields(circles)
-                updateFieldEffects(circles, warnedPlayers)
                 elapsed += 5
+                drawActiveFields(circles)
+                updateFieldEffects(circles, warnedPlayers, elapsed)
 
                 if (elapsed >= fieldTicks) {
                     cleanupAllEffects()
@@ -315,6 +314,8 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onDamage(event: EntityDamageByEntityEvent) {
+        if (event.entity.hasMetadata(QUICKSAND_DAMAGE_METADATA)) return
+
         val source = when (val damager = event.damager) {
             is LivingEntity -> damager
             is Projectile -> damager.shooter as? LivingEntity
@@ -322,15 +323,6 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         }
 
         if (source == boss && event.entity is Player) {
-            val player = event.entity as Player
-            val now = System.currentTimeMillis()
-            val lastHitAt = recentBossHits[player.uniqueId] ?: 0L
-            if (now - lastHitAt < 800L) {
-                event.isCancelled = true
-                return
-            }
-
-            recentBossHits[player.uniqueId] = now
             if (boss.hasMetadata(BOSS_BUFF_METADATA)) {
                 event.damage *= 1.2
             }
@@ -342,20 +334,10 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
 
         if (!ignoresArmor(event.cause)) {
             val victim = event.entity
-            if (victim is Player && victim.hasMetadata(PLAYER_DEBUFF_METADATA)) {
-                val armor = plugin.playerManager.getPlayerData(victim)?.armor ?: 0.0
-                event.damage *= armorChangeMultiplier(armor, 0.5)
-            } else if (victim == boss && boss.hasMetadata(BOSS_BUFF_METADATA)) {
+            if (victim == boss && boss.hasMetadata(BOSS_BUFF_METADATA)) {
                 val armor = boss.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
                 event.damage *= armorChangeMultiplier(armor, 1.3)
             }
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    fun onSlimeSplit(event: SlimeSplitEvent) {
-        if (event.entity == boss) {
-            event.isCancelled = true
         }
     }
 
@@ -369,13 +351,11 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     @EventHandler(priority = EventPriority.MONITOR)
     fun onPlayerDeath(event: PlayerDeathEvent) {
         removePlayerEffect(event.entity)
-        recentBossHits.remove(event.entity.uniqueId)
     }
 
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent) {
         removePlayerEffect(event.player)
-        recentBossHits.remove(event.player.uniqueId)
     }
 
     private fun ignoresArmor(cause: EntityDamageEvent.DamageCause): Boolean {
@@ -387,7 +367,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         return (50.0 + currentArmor) / (50.0 + currentArmor * armorFactor)
     }
 
-    private fun updateFieldEffects(circles: List<QuicksandCircle>, warnedPlayers: MutableSet<UUID>) {
+    private fun updateFieldEffects(circles: List<QuicksandCircle>, warnedPlayers: MutableSet<UUID>, fieldAgeTicks: Int) {
         val currentlyAffected = mutableSetOf<UUID>()
 
         boss.world.players
@@ -400,7 +380,11 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
                     player.sendMessage("§c快离开流沙区域！")
                     player.playSound(player.location, Sound.BLOCK_SAND_HIT, 1.0f, 0.7f)
                 }
-                player.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 12, 1, false, true, true))
+                player.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 12, 2, false, true, true))
+
+                if (fieldAgeTicks % 20 == 0) {
+                    damagePlayerInQuicksand(player)
+                }
             }
 
         affectedPlayers
@@ -416,6 +400,27 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
             boss.setMetadata(BOSS_BUFF_METADATA, FixedMetadataValue(plugin, true))
         } else if (boss.hasMetadata(BOSS_BUFF_METADATA)) {
             boss.removeMetadata(BOSS_BUFF_METADATA, plugin)
+        }
+    }
+
+    private fun damagePlayerInQuicksand(player: Player) {
+        if (!player.isValidPlayer()) return
+
+        val damage = player.health * 0.3
+        if (damage <= 0.0) return
+
+        player.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
+        player.setMetadata(QUICKSAND_DAMAGE_METADATA, FixedMetadataValue(plugin, true))
+        player.noDamageTicks = 0
+        try {
+            player.damage(damage, boss)
+        } finally {
+            if (player.hasMetadata("HJH_MAGIC_DAMAGE")) {
+                player.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            }
+            if (player.hasMetadata(QUICKSAND_DAMAGE_METADATA)) {
+                player.removeMetadata(QUICKSAND_DAMAGE_METADATA, plugin)
+            }
         }
     }
 
