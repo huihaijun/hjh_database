@@ -132,13 +132,13 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 10
+            Hjh_database.instance.playerManager.giveExp(player, 10)
 
             // ★★★ 额外自动解锁支线任务 (Side_Ren_01) ★★★
             data.questStatuses["side_ren_1"] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
             data.questProgress["side_ren_1"] = 0
 
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

@@ -320,7 +320,7 @@ class ZhuanYuanShangXianTrial(
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 100
+            plugin.playerManager.giveExp(player, 100)
             data.completedMedicalTrials.add(trialId)
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {

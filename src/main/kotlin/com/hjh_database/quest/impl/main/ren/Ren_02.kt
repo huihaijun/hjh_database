@@ -86,8 +86,8 @@ class Ren_02 : QuestBase("main_ren_2", "[人族主线]坚韧试炼", QuestType.M
         // 经验奖励
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 10
-            plugin.databaseManager.savePlayer(data)
+            plugin.playerManager.giveExp(player, 10)
+            plugin.databaseManager.savePlayerAsync(data)
         }
 
         player.sendMessage("§8§m========================================")

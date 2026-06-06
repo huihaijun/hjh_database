@@ -32,8 +32,8 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
         data.lingli = data.lingli + lingliAdd
-        // 修改完数据后，必须告诉数据库管理器保存数据
-        plugin.databaseManager.savePlayer(data)
+        // 施法路径高频触发，延迟合并保存灵力变化。
+        plugin.databaseManager.queuePlayerSave(data)
 
         // 3. 计算目标位置 (星云中心)
         val hitLoc = getHitLocation(player, range)

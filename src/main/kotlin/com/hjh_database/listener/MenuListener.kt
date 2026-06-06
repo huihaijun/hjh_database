@@ -225,8 +225,8 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
             if (count > 0) {
                 addBankAmount(data, type, count)
                 player.sendMessage("§a已存入 $count 个 ${type.displayName}")
-                // 异步保存数据，防止卡主线程
-                plugin.databaseManager.savePlayer(data)
+                // 点击可能连续触发，延迟合并保存，避免主线程等待数据库。
+                plugin.databaseManager.queuePlayerSave(data, 40L)
                 // 刷新界面以显示最新库存
                 plugin.menuManager.openDaoTianMenu(player)
             } else {
@@ -279,7 +279,7 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
 
             if (amountToTake > 0) {
                 player.sendMessage("§e已取出 $amountToTake 个 ${type.displayName}")
-                plugin.databaseManager.savePlayer(data)
+                plugin.databaseManager.queuePlayerSave(data, 40L)
                 plugin.menuManager.openDaoTianMenu(player)
             } else {
                 player.sendMessage("§c背包已满，无法取出！")

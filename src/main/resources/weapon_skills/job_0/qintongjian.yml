@@ -4,8 +4,8 @@ active:
   message: ""
   cooldown: 3
   # === 技能参数 ===
-  # 提升护甲的具体数值 20
-  armor_bonus: 20.0
+  # 提升护甲的具体数值 25
+  armor_bonus: 25.0
   # 降低移速的百分比 (0.25 = 25%)
   speed_malus_percent: 0.50
   # 开启时的提示

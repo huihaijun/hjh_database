@@ -212,8 +212,8 @@ class Ren_03 : QuestBase("main_ren_3", "[人族主线]工欲善其事", QuestTyp
         // 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 10
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 10)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

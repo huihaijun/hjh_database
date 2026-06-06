@@ -25,23 +25,263 @@ internal class DatabasePlayerRepository(
     }
 
     fun savePlayer(data: PlayerData) {
-        val updateMain = "UPDATE player_data SET player_name=?, lv=?, exp=?, job=?, race=?, attack=?, archer_damage=?, armor=?, speed=?, max_health=?, current_health=?, toughness=?, knock_back_res=?, attack_speed=?, crit_chance=?, zf_str=?, cool_reduce=?, lingli=?, total_rarity=? WHERE uuid=?"
-        val insertMain = "INSERT INTO player_data (player_name, lv, exp, job, race, attack, archer_damage, armor, speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance, zf_str, cool_reduce, lingli, total_rarity, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        val saveMain = """
+            INSERT INTO player_data (
+                uuid, player_name, lv, exp, exp_curve_version, job, race, attack, archer_damage, armor,
+                speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance,
+                zf_str, cool_reduce, lingli, total_rarity
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                lv=excluded.lv,
+                exp=excluded.exp,
+                exp_curve_version=excluded.exp_curve_version,
+                job=excluded.job,
+                race=excluded.race,
+                attack=excluded.attack,
+                archer_damage=excluded.archer_damage,
+                armor=excluded.armor,
+                speed=excluded.speed,
+                max_health=excluded.max_health,
+                current_health=excluded.current_health,
+                toughness=excluded.toughness,
+                knock_back_res=excluded.knock_back_res,
+                attack_speed=excluded.attack_speed,
+                crit_chance=excluded.crit_chance,
+                zf_str=excluded.zf_str,
+                cool_reduce=excluded.cool_reduce,
+                lingli=excluded.lingli,
+                total_rarity=excluded.total_rarity
+        """.trimIndent()
 
-        val updateBank = "UPDATE player_elementbank SET player_name=?, metal=?, wood=?, water=?, fire=?, earth=?, relive_stone=? WHERE uuid=?"
-        val insertBank = "INSERT INTO player_elementbank (player_name, metal, wood, water, fire, earth, relive_stone, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        val saveBank = """
+            INSERT INTO player_elementbank (uuid, player_name, metal, wood, water, fire, earth, relive_stone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                metal=excluded.metal,
+                wood=excluded.wood,
+                water=excluded.water,
+                fire=excluded.fire,
+                earth=excluded.earth,
+                relive_stone=excluded.relive_stone
+        """.trimIndent()
 
-        val updateSkills = "UPDATE player_element_zf_lvl SET player_name=?, metal=?, wood=?, water=?, fire=?, earth=? WHERE uuid=?"
-        val insertSkills = "INSERT INTO player_element_zf_lvl (player_name, metal, wood, water, fire, earth, uuid) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        val saveSkills = """
+            INSERT INTO player_element_zf_lvl (uuid, player_name, metal, wood, water, fire, earth)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                metal=excluded.metal,
+                wood=excluded.wood,
+                water=excluded.water,
+                fire=excluded.fire,
+                earth=excluded.earth
+        """.trimIndent()
 
-        val updateForge = "UPDATE player_dzlv SET player_name=?, forge_level=?, forge_exp=?, forge_license=? WHERE uuid=?"
-        val insertForge = "INSERT INTO player_dzlv (player_name, forge_level, forge_exp, forge_license, uuid) VALUES (?, ?, ?, ?, ?)"
+        val saveForge = """
+            INSERT INTO player_dzlv (uuid, player_name, forge_level, forge_exp, forge_license)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                forge_level=excluded.forge_level,
+                forge_exp=excluded.forge_exp,
+                forge_license=excluded.forge_license
+        """.trimIndent()
+
+        val saveKaiWu = """
+            INSERT INTO player_kaiwu (uuid, player_name, kaiwu_level, kaiwu_exp, kaiwu_energy, node_data)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                kaiwu_level=excluded.kaiwu_level,
+                kaiwu_exp=excluded.kaiwu_exp,
+                kaiwu_energy=excluded.kaiwu_energy,
+                node_data=excluded.node_data
+        """.trimIndent()
+
+        try {
+            manager.dataSource?.connection?.use { conn ->
+                val originalAutoCommit = conn.autoCommit
+                conn.autoCommit = false
+                try {
+                    conn.prepareStatement(saveMain).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.lv)
+                        ps.setInt(4, data.exp)
+                        ps.setInt(5, data.expCurveVersion)
+                        ps.setObject(6, data.job)
+                        ps.setObject(7, data.race)
+                        ps.setDouble(8, data.attack)
+                        ps.setDouble(9, data.archerDamage)
+                        ps.setDouble(10, data.armor)
+                        ps.setDouble(11, data.speed)
+                        ps.setDouble(12, data.maxHealth)
+                        ps.setDouble(13, data.currentHealth)
+                        ps.setDouble(14, data.toughness)
+                        ps.setDouble(15, data.knockBackRes)
+                        ps.setDouble(16, data.attackSpeed)
+                        ps.setDouble(17, data.critChance)
+                        ps.setDouble(18, data.zfStr)
+                        ps.setDouble(19, data.coolReduce)
+                        ps.setDouble(20, data.lingli)
+                        ps.setInt(21, data.totalRarity)
+                        ps.executeUpdate()
+                    }
+
+                    conn.prepareStatement(saveBank).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.metal)
+                        ps.setInt(4, data.wood)
+                        ps.setInt(5, data.water)
+                        ps.setInt(6, data.fire)
+                        ps.setInt(7, data.earth)
+                        ps.setInt(8, data.reliveStone)
+                        ps.executeUpdate()
+                    }
+
+                    conn.prepareStatement(saveSkills).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.getElementLevel("METAL"))
+                        ps.setInt(4, data.getElementLevel("WOOD"))
+                        ps.setInt(5, data.getElementLevel("WATER"))
+                        ps.setInt(6, data.getElementLevel("FIRE"))
+                        ps.setInt(7, data.getElementLevel("EARTH"))
+                        ps.executeUpdate()
+                    }
+
+                    conn.prepareStatement(saveForge).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.forgeLevel)
+                        ps.setInt(4, data.forgeExp)
+                        ps.setInt(5, data.forgeLicense)
+                        ps.executeUpdate()
+                    }
+
+                    conn.prepareStatement(saveKaiWu).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.kaiwuLevel)
+                        ps.setInt(4, data.kaiwuExp)
+                        ps.setDouble(5, data.kaiwuEnergy)
+                        ps.setString(6, data.getNodeDataAsJsonString())
+                        ps.executeUpdate()
+                    }
+
+                    manager.saveMedicalData(conn, data)
+                    manager.saveAlchemyData(conn, data)
+                    manager.savePlayerStatus(conn, data)
+                    manager.savePlayerGoldenChest(conn, data)
+                    manager.saveCompletedMedicalTrials(conn, data)
+                    conn.commit()
+                } catch (ex: SQLException) {
+                    try {
+                        conn.rollback()
+                    } catch (rollbackEx: SQLException) {
+                        ex.addSuppressed(rollbackEx)
+                    }
+                    throw ex
+                } finally {
+                    conn.autoCommit = originalAutoCommit
+                }
+            }
+        } catch (e: SQLException) {
+            plugin.logger.severe("保存玩家数据失败: " + e.message)
+            e.printStackTrace()
+        }
+    }
+
+    @Suppress("unused")
+    private fun savePlayerLegacy(data: PlayerData) {
+        val saveMain = """
+            INSERT INTO player_data (
+                uuid, player_name, lv, exp, exp_curve_version, job, race, attack, archer_damage, armor,
+                speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance,
+                zf_str, cool_reduce, lingli, total_rarity
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                lv=excluded.lv,
+                exp=excluded.exp,
+                exp_curve_version=excluded.exp_curve_version,
+                job=excluded.job,
+                race=excluded.race,
+                attack=excluded.attack,
+                archer_damage=excluded.archer_damage,
+                armor=excluded.armor,
+                speed=excluded.speed,
+                max_health=excluded.max_health,
+                current_health=excluded.current_health,
+                toughness=excluded.toughness,
+                knock_back_res=excluded.knock_back_res,
+                attack_speed=excluded.attack_speed,
+                crit_chance=excluded.crit_chance,
+                zf_str=excluded.zf_str,
+                cool_reduce=excluded.cool_reduce,
+                lingli=excluded.lingli,
+                total_rarity=excluded.total_rarity
+        """.trimIndent()
+
+        val saveBank = """
+            INSERT INTO player_elementbank (uuid, player_name, metal, wood, water, fire, earth, relive_stone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                metal=excluded.metal,
+                wood=excluded.wood,
+                water=excluded.water,
+                fire=excluded.fire,
+                earth=excluded.earth,
+                relive_stone=excluded.relive_stone
+        """.trimIndent()
+
+        val saveSkills = """
+            INSERT INTO player_element_zf_lvl (uuid, player_name, metal, wood, water, fire, earth)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                metal=excluded.metal,
+                wood=excluded.wood,
+                water=excluded.water,
+                fire=excluded.fire,
+                earth=excluded.earth
+        """.trimIndent()
+
+        val saveForge = """
+            INSERT INTO player_dzlv (uuid, player_name, forge_level, forge_exp, forge_license)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                forge_level=excluded.forge_level,
+                forge_exp=excluded.forge_exp,
+                forge_license=excluded.forge_license
+        """.trimIndent()
 
         val saveKaiWu = """
             INSERT INTO player_kaiwu (uuid, player_name, kaiwu_level, kaiwu_exp, kaiwu_energy, node_data) 
             VALUES (?, ?, ?, ?, ?, ?) 
-            ON CONFLICT(uuid) DO UPDATE SET player_name=?, kaiwu_level=?, kaiwu_exp=?, kaiwu_energy=?, node_data=?
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                kaiwu_level=excluded.kaiwu_level,
+                kaiwu_exp=excluded.kaiwu_exp,
+                kaiwu_energy=excluded.kaiwu_energy,
+                node_data=excluded.node_data
         """.trimIndent()
+
+        val updateMain = saveMain
+        val insertMain = saveMain
+        val updateBank = saveBank
+        val insertBank = saveBank
+        val updateSkills = saveSkills
+        val insertSkills = saveSkills
+        val updateForge = saveForge
+        val insertForge = saveForge
 
         try {
             // 【死锁修复】这里获取唯一连接，并一直持有到所有数据保存完毕
@@ -51,46 +291,48 @@ internal class DatabasePlayerRepository(
                     ps.setString(1, data.playerName)
                     ps.setInt(2, data.lv)
                     ps.setInt(3, data.exp)
-                    ps.setObject(4, data.job)
-                    ps.setObject(5, data.race)
-                    ps.setDouble(6, data.attack)
-                    ps.setDouble(7, data.archerDamage)
-                    ps.setDouble(8, data.armor)
-                    ps.setDouble(9, data.speed)
-                    ps.setDouble(10, data.maxHealth)
-                    ps.setDouble(11, data.currentHealth)
-                    ps.setDouble(12, data.toughness)
-                    ps.setDouble(13, data.knockBackRes)
-                    ps.setDouble(14, data.attackSpeed)
-                    ps.setDouble(15, data.critChance)
-                    ps.setDouble(16, data.zfStr)
-                    ps.setDouble(17, data.coolReduce)
-                    ps.setDouble(18, data.lingli)
-                    ps.setInt(19, data.totalRarity)
-                    ps.setString(20, data.uuid.toString())
+                    ps.setInt(4, data.expCurveVersion)
+                    ps.setObject(5, data.job)
+                    ps.setObject(6, data.race)
+                    ps.setDouble(7, data.attack)
+                    ps.setDouble(8, data.archerDamage)
+                    ps.setDouble(9, data.armor)
+                    ps.setDouble(10, data.speed)
+                    ps.setDouble(11, data.maxHealth)
+                    ps.setDouble(12, data.currentHealth)
+                    ps.setDouble(13, data.toughness)
+                    ps.setDouble(14, data.knockBackRes)
+                    ps.setDouble(15, data.attackSpeed)
+                    ps.setDouble(16, data.critChance)
+                    ps.setDouble(17, data.zfStr)
+                    ps.setDouble(18, data.coolReduce)
+                    ps.setDouble(19, data.lingli)
+                    ps.setInt(20, data.totalRarity)
+                    ps.setString(21, data.uuid.toString())
 
                     if (ps.executeUpdate() == 0) {
                         conn.prepareStatement(insertMain).use { insertPs ->
                             insertPs.setString(1, data.playerName)
                             insertPs.setInt(2, data.lv)
                             insertPs.setInt(3, data.exp)
-                            insertPs.setObject(4, data.job)
-                            insertPs.setObject(5, data.race)
-                            insertPs.setDouble(6, data.attack)
-                            insertPs.setDouble(7, data.archerDamage)
-                            insertPs.setDouble(8, data.armor)
-                            insertPs.setDouble(9, data.speed)
-                            insertPs.setDouble(10, data.maxHealth)
-                            insertPs.setDouble(11, data.currentHealth)
-                            insertPs.setDouble(12, data.toughness)
-                            insertPs.setDouble(13, data.knockBackRes)
-                            insertPs.setDouble(14, data.attackSpeed)
-                            insertPs.setDouble(15, data.critChance)
-                            insertPs.setDouble(16, data.zfStr)
-                            insertPs.setDouble(17, data.coolReduce)
-                            insertPs.setDouble(18, data.lingli)
-                            insertPs.setInt(19, data.totalRarity)
-                            insertPs.setString(20, data.uuid.toString())
+                            insertPs.setInt(4, data.expCurveVersion)
+                            insertPs.setObject(5, data.job)
+                            insertPs.setObject(6, data.race)
+                            insertPs.setDouble(7, data.attack)
+                            insertPs.setDouble(8, data.archerDamage)
+                            insertPs.setDouble(9, data.armor)
+                            insertPs.setDouble(10, data.speed)
+                            insertPs.setDouble(11, data.maxHealth)
+                            insertPs.setDouble(12, data.currentHealth)
+                            insertPs.setDouble(13, data.toughness)
+                            insertPs.setDouble(14, data.knockBackRes)
+                            insertPs.setDouble(15, data.attackSpeed)
+                            insertPs.setDouble(16, data.critChance)
+                            insertPs.setDouble(17, data.zfStr)
+                            insertPs.setDouble(18, data.coolReduce)
+                            insertPs.setDouble(19, data.lingli)
+                            insertPs.setInt(20, data.totalRarity)
+                            insertPs.setString(21, data.uuid.toString())
                             insertPs.executeUpdate()
                         }
                     }
@@ -218,6 +460,9 @@ internal class DatabasePlayerRepository(
                             if (rs.next()) {
                                 data.lv = rs.getInt("lv")
                                 data.exp = rs.getInt("exp")
+                                try {
+                                    data.expCurveVersion = rs.getInt("exp_curve_version")
+                                } catch (e: Exception) {}
                                 val job = rs.getObject("job") as? Int
                                 if (job != null) data.job = job
                                 val race = rs.getObject("race") as? Int

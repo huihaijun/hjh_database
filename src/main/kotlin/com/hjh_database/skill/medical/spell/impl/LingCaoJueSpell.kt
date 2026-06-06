@@ -3,6 +3,7 @@ package com.hjh_database.skill.medical.spell.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.Particle
@@ -33,10 +34,10 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         // --- 1. 读取配置与计算属性 ---
         val zfStr = data.zfStr
-        val damageMultiplier = config?.getDouble("damage_multiplier", 1.2) ?: 1.2
-        val finalDamage = zfStr * damageMultiplier // 120% 阵法强度伤害
+        val damageMultiplier = config?.getDouble("damage_multiplier", 2.5) ?: 2.5
+        val finalDamage = zfStr * damageMultiplier // 250% 阵法强度伤害
 
-        val tauntRadius = config?.getDouble("taunt_radius", 10.0) ?: 10.0
+        val tauntRadius = config?.getDouble("taunt_radius", 5.0) ?: 5.0
         val explosionRadius = config?.getDouble("radius", 3.0) ?: 3.0
         val durationTicks = (config?.getInt("duration", 4) ?: 4) * 20
 
@@ -69,12 +70,14 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
         center.world.playSound(center, Sound.BLOCK_GRASS_PLACE, 1.0f, 1.0f)
         center.world.spawnParticle(Particle.HAPPY_VILLAGER, center.clone().add(0.0, 0.5, 0.0), 10, 0.3, 0.3, 0.3, 0.0)
 
-        // --- 3. 核心循环任务：吸引仇恨 + 倒计时爆炸 ---
+        // 释放瞬间固定一次嘲讽名单；后续只维持这批怪物的仇恨，不再吸引新进入范围的怪。
+        val tauntedMobIds = captureTauntTargets(center, tauntRadius, anchor)
+
+        // --- 3. 核心循环任务：维持初始嘲讽名单 + 倒计时爆炸 ---
         object : BukkitRunnable() {
             var ticks = 0
 
             override fun run() {
-                // 1) 倒计时结束，执行爆炸逻辑
                 if (ticks >= durationTicks) {
                     explode(player, center, finalDamage, explosionRadius)
                     cleanup()
@@ -82,29 +85,8 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
                     return
                 }
 
-                // 2) 每 10 ticks (0.5秒) 执行一次强制索敌，优化性能
                 if (ticks % 10 == 0) {
-                    // 获取范围内的实体
-                    val nearbyEntities = center.world.getNearbyEntities(center, tauntRadius, tauntRadius, tauntRadius)
-                    for (entity in nearbyEntities) {
-                        // 筛选盘灵怪物
-                        if (entity is Mob && entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
-
-                            // 【核心机制】判断这个怪物距离场上哪颗灵草最近
-                            val closestPlant = activePlants.minByOrNull { it.location.distanceSquared(entity.location) }
-
-                            // 如果距离这只怪物最近的灵草就是当前这颗，才抢夺仇恨
-                            if (closestPlant?.id == plantId) {
-                                entity.target = anchor // 强制怪物将目标设为当前灵草
-                                // 兼容 Leaves/Paper 端：尝试直接修改寻路目标到灵草位置，效果比纯 target 更好
-                                try {
-                                    entity.pathfinder.moveTo(anchor.location)
-                                } catch (e: Exception) {
-                                    // 容错处理
-                                }
-                            }
-                        }
-                    }
+                    refreshTauntedMobs(tauntedMobIds, anchor)
                 }
 
                 ticks += 5 // 任务本身每 5 ticks 执行一次(为了倒计时精确)
@@ -119,6 +101,36 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
         }.runTaskTimer(plugin, 0L, 5L)
 
         return true
+    }
+
+    private fun captureTauntTargets(center: Location, tauntRadius: Double, anchor: ArmorStand): List<UUID> {
+        val targetIds = mutableListOf<UUID>()
+        val nearbyEntities = center.world.getNearbyEntities(center, tauntRadius, tauntRadius, tauntRadius)
+        for (entity in nearbyEntities) {
+            if (entity is Mob && entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
+                targetIds.add(entity.uniqueId)
+                redirectMobToAnchor(entity, anchor)
+            }
+        }
+        return targetIds
+    }
+
+    private fun refreshTauntedMobs(targetIds: List<UUID>, anchor: ArmorStand) {
+        for (targetId in targetIds) {
+            val mob = Bukkit.getEntity(targetId) as? Mob ?: continue
+            if (!mob.isValid || mob.isDead) continue
+            if (!mob.scoreboardTags.contains("panling") || !mob.scoreboardTags.contains("monster")) continue
+            redirectMobToAnchor(mob, anchor)
+        }
+    }
+
+    private fun redirectMobToAnchor(mob: Mob, anchor: ArmorStand) {
+        mob.target = anchor
+        try {
+            mob.pathfinder.moveTo(anchor.location)
+        } catch (ignored: Exception) {
+            // 部分服务端不支持直接改寻路目标，保留 target 即可。
+        }
     }
 
     // 爆炸与伤害结算逻辑

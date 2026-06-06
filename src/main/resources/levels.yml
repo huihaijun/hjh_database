@@ -1,5 +1,7 @@
 # 经验系统配置
 
+curve_version: 2
+
 # 怪物经验设置
 mobs:
   # 当怪物同时拥有 "panling" 和 "monster" 标签时给予的经验
@@ -11,23 +13,37 @@ mobs:
 # 逻辑: 每一级所需经验 = 基础值 + (当前等级 * 系数)
 # 你可以定义多个阶段，实现非线性增长
 level_stages:
-  # 1-10级: 比如 1级需要 100 + 1*50 = 150
+  # 1-10级: 新手期保持轻快，1级需要 80 + 1*40 = 120
   stage_1:
     min_level: 1
     max_level: 10
-    base: 100
-    multiplier: 50
+    base: 80
+    multiplier: 40
 
-  # 11-20级: 难度提升，系数变大
+  # 11-20级: 二阶到三阶，平滑抬升，避免10级后断崖
   stage_2:
     min_level: 11
     max_level: 20
-    base: 1000
-    multiplier: 100
+    base: 500
+    multiplier: 60
 
-  # 21级以上: 只有基础值，没有系数增长 (示例)
+  # 21-30级: 三阶开荒期
   stage_3:
     min_level: 21
+    max_level: 30
+    base: 1200
+    multiplier: 90
+
+  # 31-40级: 预留四阶
+  stage_4:
+    min_level: 31
+    max_level: 40
+    base: 2500
+    multiplier: 140
+
+  # 41级以上: 预留五阶及之后
+  stage_5:
+    min_level: 41
     max_level: 100
-    base: 5000
-    multiplier: 200
+    base: 4500
+    multiplier: 220

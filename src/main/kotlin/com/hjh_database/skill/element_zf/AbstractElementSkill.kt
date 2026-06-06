@@ -58,7 +58,7 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
                 if (data.lingli > (data.maxLingli * threshold) && data.lingli >= actualLingliCost) {
                     if (Math.random() <= prob) {
                         data.lingli -= actualLingliCost // 扣除灵力
-                        plugin.databaseManager.savePlayer(data)
+                        plugin.databaseManager.queuePlayerSave(data)
                         player.sendMessage("§d✨ 【回流】触发成功！本次阵法消耗了 $actualLingliCost 点灵力。")
                         willConsumeItem = false // 触发了回流，免去物品消耗
                     }

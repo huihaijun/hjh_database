@@ -9,7 +9,6 @@ import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
 import java.util.HashMap
-import java.util.UUID
 
 /**
  * 南方主线任务第三章 - 伪神之谜
@@ -24,6 +23,7 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
         return when (progress) {
             0 -> listOf("§c前往旧村庄废墟寻找 §e莲心")
             1 -> listOf("§c收集 §e火元素x20 §c和 §e土元素x20 §c交给莲心")
+            2 -> listOf("§a已交付元素", "§c继续听 §e莲心 §c说明丹药用法")
             else -> listOf("§a任务已完成")
         }
     }
@@ -35,7 +35,7 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
     )
 
     // 临时记录对话索引
-    private val talkProgress = HashMap<UUID, Int>()
+    private val talkProgress = HashMap<String, Int>()
 
     // ==========================================
     // 剧本配置
@@ -85,7 +85,7 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
 
             if (currentProgress == 0) {
                 // 第一阶段对话
-                playDialogue(player, scriptPart1) {
+                playDialogue(player, "part1", scriptPart1) {
                     player.sendMessage("§a[任务] -> 已接受收集委托，请收集火元素与土元素。")
                     plugin.questManager.updateProgress(player, id, 1)
                 }
@@ -94,16 +94,33 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
             else if (currentProgress == 1) {
                 // 第二阶段：检查物品
                 if (hasResourceItem(player, "fire", 20) && hasResourceItem(player, "earth", 20)) {
-                    // 扣除物品并播放第二段对话
-                    playDialogue(player, scriptPart2) {
-                        removeResourceItem(player, "fire", 20)
-                        removeResourceItem(player, "earth", 20)
-                        // 完成任务
+                    if (Hjh_database.instance.resourceManager.getItem("lianxindan") == null) {
+                        player.sendMessage("§c[错误] 无法获取莲心丹配置，请联系管理员！")
+                        return true
+                    }
+
+                    if (!consumeElements(player)) {
+                        playDialogue(player, "not_enough", scriptNotEnough) {}
+                        return true
+                    }
+
+                    giveLianxinDan(player)
+                    plugin.questManager.updateProgress(player, id, 2)
+                    player.sendMessage("§a[任务] -> 已交付火元素与土元素。")
+                    clearDialogueProgress(player)
+
+                    playDialogue(player, "part2", scriptPart2) {
                         plugin.questManager.completeQuest(player, plugin.playerManager.getPlayerData(player)!!, this)
                     }
                 } else {
                     // 材料不足
-                    playDialogue(player, scriptNotEnough) {}
+                    playDialogue(player, "not_enough", scriptNotEnough) {}
+                }
+                return true
+            }
+            else if (currentProgress == 2) {
+                playDialogue(player, "part2", scriptPart2) {
+                    plugin.questManager.completeQuest(player, plugin.playerManager.getPlayerData(player)!!, this)
                 }
                 return true
             }
@@ -111,38 +128,30 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
         return false
     }
 
-    private fun playDialogue(player: Player, scripts: List<String>, onFinish: () -> Unit) {
-        val index = talkProgress.getOrDefault(player.uniqueId, 0)
+    private fun playDialogue(player: Player, dialogueId: String, scripts: List<String>, onFinish: () -> Unit) {
+        val key = dialogueKey(player, dialogueId)
+        val index = talkProgress.getOrDefault(key, 0)
 
         if (index < scripts.size) {
             player.sendMessage(scripts[index].replace("&", "§"))
             player.playSound(player.location, Sound.ENTITY_VILLAGER_TRADE, 1f, 1f)
 
-            // 【特殊判定】如果播放的是 scriptPart2 的第一句话，直接发放莲心丹
-            if (scripts === scriptPart2 && index == 0) {
-                val rm = Hjh_database.instance.resourceManager
-                rm.getItem("lianxindan")?.let { item ->
-                    item.amount = 3
-                    val leftovers = player.inventory.addItem(item)
-                    if (leftovers.isNotEmpty()) {
-                        player.sendMessage("§c[提示] 背包已满，莲心丹已掉落在脚下！")
-                        for (drop in leftovers.values) {
-                            player.world.dropItem(player.location, drop)
-                        }
-                    } else {
-                        player.sendMessage("§a[系统] 获得了 莲心丹 x3")
-                    }
-                    player.playSound(player.location, Sound.ENTITY_ITEM_PICKUP, 1f, 1f)
-                }
-            }
-
-            talkProgress[player.uniqueId] = index + 1
+            talkProgress[key] = index + 1
 
             if (index == scripts.size - 1) {
-                talkProgress.remove(player.uniqueId)
+                talkProgress.remove(key)
                 onFinish()
             }
         }
+    }
+
+    private fun dialogueKey(player: Player, dialogueId: String): String {
+        return "${player.uniqueId}:$dialogueId"
+    }
+
+    private fun clearDialogueProgress(player: Player) {
+        val prefix = "${player.uniqueId}:"
+        talkProgress.keys.removeIf { it.startsWith(prefix) }
     }
 
     // ==========================================
@@ -166,7 +175,17 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
         return count >= amount
     }
 
-    private fun removeResourceItem(player: Player, resId: String, amount: Int) {
+    private fun consumeElements(player: Player): Boolean {
+        if (!hasResourceItem(player, "fire", 20) || !hasResourceItem(player, "earth", 20)) {
+            return false
+        }
+
+        val removedFire = removeResourceItem(player, "fire", 20)
+        val removedEarth = removeResourceItem(player, "earth", 20)
+        return removedFire && removedEarth
+    }
+
+    private fun removeResourceItem(player: Player, resId: String, amount: Int): Boolean {
         var leftToRemove = amount
         val key = NamespacedKey(Hjh_database.instance, "resource_id")
         for (item in player.inventory.contents) {
@@ -183,6 +202,28 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
                 }
             }
         }
+        return leftToRemove <= 0
+    }
+
+    private fun giveLianxinDan(player: Player) {
+        val rm = Hjh_database.instance.resourceManager
+        val item = rm.getItem("lianxindan")
+        if (item == null) {
+            player.sendMessage("§c[错误] 无法获取莲心丹配置，请联系管理员！")
+            return
+        }
+
+        item.amount = 3
+        val leftovers = player.inventory.addItem(item)
+        if (leftovers.isNotEmpty()) {
+            player.sendMessage("§c[提示] 背包已满，莲心丹已掉落在脚下！")
+            for (drop in leftovers.values) {
+                player.world.dropItem(player.location, drop)
+            }
+        } else {
+            player.sendMessage("§a[系统] 获得了 莲心丹 x3")
+        }
+        player.playSound(player.location, Sound.ENTITY_ITEM_PICKUP, 1f, 1f)
     }
 
     // ==========================================
@@ -198,8 +239,8 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
         // 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 100
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 100)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

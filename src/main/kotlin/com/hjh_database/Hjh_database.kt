@@ -160,6 +160,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(com.hjh_database.npc.listener.NpcInteractListener(this), this)
+        pm.registerEvents(com.hjh_database.listener.TestDummySignListener(this), this)
 
         // 2. 技能与战斗相关监听
         pm.registerEvents(com.hjh_database.listener.SpellListener(this), this)
@@ -228,9 +229,9 @@ class Hjh_database : JavaPlugin() {
             }
         }, 10L)
 
-        // 【新增】每5分钟自动保存所有仓库数据 (20 ticks * 60 seconds * 5 minutes)
+        // 【新增】每5分钟异步保存在线玩家与仓库数据 (20 ticks * 60 seconds * 5 minutes)
         server.scheduler.runTaskTimerAsynchronously(this, Runnable {
-            // 直接调用 manager 里写好的批量保存方法，它里面已经处理好 conn 了！
+            playerManager.saveAllOnline()
             warehouseManager.saveAllOnline()
         }, 6000L, 6000L)
 
@@ -254,6 +255,10 @@ class Hjh_database : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::databaseManager.isInitialized) {
+            databaseManager.cancelQueuedPlayerSaves()
+        }
+
         if (::playerManager.isInitialized) {
             playerManager.saveAllOnline()
         }

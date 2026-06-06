@@ -323,7 +323,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
         data.kaiwuExp = currentExp + node.exp
 
         checkLevelUp(player, data)
-        plugin.databaseManager.savePlayer(data)
+        plugin.databaseManager.queuePlayerSave(data)
     }
 
     // ==========================================

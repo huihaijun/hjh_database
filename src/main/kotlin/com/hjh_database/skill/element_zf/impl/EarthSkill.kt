@@ -38,7 +38,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             val maxLingli = data.maxLingli
             if (currentLingli < maxLingli) {
                 data.lingli = min(maxLingli, currentLingli + lingliAdd)
-                plugin.databaseManager.savePlayer(data)
+                plugin.databaseManager.queuePlayerSave(data)
             }
         }
 

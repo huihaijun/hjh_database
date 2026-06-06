@@ -140,8 +140,8 @@ class Side_Ren_01 : QuestBase("side_ren_1", "[支线]重华晶的奥秘", QuestT
         // 经验奖励 +20
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 20
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 20)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

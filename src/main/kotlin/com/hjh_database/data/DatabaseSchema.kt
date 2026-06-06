@@ -37,6 +37,7 @@ internal class DatabaseSchema(
                 conn.createStatement().use { stmt ->
                     // 1. 修复 player_data
                     safeAddColumn(stmt, "player_data", "exp", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_data", "exp_curve_version", "INT DEFAULT 1")
                     safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)")
                     safeAddColumn(stmt, "player_data", "total_rarity", "INT DEFAULT 0")
 
@@ -106,6 +107,7 @@ internal class DatabaseSchema(
                 player_name VARCHAR(16), 
                 lv INT DEFAULT 1, 
                 exp INT DEFAULT 0, 
+                exp_curve_version INT DEFAULT 2,
                 job INT, 
                 race INT, 
                 attack DOUBLE DEFAULT 0, 

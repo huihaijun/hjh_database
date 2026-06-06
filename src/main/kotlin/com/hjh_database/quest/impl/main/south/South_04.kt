@@ -168,8 +168,8 @@ class South_04 : QuestBase("main_south_4", "[主线]朱雀祭坛", QuestType.MAI
         // 1. 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 300
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 300)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         // 2. 发放任务物品

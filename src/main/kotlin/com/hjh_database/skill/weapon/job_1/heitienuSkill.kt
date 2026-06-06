@@ -121,8 +121,8 @@ class heitienuSkill : WeaponSkill, Listener {
         val isNewBuff = !activeBuffs.containsKey(player.uniqueId)
         activeBuffs[player.uniqueId] = System.currentTimeMillis() + 5000L
 
-        // 写入临时属性 Map (20% 箭矢强度提升)
-        pData.tempBonuses["archer_damage_percent"] = 0.20
+        // 写入临时属性 Map (固定提升 3 点箭矢强度)
+        pData.tempBonuses["archer_damage"] = 3.0
 
         // 刷新属性
         pluginMain.playerManager.updateStats(player)
@@ -139,7 +139,7 @@ class heitienuSkill : WeaponSkill, Listener {
         val pData = pluginMain.playerManager.getData(player.uniqueId) ?: return
 
         // 移除临时属性
-        pData.tempBonuses.remove("archer_damage_percent")
+        pData.tempBonuses.remove("archer_damage")
 
         // 刷新属性
         pluginMain.playerManager.updateStats(player)

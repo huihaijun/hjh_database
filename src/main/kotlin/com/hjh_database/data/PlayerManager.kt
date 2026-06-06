@@ -20,6 +20,11 @@ class PlayerManager(private val plugin: Hjh_database) {
     private val dataCache: MutableMap<UUID, PlayerData> = ConcurrentHashMap()
     private val dzDataCache: MutableMap<UUID, DzPlayerData> = ConcurrentHashMap()
 
+    companion object {
+        const val CURRENT_EXP_CURVE_VERSION = 2
+        private const val MAX_LEVEL_FOR_EXP_MIGRATION = 100
+    }
+
     // 保持原有变量名的访问性
     val weaponManager: WeaponManager
     val armorManager: ArmorManager
@@ -44,6 +49,33 @@ class PlayerManager(private val plugin: Hjh_database) {
             plugin.saveResource("levels.yml", false)
         }
         levelsConfig = YamlConfiguration.loadConfiguration(levelsFile!!)
+        upgradeLevelConfigIfNeeded()
+    }
+
+    private fun upgradeLevelConfigIfNeeded() {
+        val config = levelsConfig ?: return
+        val file = levelsFile ?: return
+        if (config.getInt("curve_version", 1) >= CURRENT_EXP_CURVE_VERSION) return
+
+        config.set("curve_version", CURRENT_EXP_CURVE_VERSION)
+        config.set("level_stages", null)
+
+        setLevelStage(config, "stage_1", 1, 10, 80, 40)
+        setLevelStage(config, "stage_2", 11, 20, 500, 60)
+        setLevelStage(config, "stage_3", 21, 30, 1200, 90)
+        setLevelStage(config, "stage_4", 31, 40, 2500, 140)
+        setLevelStage(config, "stage_5", 41, 100, 4500, 220)
+
+        config.save(file)
+        plugin.logger.info("[ExpCurve] 已将 levels.yml 升级到经验曲线版本 $CURRENT_EXP_CURVE_VERSION")
+    }
+
+    private fun setLevelStage(config: YamlConfiguration, key: String, min: Int, max: Int, base: Int, multiplier: Int) {
+        val path = "level_stages.$key"
+        config.set("$path.min_level", min)
+        config.set("$path.max_level", max)
+        config.set("$path.base", base)
+        config.set("$path.multiplier", multiplier)
     }
 
     // 【新增】获取怪物经验配置
@@ -67,6 +99,51 @@ class PlayerManager(private val plugin: Hjh_database) {
             }
         }
         return 100 + (currentLevel * 50) // 默认公式
+    }
+
+    private fun getOldMaxExpRequired(currentLevel: Int): Int {
+        return when {
+            currentLevel in 1..10 -> 100 + (currentLevel * 50)
+            currentLevel in 11..20 -> 1000 + (currentLevel * 100)
+            currentLevel in 21..100 -> 5000 + (currentLevel * 200)
+            else -> 100 + (currentLevel * 50)
+        }
+    }
+
+    private fun getOldTotalExp(lv: Int, exp: Int): Long {
+        var total = exp.coerceAtLeast(0).toLong()
+        for (level in 1 until lv.coerceAtLeast(1)) {
+            total += getOldMaxExpRequired(level).toLong()
+        }
+        return total
+    }
+
+    private fun applyTotalExpToCurrentCurve(data: PlayerData, totalExp: Long) {
+        var level = 1
+        var remaining = totalExp.coerceAtLeast(0)
+
+        while (level < MAX_LEVEL_FOR_EXP_MIGRATION) {
+            val required = getMaxExpRequired(level).toLong()
+            if (required <= 0 || remaining < required) break
+            remaining -= required
+            level++
+        }
+
+        data.lv = level
+        data.exp = remaining.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        data.expCurveVersion = CURRENT_EXP_CURVE_VERSION
+    }
+
+    private fun migrateExpCurveIfNeeded(data: PlayerData): Boolean {
+        if (data.expCurveVersion >= CURRENT_EXP_CURVE_VERSION) return false
+
+        val oldLv = data.lv
+        val oldExp = data.exp
+        val totalExp = getOldTotalExp(oldLv, oldExp)
+        applyTotalExpToCurrentCurve(data, totalExp)
+
+        plugin.logger.info("[ExpCurve] ${data.playerName} 经验曲线迁移: Lv.$oldLv/$oldExp -> Lv.${data.lv}/${data.exp}, total=$totalExp")
+        return true
     }
 
     // 【新增】核心：给予经验
@@ -98,9 +175,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         // 升级保存
         if (leveledUp) {
             tryAutoAcceptLevelQuests(player, data)
-            plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                plugin.databaseManager.savePlayer(data)
-            })
+            plugin.databaseManager.savePlayerAsync(data)
         }
     }
 
@@ -129,6 +204,7 @@ class PlayerManager(private val plugin: Hjh_database) {
             .thenAccept { loadedData ->
                 // 如果数据库为空，创建新数据
                 val data = loadedData ?: PlayerData(player.uniqueId, player.name)
+                val migratedExpCurve = migrateExpCurveIfNeeded(data)
                 dataCache[player.uniqueId] = data
 
                 // 同步锻造数据 (保持原样)
@@ -139,9 +215,15 @@ class PlayerManager(private val plugin: Hjh_database) {
                 dzDataCache[player.uniqueId] = dzData
 
                 val finalData = data
+                if (migratedExpCurve) {
+                    plugin.databaseManager.savePlayer(finalData)
+                }
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     updateStats(player)
                     syncToVanilla(player, finalData)
+                    if (migratedExpCurve) {
+                        player.sendMessage("§a[经验系统] §7已按新版经验曲线无损折算你的等级与经验。")
+                    }
                 })
             }
     }

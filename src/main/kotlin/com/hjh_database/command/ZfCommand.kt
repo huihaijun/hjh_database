@@ -60,7 +60,7 @@ class ZfCommand(private val plugin: Hjh_database) : CommandExecutor, TabComplete
         }
 
         data.setElementLevel(type, level)
-        plugin.databaseManager.savePlayer(data) // 异步保存到数据库
+        plugin.databaseManager.savePlayerAsync(data)
 
         sender.sendMessage(ChatColor.GREEN.toString() + "成功将玩家 " + target.name + " 的 " + type + " 等级设置为 " + level)
         target.sendMessage(ChatColor.GREEN.toString() + "你的 " + type + " 阵法等级已变更为 " + level + "！")

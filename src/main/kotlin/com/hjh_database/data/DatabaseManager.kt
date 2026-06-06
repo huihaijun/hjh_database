@@ -8,10 +8,16 @@ import com.hjh_database.warehouse.data.WarehouseData
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.bukkit.entity.Player
+import org.bukkit.scheduler.BukkitTask
 import java.io.File
 import java.sql.Connection
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DatabaseManager(private val plugin: Hjh_database) {
     var dataSource: HikariDataSource? = null
@@ -19,6 +25,13 @@ class DatabaseManager(private val plugin: Hjh_database) {
     private val schema = DatabaseSchema(this, plugin)
     private val players = DatabasePlayerRepository(this, plugin)
     private val subsystems = DatabaseSubsystemRepository(this, plugin)
+    private val queuedPlayerSaves = ConcurrentHashMap<UUID, BukkitTask>()
+    private val acceptingAsyncWrites = AtomicBoolean(true)
+    private val writeExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "hjh-database-writer").apply {
+            isDaemon = true
+        }
+    }
 
     init {
         if (!plugin.dataFolder.exists()) {
@@ -42,14 +55,88 @@ class DatabaseManager(private val plugin: Hjh_database) {
         config.maxLifetime = 1800000
 
         dataSource = HikariDataSource(config)
+        configureSqlite()
         plugin.logger.info("SQLite 数据库连接成功！文件路径: ${dbFile.absolutePath}")
     }
 
+    private fun configureSqlite() {
+        try {
+            dataSource?.connection?.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute("PRAGMA journal_mode=WAL")
+                    stmt.execute("PRAGMA synchronous=NORMAL")
+                    stmt.execute("PRAGMA busy_timeout=5000")
+                    stmt.execute("PRAGMA foreign_keys=ON")
+                }
+            }
+        } catch (ex: Exception) {
+            plugin.logger.warning("SQLite runtime pragma setup failed: ${ex.message}")
+        }
+    }
+
     fun close() {
+        acceptingAsyncWrites.set(false)
+        cancelQueuedPlayerSaves()
+        writeExecutor.shutdown()
+        try {
+            if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                plugin.logger.warning("数据库后台写入队列等待超时，正在强制关闭。")
+                writeExecutor.shutdownNow()
+            }
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            writeExecutor.shutdownNow()
+        }
         dataSource?.close()
     }
 
     fun savePlayer(data: PlayerData) = players.savePlayer(data)
+
+    fun savePlayerAsync(data: PlayerData) {
+        queuedPlayerSaves.remove(data.uuid)?.cancel()
+        submitPlayerSave(data)
+    }
+
+    private fun submitPlayerSave(data: PlayerData) {
+        if (!acceptingAsyncWrites.get() || !plugin.isEnabled) {
+            savePlayer(data)
+            return
+        }
+
+        try {
+            writeExecutor.execute {
+                savePlayer(data)
+            }
+        } catch (_: RejectedExecutionException) {
+            savePlayer(data)
+        }
+    }
+
+    fun queuePlayerSave(data: PlayerData, delayTicks: Long = 100L) {
+        if (!acceptingAsyncWrites.get() || !plugin.isEnabled) {
+            savePlayer(data)
+            return
+        }
+
+        val delay = delayTicks.coerceAtLeast(1L)
+        queuedPlayerSaves.compute(data.uuid) { uuid, existing ->
+            if (existing != null && !existing.isCancelled) {
+                existing
+            } else {
+                plugin.server.scheduler.runTaskLater(plugin, Runnable {
+                    queuedPlayerSaves.remove(uuid)
+                    submitPlayerSave(data)
+                }, delay)
+            }
+        }
+    }
+
+    fun cancelQueuedPlayerSaves() {
+        queuedPlayerSaves.values.forEach { task ->
+            if (!task.isCancelled) task.cancel()
+        }
+        queuedPlayerSaves.clear()
+    }
 
     fun loadPlayer(uuid: UUID, playerName: String): CompletableFuture<PlayerData> =
         players.loadPlayer(uuid, playerName)

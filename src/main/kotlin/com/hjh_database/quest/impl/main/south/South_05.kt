@@ -255,8 +255,8 @@ class South_05 : QuestBase("main_south_5", "[主线]莲心的信", QuestType.MAI
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 300
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 300)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

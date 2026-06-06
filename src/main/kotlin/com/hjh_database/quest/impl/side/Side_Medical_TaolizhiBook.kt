@@ -30,7 +30,7 @@ import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import kotlin.random.Random
 
-class Side_Medical_TaolizhiBook : QuestBase("side_medical_taolizhi_book", "[支线]旦野师傅的桃李枝制作书", QuestType.SIDE, 1), Listener {
+class Side_Medical_TaolizhiBook : QuestBase("side_medical_taolizhi_book", "[支线]旦师傅的神奇树枝", QuestType.SIDE, 1), Listener {
 
     private val plugin get() = Hjh_database.instance
     private val talkProgress = HashMap<UUID, Int>()
@@ -54,7 +54,7 @@ class Side_Medical_TaolizhiBook : QuestBase("side_medical_taolizhi_book", "[支�
     }
 
     override val description = listOf(
-        "§7旦野师傅眼神不济，急需有人帮他分拣草药。",
+        "§7皇城炼丹房的旦野师傅眼神不济，急需有人帮他分拣草药。",
         "§7若能分清三味草药，他愿意传授桃李枝的制作法。"
     )
 

@@ -62,10 +62,10 @@ class Ren_01 : QuestBase("main_ren_1", "[人族主线]初出茅庐", QuestType.M
         // 根据你的架构，获取 PlayerData 并直接修改 exp 字段
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 10
+            plugin.playerManager.giveExp(player, 10)
             // 保存数据，确保经验不丢失
             // 如果你的 PlayerManager 有 checkLevelUp(player) 方法，建议在这里调用一下
-            plugin.databaseManager.savePlayer(data)
+            plugin.databaseManager.savePlayerAsync(data)
         }
 
         // 3. 明显的完成提示

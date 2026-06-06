@@ -18,6 +18,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // --- 基础信息 ---
     var lv: Int = 1
     var exp: Int = 0
+    var expCurveVersion: Int = 2
     var job: Int? = null
     var race: Int? = null
 

@@ -187,8 +187,8 @@ class Ren_09 : QuestBase("main_ren_9", "[人族主线]四方圣兽", QuestType.M
         // 1. 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 100
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 100)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         // 2. 发放物品

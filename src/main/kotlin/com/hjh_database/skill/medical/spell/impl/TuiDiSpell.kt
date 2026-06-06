@@ -17,7 +17,7 @@ class TuiDiSpell(private val plugin: Hjh_database) : MedicalSpell {
         // 使用 ?: 复刻 Java 的三元运算符逻辑 (config != null ? val : default)
         val range = config?.getDouble("range", 4.0) ?: 4.0
         val knockback = config?.getDouble("knockback_strength", 1.2) ?: 1.2
-        val damageRatio = config?.getDouble("damage_ratio", 0.9) ?: 0.9
+        val damageRatio = config?.getDouble("damage_ratio", 1.5) ?: 1.5
 
         // 2. 计算伤害 (基于阵法强度)
         val zfStr = data.zfStr // 确保这里获取到了 80

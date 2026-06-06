@@ -100,7 +100,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         val activeWd = getActiveManaFlag(p) ?: return
 
         // 2. 发送开始提示
-        p.sendMessage("§a[医术] §7你已开始凝聚灵力...")
+        sendActionBar(p, "§a[医术] §7你已开始凝聚灵力...")
 
         // 2. 开启循环任务
         val taskId = object : BukkitRunnable() {
@@ -132,13 +132,13 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
 
                 // 3. 发送 ActionBar
                 val barMsg = "§b☯ 当前灵力值：" + String.format("%.1f", currentLingli) + "/" + String.format("%.0f", maxLingli) + " ☯"
-                p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(barMsg))
+                sendActionBar(p, barMsg)
                 p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 25, 2, false, false, false))
                 // 特效 (绿色粒子环绕)
                 p.world.spawnParticle(Particle.HAPPY_VILLAGER, p.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.5, 0.3, 0.0)
                 p.world.spawnParticle(Particle.SPLASH, p.location.add(0.0, 0.5, 0.0), 0, 0.0, 1.0, 0.0, 1.0) // 绿色药水粒子
             }
-        }.runTaskTimer(plugin, 40L, 40L).taskId // 2s延时，40tick(2秒)间隔
+        }.runTaskTimer(plugin, 30L, 30L).taskId // 1.5s延时，30tick(1.5秒)间隔
 
         chargingTasks[p.uniqueId] = taskId
     }
@@ -147,8 +147,12 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         if (chargingTasks.containsKey(p.uniqueId)) {
             val taskId = chargingTasks.remove(p.uniqueId)!!
             plugin.server.scheduler.cancelTask(taskId)
-            p.sendMessage("§a[医术] §c你已停止凝聚灵力...")
+            sendActionBar(p, "§a[医术] §c你已停止凝聚灵力...")
         }
+    }
+
+    private fun sendActionBar(player: Player, message: String) {
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(message))
     }
 
     private fun getActiveManaFlag(player: Player): WeaponManager.WeaponData? {

@@ -93,8 +93,8 @@ class Ren_07 : QuestBase("main_ren_7", "[人族主线]森林危机", QuestType.M
         // 1. 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            data.exp += 20
-            Hjh_database.instance.databaseManager.savePlayer(data)
+            Hjh_database.instance.playerManager.giveExp(player, 20)
+            Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 
         // 2. 发放普通物品（包子）

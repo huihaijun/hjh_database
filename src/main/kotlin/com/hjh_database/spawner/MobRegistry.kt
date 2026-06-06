@@ -352,11 +352,12 @@ object MobRegistry {
             drops = listOf(
                 MobDrop("wood", 2, 2, 1.0),
                 MobDrop("metal", 2, 2, 0.9),
-                MobDrop("hjh_tongqian", 2, 4, 0.8),
+                MobDrop("hjh_tongqian", 5, 6, 0.7),
                 MobDrop("relive_stone", 1, 2, 1.0),
-                MobDrop("renshen", 1, 1, 0.5),
-                //三阶核心
-                MobDrop("armor_core_3", 1, 1, 0.25)
+                MobDrop("renshen", 1, 2, 0.5),
+                //赤铜锭
+                MobDrop("chitongding", 1, 1, 0.25)
+
             ),
             affixes = listOf(),
             helmet = Material.IRON_HELMET,

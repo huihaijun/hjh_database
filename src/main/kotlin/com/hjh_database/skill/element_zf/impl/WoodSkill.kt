@@ -33,8 +33,7 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             val maxLingli = data.maxLingli
             if (currentLingli < maxLingli) {
                 data.lingli = min(maxLingli, currentLingli + lingliAdd)
-                // 记得保存数据
-                plugin.databaseManager.savePlayer(data)
+                plugin.databaseManager.queuePlayerSave(data)
             }
         }
 

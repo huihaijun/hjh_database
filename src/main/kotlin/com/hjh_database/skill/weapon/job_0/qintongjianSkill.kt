@@ -50,7 +50,7 @@ class qintongjianSkill : WeaponSkill, Listener {
 
         manager?.registerToggle(player, "qintongjian") // 注册到管理器，防止切武器
 
-        val armorBonus = config.getDouble("armor_bonus", 20.0)
+        val armorBonus = config.getDouble("armor_bonus", 25.0)
         val speedMalus = config.getDouble("speed_malus_percent", 0.25)
         val messageOn = config.getString("message_on", "&e&l[御守] &f进入防御姿态！护甲UP，移速DOWN")
 

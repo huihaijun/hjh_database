@@ -298,13 +298,7 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
 
         data.elementLevels[zfType] = currentLevel + 1
 
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            try {
-                plugin.databaseManager.savePlayer(data)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-            }
-        })
+        plugin.databaseManager.savePlayerAsync(data)
 
         player.sendMessage("§a恭喜！你的 ${elInfo.title} §a已成功升级至 §e${currentLevel + 1} §a级！")
         player.playSound(player.location, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f)

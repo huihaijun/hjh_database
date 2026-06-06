@@ -1,6 +1,7 @@
 package com.hjh_database.listener
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobAffix
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
@@ -316,6 +317,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 } ?: plugin.playerManager.getMobExp() // 默认兜底兼容
 
                 plugin.playerManager.giveExp(killer, expAmount)
+                shareExpToNearbyMedicalPlayers(killer, entity, expAmount)
                 killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e+ $expAmount 经验"))
             }
         }
@@ -331,23 +333,36 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
             // 延迟一秒在原地重新生成测伤玩偶
             Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-                loc.world?.spawn(loc, Creeper::class.java) { creeper ->
-                    creeper.addScoreboardTag("panling")
-                    creeper.addScoreboardTag("monster")
-                    creeper.addScoreboardTag(TEST_DUMMY_TAG)
-                    creeper.setAI(false)
-                    creeper.isPowered = false
-                    creeper.explosionRadius = 0
-
-                    creeper.persistentDataContainer.set(armorKey, PersistentDataType.DOUBLE, finalArmor)
-                    creeper.getAttribute(Attribute.MAX_HEALTH)?.baseValue = maxHealth
-                    creeper.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
-                    creeper.health = maxHealth
-
-                    creeper.customName = "§c§l测伤人偶 §7(HP:${maxHealth.toInt()} 护甲:${finalArmor.toInt()})"
-                    creeper.isCustomNameVisible = true
-                }
+                TestMobCommand.spawnDummy(plugin, loc, maxHealth, finalArmor)
             }, 20L)
+        }
+    }
+
+    private fun shareExpToNearbyMedicalPlayers(killer: Player, source: LivingEntity, expAmount: Int) {
+        if (expAmount <= 0) return
+        val killerData = plugin.playerManager.getData(killer.uniqueId) ?: return
+        if (killerData.job == 3) return
+
+        val sharedExp = expAmount / 2
+        if (sharedExp <= 0) return
+
+        val radius = 10.0
+        val radiusSquared = radius * radius
+        val center = source.location
+
+        for (entity in source.world.getNearbyEntities(center, radius, radius, radius)) {
+            val medicalPlayer = entity as? Player ?: continue
+            if (medicalPlayer.uniqueId == killer.uniqueId) continue
+            if (medicalPlayer.location.distanceSquared(center) > radiusSquared) continue
+
+            val medicalData = plugin.playerManager.getData(medicalPlayer.uniqueId) ?: continue
+            if (medicalData.job != 3 || medicalData.lv >= 30) continue
+
+            plugin.playerManager.giveExp(medicalPlayer, sharedExp)
+            medicalPlayer.spigot().sendMessage(
+                ChatMessageType.ACTION_BAR,
+                TextComponent("§a医师协助 §e+ $sharedExp 经验")
+            )
         }
     }
 
