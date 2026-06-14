@@ -24,6 +24,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
     // 存储 元素名 -> 技能逻辑 的映射
     private val skills: MutableMap<String, ElementSkill> = HashMap()
+    private val enhancedSkills: MutableMap<String, EnhancedElementSkill> = HashMap()
 
     // 系统级冷却记录表: PlayerUUID -> (ElementType -> CooldownEndTime)
     private val internalCooldowns: MutableMap<UUID, MutableMap<String, Long>> = ConcurrentHashMap()
@@ -56,6 +57,12 @@ class ElementZfManager(private val plugin: Hjh_database) {
         skills["WATER"] = WaterSkill(plugin)
         skills["FIRE"] = FireSkill(plugin)
         skills["EARTH"] = EarthSkill(plugin)
+
+        enhancedSkills["METAL"] = EnhancedMetalSkill(plugin)
+        enhancedSkills["WOOD"] = EnhancedWoodSkill(plugin)
+        enhancedSkills["WATER"] = EnhancedWaterSkill(plugin)
+        enhancedSkills["FIRE"] = EnhancedFireSkill(plugin)
+        enhancedSkills["EARTH"] = EnhancedEarthSkill(plugin)
     }
 
     fun castSkill(player: Player, type: String, data: PlayerData) {
@@ -97,6 +104,9 @@ class ElementZfManager(private val plugin: Hjh_database) {
             // B. 视觉冷却 (客户端转圈圈)
             // 这里不再对 Material 冷却，而是对 "元素组" 冷却
             setVisualCooldown(player, type, finalCd)
+
+            // 水元素 Revelation/启示 触发冷却返还
+            plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
 
             // 5. 发送提示消息
             val msg = config!!.getString("skills.$type.message")
@@ -201,4 +211,96 @@ class ElementZfManager(private val plugin: Hjh_database) {
         return config
     }
 
+    fun reduceCooldown(player: Player, type: String, seconds: Double) {
+        val playerCds = internalCooldowns[player.uniqueId] ?: return
+        val keyToUse = if (playerCds.containsKey(type.uppercase())) type.uppercase() else if (playerCds.containsKey(type.lowercase())) type.lowercase() else type
+        val currentEnd = playerCds[keyToUse] ?: return
+        val now = System.currentTimeMillis()
+        if (currentEnd <= now) return
+
+        val newEnd = currentEnd - (seconds * 1000.0).toLong()
+        if (newEnd <= now) {
+            playerCds.remove(keyToUse)
+            setVisualCooldown(player, keyToUse, 0.0)
+        } else {
+            playerCds[keyToUse] = newEnd
+            setVisualCooldown(player, keyToUse, (newEnd - now) / 1000.0)
+        }
+    }
+
+    fun castEnhancedSkill(player: Player, type: String, data: PlayerData) {
+        val skill = enhancedSkills[type] ?: return
+
+        // 1. 检查冷却
+        if (isOnCooldown(player, type)) {
+            val remainingMillis = getCooldownTime(player, type) - System.currentTimeMillis()
+            val remainingSeconds = remainingMillis / 1000.0
+            val skillName = getEnhancedSkillName(type)
+            player.spigot().sendMessage(
+                ChatMessageType.ACTION_BAR,
+                TextComponent(ChatColor.translateAlternateColorCodes('&', "&c&l$skillName 阵法冷却中，剩余 ${String.format("%.1f", remainingSeconds)} 秒"))
+            )
+            return
+        }
+
+        // 2. 检查并消耗灵力
+        val manaCost = 25.0
+        if (data.lingli < manaCost) {
+            player.sendMessage(ChatColor.RED.toString() + "您的灵力不足，需要 ${manaCost.toInt()} 点灵力")
+            return
+        }
+
+        // 3. 执行技能逻辑
+        if (!skill.cast(player, data)) return
+
+        // 4. 扣除物品与灵力
+        consumeOneElementFromMainHand(player)
+        data.lingli -= manaCost
+        plugin.databaseManager.queuePlayerSave(data)
+
+        // 5. 应用冷却
+        val baseCd = getEnhancedCooldown(type)
+        var reduce = data.coolReduce
+        if (reduce > 0.5) reduce = 0.5
+        val finalCd = baseCd * (1.0 - reduce)
+
+        setCooldown(player, type, finalCd)
+        setVisualCooldown(player, type, finalCd)
+
+        // 水元素 Revelation/启示 触发冷却返还
+        plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
+
+        // 6. 显示最新灵力
+        val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
+        player.sendActionBar(LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage))
+    }
+
+    private fun getEnhancedSkillName(type: String): String {
+        return config?.getString("skills.$type.enhanced_name") ?: when (type.uppercase()) {
+            "METAL" -> "暗云裂解"
+            "WOOD" -> "魂灵契约"
+            "WATER" -> "覆海"
+            "FIRE" -> "炎蝶之舞"
+            "EARTH" -> "岩星"
+            else -> type
+        }
+    }
+
+    private fun getEnhancedCooldown(type: String): Double {
+        return config?.getDouble("skills.$type.enhanced_cooldown") ?: when (type.uppercase()) {
+            "METAL" -> 15.0
+            "WOOD" -> 15.0
+            "WATER" -> 15.0
+            "FIRE" -> 15.0
+            "EARTH" -> 15.0
+            else -> 15.0
+        }
+    }
+
+    private fun consumeOneElementFromMainHand(player: Player) {
+        val item = player.inventory.itemInMainHand
+        if (!item.type.isAir) {
+            item.amount = item.amount - 1
+        }
+    }
 }

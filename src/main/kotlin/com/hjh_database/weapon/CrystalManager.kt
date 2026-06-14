@@ -293,10 +293,95 @@ class CrystalManager(private val plugin: Hjh_database) {
                 .replace("{stored}", formatNumber(currentMedicalOverflow))
                 .replace("{max_storage}", formatNumber(crystalData.medicalOverflowMaxStorage))
                 .replace("{trigger_storage}", formatNumber(crystalData.medicalOverflowTriggerStorage))
+
+            if (crystalData.id.startsWith("yuansujiejing") && finalLine.contains("饰品属性")) {
+                newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
+                val bindUuid = meta.persistentDataContainer.get(NamespacedKey(plugin, "element_bind_uuid"), PersistentDataType.STRING)
+                if (bindUuid == playerData.uuid.toString()) {
+                    val eData = plugin.elementCrystalManager.getData(playerData.uuid)
+                    val hasPoints = eData.getTotalPoints() > 0
+                    if (hasPoints) {
+                        if (eData.goldPoints > 0) newLore.add("§f进攻属性 +${eData.goldPoints * 1.5}")
+                        if (eData.woodPoints > 0) newLore.add("§f最大生命 +${eData.woodPoints * 6.0}")
+                        if (eData.waterPoints > 0) newLore.add("§f冷却缩减 +${eData.waterPoints * 2}%")
+                        if (eData.firePoints > 0) newLore.add("§f暴击率 +${eData.firePoints * 4}%")
+                        if (eData.earthPoints > 0) newLore.add("§f护甲 +${eData.earthPoints * 6.0}")
+                    } else {
+                        newLore.add("§7尚未分配属性点")
+                    }
+                } else if (bindUuid != null) {
+                    newLore.add("§c已绑定其他玩家，无法激活属性")
+                }
+                continue
+            }
+
+            if (crystalData.id.startsWith("yuansujiejing") && finalLine.contains("饰品技能")) {
+                newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
+                val bindUuid = meta.persistentDataContainer.get(NamespacedKey(plugin, "element_bind_uuid"), PersistentDataType.STRING)
+                if (bindUuid == playerData.uuid.toString()) {
+                    val eData = plugin.elementCrystalManager.getData(playerData.uuid)
+                    val activeSkills = mutableListOf<String>()
+                    if (eData.goldPoints >= 2) {
+                        activeSkills.add("&e[金元素·启示] &f冷却：&c无")
+                        activeSkills.add("&f造成伤害时获得&b1&f层&b锋芒&f")
+                        activeSkills.add("&b[锋芒]&f:每层增加&b4%&f进攻属性,最多&b3&f层")
+                        activeSkills.add("&f叠满后将不再叠层和刷新持续时间,&b5&f秒后层数消失")
+                    }
+                    if (eData.woodPoints >= 2) {
+                        activeSkills.add("&e[木元素·启示] &f冷却：&b30&f秒")
+                        activeSkills.add("&f生命低于&b50%&f时,在&b5&f秒内恢复&b10%&f最大生命")
+                    }
+                    if (eData.waterPoints >= 2) {
+                        activeSkills.add("&e[水元素·启示] &f冷却：&b10&f秒")
+                        activeSkills.add("&f释放武器技或阵法后,返还该技能&b20%&f冷却")
+                    }
+                    if (eData.firePoints >= 2) {
+                        activeSkills.add("&e[火元素·启示] &f冷却：&b6&f秒")
+                        activeSkills.add("&f造成伤害时为目标附加&b余烬&f")
+                        activeSkills.add("&b余烬&f：在&b3&f秒造成共计&b20%&f进攻属性伤害")
+                    }
+                    if (eData.earthPoints >= 2) {
+                        activeSkills.add("&e[土元素·启示] &f冷却：&b12&f秒")
+                        activeSkills.add("&f受到伤害后获得&b10&f点护甲,持续 &b4&f秒")
+                    }
+
+                    if (activeSkills.isNotEmpty()) {
+                        for (skillLine in activeSkills) {
+                            newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', skillLine))
+                        }
+                    } else {
+                        newLore.add("§7请于[天机阁]唤醒其元素技能")
+                    }
+                } else if (bindUuid != null) {
+                    newLore.add("§c已绑定其他玩家，无法激活技能")
+                } else {
+                    newLore.add("§7请于[天机阁]唤醒其元素技能")
+                }
+                continue
+            }
+
+            // 元素结晶：已绑定玩家时，跳过原模板中的占位文本行（属性和技能的占位）
+            if (crystalData.id.startsWith("yuansujiejing")) {
+                val bindUuid = meta.persistentDataContainer.get(NamespacedKey(plugin, "element_bind_uuid"), PersistentDataType.STRING)
+                if (bindUuid != null) {
+                    if (finalLine.contains("唤醒其元素属性") || finalLine.contains("唤醒其元素技能")) {
+                        continue
+                    }
+                }
+            }
+
             newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
         }
 
         newLore.add(" ")
+
+        // 【元素结晶】从 PDC 还原绑定信息到 lore（防止被 ResourceManager 刷新覆盖）
+        if (crystalData.id.startsWith("yuansujiejing")) {
+            val bindName = meta.persistentDataContainer.get(NamespacedKey(plugin, "element_bind_name"), PersistentDataType.STRING)
+            if (bindName != null) {
+                newLore.add("§6已绑定玩家：§e$bindName")
+            }
+        }
 
         // 4. 【最终显示】只有真正的 isActive 才会显示绿色对勾
         if (isActive) {
@@ -357,6 +442,32 @@ class CrystalManager(private val plugin: Hjh_database) {
                 val crystalData = loadedCrystals[crystalId] ?: return
 
 // 【核心修复点】直接调用已经封装好的 isActivated 方法，彻底杜绝硬编码遗漏
+                // 【元素结晶特殊处理】元素结晶不依赖 activation 配置，只要放在饰品栏第1格就生效
+                if (crystalId.startsWith("yuansujiejing") && slotKey == "accessory_0") {
+                    data.rarityDetails.add(crystalData.rarity)
+                    totalRarity += crystalData.rarity.toDouble()
+
+                    val elementStats = mutableMapOf<String, Double>()
+                    val eData = plugin.elementCrystalManager.getData(player.uniqueId)
+                    val bindUuid = meta.persistentDataContainer.get(NamespacedKey(plugin, "element_bind_uuid"), PersistentDataType.STRING)
+                    if (bindUuid == player.uniqueId.toString()) {
+                        elementStats.putAll(plugin.elementCrystalManager.getStats(eData))
+                        plugin.elementCrystalManager.checkAndTriggerSkills(player, eData)
+                    }
+
+                    elementStats.forEach { (k, v) ->
+                        val actualKey = if (k == "power") {
+                            when (data.job) {
+                                1 -> "archer_damage"
+                                2, 3 -> "zf_str"
+                                else -> "attack"
+                            }
+                        } else k
+                        stats.merge(actualKey, v) { a, b -> a + b }
+                    }
+                    return
+                }
+
                 // 校验：等级足够、职业匹配，且该槽位在配置文件的激活列表里
                 if (crystalData.isActivated(data) && crystalData.activations.containsKey(slotKey)) {
 
@@ -364,12 +475,13 @@ class CrystalManager(private val plugin: Hjh_database) {
                     totalRarity += crystalData.rarity.toDouble()
 
                     // 读取该特定槽位赋予的属性
-                    val slotStats = crystalData.activations[slotKey]?.stats ?: return
+                    val slotStats = crystalData.activations[slotKey]?.stats?.toMutableMap() ?: mutableMapOf()
+
                     slotStats.forEach { (k, v) ->
                         val actualKey = if (k == "power") {
                             when (data.job) {
-                                1 -> "archerDamage"
-                                2, 3 -> "zfStr"
+                                1 -> "archer_damage"
+                                2, 3 -> "zf_str"
                                 else -> "attack"
                             }
                         } else k

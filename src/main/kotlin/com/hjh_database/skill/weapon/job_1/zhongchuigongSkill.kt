@@ -170,8 +170,8 @@ class zhongchuigongSkill : WeaponSkill, Listener {
             // 消耗标记
 //            markedTargets.remove(victim.uniqueId)
 
-            // 【被动效果】额外造成 250% 箭矢强度的伤害
-            val extraPassiveDamage = pData.archerDamage * 2.5
+            // 【被动效果】额外造成 150% 箭矢强度的伤害
+            val extraPassiveDamage = pData.archerDamage * 1.5
 
             if (extraPassiveDamage > 0) {
                 applyExtraDamage(victim, attacker, extraPassiveDamage)

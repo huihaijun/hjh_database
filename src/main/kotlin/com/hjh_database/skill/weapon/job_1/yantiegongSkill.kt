@@ -140,12 +140,12 @@ class yantiegongSkill : WeaponSkill, Listener {
             val pluginMain = plugin as com.hjh_database.Hjh_database
             val pData = pluginMain.playerManager.getData(shooter.uniqueId) ?: return
 
-            // 伤害计算：300% 箭矢强度 + 每层1%最大生命（该部分附加伤害总和最多100）
-            val baseDamage = pData.archerDamage * 3.0
+            // 伤害计算：250% 箭矢强度 + 每层0.8%最大生命（该部分附加伤害总和最多100）
+            val baseDamage = pData.archerDamage * 2.5
             val maxHp = victim.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
             // 【修改点】：先将单层伤害乘以总层数，算出一个总的附加生命值伤害，然后再用 min 函数限制最高不超过100
-            val totalHpBonus = min(maxHp * 0.01 * stacks, 100.0)
-            // 最终伤害 = 无上限的300%箭矢强度 + 封顶100的百分比附加伤害
+            val totalHpBonus = min(maxHp * 0.008 * stacks, 100.0)
+            // 最终伤害 = 无上限的250%箭矢强度 + 封顶100的百分比附加伤害
             val totalDetonateDamage = baseDamage + totalHpBonus
             // 造成引爆伤害
             applyDetonateDamage(victim, shooter, totalDetonateDamage)

@@ -82,6 +82,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 重载 Resource 物品
             if (plugin.resourceManager != null) {
                 plugin.resourceManager.reload()
+                plugin.jianghuXindeManager.reload()
+                plugin.jianghuXindeManager.ensureStationBlock()
             }
             // 【新增】重载医术配置
             if (plugin.medicalManager != null) {

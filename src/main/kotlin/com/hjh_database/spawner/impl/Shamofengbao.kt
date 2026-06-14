@@ -42,6 +42,9 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
     init {
         plugin.server.pluginManager.registerEvents(this, plugin)
         applyPassiveSkill()
+        BossTargetingUtil.start(plugin, boss, radius = 48.0, chaseSpeed = 0.22, minChaseDistance = 7.0) {
+            !isCasting && !boss.hasPotionEffect(PotionEffectType.SLOWNESS)
+        }
         startMainAI()
 
         object : BukkitRunnable() {
@@ -214,6 +217,7 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
 
     private fun finishSkillAndEnterCD() {
         isCasting = false
+        boss.removePotionEffect(PotionEffectType.SLOWNESS)
         skillCooldownTicks = 15 * 20
     }
 

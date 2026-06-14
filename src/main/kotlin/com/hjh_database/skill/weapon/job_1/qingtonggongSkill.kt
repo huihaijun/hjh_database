@@ -140,12 +140,12 @@ class qingtonggongSkill : WeaponSkill, Listener {
                 val distance = shooter.location.distance(victim.location)
 
                 // 距离计算公式：
-                // 假设 30 格达到最大增伤 (300%)，即基础 100% + 额外 200%
+                // 假设 30 格达到最大增伤 (240%)，即基础 100% + 额外 140%
                 val maxDistance = 30.0
                 val ratio = min(distance / maxDistance, 1.0) // 0.0 到 1.0 之间
 
-                // multiplier 范围: 1.0(贴脸) ~ 3.0(30格开外)
-                val multiplier = 1.0 + (ratio * 2.0)
+                // multiplier 范围: 1.0(贴脸) ~ 2.4(30格开外)
+                val multiplier = 1.0 + (ratio * 1.4)
 
                 // 应用伤害放大
                 event.damage *= multiplier

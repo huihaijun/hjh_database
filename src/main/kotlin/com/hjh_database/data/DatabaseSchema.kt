@@ -24,10 +24,26 @@ internal class DatabaseSchema(
         createGoldenChestTable()
         createWarehouseTable()
         createMedicalTestTable()
+        createJianghuXindeTable()
+        createElementCrystalTable()
         updateTables()
     }
 
-    // ==========================================
+    private fun createElementCrystalTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_element_crystal (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(16) NOT NULL,
+                gold_points INT DEFAULT 0,
+                wood_points INT DEFAULT 0,
+                water_points INT DEFAULT 0,
+                fire_points INT DEFAULT 0,
+                earth_points INT DEFAULT 0
+            )
+            """.trimIndent()
+        )
+    }
 
     // === 自动检测并补全字段 ===
     private fun updateTables() {
@@ -67,6 +83,10 @@ internal class DatabaseSchema(
 
                     // 6. 修复 player_alchemy 冶药法表
                     safeAddColumn(stmt, "player_alchemy", "alchemy_exp", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_jianghu_xinde", "player_name", "VARCHAR(32)")
+                    safeAddColumn(stmt, "player_jianghu_xinde", "jianghu_xinde", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_exp_gained", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_last_level", "INT DEFAULT 1")
                 }
             }
         } catch (e: SQLException) {
@@ -327,6 +347,19 @@ internal class DatabaseSchema(
         } catch (e: Exception) {
             plugin.logger.severe("创建 player_medicaltest 表失败: ${e.message}")
         }
+    }
+
+    private fun createJianghuXindeTable() {
+        val sql = """
+            CREATE TABLE IF NOT EXISTS player_jianghu_xinde (
+                uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32),
+                jianghu_xinde INT DEFAULT 0,
+                xiushen_exp_gained INT DEFAULT 0,
+                xiushen_last_level INT DEFAULT 1
+            );
+        """.trimIndent()
+        executeSql(sql)
     }
 
 }
