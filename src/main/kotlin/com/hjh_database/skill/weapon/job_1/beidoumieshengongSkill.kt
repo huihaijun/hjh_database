@@ -32,7 +32,7 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
     private val starTicks = ConcurrentHashMap<UUID, Int>()
 
     // 第1~7颗星的独立伤害倍率
-    private val damageMultipliers = arrayOf(0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)
+    private val damageMultipliers = arrayOf(0.5, 0.8, 1.1, 1.4, 1.7, 2.0, 2.3)
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)

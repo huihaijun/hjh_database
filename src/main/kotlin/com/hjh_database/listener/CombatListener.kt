@@ -253,6 +253,30 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
+        // === 【元素结晶·启示 触发】 ===
+        val attackerPlayer = if (event is EntityDamageByEntityEvent) {
+            when (val d = event.damager) {
+                is Player -> d
+                is Projectile -> d.shooter as? Player
+                else -> null
+            }
+        } else null
+
+        if (attackerPlayer != null) {
+            val goldStacks = plugin.elementCrystalManager.getFengMangStacks(attackerPlayer)
+            if (goldStacks > 0) {
+                damage *= (1.0 + 0.04 * goldStacks)
+            }
+            if (entity is LivingEntity) {
+                plugin.elementCrystalManager.onDamageDealt(attackerPlayer, entity)
+            }
+        }
+
+        if (entity is Player) {
+            plugin.elementCrystalManager.onDamageTaken(entity, event)
+        }
+        // ============================
+
         // 应用伤害修改
         if (damage != event.damage) {
             event.damage = damage

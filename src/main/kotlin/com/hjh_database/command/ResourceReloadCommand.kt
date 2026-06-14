@@ -21,6 +21,8 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             sender.sendMessage(ChatColor.YELLOW.toString() + "正在重载资源配置并刷新全服物品...")
             // 调用 ResourceManager 的 reload 方法 (Kotlin 属性访问)
             plugin.resourceManager.reload()
+            plugin.jianghuXindeManager.reload()
+            plugin.jianghuXindeManager.ensureStationBlock()
             sender.sendMessage(ChatColor.GREEN.toString() + "重载完成！在线玩家的物品已更新。")
             return true
         }

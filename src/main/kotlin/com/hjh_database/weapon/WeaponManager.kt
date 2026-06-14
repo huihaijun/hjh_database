@@ -204,7 +204,7 @@ class WeaponManager(private val plugin: Hjh_database) {
             if (item.type == Material.CROSSBOW) {
                 if (isActive) {
                     // 【修改点】判断 ID 是否为 tingchao，赋予不同的快速装填等级
-                    val quickChargeLevel = if (id == "tingchao") 3 else 2
+                    val quickChargeLevel = if (id == "tingchao" || id == "zhuiyue") 3 else 2
 
                     meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
                     meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
@@ -361,7 +361,7 @@ class WeaponManager(private val plugin: Hjh_database) {
         // 【新增】如果拿出来的是弩，默认给它附魔
         if (item.type == Material.CROSSBOW) {
             // 【修改点】针对 tingchao 给予 3 级快速装填
-            val quickChargeLevel = if (id == "tingchao") 3 else 2
+            val quickChargeLevel = if (id == "tingchao" || id == "zhuiyue") 3 else 2
             meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
             meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
         }

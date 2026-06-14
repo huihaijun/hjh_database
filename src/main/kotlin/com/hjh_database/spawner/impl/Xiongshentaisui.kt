@@ -78,6 +78,9 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     init {
         plugin.server.pluginManager.registerEvents(this, plugin)
         applyPassiveSkill()
+        BossTargetingUtil.start(plugin, boss, radius = 48.0, chaseSpeed = 0.18, minChaseDistance = 5.0) {
+            (boss as? Mob)?.hasAI() == true
+        }
         startLifecycleCleanup()
         scheduleNextSkill(initialDelayTicks)
     }

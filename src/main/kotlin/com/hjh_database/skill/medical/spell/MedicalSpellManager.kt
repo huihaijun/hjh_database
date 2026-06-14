@@ -138,6 +138,9 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
             // A. 设置逻辑冷却 (插件内部判断用)
             setCooldown(player, skillId, cdMillis)
 
+            // Trigger Water skill for cooldown refund
+            plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, cdMillis / 1000.0)
+
             // Fix #2: 释放消息与 YML 一致
             var msg = config?.getString("cast_message")
             if (msg != null) {
@@ -250,5 +253,22 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
     private fun setCooldown(player: Player, skillId: String, durationMillis: Long) {
         val endTime = System.currentTimeMillis() + durationMillis
         cooldowns.computeIfAbsent(player.uniqueId) { ConcurrentHashMap() }[skillId] = endTime
+    }
+
+    fun reduceCooldown(player: Player, skillId: String, seconds: Double) {
+        val playerCds = cooldowns[player.uniqueId] ?: return
+        val currentEnd = playerCds[skillId] ?: return
+        val now = System.currentTimeMillis()
+        if (currentEnd <= now) return
+
+        val newEnd = currentEnd - (seconds * 1000.0).toLong()
+        if (newEnd <= now) {
+            playerCds.remove(skillId)
+            setVisualCooldown(player, skillId, 0)
+        } else {
+            playerCds[skillId] = newEnd
+            val remainingTicks = ((newEnd - now) / 50L).toInt()
+            setVisualCooldown(player, skillId, remainingTicks)
+        }
     }
 }

@@ -25,7 +25,8 @@ class SpellListener(private val plugin: Hjh_database) : Listener {
         // 【优化】直接调用 Manager 判断副手是否激活
         // 这一步代替了之前的长串逻辑
         // 这里的 playerManager 和 weaponManager 均使用 Kotlin 属性访问
-        if (plugin.playerManager.weaponManager.getActiveOffHandWeaponId(player) == null) {
+        val activeOffHandWeaponId = plugin.playerManager.weaponManager.getActiveOffHandWeaponId(player)
+        if (activeOffHandWeaponId == null) {
             return // 副手没激活，直接撤
         }
 
@@ -37,12 +38,15 @@ class SpellListener(private val plugin: Hjh_database) : Listener {
 
         event.isCancelled = true
 
-        // 假设 Hjh_database 中有 getElementZfManager() 方法
-        plugin.elementZfManager.castSkill(
-            player,
-            elementType.name,
-            plugin.playerManager.getData(player.uniqueId)!!
-        )
+        val data = plugin.playerManager.getData(player.uniqueId)!!
+        val activeOffHandWeapon = plugin.playerManager.weaponManager.getWeaponData(activeOffHandWeaponId)
+        val useEnhanced = player.isSneaking && (activeOffHandWeapon?.rarity ?: 0) >= 6
+
+        if (useEnhanced) {
+            plugin.elementZfManager.castEnhancedSkill(player, elementType.name, data)
+        } else {
+            plugin.elementZfManager.castSkill(player, elementType.name, data)
+        }
     }
 
     private fun getElementType(item: ItemStack?): MenuManager.ElementType? {

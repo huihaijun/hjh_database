@@ -13,3 +13,7 @@ interface ElementSkill {
      */
     fun cast(player: Player, level: Int, config: ConfigurationSection?): Boolean
 }
+
+interface EnhancedElementSkill {
+    fun cast(player: Player, data: com.hjh_database.data.PlayerData): Boolean
+}

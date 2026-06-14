@@ -42,7 +42,9 @@ import com.hjh_database.weapon.WeaponManager
 import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
 import com.hjh_database.spawner.impl.CustomMagmaCubeListener
 import com.hjh_database.spawner.impl.DesertSouthSkill
-
+import com.hjh_database.accessory.element.ElementCrystalManager
+import com.hjh_database.accessory.element.ElementCrystalGui
+import com.hjh_database.accessory.element.ElementCrystalInteractListener
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -78,10 +80,13 @@ class Hjh_database : JavaPlugin() {
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
+    lateinit var jianghuXindeManager: com.hjh_database.jianghu.JianghuXindeManager
     // 新增：箭袋管理器
     lateinit var jiandaiSkill: JiandaiSkill
     val accessorySkillManager = AccessorySkillManager(this)
 
+    lateinit var elementCrystalManager: ElementCrystalManager
+    lateinit var elementCrystalGui: ElementCrystalGui
 
     override fun onEnable() {
         instance = this
@@ -136,6 +141,7 @@ class Hjh_database : JavaPlugin() {
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
         // 【新增】初始化医术试炼管理器
         this.medicalTrialManager = MedicalTrialManager(this)
+        this.jianghuXindeManager = com.hjh_database.jianghu.JianghuXindeManager(this)
         // 南方沙漠 着火机制
         DesertSouthSkill.init(this)
 
@@ -144,7 +150,13 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         this.questGui = QuestGui(this)
         this.elementZfGui = ElementZfGui(this)
-
+        
+        this.elementCrystalManager = ElementCrystalManager(this)
+        this.elementCrystalManager.initBlock()
+        this.elementCrystalGui = ElementCrystalGui(this)
+        server.pluginManager.registerEvents(this.elementCrystalGui, this)
+        server.pluginManager.registerEvents(ElementCrystalInteractListener(this), this)
+        server.pluginManager.registerEvents(com.hjh_database.jianghu.JianghuXindeListener(this), this)
 
         // ==========================================
         // 第三阶段：注册所有事件监听器 (Listeners)
@@ -226,13 +238,18 @@ class Hjh_database : JavaPlugin() {
                 playerManager.loadAndCache(player)
                 // 【新增】同时加载玩家的仓库数据！
                 warehouseManager.loadAndCache(player)
+                // 【新增】同时加载玩家的元素结晶数据！
+                elementCrystalManager.loadPlayer(player)
             }
         }, 10L)
 
-        // 【新增】每5分钟异步保存在线玩家与仓库数据 (20 ticks * 60 seconds * 5 minutes)
+        // 【新增】每5分钟异步保存在线玩家、仓库与元素结晶数据 (20 ticks * 60 seconds * 5 minutes)
         server.scheduler.runTaskTimerAsynchronously(this, Runnable {
             playerManager.saveAllOnline()
             warehouseManager.saveAllOnline()
+            if (::elementCrystalManager.isInitialized) {
+                elementCrystalManager.saveAll()
+            }
         }, 6000L, 6000L)
 
 
@@ -261,6 +278,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::playerManager.isInitialized) {
             playerManager.saveAllOnline()
+        }
+
+        if (::elementCrystalManager.isInitialized) {
+            elementCrystalManager.saveAll()
         }
 
         // 【新增】关服时清理所有正在进行的医术试炼，防止 BossBar 残留或刷出幽灵实体

@@ -8,6 +8,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.attribute.Attribute
+import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
@@ -27,6 +28,7 @@ object MobFactory {
 
         // (如果你之前加了这行，保留它) 防止原版机制刷没怪物
         entity.removeWhenFarAway = removeWhenFarAway
+        clearVanillaSpecialSpawnState(entity)
 
         // === 【新增修改】1. 强制设置为成年体，防止出现小僵尸、小牛、小猪灵等幼体 ===
         if (entity is org.bukkit.entity.Ageable) {
@@ -149,5 +151,40 @@ object MobFactory {
         }
 
         return entity
+    }
+
+    private fun clearVanillaSpecialSpawnState(entity: LivingEntity) {
+        entity.activePotionEffects.toList().forEach { entity.removePotionEffect(it.type) }
+        entity.fireTicks = 0
+
+        if (entity is org.bukkit.entity.Ageable) {
+            entity.setAdult()
+        }
+        if (entity is org.bukkit.entity.Zombie) {
+            entity.setBaby(false)
+        }
+        if (entity is org.bukkit.entity.Piglin) {
+            entity.setBaby(false)
+        }
+        if (entity is org.bukkit.entity.Slime) {
+            entity.size = 4
+        }
+
+        entity.vehicle?.let { vehicle ->
+            entity.leaveVehicle()
+            removeEntityTree(vehicle)
+        }
+        entity.passengers.toList().forEach { passenger ->
+            entity.removePassenger(passenger)
+            removeEntityTree(passenger)
+        }
+    }
+
+    private fun removeEntityTree(entity: Entity) {
+        entity.passengers.toList().forEach { passenger ->
+            entity.removePassenger(passenger)
+            removeEntityTree(passenger)
+        }
+        entity.remove()
     }
 }

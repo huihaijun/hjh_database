@@ -21,11 +21,15 @@ import org.bukkit.util.Vector
 class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: LivingEntity) : Listener {
 
     private var isChanneling = false
+    private var isDashing = false
     private val skillCooldown = 13 * 20L // 13秒 CD
     private val initialDelay = 5 * 20L   // 出生后 5秒 首发
 
     init {
         applyPassiveSkill()
+        BossTargetingUtil.start(plugin, boss, radius = 48.0, chaseSpeed = 0.2, minChaseDistance = 5.0) {
+            !isChanneling && !isDashing && !boss.hasPotionEffect(PotionEffectType.SLOWNESS)
+        }
 
         // 动态注册一个专属监听器，用于实现吟唱期 80% 免伤
         plugin.server.pluginManager.registerEvents(this, plugin)
@@ -65,6 +69,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
     // 主动技能调度器
     // ==========================================
     private fun scheduleNextSkill(delayTicks: Long) {
+        isDashing = false
         object : BukkitRunnable() {
             override fun run() {
                 if (boss.isDead || !boss.isValid) return
@@ -162,6 +167,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
     // 阶段二：高速冲锋 (最远 15 格)
     // ==========================================
     private fun startDash(direction: Vector) {
+        isDashing = true
         boss.world.playSound(boss.location, Sound.ENTITY_RAVAGER_ROAR, 1.5f, 1.0f)
 
         var distanceTraveled = 0.0
@@ -173,6 +179,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
             override fun run() {
                 if (boss.isDead || !boss.isValid || distanceTraveled >= maxDistance) {
                     // 冲锋结束（未撞到玩家也未撞到墙），直接进入常规 CD
+                    isDashing = false
                     scheduleNextSkill(skillCooldown)
                     cancel()
                     return
@@ -229,6 +236,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
 
                 if (headRay != null && headRay.hitBlock != null && !headRay.hitBlock!!.isPassable) {
                     // 头前方的射线碰到了不可穿过的方块 (比如两格高的仙人掌、墙壁) -> 直接眩晕！
+                    isDashing = false
                     applyStun()
                     cancel()
                     return

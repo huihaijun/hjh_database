@@ -101,6 +101,16 @@ internal class DatabasePlayerRepository(
                 node_data=excluded.node_data
         """.trimIndent()
 
+        val saveJianghuXinde = """
+            INSERT INTO player_jianghu_xinde (uuid, player_name, jianghu_xinde, xiushen_exp_gained, xiushen_last_level)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=excluded.player_name,
+                jianghu_xinde=excluded.jianghu_xinde,
+                xiushen_exp_gained=excluded.xiushen_exp_gained,
+                xiushen_last_level=excluded.xiushen_last_level
+        """.trimIndent()
+
         try {
             manager.dataSource?.connection?.use { conn ->
                 val originalAutoCommit = conn.autoCommit
@@ -170,6 +180,15 @@ internal class DatabasePlayerRepository(
                         ps.setInt(4, data.kaiwuExp)
                         ps.setDouble(5, data.kaiwuEnergy)
                         ps.setString(6, data.getNodeDataAsJsonString())
+                        ps.executeUpdate()
+                    }
+
+                    conn.prepareStatement(saveJianghuXinde).use { ps ->
+                        ps.setString(1, data.uuid.toString())
+                        ps.setString(2, data.playerName)
+                        ps.setInt(3, data.jianghuXinde)
+                        ps.setInt(4, data.xiushenExpGained)
+                        ps.setInt(5, data.xiushenLastLevel)
                         ps.executeUpdate()
                     }
 
@@ -448,6 +467,7 @@ internal class DatabasePlayerRepository(
             val sqlSkills = "SELECT * FROM player_element_zf_lvl WHERE uuid = ?"
             val sqlForge = "SELECT * FROM player_dzlv WHERE uuid = ?"
             val sqlKaiWu = "SELECT * FROM player_kaiwu WHERE uuid = ?"
+            val sqlJianghuXinde = "SELECT jianghu_xinde, xiushen_exp_gained, xiushen_last_level FROM player_jianghu_xinde WHERE uuid = ?"
             val sqlCompletedQuests = "SELECT quest_id FROM player_quests WHERE uuid = ? AND status = 'COMPLETED'"
 
             try {
@@ -543,6 +563,17 @@ internal class DatabasePlayerRepository(
                     }
 
                     // 6. 加载各项子系统 (传入 conn 避免死锁)
+                    conn.prepareStatement(sqlJianghuXinde).use { ps ->
+                        ps.setString(1, uuid.toString())
+                        ps.executeQuery().use { rs ->
+                            if (rs.next()) {
+                                data.jianghuXinde = rs.getInt("jianghu_xinde")
+                                try { data.xiushenExpGained = rs.getInt("xiushen_exp_gained") } catch (e: Exception) {}
+                                try { data.xiushenLastLevel = rs.getInt("xiushen_last_level") } catch (e: Exception) { data.xiushenLastLevel = 1 }
+                            }
+                        }
+                    }
+
                     manager.loadMedicalData(conn, data)
                     manager.loadPlayerQuests(conn, data)
                     manager.loadAlchemyData(conn, data)

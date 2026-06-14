@@ -22,6 +22,8 @@ import com.hjh_database.skill.weapon.job_1.tengmugongSkill
 import com.hjh_database.skill.weapon.job_1.tingchaoSkill
 import com.hjh_database.skill.weapon.job_1.yantiegongSkill
 import com.hjh_database.skill.weapon.job_1.zhongchuigongSkill
+import com.hjh_database.skill.weapon.job_0.baihuajianSkill
+import com.hjh_database.skill.weapon.job_1.zhuiyueSkill
 import com.hjh_database.weapon.WeaponManager
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -108,6 +110,8 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["riyueliuxingnu"] = riyueliuxingnuSkill()
         skillRegistry["beidoumieshengong"] = beidoumieshengongSkill()
         skillRegistry["tingchao"] = tingchaoSkill()
+        skillRegistry["baihuajian"] = baihuajianSkill()
+        skillRegistry["zhuiyue"] = zhuiyueSkill()
 
 
         skillRegistry["novice_bow"] = NoviceBowSkill()
@@ -161,7 +165,9 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 
         // 注意：projectile 在 Kotlin 中可能需要处理 nullable，取决于 WeaponSkill 接口定义，此处传入原值
         if (skill!!.castActive(player, data, activeConfig, projectile)) {
-            applyCooldown(player, data, item.type, activeConfig.getDouble("cooldown", 10.0))
+            val baseCd = activeConfig.getDouble("cooldown", 10.0)
+            applyCooldown(player, data, item.type, baseCd)
+            plugin.elementCrystalManager.triggerWaterSkill(player, "weapon", weaponId, baseCd * (1.0 - data.coolReduce), item.type)
 
             val successMsg = activeConfig.getString("message")
             if (successMsg != null && !successMsg.isEmpty()) {
@@ -290,5 +296,29 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     // 提供给外部获取管理器的方法
     fun getPlugin(): Hjh_database {
         return plugin
+    }
+
+    fun reduceCooldown(player: Player, seconds: Double) {
+        reduceCooldown(player, seconds, player.inventory.itemInMainHand.type)
+    }
+
+    fun reduceCooldown(player: Player, seconds: Double, material: Material?) {
+        val uuid = player.uniqueId
+        val currentEnd = globalCooldowns[uuid] ?: return
+        val now = System.currentTimeMillis()
+        if (currentEnd <= now) return
+
+        val newEnd = currentEnd - (seconds * 1000.0).toLong()
+        if (newEnd <= now) {
+            globalCooldowns.remove(uuid)
+            material?.let { player.setCooldown(it, 0) }
+        } else {
+            globalCooldowns[uuid] = newEnd
+            val remainingTicks = ((newEnd - now) / 50L).toInt()
+            val cooldownType = material ?: player.inventory.itemInMainHand.type
+            if (cooldownType != Material.BOW && cooldownType != Material.CROSSBOW) {
+                player.setCooldown(cooldownType, remainingTicks)
+            }
+        }
     }
 }

@@ -17,6 +17,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
         plugin.playerManager.loadAndCache(event.player)
         // 【新增】进服时，异步加载玩家的个人仓库数据
         plugin.warehouseManager.loadAndCache(event.player)
+        plugin.elementCrystalManager.loadPlayer(event.player)
     }
 
     @EventHandler
@@ -29,6 +30,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
         plugin.playerManager.unloadAndSave(player.uniqueId)
         // 【新增】退服时，异步保存并清理玩家的个人仓库数据
         plugin.warehouseManager.saveAndRemove(player)
+        plugin.elementCrystalManager.unloadPlayer(player)
     }
 
     // =================================================================

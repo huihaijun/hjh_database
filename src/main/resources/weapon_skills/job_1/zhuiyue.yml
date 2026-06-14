@@ -1,0 +1,5 @@
+active:
+  enable: true
+  message: "&a&l武器技【新月之舞】已发动"
+  cooldown: 15.0
+  duration: 10.0

@@ -68,6 +68,9 @@ class PlayerData(val uuid: UUID, val playerName: String) {
 
     var jhq: Double = 0.0
     var money: Double = 0.0
+    var jianghuXinde: Int = 0
+    var xiushenExpGained: Int = 0
+    var xiushenLastLevel: Int = 1
 
     // --- 仓库/元素 ---
     var metal: Int = 0

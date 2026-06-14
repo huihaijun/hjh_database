@@ -55,8 +55,18 @@ class TestDummySignListener(private val plugin: Hjh_database) : Listener {
 
         event.isCancelled = true
         val loc = Location(block.world, sign.spawnX + 0.5, sign.spawnY + 1.0, sign.spawnZ + 0.5)
+        clearExistingDummy(loc)
         TestMobCommand.spawnDummy(plugin, loc, sign.health, sign.armor)
         event.player.sendMessage("${ChatColor.GREEN}已生成测伤人偶：血量 ${sign.health.toInt()}，护甲 ${sign.armor.toInt()}")
+    }
+
+    private fun clearExistingDummy(loc: Location) {
+        loc.world?.getNearbyEntities(loc, 1.0, 1.5, 1.0)
+            ?.filter { it.scoreboardTags.contains(TestMobCommand.TEST_DUMMY_TAG) }
+            ?.forEach {
+                it.removeScoreboardTag(TestMobCommand.TEST_DUMMY_TAG)
+                it.remove()
+            }
     }
 
     private fun setupSigns() {
