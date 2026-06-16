@@ -322,27 +322,56 @@ class CrystalManager(private val plugin: Hjh_database) {
                     val eData = plugin.elementCrystalManager.getData(playerData.uuid)
                     val activeSkills = mutableListOf<String>()
                     if (eData.goldPoints >= 2) {
-                        activeSkills.add("&e[金元素·启示] &f冷却：&c无")
-                        activeSkills.add("&f造成伤害时获得&b1&f层&b锋芒&f")
-                        activeSkills.add("&b[锋芒]&f:每层增加&b4%&f进攻属性,最多&b3&f层")
+                        activeSkills.add("&e[金·启示] &f冷却:&c无冷却")
+                        activeSkills.add("&f直接造成伤害时获得&b1&f层&b锋芒&f")
+                        activeSkills.add("&b[锋芒]&f:每层增加&b5%&f进攻属性,最多&b3&f层")
                         activeSkills.add("&f叠满后将不再叠层和刷新持续时间,&b5&f秒后层数消失")
                     }
                     if (eData.woodPoints >= 2) {
-                        activeSkills.add("&e[木元素·启示] &f冷却：&b30&f秒")
-                        activeSkills.add("&f生命低于&b50%&f时,在&b5&f秒内恢复&b10%&f最大生命")
+                        activeSkills.add("&a[木·启示] &f冷却:&b30&f秒")
+                        activeSkills.add("&f生命低于&b50%&f时,在&b5&f秒内恢复&b20%&f最大生命")
                     }
                     if (eData.waterPoints >= 2) {
-                        activeSkills.add("&e[水元素·启示] &f冷却：&b10&f秒")
-                        activeSkills.add("&f释放武器技或阵法后,返还该技能&b20%&f冷却")
+                        activeSkills.add("&9[水·启示] &f冷却:&b10&f秒")
+                        activeSkills.add("&f释放武器技、医术或阵法后,返还该技能&b15%&f冷却")
                     }
                     if (eData.firePoints >= 2) {
-                        activeSkills.add("&e[火元素·启示] &f冷却：&b6&f秒")
-                        activeSkills.add("&f造成伤害时为目标附加&b余烬&f")
-                        activeSkills.add("&b余烬&f：在&b3&f秒造成共计&b20%&f进攻属性伤害")
+                        activeSkills.add("&c[火·启示] &f冷却:&b6&f秒")
+                        activeSkills.add("&f直接伤害命中时附加&b余烬&f")
+                        activeSkills.add("&b余烬&f：在&b3&f秒内造成共计&b150%&f进攻属性伤害")
                     }
                     if (eData.earthPoints >= 2) {
-                        activeSkills.add("&e[土元素·启示] &f冷却：&b12&f秒")
-                        activeSkills.add("&f受到伤害后获得&b10&f点护甲,持续 &b4&f秒")
+                        activeSkills.add("&6[土·启示] &f冷却:&b12&f秒")
+                        activeSkills.add("&f受到伤害后获得&b10&f点护甲,持续&b6&f秒")
+                    }
+
+                    if (eData.goldPoints >= 4 && playerData.job == 0) {
+                        activeSkills.add("&6[战] &e[金·精进] [金戈] &f冷却:&b15&f秒")
+                        activeSkills.add("&f普通攻击命中第&b4&f次怪物时,向前方&b12&f格距离")
+                        activeSkills.add("&f斩出一道伤害为&b300%&f近战强度的剑气,贯穿路径上的怪物")
+                    }
+                    if (eData.woodPoints >= 4 && playerData.job == 0) {
+                        activeSkills.add("&6[战] &a[木·精进] [生根] &f冷却:&b15&f秒")
+                        activeSkills.add("&f受到伤害后,向十字方向生长距离为&b8&f格的&b根脉&f持续&b8&f秒")
+                        activeSkills.add("&b[根脉]&f:持续减速路径范围的怪物,并每秒回复路径上队友&b4&f点生命")
+                    }
+                    if (eData.waterPoints >= 4 && playerData.job == 0) {
+                        activeSkills.add("&6[战] &9[水·精进] [潮返] &f冷却:&b12&f秒")
+                        activeSkills.add("&f攻击/受到伤害后,在&b2&f秒内依次向周围&b10&f格扩散三道水波")
+                        activeSkills.add("&f前两道水波:造成&b80%最大生命&f的伤害,对怪物造成轻微减速&b3&f秒")
+                        activeSkills.add("&f第三道水波:造成&b100%最大生命&f的伤害,并小幅击飞怪物")
+                    }
+                    if (eData.firePoints >= 4 && playerData.job == 0) {
+                        activeSkills.add("&6[战] &c[火·精进] [炎斩] &f冷却:&b15&f秒")
+                        activeSkills.add("&f普通攻击造成伤害后,对目标叠加一层&b[炎斩]&f持续&b5&f秒")
+                        activeSkills.add("&f叠满三层时,移去所有标记并对其造成&b250%近战强度&f的&b穿甲&f伤害")
+                        activeSkills.add("&f并附带其&b最大生命8%&f的斩杀伤害,然后进入冷却")
+                    }
+                    if (eData.earthPoints >= 4 && playerData.job == 0) {
+                        activeSkills.add("&6[战] &6[土·精进] [崩山] &f冷却:&b15&f秒")
+                        activeSkills.add("&f每受到4次伤害时,将引发崩裂,眩晕周围&b10&f格怪物&b0.8&f秒")
+                        activeSkills.add("&f同时降低他们&b50%&f护甲持续&b8&f秒")
+                        activeSkills.add("&f并获得&b最大生命50%&f的护盾(最多&b40&f点)持续&b15&f秒")
                     }
 
                     if (activeSkills.isNotEmpty()) {

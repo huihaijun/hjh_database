@@ -21,6 +21,7 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
     private val crystalKey = NamespacedKey(plugin, "crystal_id")
     private val bindUuidKey = NamespacedKey(plugin, "element_bind_uuid")
     private val bindNameKey = NamespacedKey(plugin, "element_bind_name")
+    private val clickCooldown = java.util.concurrent.ConcurrentHashMap<java.util.UUID, Long>()
 
     private fun isElementCrystal(crystalId: String?): Boolean {
         return crystalId != null && crystalId.startsWith("yuansujiejing")
@@ -93,20 +94,31 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         val infoLore = mutableListOf<String>()
         infoLore.add("§7当前放入的元素结晶稀有度决定了可用点数。")
         infoLore.add("§7每分配一点，将获得对应元素的属性加成。")
+        infoLore.add("")
+        infoLore.add("§7当某元素分配点数：")
+        infoLore.add("§7达到§b2§7点，激活其§b[启示]§7技能效果；")
+        infoLore.add("§7达到§b4§7点，激活其§b[精进]§7技能效果；")
+        infoLore.add("§7达到§b6§7点，激活其§b[共鸣]§7技能效果")
         if (isCrystal) {
             if (isBoundToOther) {
                 infoLore.add("§c该结晶已绑定其他玩家，无法分配！")
             } else {
                 infoLore.add("§e剩余分配点数: §a$remainingPoints")
                 infoLore.add("§7已分配总点数: §f$totalPoints / $rarity")
+
                 
-                // === 【新增】显示启示状态 ===
+                // === 【新增】显示启示与精进状态 ===
                 val statesList = mutableListOf<String>()
-                if (data.goldPoints >= 2) statesList.add("§e[金元素·启示]")
-                if (data.woodPoints >= 2) statesList.add("§a[木元素·启示]")
-                if (data.waterPoints >= 2) statesList.add("§9[水元素·启示]")
-                if (data.firePoints >= 2) statesList.add("§c[火元素·启示]")
-                if (data.earthPoints >= 2) statesList.add("§6[土元素·启示]")
+                if (data.goldPoints >= 2) statesList.add("§e[金·启示]")
+                if (data.goldPoints >= 4) statesList.add("§e[金·精进]")
+                if (data.woodPoints >= 2) statesList.add("§a[木·启示]")
+                if (data.woodPoints >= 4) statesList.add("§a[木·精进]")
+                if (data.waterPoints >= 2) statesList.add("§9[水·启示]")
+                if (data.waterPoints >= 4) statesList.add("§9[水·精进]")
+                if (data.firePoints >= 2) statesList.add("§c[火·启示]")
+                if (data.firePoints >= 4) statesList.add("§c[火·精进]")
+                if (data.earthPoints >= 2) statesList.add("§6[土·启示]")
+                if (data.earthPoints >= 4) statesList.add("§6[土·精进]")
                 if (statesList.isNotEmpty()) {
                     infoLore.add("§b当前状态: " + statesList.joinToString(" "))
                 }
@@ -126,23 +138,96 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         resetItem.itemMeta = resetMeta
         inv.setItem(8, resetItem)
 
-        // 节点
-        inv.setItem(13, createNodeItem(Material.FLINT, "§e锋锐之金", "进攻属性 +1.5", data.goldPoints))
-        inv.setItem(29, createNodeItem(Material.MELON_SEEDS, "§a生机之木", "最大生命 +6", data.woodPoints))
-        inv.setItem(33, createNodeItem(Material.WHEAT_SEEDS, "§9灵动之水", "冷却缩减 +2%", data.waterPoints))
-        inv.setItem(48, createNodeItem(Material.CHARCOAL, "§c暴烈之火", "暴击率 +4%", data.firePoints))
-        inv.setItem(50, createNodeItem(Material.PUMPKIN_SEEDS, "§6坚韧之土", "护甲 +6", data.earthPoints))
+        // 节点 — 传入玩家职业与剩余点数用于显示不同精进文本和剩余可分配点数
+        val pData = plugin.playerManager.getPlayerData(player)
+        val playerJob = pData?.job ?: -1
+        inv.setItem(13, createNodeItem(Material.FLINT, "§e锋锐之金", "进攻属性 +1.5", data.goldPoints, "gold", playerJob, remainingPoints))
+        inv.setItem(29, createNodeItem(Material.MELON_SEEDS, "§a生机之木", "最大生命 +6", data.woodPoints, "wood", playerJob, remainingPoints))
+        inv.setItem(33, createNodeItem(Material.WHEAT_SEEDS, "§9灵动之水", "冷却缩减 +2%", data.waterPoints, "water", playerJob, remainingPoints))
+        inv.setItem(48, createNodeItem(Material.CHARCOAL, "§c暴烈之火", "暴击率 +4%", data.firePoints, "fire", playerJob, remainingPoints))
+        inv.setItem(50, createNodeItem(Material.PUMPKIN_SEEDS, "§6坚韧之土", "护甲 +6", data.earthPoints, "earth", playerJob, remainingPoints))
     }
 
-    private fun createNodeItem(mat: Material, name: String, statDesc: String, currentPoints: Int): ItemStack {
+    private fun createNodeItem(mat: Material, name: String, statDesc: String, currentPoints: Int, element: String, job: Int, remainingPoints: Int): ItemStack {
         val item = ItemStack(mat)
         val meta = item.itemMeta
         meta?.setDisplayName(name)
         val lore = mutableListOf<String>()
         lore.add("§7每点属性: §f$statDesc")
         lore.add("§7当前已投入: §a$currentPoints 点")
+        lore.add("§7剩余可分配点数: §a$remainingPoints")
         lore.add("")
         lore.add("§e点击投入 1 点")
+        
+        val qishiSep = if (currentPoints >= 2) "§8===========§2§n§l启示（已激活）§8============" else "§8===========§8§n§l启示（未激活）§8============"
+        val jingjinSep = if (currentPoints >= 4) "§8===========§2§n§l精进（已激活）§8============" else "§8===========§8§n§l精进（未激活）§8============"
+        val gongmingSep = if (currentPoints >= 6) "§8===========§2§n§l共鸣（已激活）§8============" else "§8===========§8§n§l共鸣（未激活）§8============"
+        
+        lore.add(qishiSep)
+        when (element) {
+            "gold" -> {
+                lore.add("§e[金·启示] §f冷却:§c无冷却")
+                lore.add("§f直接造成伤害时获得§b1§f层§b锋芒§f")
+                lore.add("§b[锋芒]§f:每层增加§b5%§f进攻属性,最多§b3§f层")
+                lore.add("§f叠满后将不再叠层和刷新持续时间,§b5§f秒后层数消失")
+            }
+            "wood" -> {
+                lore.add("§a[木·启示] §f冷却:§b30§f秒")
+                lore.add("§f生命低于§b50%§f时,在§b3§f秒内恢复§b20%§f最大生命")
+            }
+            "water" -> {
+                lore.add("§9[水·启示] §f冷却:§b10§f秒")
+                lore.add("§f释放武器技、医术或阵法后,返还该技能§b15%§f冷却")
+            }
+            "fire" -> {
+                lore.add("§c[火·启示] §f冷却:§b6§f秒")
+                lore.add("§f直接伤害命中时附加§b余烬§f")
+                lore.add("§b余烬§f：在§b3§f秒内造成共计§b150%§f进攻属性伤害")
+            }
+            "earth" -> {
+                lore.add("§6[土·启示] §f冷却:§b12§f秒")
+                lore.add("§f受到伤害后获得§b10§f点护甲,持续§b6§f秒")
+            }
+        }
+        lore.add(jingjinSep)
+        when (job) {
+            0 -> { // 战士
+                when (element) {
+                    "gold" -> {
+                        lore.add("§6[战] §e[金·精进] [金戈] §f冷却:§b15§f秒")
+                        lore.add("§f普通攻击命中第§b4§f次怪物时,向前方§b12§f格距离")
+                        lore.add("§f斩出一道伤害为§b300%§f近战强度的剑气,贯穿路径上的怪物")
+                    }
+                    "wood" -> {
+                        lore.add("§6[战] §a[木·精进] [生根] §f冷却:§b15§f秒")
+                        lore.add("§f受到伤害后,向十字方向生长距离为§b8§f格的§b根脉§f持续§b8§f秒")
+                        lore.add("§b[根脉]§f:持续减速路径范围的怪物,并每秒回复路径上队友§b4§f点生命")
+                    }
+                    "water" -> {
+                        lore.add("§6[战] §9[水·精进] [潮返] §f冷却:§b12§f秒")
+                        lore.add("§f攻击/受到伤害后,在§b2§f秒内依次向周围§b10§f格扩散三道水波")
+                        lore.add("§f前两道水波:造成§b80%最大生命§f的伤害,对怪物造成轻微减速§b3§f秒")
+                        lore.add("§f第三道水波:造成§b100%最大生命§f的伤害,并小幅击飞怪物")
+                    }
+                    "fire" -> {
+                        lore.add("§6[战] §c[火·精进] [炎斩] §f冷却:§b15§f秒")
+                        lore.add("§f普通攻击造成伤害后,对目标叠加一层§b[炎斩]§f持续§b5§f秒")
+                        lore.add("§f叠满三层时,移去所有标记并对其造成§b250%近战强度§f的§b穿甲§f伤害")
+                        lore.add("§f并附带其§b最大生命8%§f的斩杀伤害,然后进入冷却")
+                    }
+                    "earth" -> {
+                        lore.add("§6[战] §6[土·精进] [崩山] §f冷却:§b15§f秒")
+                        lore.add("§f每受到4次伤害时,将引发崩裂,眩晕周围§b10§f格怪物§b0.8§f秒")
+                        lore.add("§f同时降低他们§b50%§f护甲持续§b8§f秒")
+                        lore.add("§f并获得§b最大生命50%§f的护盾(最多§b40§f点)持续§b15§f秒")
+                    }
+                }
+            }
+            else -> lore.add("§7(尚未添加)")
+        }
+        lore.add(gongmingSep)
+        lore.add("§7(尚未添加)")
+        
         meta?.lore = lore
         item.itemMeta = meta
         return item
@@ -224,6 +309,16 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         val totalPoints = data.getTotalPoints()
         
         var pointsChanged = false
+
+        val allocationSlots = setOf(13, 29, 33, 48, 50)
+        if (rawSlot in allocationSlots) {
+            val now = System.currentTimeMillis()
+            val lastClick = clickCooldown[player.uniqueId] ?: 0L
+            if (now - lastClick < 200L) {
+                return
+            }
+            clickCooldown[player.uniqueId] = now
+        }
 
         when (rawSlot) {
             8 -> { // 重置

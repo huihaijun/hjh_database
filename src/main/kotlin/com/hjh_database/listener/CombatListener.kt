@@ -148,77 +148,79 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
             }
             // =============================================================
-            when (val attacker = event.damager) {
-                // --- A. 玩家 ---
-                is Player -> {
-                    val hand = attacker.inventory.itemInMainHand
-                    if (!isWeaponSlotValid(attacker, hand)) {
-                        val data = plugin.playerManager.getPlayerData(attacker)
-                        if (data?.job == 3) {
+            if (!isMagicDamage) {
+                when (val attacker = event.damager) {
+                    // --- A. 玩家 ---
+                    is Player -> {
+                        val hand = attacker.inventory.itemInMainHand
+                        if (!isWeaponSlotValid(attacker, hand)) {
+                            val data = plugin.playerManager.getPlayerData(attacker)
+                            if (data?.job == 3) {
+                                event.isCancelled = true
+                                return
+                            }
                             event.isCancelled = true
+                            attacker.sendMessage("§c武器未激活！请将武器移动到正确的槽位使用！")
+                            attacker.playSound(attacker.location, Sound.ENTITY_ITEM_BREAK, 1f, 0.5f)
                             return
                         }
-                        event.isCancelled = true
-                        attacker.sendMessage("§c武器未激活！请将武器移动到正确的槽位使用！")
-                        attacker.playSound(attacker.location, Sound.ENTITY_ITEM_BREAK, 1f, 0.5f)
-                        return
-                    }
 
-                    plugin.playerManager.getPlayerData(attacker)?.let { data ->
-                        val isRpgWeapon = hand.itemMeta?.persistentDataContainer?.has(weaponKey, PersistentDataType.STRING) == true
+                        plugin.playerManager.getPlayerData(attacker)?.let { data ->
+                            val isRpgWeapon = hand.itemMeta?.persistentDataContainer?.has(weaponKey, PersistentDataType.STRING) == true
 
-                        if (data.job == 0) { // 战士
-                            val typeName = hand.type.name
-                            if (typeName.endsWith("_SWORD") || typeName.endsWith("_AXE")) {
-                                damage = data.attack * attacker.attackCooldown.toDouble()
+                            if (data.job == 0) { // 战士
+                                val typeName = hand.type.name
+                                if (typeName.endsWith("_SWORD") || typeName.endsWith("_AXE")) {
+                                    damage = data.attack * attacker.attackCooldown.toDouble()
+                                }
+                            } else if (isRpgWeapon) {
+                                damage = 1.0
                             }
-                        } else if (isRpgWeapon) {
-                            damage = 1.0
-                        }
 
-                        // 高性能并发安全的随机数替代 Math.random()
-                        val critChance = min(0.8, data.critChance)
-                        if (attacker.attackCooldown > 0.9f && ThreadLocalRandom.current().nextDouble() < critChance) {
-                            damage *= 1.5
-                            attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
-                            attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                            // 高性能并发安全的随机数替代 Math.random()
+                            val critChance = min(0.8, data.critChance)
+                            if (attacker.attackCooldown > 0.9f && ThreadLocalRandom.current().nextDouble() < critChance) {
+                                damage *= 1.5
+                                attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
+                                attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                            }
                         }
                     }
-                }
 
-                // --- B. 箭矢 ---
-                is AbstractArrow -> {
-                    val shooter = attacker.shooter
-                    if (shooter is Player) {
-                        val pdc = attacker.persistentDataContainer
+                    // --- B. 箭矢 ---
+                    is AbstractArrow -> {
+                        val shooter = attacker.shooter
+                        if (shooter is Player) {
+                            val pdc = attacker.persistentDataContainer
 
-                        // ⭐ 【关键修复】直接从箭矢 PDC 中读取当时存入的伤害和暴击率（如果没读到则默认为0）
-                        val archerDmg = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: 0.0
-                        val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
+                            // ⭐ 【关键修复】直接从箭矢 PDC 中读取当时存入的伤害和暴击率（如果没读到则默认为0）
+                            val archerDmg = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: 0.0
+                            val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
 
-                        val velocity = attacker.velocity.length()
+                            val velocity = attacker.velocity.length()
 
-                        // 原始伤害系数计算 (速度折算)
-                        var arrowDamage = archerDmg * (min(3.0, velocity) / 3.0)
+                            // 原始伤害系数计算 (速度折算)
+                            var arrowDamage = archerDmg * (min(3.0, velocity) / 3.0)
 
-                        // 判断武器类型 (弓还是弩) - 弓伤害在拉满时额外 x2.5
-                        if (pdc.has(isBowKey, PersistentDataType.BYTE)) {
-                            arrowDamage *= 2.5
-                        }
+                            // 判断武器类型 (弓还是弩) - 弓伤害在拉满时额外 x2.5
+                            if (pdc.has(isBowKey, PersistentDataType.BYTE)) {
+                                arrowDamage *= 2.5
+                            }
 
-                        // 判断是否为多重射击的侧箭
-                        if (pdc.has(multishotSideKey, PersistentDataType.BYTE)) {
-                            arrowDamage *= 0.2 // 侧箭削弱到 20%
-                        }
+                            // 判断是否为多重射击的侧箭
+                            if (pdc.has(multishotSideKey, PersistentDataType.BYTE)) {
+                                arrowDamage *= 0.2 // 侧箭削弱到 20%
+                            }
 
-                        damage = arrowDamage
+                            damage = arrowDamage
 
-                        // 判断暴击，使用快照里的暴击率
-                        val finalCritChance = min(0.8, critChance)
-                        if (ThreadLocalRandom.current().nextDouble() < finalCritChance) {
-                            damage *= 1.5
-                            attacker.isCritical = true
-                            shooter.playSound(shooter.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                            // 判断暴击，使用快照里的暴击率
+                            val finalCritChance = min(0.8, critChance)
+                            if (ThreadLocalRandom.current().nextDouble() < finalCritChance) {
+                                damage *= 1.5
+                                attacker.isCritical = true
+                                shooter.playSound(shooter.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                            }
                         }
                     }
                 }
@@ -247,6 +249,17 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     }
                 }
 
+                // 土·精进 [崩山] 护甲减半判定
+                if (armor > 0 && entity.hasMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE)) {
+                    val until = entity.getMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE)
+                        .firstOrNull()?.asLong() ?: 0L
+                    if (System.currentTimeMillis() < until) {
+                        armor *= 0.5
+                    } else {
+                        entity.removeMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE, plugin)
+                    }
+                }
+
                 if (armor < 0) armor = 0.0
                 val multiplier = 50.0 / (50.0 + armor)
                 damage *= multiplier
@@ -265,10 +278,11 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         if (attackerPlayer != null) {
             val goldStacks = plugin.elementCrystalManager.getFengMangStacks(attackerPlayer)
             if (goldStacks > 0) {
-                damage *= (1.0 + 0.04 * goldStacks)
+                damage *= (1.0 + 0.05 * goldStacks)
             }
             if (entity is LivingEntity) {
-                plugin.elementCrystalManager.onDamageDealt(attackerPlayer, entity)
+                val isNormalAttack = !isMagicDamage && (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK || cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)
+                plugin.elementCrystalManager.onDamageDealt(attackerPlayer, entity, isNormalAttack)
             }
         }
 

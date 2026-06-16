@@ -52,7 +52,7 @@ class PlayerRecipeListGui(
         val myJob = data?.job ?: -1
 
         for (r in all) {
-            // 职业过滤
+            // 职业过滤: -1 表示全职业通用
             if (r.reqJob != -1 && r.reqJob != myJob) {
                 continue
             }
@@ -78,7 +78,10 @@ class PlayerRecipeListGui(
 
         val currentRarity = rarityPages.getOrNull(page)
 
-        // 2. 设置翻页按钮：按稀有度翻页
+        // 2. 顶部彩色羊毛阶数筛选栏
+        setupRarityWoolBar()
+
+        // 3. 设置翻页按钮：按稀有度翻页（保留底栏箭头）
         if (page > 0) {
             setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}")
         }
@@ -86,15 +89,13 @@ class PlayerRecipeListGui(
             setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}")
         }
 
-        // 3. 返回按钮 (保持原逻辑)
+        // 4. 返回按钮 (保持原逻辑)
         setBtn(49, Material.BARRIER, "§c返回分类")
 
         if (currentRarity == null) {
             setBtn(22, Material.GRAY_DYE, "§7暂无可锻造配方")
             return
         }
-
-        setBtn(4, Material.NETHER_STAR, "${formatRarityName(currentRarity)} §7配方")
 
         // ====================================================
         // 【核心修改区域】 配方列表渲染
@@ -132,12 +133,12 @@ class PlayerRecipeListGui(
                 lore.add("")
                 lore.add("§8§m------------------")
 
-                // 1. 职业需求
+                // 1. 职业需求 (修复: -1才是通用, 0是战士)
                 val jobName = DzUtil.getJobName(recipe.reqJob)
-                val jobOk = (recipe.reqJob == 0) || (myJob == recipe.reqJob)
+                val jobOk = (recipe.reqJob == -1) || (myJob == recipe.reqJob)
                 val jobStatus = if (jobOk) "§a✔" else "§c✘"
 
-                if (recipe.reqJob > 0) {
+                if (recipe.reqJob != -1) {
                     lore.add("§7职业: §f$jobName $jobStatus")
                 } else {
                     lore.add("§7职业: §f通用")
@@ -172,6 +173,67 @@ class PlayerRecipeListGui(
         }
     }
 
+    /**
+     * 在顶部第一行(slots 0-8)放置彩色羊毛阶数按钮，
+     * 空余位置用灰色染色玻璃板填充。
+     */
+    private fun setupRarityWoolBar() {
+        // 先用灰色玻璃板填充整行
+        val glassFiller = ItemStack(Material.GRAY_STAINED_GLASS_PANE)
+        val gm = glassFiller.itemMeta
+        if (gm != null) {
+            gm.setDisplayName(" ")
+            glassFiller.itemMeta = gm
+        }
+        for (i in 0 until 9) inv.setItem(i, glassFiller)
+
+        if (rarityPages.isEmpty()) return
+
+        // 计算居中起始位置
+        val count = rarityPages.size
+        val startSlot = (9 - count) / 2
+
+        for ((idx, rarity) in rarityPages.withIndex()) {
+            val slot = startSlot + idx
+            if (slot < 0 || slot > 8) continue
+
+            val woolMat = getRarityWool(rarity)
+            val wool = ItemStack(woolMat)
+            val meta = wool.itemMeta
+            if (meta != null) {
+                val isCurrentPage = (idx == page)
+                val rarityName = formatRarityName(rarity)
+                if (isCurrentPage) {
+                    meta.setDisplayName("$rarityName §l◀ 当前")
+                } else {
+                    meta.setDisplayName("$rarityName §7(点击切换)")
+                }
+                // 使用PDC记录阶数索引，方便点击时定位
+                meta.persistentDataContainer.set(
+                    NamespacedKey(plugin, "rarity_page_idx"),
+                    PersistentDataType.INTEGER,
+                    idx
+                )
+                wool.itemMeta = meta
+            }
+            inv.setItem(slot, wool)
+        }
+    }
+
+    /**
+     * 根据阶数返回对应颜色的羊毛Material
+     */
+    private fun getRarityWool(rarity: Int): Material {
+        return when (rarity) {
+            1 -> Material.WHITE_WOOL
+            2 -> Material.LIME_WOOL
+            3 -> Material.BLUE_WOOL
+            4 -> Material.PINK_WOOL
+            5 -> Material.YELLOW_WOOL
+            else -> Material.WHITE_WOOL // 无阶数或其他用白色
+        }
+    }
+
     // 原代码中有 setBtn 定义但未使用（只在内部直接 new 实现了），为保持一致性保留
     private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String) {
         val item = ItemStack(mat)
@@ -195,9 +257,9 @@ class PlayerRecipeListGui(
         val key = NamespacedKey(plugin, "rarity")
         meta.persistentDataContainer.get(key, PersistentDataType.INTEGER)?.let { return it }
 
-        val idKey = NamespacedKey(plugin, "resource_id")
         val weaponKey = NamespacedKey(plugin, "weapon_id")
         val armorKey = NamespacedKey(plugin, "armor_id")
+        val idKey = NamespacedKey(plugin, "resource_id")
         val itemId = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
             ?: meta.persistentDataContainer.get(armorKey, PersistentDataType.STRING)
             ?: meta.persistentDataContainer.get(idKey, PersistentDataType.STRING)
@@ -286,6 +348,21 @@ class PlayerRecipeListGui(
         if (event.currentItem == null) return // 允许点空位，反正做了判断
 
         val slot = event.slot
+
+        // 0. 顶部羊毛栏点击 (slots 0-8)
+        if (slot in 0..8) {
+            val item = event.currentItem ?: return
+            val meta = item.itemMeta ?: return
+            val pageKey = NamespacedKey(plugin, "rarity_page_idx")
+            if (meta.persistentDataContainer.has(pageKey, PersistentDataType.INTEGER)) {
+                val targetPage = meta.persistentDataContainer.get(pageKey, PersistentDataType.INTEGER) ?: return
+                if (targetPage != page) {
+                    page = targetPage
+                    setupPage()
+                }
+            }
+            return
+        }
 
         // 1. 功能按钮区
         if (slot == 45) {

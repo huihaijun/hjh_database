@@ -9,6 +9,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
     private val cache = ConcurrentHashMap<UUID, ElementCrystalData>()
     private val dbRepo = ElementCrystalDbRepository(plugin.databaseManager, plugin)
 
+    /** 战士精进技能管理器 */
+    val warriorMastery = WarriorMasterySkills(plugin)
+
     fun initBlock() {
         plugin.server.scheduler.runTask(plugin, Runnable {
             val world = org.bukkit.Bukkit.getWorld("world")
@@ -39,6 +42,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                 dbRepo.saveData(data)
             })
         }
+        warriorMastery.cleanup(player.uniqueId)
     }
 
     fun savePlayerAsync(player: Player) {
@@ -122,7 +126,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
     }
 
     // 1. 金/火 技能触发 (当玩家直接造成伤害时调用)
-    fun onDamageDealt(player: Player, victim: org.bukkit.entity.LivingEntity) {
+    fun onDamageDealt(player: Player, victim: org.bukkit.entity.LivingEntity, isNormalAttack: Boolean = false) {
         if (!isCrystalActive(player)) return
         val eData = getData(player.uniqueId)
 
@@ -134,7 +138,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                 // 开启新一轮叠层
                 goldStacks[player.uniqueId] = 1
                 goldEndTime[player.uniqueId] = now + 5000L
-                player.sendMessage("§e[金元素·启示]已触发")
+                player.sendMessage("§e[金·启示]已触发")
                 player.world.spawnParticle(org.bukkit.Particle.CRIT, player.location.add(0.0, 1.0, 0.0), 10, 0.2, 0.2, 0.2, 0.1)
             } else {
                 val current = goldStacks.getOrDefault(player.uniqueId, 0)
@@ -151,7 +155,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             val cdEnd = fireCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 fireCd[player.uniqueId] = now + 6000L // 6秒冷却
-                player.sendMessage("§c[火元素·启示]已触发")
+                player.sendMessage("§c[火·启示]已触发")
                 player.world.spawnParticle(org.bukkit.Particle.LAVA, victim.location.add(0.0, 1.0, 0.0), 10, 0.3, 0.3, 0.3, 0.1)
 
                 val pData = plugin.playerManager.getPlayerData(player)
@@ -162,7 +166,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                         2, 3 -> pData.zfStr
                         else -> pData.attack
                     }
-                    val totalDamage = offStat * 0.20
+                    val totalDamage = offStat * 1.50
                     val tickDamage = totalDamage / 3.0
 
                     var ticksRun = 0
@@ -190,6 +194,12 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                 }
             }
         }
+
+        // ===== 精进技能触发 (4点) =====
+        val pDataMastery = plugin.playerManager.getPlayerData(player)
+        if (pDataMastery != null && pDataMastery.job == 0) {
+            warriorMastery.onDamageDealt(player, victim, eData, pDataMastery, isNormalAttack)
+        }
     }
 
     // 2. 木/土 技能触发 (当玩家受到伤害时调用)
@@ -203,7 +213,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             val cdEnd = earthCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 earthCd[player.uniqueId] = now + 12000L // 12秒冷却
-                player.sendMessage("§6[土元素·启示]已触发")
+                player.sendMessage("§6[土·启示]已触发")
                 
                 try {
                     player.world.spawnParticle(
@@ -227,7 +237,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                             pData.tempBonuses["armor"] = (currentArmor - 10.0).coerceAtLeast(0.0)
                             plugin.playerManager.updateStats(player)
                         }
-                    }, 80L) // 4秒持续
+                    }, 120L) // 6秒持续
                 }
             }
         }
@@ -243,10 +253,10 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                     val currentHp = player.health - event.finalDamage
                     if (currentHp < maxHp * 0.5 && currentHp > 0.0) {
                         woodCd[player.uniqueId] = now + 30000L // 30秒冷却
-                        player.sendMessage("§a[木元素·启示]已触发")
+                        player.sendMessage("§a[木·启示]已触发")
                         player.world.spawnParticle(org.bukkit.Particle.HEART, player.location.add(0.0, 1.5, 0.0), 5, 0.2, 0.2, 0.2, 0.1)
 
-                        val healPerTick = maxHp * 0.02
+                        val healPerTick = maxHp * (0.20 / 3.0)
                         var ticksRun = 0
                         val task = object : org.bukkit.scheduler.BukkitRunnable() {
                             override fun run() {
@@ -259,15 +269,21 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
                                 pData.currentHealth = newHp
                                 player.world.spawnParticle(org.bukkit.Particle.HAPPY_VILLAGER, player.location.add(0.0, 1.0, 0.0), 8, 0.3, 0.5, 0.3, 0.1)
                                 ticksRun++
-                                if (ticksRun >= 5) {
+                                if (ticksRun >= 3) {
                                     cancel()
                                 }
                             }
                         }
-                        task.runTaskTimer(plugin, 20L, 20L) // 1秒 1 滴答，共 5 秒
+                        task.runTaskTimer(plugin, 20L, 20L) // 1秒 1 滴答，共 3 秒
                     }
                 }
             }
+        }
+
+        // ===== 精进技能触发 (4点) =====
+        val pDataMastery = plugin.playerManager.getPlayerData(player)
+        if (pDataMastery != null && pDataMastery.job == 0) {
+            warriorMastery.onDamageTaken(player, event, eData, pDataMastery)
         }
     }
 
@@ -281,10 +297,10 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             val cdEnd = waterCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 waterCd[player.uniqueId] = now + 10000L // 10秒冷却
-                player.sendMessage("§9[水元素·启示]已触发")
+                player.sendMessage("§9[水·启示]已触发")
                 player.world.spawnParticle(org.bukkit.Particle.SPLASH, player.location.add(0.0, 1.0, 0.0), 20, 0.3, 0.5, 0.3, 0.1)
 
-                val refundSeconds = totalCd * 0.20
+                val refundSeconds = totalCd * 0.15
                 if (refundSeconds > 0.0) {
                     when (skillType) {
                         "weapon" -> {
