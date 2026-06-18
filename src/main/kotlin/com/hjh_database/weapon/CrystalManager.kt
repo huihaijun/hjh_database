@@ -350,10 +350,40 @@ class CrystalManager(private val plugin: Hjh_database) {
                         activeSkills.add("&f普通攻击命中第&b4&f次怪物时,向前方&b12&f格距离")
                         activeSkills.add("&f斩出一道伤害为&b300%&f近战强度的剑气,贯穿路径上的怪物")
                     }
+                    if (eData.goldPoints >= 4 && playerData.job == 1) {
+                        activeSkills.add("&6[弓] &e[金·精进] [鸣镝] &f冷却:&b10&f秒")
+                        activeSkills.add("&f箭矢命中目标后,若与其距离超过&b10&f格")
+                        activeSkills.add("&f则对其追加一段&b200%箭矢强度&f的伤害")
+                    }
+                    if (eData.goldPoints >= 4 && playerData.job == 2) {
+                        activeSkills.add("&6[术] &e[金·精进] [金印] &f冷却:&b15&f秒")
+                        activeSkills.add("&f元素阵法命中目标&b造成伤害&f后,为目标打下&b[金印]&f标记,持续&b3&f秒")
+                        activeSkills.add("&b[金印]&f:持续时间结束后爆炸,对目标&b2&f格范围内怪物造成持有印记期间")
+                        activeSkills.add("&f受到的伤害总数的&b50%&f的伤害,最多&b200&f点")
+                    }
+                    if (eData.goldPoints >= 4 && playerData.job == 3) {
+                        activeSkills.add("&6[医] &e[金·精进] [金针] &f冷却:&b15&f秒")
+                        activeSkills.add("&f释放医术后,向&b15格&f内离你最近的&b2&f只怪物飞出金针")
+                        activeSkills.add("&f造成&b150%阵法强度&f伤害并定身其&b1&f秒")
+                    }
                     if (eData.woodPoints >= 4 && playerData.job == 0) {
                         activeSkills.add("&6[战] &a[木·精进] [生根] &f冷却:&b15&f秒")
                         activeSkills.add("&f受到伤害后,向十字方向生长距离为&b8&f格的&b根脉&f持续&b8&f秒")
                         activeSkills.add("&b[根脉]&f:持续减速路径范围的怪物,并每秒回复路径上队友&b4&f点生命")
+                    }
+                    if (eData.woodPoints >= 4 && playerData.job == 1) {
+                        activeSkills.add("&6[弓] &a[木·精进] [藤矢] &f冷却:&b12&f秒")
+                        activeSkills.add("&f箭矢命中目标后,对目标附带&b[藤蔓]&f标记持续&b8&f秒")
+                        activeSkills.add("&b[藤蔓]&f:减速50%,命中带有此标记的目标后,会为自己恢复&b2&f点生命")
+                    }
+                    if (eData.woodPoints >= 4 && playerData.job == 2) {
+                        activeSkills.add("&6[术] &a[木·精进] [溯生] &f冷却:&b20&f秒")
+                        activeSkills.add("&f受到伤害后,在&b1.5&f秒内回复&b70%此伤害值&f的生命")
+                    }
+                    if (eData.woodPoints >= 4 && playerData.job == 3) {
+                        activeSkills.add("&6[医] &a[木·精进] [花语] &f冷却:&b15&f秒")
+                        activeSkills.add("&f使用医术回复生命后,将&b50%此次治愈值&f传递给身旁最近的一名队友")
+                        activeSkills.add("&f最多以此法传递&b三&f次且无法传递给相同玩家")
                     }
                     if (eData.waterPoints >= 4 && playerData.job == 0) {
                         activeSkills.add("&6[战] &9[水·精进] [潮返] &f冷却:&b12&f秒")
@@ -361,17 +391,66 @@ class CrystalManager(private val plugin: Hjh_database) {
                         activeSkills.add("&f前两道水波:造成&b80%最大生命&f的伤害,对怪物造成轻微减速&b3&f秒")
                         activeSkills.add("&f第三道水波:造成&b100%最大生命&f的伤害,并小幅击飞怪物")
                     }
+                    if (eData.waterPoints >= 4 && playerData.job == 1) {
+                        activeSkills.add("&6[弓] &9[水·精进] [水月] &f冷却:&b8&f秒")
+                        activeSkills.add("&f箭矢命中目标后,复制一根&b水箭&f,对其附近&b5&f格的最近一名怪物造成同等伤害")
+                        activeSkills.add("&b水箭&f命中后,令自己移速增加&b30%&f持续&b3&f秒")
+                        activeSkills.add("&f若其身旁没有怪物,则&b水箭&f会攻击原目标")
+                    }
+                    if (eData.waterPoints >= 4 && playerData.job == 2) {
+                        activeSkills.add("&6[术] &9[水·精进] [回潮] &f冷却:&b15&f秒")
+                        activeSkills.add("&f释放元素阵法后,从身旁&b5&f格的怪物内吸取灵力")
+                        activeSkills.add("&f每1只怪物会为自己额外回复&b2&f点灵力,至多&b20&f点")
+                        activeSkills.add("&f并获得&b5&f秒速度提升,每1只怪物延长&b2&f秒,至多&b20&f秒")
+                    }
+                    if (eData.waterPoints >= 4 && playerData.job == 3) {
+                        activeSkills.add("&6[医] &9[水·精进] [净流] &f冷却:&b20&f秒")
+                        activeSkills.add("&f释放医术后进入&b[净流]&f状态,持续&b8&f秒")
+                        activeSkills.add("&b[净流]&f:医旗回复灵力速度增加&b50%&f,且回复量增加&b20%&f")
+                    }
                     if (eData.firePoints >= 4 && playerData.job == 0) {
                         activeSkills.add("&6[战] &c[火·精进] [炎斩] &f冷却:&b15&f秒")
                         activeSkills.add("&f普通攻击造成伤害后,对目标叠加一层&b[炎斩]&f持续&b5&f秒")
                         activeSkills.add("&f叠满三层时,移去所有标记并对其造成&b250%近战强度&f的&b穿甲&f伤害")
                         activeSkills.add("&f并附带其&b最大生命8%&f的斩杀伤害,然后进入冷却")
                     }
+                    if (eData.firePoints >= 4 && playerData.job == 1) {
+                        activeSkills.add("&6[弓] &c[火·精进] [爆燃] &f冷却:&b15&f秒")
+                        activeSkills.add("&f箭矢命中怪物后,以其为中心引发一次半径为&b5&f格的烈火爆炸")
+                        activeSkills.add("&f造成&b150%箭矢强度&f的伤害")
+                    }
+                    if (eData.firePoints >= 4 && playerData.job == 2) {
+                        activeSkills.add("&6[术] &c[火·精进] [阵焚] &f冷却:&b20&f秒")
+                        activeSkills.add("&f元素阵法造成伤害后,在目标脚底生成焚阵,在&b1&f秒后喷发")
+                        activeSkills.add("&b击飞&f&b2&f格范围内怪物并造成&b250%阵法强度&f的伤害")
+                    }
+                    if (eData.firePoints >= 4 && playerData.job == 3) {
+                        activeSkills.add("&6[医] &c[火·精进] [灼脉] &f冷却:&b20&f秒")
+                        activeSkills.add("&f释放医术造成伤害后,令目标进入&b[经脉受损]&f持续&b5&f秒")
+                        activeSkills.add("&b[经脉受损]&f:移速降低&c50%&f,伤害降低&b30%&f")
+                    }
                     if (eData.earthPoints >= 4 && playerData.job == 0) {
                         activeSkills.add("&6[战] &6[土·精进] [崩山] &f冷却:&b15&f秒")
                         activeSkills.add("&f每受到4次伤害时,将引发崩裂,眩晕周围&b10&f格怪物&b0.8&f秒")
                         activeSkills.add("&f同时降低他们&b50%&f护甲持续&b8&f秒")
                         activeSkills.add("&f并获得&b最大生命50%&f的护盾(最多&b40&f点)持续&b15&f秒")
+                    }
+                    if (eData.earthPoints >= 4 && playerData.job == 1) {
+                        activeSkills.add("&6[弓] &6[土·精进] [岩钉] &f冷却:&b15&f秒")
+                        activeSkills.add("&f箭矢命中目标后,对目标施加&b[定身]&f持续&b1.5&f秒")
+                        activeSkills.add("&b[定身]&f结束时岩钉会爆裂,削弱目标&b30%&f护甲持续&b5&f秒")
+                    }
+                    if (eData.earthPoints >= 4 && playerData.job == 2) {
+                        activeSkills.add("&6[术] &6[土·精进] [镇石] &f冷却:&b20&f秒")
+                        activeSkills.add("&f受到伤害后,额外受到&b20%此次伤害值&f的&b真实伤害&f")
+                        activeSkills.add("&f(若此伤害让你&c致死&f,则改为体力&c降为1&f)")
+                        activeSkills.add("&f然后获得等同于&b200%此次伤害值&f的&b护盾&f,持续&b15&f秒")
+                        activeSkills.add("&f护盾消失时,对周围&b4&f格怪物造成&b0.5&f秒晕眩效果")
+                    }
+                    if (eData.earthPoints >= 4 && playerData.job == 3) {
+                        activeSkills.add("&6[医] &6[土·精进] [厚土] &f冷却:&b20&f秒")
+                        activeSkills.add("&f释放医术治愈友军时,会为这些友军叠加&b100%阵法强度&f的护盾持续&b5&f秒")
+                        activeSkills.add("&f护盾消失时,会令其获得持续&b5&f秒的生命回复效果")
                     }
 
                     if (activeSkills.isNotEmpty()) {

@@ -151,12 +151,7 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
                 entity.noDamageTicks = 0
 
                 // 标记为法术伤害 (参考术士的伤害逻辑)
-                entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-
-                // 造成伤害，伤害来源为释放灵草的玩家
-                entity.damage(damage, player)
-
-                entity.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+                plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "lingcaojue")
             }
         }
     }

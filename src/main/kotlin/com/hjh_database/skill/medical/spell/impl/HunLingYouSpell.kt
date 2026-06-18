@@ -117,9 +117,7 @@ class HunLingYouSpell(private val plugin: Hjh_database) : MedicalSpell, Listener
                             hitEntities.add(entity.uniqueId)
 
                             // 造成法术伤害
-                            entity.noDamageTicks = 0
-                            entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                            entity.damage(damage, player)
+                            plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "hunlingyou")
 
                             entity.world.playSound(entity.location, Sound.PARTICLE_SOUL_ESCAPE, 1.0f, 1.5f)
                             entity.world.spawnParticle(Particle.SCULK_SOUL, entity.location.clone().add(0.0, 1.0, 0.0), 5, 0.3, 0.3, 0.3, 0.05)

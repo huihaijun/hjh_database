@@ -98,9 +98,7 @@ class DuSuZhenSpell(private val plugin: Hjh_database) : MedicalSpell {
                             }
 
                             // 取消无敌帧，施加真实魔法伤害
-                            entity.noDamageTicks = 0
-                            entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, actualDamage))
-                            entity.damage(actualDamage, player)
+                            plugin.medicalSpellManager.applyMedicalDamage(player, entity, actualDamage, "dusuzhen")
 
                             // 施加轻微减速效果 (Slowness I, 持续3秒)
                             entity.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, slowDurationTicks, 0))

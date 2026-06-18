@@ -6,7 +6,6 @@ import org.bukkit.*
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.scheduler.BukkitRunnable
 import kotlin.math.cos
 import kotlin.math.min
@@ -46,10 +45,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             val baseDamage = data.zfStr
             val finalDamage = baseDamage * damagePercent
 
-            // 法术伤害
-            target.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
-            target.damage(finalDamage, player)
-            target.removeMetadata("hjh_magic_damage", plugin)
+            formationMagicDamage(plugin, player, target, finalDamage)
 
             // 只有打中人才播放特效
             playBurnEffect(target)

@@ -58,11 +58,7 @@ class NianQiJinSpell(private val plugin: Hjh_database) : MedicalSpell {
                         damagedEntities.add(entity)
 
                         // 取消无敌帧，并打上魔法伤害标签
-                        entity.noDamageTicks = 0
-                        entity.setMetadata("HJH_MAGIC_DAMAGE", org.bukkit.metadata.FixedMetadataValue(plugin, damage))
-
-                        // 造成伤害
-                        entity.damage(damage, player)
+                        plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "nianqijin")
 
                         // 播放击中音效与粒子
                         entity.world.playSound(entity.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1.0f, 1.0f)

@@ -7,7 +7,6 @@ import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -46,10 +45,7 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             // 计算伤害
             val baseDamage = data.zfStr
             val finalDamage = baseDamage * damagePercent
-            // 法术伤害逻辑
-            target.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
-            target.damage(finalDamage, player)
-            target.removeMetadata("hjh_magic_damage", plugin)
+            formationMagicDamage(plugin, player, target, finalDamage)
 
             // 吸血逻辑
             val healAmount = ceil(finalDamage * healPercent)

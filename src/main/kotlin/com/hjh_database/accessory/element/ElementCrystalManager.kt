@@ -2,15 +2,27 @@ package com.hjh_database.accessory.element
 
 import com.hjh_database.Hjh_database
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-class ElementCrystalManager(private val plugin: Hjh_database) {
+class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
     private val cache = ConcurrentHashMap<UUID, ElementCrystalData>()
     private val dbRepo = ElementCrystalDbRepository(plugin.databaseManager, plugin)
 
     /** 战士精进技能管理器 */
     val warriorMastery = WarriorMasterySkills(plugin)
+
+    /** 弓手精进技能管理器 */
+    val archerMastery = ArcherMasterySkills(plugin)
+
+    /** 术士精进技能管理器 */
+    val warlockMastery = WarlockMasterySkills(plugin)
+
+    /** 医师精进技能管理器 */
+    val medicalMastery = MedicalMasterySkills(plugin)
 
     fun initBlock() {
         plugin.server.scheduler.runTask(plugin, Runnable {
@@ -43,6 +55,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             })
         }
         warriorMastery.cleanup(player.uniqueId)
+        archerMastery.cleanup(player.uniqueId)
+        warlockMastery.cleanup(player.uniqueId)
+        medicalMastery.cleanup(player.uniqueId)
     }
 
     fun savePlayerAsync(player: Player) {
@@ -125,8 +140,34 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
         return goldStacks.getOrDefault(player.uniqueId, 0)
     }
 
+    @EventHandler(priority = EventPriority.LOWEST)
+    fun handleDamageDealt(event: ElementCrystalDamageDealtEvent) {
+        val stacks = getFengMangStacks(event.player)
+        if (stacks > 0) event.damage *= 1.0 + 0.05 * stacks
+        onDamageDealt(
+            event.player,
+            event.victim,
+            event.isNormalAttack,
+            event.isArrowHit,
+            event.arrow,
+            event.damage
+        )
+    }
+
+    @EventHandler
+    fun handleDamageTaken(event: ElementCrystalDamageTakenEvent) {
+        onDamageTaken(event.player, event.damageEvent)
+    }
+
     // 1. 金/火 技能触发 (当玩家直接造成伤害时调用)
-    fun onDamageDealt(player: Player, victim: org.bukkit.entity.LivingEntity, isNormalAttack: Boolean = false) {
+    fun onDamageDealt(
+        player: Player,
+        victim: org.bukkit.entity.LivingEntity,
+        isNormalAttack: Boolean = false,
+        isArrowHit: Boolean = false,
+        arrow: org.bukkit.entity.AbstractArrow? = null,
+        eventDamage: Double = 0.0
+    ) {
         if (!isCrystalActive(player)) return
         val eData = getData(player.uniqueId)
 
@@ -195,11 +236,6 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             }
         }
 
-        // ===== 精进技能触发 (4点) =====
-        val pDataMastery = plugin.playerManager.getPlayerData(player)
-        if (pDataMastery != null && pDataMastery.job == 0) {
-            warriorMastery.onDamageDealt(player, victim, eData, pDataMastery, isNormalAttack)
-        }
     }
 
     // 2. 木/土 技能触发 (当玩家受到伤害时调用)
@@ -280,17 +316,19 @@ class ElementCrystalManager(private val plugin: Hjh_database) {
             }
         }
 
-        // ===== 精进技能触发 (4点) =====
-        val pDataMastery = plugin.playerManager.getPlayerData(player)
-        if (pDataMastery != null && pDataMastery.job == 0) {
-            warriorMastery.onDamageTaken(player, event, eData, pDataMastery)
-        }
     }
 
     // 3. 水元素技能触发 (释放各类主动技后)
     fun triggerWaterSkill(player: Player, skillType: String, skillId: String, totalCd: Double, material: org.bukkit.Material? = null) {
         if (!isCrystalActive(player)) return
         val eData = getData(player.uniqueId)
+
+        if (skillType == "formation") {
+            val pData = plugin.playerManager.getPlayerData(player)
+            if (pData?.job == 2) {
+                warlockMastery.onFormationCast(player, eData, pData)
+            }
+        }
 
         if (eData.waterPoints >= 2) {
             val now = System.currentTimeMillis()

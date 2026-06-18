@@ -33,6 +33,7 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.metadata.FixedMetadataValue
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -138,6 +139,8 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
             // A. 设置逻辑冷却 (插件内部判断用)
             setCooldown(player, skillId, cdMillis)
 
+            plugin.server.pluginManager.callEvent(MedicalCastEvent(player, skillId))
+
             // Trigger Water skill for cooldown refund
             plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, cdMillis / 1000.0)
 
@@ -180,6 +183,36 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         val event = MedicalHealEvent(caster, target, spellId, amount, actualHeal, overflowHeal)
         plugin.server.pluginManager.callEvent(event)
         return actualHeal
+    }
+
+    fun applyMedicalDamage(
+        caster: Player,
+        target: LivingEntity,
+        amount: Double,
+        spellId: String? = null,
+        triggersMastery: Boolean = true
+    ): Double {
+        if (amount <= 0.0 || !target.isValid || target.isDead) return 0.0
+        val effectiveHealthBefore = target.health + target.absorptionAmount
+        val previousMaximum = target.maximumNoDamageTicks
+        target.noDamageTicks = 0
+        target.maximumNoDamageTicks = 0
+        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, amount))
+        try {
+            target.damage(amount, caster)
+        } finally {
+            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            target.noDamageTicks = 0
+            target.maximumNoDamageTicks = previousMaximum
+        }
+        val effectiveHealthAfter = if (target.isDead) 0.0 else target.health + target.absorptionAmount
+        val actualDamage = (effectiveHealthBefore - effectiveHealthAfter).coerceIn(0.0, effectiveHealthBefore)
+        if (actualDamage > 0.0) {
+            plugin.server.pluginManager.callEvent(
+                MedicalDamageEvent(caster, target, spellId, amount, actualDamage, triggersMastery)
+            )
+        }
+        return actualDamage
     }
 
     /**

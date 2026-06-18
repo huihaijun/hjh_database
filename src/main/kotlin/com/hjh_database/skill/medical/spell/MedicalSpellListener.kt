@@ -104,6 +104,8 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
 
         // 2. 开启循环任务
         val taskId = object : BukkitRunnable() {
+            var remainingTicks = 30
+
             override fun run() {
                 // 安全检查：玩家掉线、死亡、不再潜行
                 if (!p.isOnline || p.isDead || !p.isSneaking) {
@@ -119,12 +121,18 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                     stopCharging(p)
                     return
                 }
+                remainingTicks -= 5
+                if (remainingTicks > 0) return
                 // === 执行效果 ===
                 // 【关键】使用 !! 断言
                 val data = plugin.playerManager.getData(p.uniqueId)!!
 
+                val regenEvent = MedicalBannerRegenEvent(p, 30, currentWd.manaRegen)
+                plugin.server.pluginManager.callEvent(regenEvent)
+                remainingTicks = regenEvent.intervalTicks.coerceAtLeast(5)
+
                 // 1. 恢复灵力
-                data.addLingli(currentWd.manaRegen)
+                data.addLingli(regenEvent.amount.coerceAtLeast(0.0))
 
                 // 2. 获取数值用于显示 (假设 PlayerData 有 getMaxLingli 方法)
                 val currentLingli = data.lingli
@@ -133,12 +141,12 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                 // 3. 发送 ActionBar
                 val barMsg = "§b☯ 当前灵力值：" + String.format("%.1f", currentLingli) + "/" + String.format("%.0f", maxLingli) + " ☯"
                 sendActionBar(p, barMsg)
-                p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 25, 2, false, false, false))
+                p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, remainingTicks + 5, 2, false, false, false))
                 // 特效 (绿色粒子环绕)
                 p.world.spawnParticle(Particle.HAPPY_VILLAGER, p.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.5, 0.3, 0.0)
                 p.world.spawnParticle(Particle.SPLASH, p.location.add(0.0, 0.5, 0.0), 0, 0.0, 1.0, 0.0, 1.0) // 绿色药水粒子
             }
-        }.runTaskTimer(plugin, 30L, 30L).taskId // 1.5s延时，30tick(1.5秒)间隔
+        }.runTaskTimer(plugin, 5L, 5L).taskId
 
         chargingTasks[p.uniqueId] = taskId
     }

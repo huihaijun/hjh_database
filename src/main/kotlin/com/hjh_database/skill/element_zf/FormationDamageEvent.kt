@@ -1,0 +1,21 @@
+package com.hjh_database.skill.element_zf
+
+import org.bukkit.entity.LivingEntity
+import org.bukkit.entity.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
+
+/** 阵法伤害完成结算后发布；不依赖任何通用伤害 metadata 判断来源。 */
+class FormationDamageEvent(
+    val caster: Player,
+    val target: LivingEntity,
+    val requestedDamage: Double,
+    val actualDamage: Double
+) : Event() {
+    override fun getHandlers(): HandlerList = HANDLERS
+
+    companion object {
+        @JvmStatic val HANDLERS = HandlerList()
+        @JvmStatic fun getHandlerList(): HandlerList = HANDLERS
+    }
+}

@@ -55,11 +55,7 @@ class TuiDiSpell(private val plugin: Hjh_database) : MedicalSpell {
                 // =========================================================
                 // 【修复问题 2】 伤害注入
                 // =========================================================
-                // 1. 给怪物打上伤害标记
-                mob.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                // 2. 触发伤害事件 (参数填 0.0，Kotlin 对数字类型敏感)
-                // 必须传 player 作为 attacker，否则不算玩家击杀
-                mob.damage(0.0, player)
+                plugin.medicalSpellManager.applyMedicalDamage(player, mob, damage, "tuidi")
                 // =========================================================
 
                 // B. 施加击退

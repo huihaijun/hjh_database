@@ -81,9 +81,7 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
         }
 
         // 3. 造成初始爆发伤害 (因为这发生在标记之前，所以这下伤害不会触发后续的受击回血)
-        nearestMob.noDamageTicks = 0
-        nearestMob.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-        nearestMob.damage(damage, player)
+        plugin.medicalSpellManager.applyMedicalDamage(player, nearestMob, damage, "jiangtianguang")
 
         // 4. 点亮怪物并记录标记
         // 使用 1.20+ 最新的药水效果枚举名称，GLOWING 让怪物隔墙可见且高亮

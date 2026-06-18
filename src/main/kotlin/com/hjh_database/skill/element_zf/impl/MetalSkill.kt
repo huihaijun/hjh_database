@@ -6,7 +6,6 @@ import org.bukkit.*
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import kotlin.math.cos
@@ -76,16 +75,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         val damage = data.zfStr * damagePercent
 
         for (victim in victims) {
-            // === 法术伤害逻辑 ===
-            // 1. 贴标签：告诉 CombatListener 这是法术伤害，请无视护甲
-            victim.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
-
-            // 2. 造成伤害
-            victim.damage(damage, player)
-
-            // 3. 撕标签：防止影响后续的普通攻击
-            victim.removeMetadata("hjh_magic_damage", plugin)
-            // ==============================
+            formationMagicDamage(plugin, player, victim, damage)
         }
 
         // 6. 播放星云爆炸特效

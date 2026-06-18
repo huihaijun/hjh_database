@@ -56,9 +56,7 @@ class BaZhenJueSpell(private val plugin: Hjh_database) : MedicalSpell {
                 if (tags.contains("panling") && tags.contains("monster")) {
 
                     // 造成魔法伤害
-                    entity.noDamageTicks = 0
-                    entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                    entity.damage(damage, player)
+                    plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "bazhenjue")
 
                     // 判断是否为副本BOSS，非BOSS才应用击飞逻辑
                     if (!tags.contains("instance_boss")) {

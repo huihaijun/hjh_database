@@ -97,9 +97,7 @@ class ZhangQiSanSpell(private val plugin: Hjh_database) : MedicalSpell {
                             val damage = (monster.health * poisonRatio).coerceAtMost(poisonMaxDamage)
 
                             // 取消无敌帧，施加真实魔法伤害
-                            monster.noDamageTicks = 0
-                            monster.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                            monster.damage(damage, player)
+                            plugin.medicalSpellManager.applyMedicalDamage(player, monster, damage, "zhangqisan")
 
                             // 播放怪物中毒的专属粒子
                             monster.world.spawnParticle(Particle.ITEM_SLIME, monster.location.clone().add(0.0, 1.0, 0.0), 10, 0.3, 0.5, 0.3, 0.0)

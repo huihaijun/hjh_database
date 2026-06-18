@@ -64,11 +64,7 @@ class NingQiBaoSpell(private val plugin: Hjh_database) : MedicalSpell {
                     if (tags.contains("panling") && tags.contains("monster") && entity.location.distance(center) <= radius) {
 
                         // 取消无敌帧
-                        entity.noDamageTicks = 0
-
-                        // 施加真实魔法伤害
-                        entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                        entity.damage(damage, player)
+                        plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "ningqibao")
                     }
                 }
             }

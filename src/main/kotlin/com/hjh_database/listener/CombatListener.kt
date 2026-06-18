@@ -1,6 +1,9 @@
 package com.hjh_database.listener
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.element.ElementCrystalDamageDealtEvent
+import com.hjh_database.accessory.element.ElementCrystalDamageTakenEvent
+import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobAffix
 import com.hjh_database.spawner.MobFactory
@@ -85,6 +88,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         var isMagicDamage = false
         var magicBaseDamage = 0.0
         var ignoreArmor = false
+        var isArmoredMagic = false
 
         // 2. 检测法术伤害标记
         if (entity.hasMetadata("HJH_MAGIC_DAMAGE")) {
@@ -93,6 +97,15 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 magicBaseDamage = it.asDouble()
             }
             entity.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+        }
+
+        if (entity.hasMetadata("HJH_ARMORED_MAGIC_DAMAGE")) {
+            isMagicDamage = true
+            isArmoredMagic = true
+            entity.getMetadata("HJH_ARMORED_MAGIC_DAMAGE").firstOrNull()?.let {
+                magicBaseDamage = it.asDouble()
+            }
+            entity.removeMetadata("HJH_ARMORED_MAGIC_DAMAGE", plugin)
         }
 
         // 3. 横扫检测
@@ -227,6 +240,19 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
+        if (entity is LivingEntity) {
+            val source = (event as? EntityDamageByEntityEvent)?.let { damageEvent ->
+                when (val damager = damageEvent.damager) {
+                    is LivingEntity -> damager
+                    is Projectile -> damager.shooter as? LivingEntity
+                    else -> null
+                }
+            }
+            val calculationEvent = CombatDamageCalculationEvent(source, entity, damage)
+            plugin.server.pluginManager.callEvent(calculationEvent)
+            damage = calculationEvent.damage
+        }
+
         // 6. 受击者逻辑 (护甲计算)
         if (entity is LivingEntity) {
             entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
@@ -242,23 +268,16 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     armor = entity.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
                 }
 
-                if (isMagicDamage || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
+                if ((isMagicDamage && !isArmoredMagic) || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
                     armor = 0.0
                     if (ignoreArmor && entity is Player) {
                         entity.sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§d§l警告：受到破甲伤害！"))
                     }
                 }
 
-                // 土·精进 [崩山] 护甲减半判定
-                if (armor > 0 && entity.hasMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE)) {
-                    val until = entity.getMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE)
-                        .firstOrNull()?.asLong() ?: 0L
-                    if (System.currentTimeMillis() < until) {
-                        armor *= 0.5
-                    } else {
-                        entity.removeMetadata(com.hjh_database.accessory.element.WarriorMasterySkills.META_ARMOR_REDUCE, plugin)
-                    }
-                }
+                val armorEvent = ElementCrystalArmorCalculationEvent(entity, armor)
+                plugin.server.pluginManager.callEvent(armorEvent)
+                armor = armorEvent.armor
 
                 if (armor < 0) armor = 0.0
                 val multiplier = 50.0 / (50.0 + armor)
@@ -276,25 +295,32 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         } else null
 
         if (attackerPlayer != null) {
-            val goldStacks = plugin.elementCrystalManager.getFengMangStacks(attackerPlayer)
-            if (goldStacks > 0) {
-                damage *= (1.0 + 0.05 * goldStacks)
-            }
             if (entity is LivingEntity) {
                 val isNormalAttack = !isMagicDamage && (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK || cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)
-                plugin.elementCrystalManager.onDamageDealt(attackerPlayer, entity, isNormalAttack)
+                val damager = (event as? EntityDamageByEntityEvent)?.damager
+                val isArrowHit = damager is AbstractArrow
+                val crystalEvent = ElementCrystalDamageDealtEvent(
+                    attackerPlayer,
+                    entity,
+                    isNormalAttack,
+                    isArrowHit,
+                    damager as? AbstractArrow,
+                    damage
+                )
+                plugin.server.pluginManager.callEvent(crystalEvent)
+                damage = crystalEvent.damage
             }
         }
-
-        if (entity is Player) {
-            plugin.elementCrystalManager.onDamageTaken(entity, event)
-        }
-        // ============================
 
         // 应用伤害修改
         if (damage != event.damage) {
             event.damage = damage
         }
+
+        if (entity is Player) {
+            plugin.server.pluginManager.callEvent(ElementCrystalDamageTakenEvent(entity, event))
+        }
+        // ============================
     }
 
     // === 【测伤玩偶】专用监控逻辑 ===

@@ -153,6 +153,11 @@ class Hjh_database : JavaPlugin() {
         
         this.elementCrystalManager = ElementCrystalManager(this)
         this.elementCrystalManager.initBlock()
+        server.pluginManager.registerEvents(this.elementCrystalManager, this)
+        server.pluginManager.registerEvents(this.elementCrystalManager.warriorMastery, this)
+        server.pluginManager.registerEvents(this.elementCrystalManager.archerMastery, this)
+        server.pluginManager.registerEvents(this.elementCrystalManager.warlockMastery, this)
+        server.pluginManager.registerEvents(this.elementCrystalManager.medicalMastery, this)
         this.elementCrystalGui = ElementCrystalGui(this)
         server.pluginManager.registerEvents(this.elementCrystalGui, this)
         server.pluginManager.registerEvents(ElementCrystalInteractListener(this), this)

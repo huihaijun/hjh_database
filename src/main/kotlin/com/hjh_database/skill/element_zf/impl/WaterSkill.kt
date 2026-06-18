@@ -9,7 +9,6 @@ import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.util.Vector
@@ -53,10 +52,7 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             val finalDamage = baseDamage * damagePercent
 
             for (target in targets) {
-                // 法术伤害
-                target.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
-                target.damage(finalDamage, player)
-                target.removeMetadata("hjh_magic_damage", plugin)
+                formationMagicDamage(plugin, player, target, finalDamage)
 
                 // 减速
                 target.addPotionEffect(

@@ -105,9 +105,7 @@ class TianYouSpell(private val plugin: Hjh_database) : MedicalSpell {
                                     val tags = entity.scoreboardTags
                                     if (tags.contains("panling") && tags.contains("monster")) {
                                         // 造成魔法伤害，伤害来源归功于技能释放者(player)
-                                        entity.noDamageTicks = 0
-                                        entity.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-                                        entity.damage(damage, player)
+                                        plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "tianyou")
                                         hitCount++
                                     }
                                 }
