@@ -21,6 +21,7 @@ import com.hjh_database.dz.manager.RecipeManager
 import com.hjh_database.jobtrial.JobTrialManager
 import com.hjh_database.listener.CombatListener
 import com.hjh_database.listener.MenuListener
+import com.hjh_database.ui.TianjiUtilityMenus
 import com.hjh_database.listener.PlayerListener
 import com.hjh_database.resource.ResourceListener
 import com.hjh_database.resource.ResourceManager
@@ -62,6 +63,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var weaponSkillManager: WeaponSkillManager
     lateinit var dzLevelManager: DzLevelManager
     lateinit var kaiWuManager: com.hjh_database.kaiwu.KaiWuManager
+    lateinit var kaiWuAdminGui: com.hjh_database.kaiwu.KaiWuAdminGui
     lateinit var medicalManager: com.hjh_database.skill.medical.MedicalManager
     lateinit var medicalSpellManager: MedicalSpellManager
     lateinit var npcModule: NpcModule
@@ -90,6 +92,7 @@ class Hjh_database : JavaPlugin() {
 
     override fun onEnable() {
         instance = this
+        TianjiUtilityMenus.closeStaleMenusOnEnable()
 
         // ==========================================
         // 第一阶段：初始化核心数据与基础管理器
@@ -105,6 +108,7 @@ class Hjh_database : JavaPlugin() {
         this.recipeManager = RecipeManager(this)
         this.weaponSkillManager = WeaponSkillManager(this)
         this.kaiWuManager = com.hjh_database.kaiwu.KaiWuManager(this)
+        this.kaiWuAdminGui = com.hjh_database.kaiwu.KaiWuAdminGui(this, this.kaiWuManager)
         this.medicalManager = com.hjh_database.skill.medical.MedicalManager(this)
         this.medicalSpellManager = MedicalSpellManager(this)
         this.questManager = QuestManager(this)
@@ -183,6 +187,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.listener.SpellListener(this), this)
         pm.registerEvents(WeaponSkillListener(this), this)
         pm.registerEvents(com.hjh_database.kaiwu.KaiWuListener(this), this)
+        pm.registerEvents(this.kaiWuAdminGui, this)
         pm.registerEvents(MedicalSpellListener(this), this)
         pm.registerEvents(CustomMagmaCubeListener(), this)
 
@@ -224,8 +229,6 @@ class Hjh_database : JavaPlugin() {
         getCommand("testmob")?.setExecutor(com.hjh_database.command.TestMobCommand(this))
         getCommand("hjhstats")?.setExecutor(StatsCommand(this))
         getCommand("hjhweapon")?.setExecutor(com.hjh_database.command.WeaponCommand(this))
-        getCommand("hjhkw")?.setExecutor(com.hjh_database.kaiwu.KaiWuCommand(this))
-
         // 资源重载指令
         val resCmd = ResourceReloadCommand(this)
         getCommand("hjh")?.apply {
@@ -277,6 +280,10 @@ class Hjh_database : JavaPlugin() {
     }
 
     override fun onDisable() {
+        // 必须在监听器失效前关闭只读快照菜单，杜绝重载期间取走克隆物品。
+        // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
+        TianjiUtilityMenus.closeOpenMenusForDisable()
+
         if (::databaseManager.isInitialized) {
             databaseManager.cancelQueuedPlayerSaves()
         }

@@ -1,7 +1,8 @@
 # 全丹药
 NoviceHealingPill:
   material: POTION
-  name: "&b新手疗愈丹"
+  category: CHUKUI
+  name: "&b新手疗愈丹[初窥]"
   color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
   only_doctor: false     # 是否仅限医师
   req_level: 1           # 需要的冶药等级
@@ -18,7 +19,8 @@ NoviceHealingPill:
 
 yuhedan0:
   material: POTION
-  name: "&b愈合丹[初级]"
+  name: "&b愈合丹[归元][初级]"
+  category: GUIYUAN
   color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
   only_doctor: false     # 是否仅限医师
   req_level: 1           # 需要的冶药等级
@@ -35,7 +37,8 @@ yuhedan0:
 
 yuhedan1:
   material: POTION
-  name: "&b愈合丹[中级]"
+  name: "&b愈合丹[归元][中级]"
+  category: GUIYUAN
   color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
   only_doctor: false     # 是否仅限医师
   req_level: 2           # 需要的冶药等级
@@ -52,7 +55,8 @@ yuhedan1:
 
 yuhedan2:
   material: POTION
-  name: "&b愈合丹[高级]"
+  name: "&b愈合丹[归元][高级]"
+  category: GUIYUAN
   color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
   only_doctor: false     # 是否仅限医师
   req_level: 3           # 需要的冶药等级
@@ -69,7 +73,8 @@ yuhedan2:
 
 lianxindan:
   material: POTION
-  name: "&6莲心丹"
+  name: "&6莲心丹[助势]"
+  category: ZHUSHI
   color: "#BC9200" # 【新增】在这里直接写 Hex 颜色代码
   only_doctor: false     # 是否仅限医师
   req_level: 1           # 需要的冶药等级
@@ -87,7 +92,8 @@ lianxindan:
 
 huilingdan0:
   material: POTION
-  name: "&b回灵丹[初级]"
+  name: "&b回灵丹[归元][初级]"
+  category: GUIYUAN
   color: "#5555FF"
   only_doctor: false
   req_level: 1
@@ -103,7 +109,8 @@ huilingdan0:
 
 huilingdan1:
   material: POTION
-  name: "&b回灵丹[中级]"
+  name: "&b回灵丹[归元][中级]"
+  category: GUIYUAN
   color: "#5555FF"
   only_doctor: false
   req_level: 2
@@ -119,7 +126,8 @@ huilingdan1:
 
 huilingdan2:
   material: POTION
-  name: "&b回灵丹[高级]"
+  name: "&b回灵丹[归元][高级]"
+  category: GUIYUAN
   color: "#5555FF"
   only_doctor: false
   req_level: 3
@@ -128,8 +136,133 @@ huilingdan2:
   max_stack_size: 64
   lore:
     - "&7&o集天地灵气于方寸之间的珍品丹药"
-    - "&7&o灵台清明，气海翻涌，瞬息间灵力充盈"
+    - "&7&o灵台清明,气海翻涌,瞬息间灵力充盈"
     - "&8===========&2&l丹药效果&8============"
     - "&e[右键] &f药毒时间：&b10&f秒"
     - "&f瞬间恢复自身&b36&f点灵力值"
 
+qinglingdan:
+  material: POTION
+  name: "&b清灵丹[助势]"
+  category: ZHUSHI
+  color: "#4169E1"
+  only_doctor: false
+  req_level: 1
+  base_exp: 5
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o一尘不染,丹心如镜"
+    - "&7&o似有微风自丹内流转,轻拂过处,滞涩全无"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f清除自身所有的&b异常&f状态"
+    - "&f并获得持续&b30&f秒的&b抗火&f效果"
+
+zhuangyangdan0:
+  material: POTION
+  name: "&b壮阳丹[助势][初级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 1
+  base_exp: 5
+  sickness_time: 8
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色淡赤,入手微温,一缕浅薄的阳气游走于丹纹之间"
+    - "&7&o吞服后体内隐约凝成一层气盾,虽不厚重,聊胜于无"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b8&f秒"
+    - "&f获得基于自身&b20%最大生命&f的护盾"
+    - "&f护盾持续&b15&f秒,且至多&b40&f点"
+
+zhuangyangdan1:
+  material: POTION
+  name: "&b壮阳丹[助势][中级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色转深,温热如握暖石,醇厚的阳元之力于掌心久久不散"
+    - "&7&o入腹便化作一道坚实气障,与经脉气血同频共振,稳若磐石"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f获得基于自身&b25%最大生命&f的护盾"
+    - "&f护盾持续&b20&f秒,且至多&b50&f点"
+
+zhuangyangdan2:
+  material: POTION
+  name: "&b壮阳丹[助势][高级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 3
+  base_exp: 15
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色赤金,灼灼生辉,丹纹密布如龙鳞层叠,阳气充盈欲出"
+    - "&7&o服后体内宛若铸起一道无形铁壁,气血愈旺,护盾愈坚,万钧之势亦难撼动"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f获得基于自身&b30%最大生命&f的护盾"
+    - "&f护盾持续&b30&f秒,且至多&b60&f点"
+
+fenghou0:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][初级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 1
+  base_exp: 10
+  sickness_time: 6
+  max_stack_size: 64
+  lore:
+    - "&7&o隐隐透出一丝寒芒,触之指尖微麻"
+    - "&7&o掷出散作毒雾,如毒蛇吐信,直取咽喉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b6&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b150%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"
+
+fenghou1:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][中级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 2
+  base_exp: 20
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o丹体漆黑如墨,握于掌心竟生出几分刺骨凉意"
+    - "&7&o破空而出,气血翻涌不止"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b250%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"
+
+fenghou2:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][高级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 3
+  base_exp: 30
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o丹心一点殷红似血,周遭黑气缭绕"
+    - "&7&o所过之处,生机断绝,一击封喉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b350%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"

@@ -14,13 +14,20 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.LivingEntity
+import org.bukkit.entity.Monster
+import org.bukkit.entity.Player
+import org.bukkit.entity.ThrownPotion
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.ItemStack
+import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
 
@@ -75,25 +82,49 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         if (effectId == null) return
 
         val effect = plugin.alchemyManager.getEffect(effectId) ?: return
+        val player = event.player
+        val playerData = plugin.playerManager.getPlayerData(player) ?: return
+        val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
+        val resourceData = consumeResourceId?.let { plugin.resourceManager.getLocalResource(it) }
+
+        // 可堆叠的自定义喷溅药水由插件接管投掷和扣除，避免原版不消耗物品。
+        if (item.type == Material.SPLASH_POTION && effectId.startsWith(FENGHOU_PREFIX)) {
+            event.isCancelled = true
+            val canApplyEffect = resourceData?.onlyDoctor != true || playerData.job == DOCTOR_JOB
+
+            if (canApplyEffect && playerData.isSick()) {
+                sendSicknessMessage(player, playerData.pillSicknessEnd)
+                return
+            }
+
+            val thrownItem = item.clone().apply { amount = 1 }
+            applyPillCooldownComponent(thrownItem)
+            item.subtract(1)
+            player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
+
+            val potion = player.launchProjectile(ThrownPotion::class.java)
+            potion.item = thrownItem
+            player.world.playSound(player.location, org.bukkit.Sound.ENTITY_SPLASH_POTION_THROW, 0.5f, 0.4f)
+
+            if (!canApplyEffect) return
+
+            val sicknessMillis = (resourceData?.sicknessTime ?: 10) * 1000L
+            playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
+            setPillSicknessCooldown(player, thrownItem, (sicknessMillis / 50L).toInt())
+            return
+        }
 
         // 成功识别为丹药，立刻拦截原版动作，防止玩家进入“喝水动画”
         event.isCancelled = true
-        val player = event.player
 
         // 获取品阶，没有被专门定义的统统按 LOW（初级）处理
         val tierName = pdc.get(alchemyTierKey, PersistentDataType.STRING) ?: "LOW"
         val tier = try { AlchemyTier.valueOf(tierName) } catch (e: Exception) { AlchemyTier.LOW }
-        val playerData = plugin.playerManager.getPlayerData(player) ?: return
 
         if (playerData.isSick()) {
-            val leftTime = (playerData.pillSicknessEnd - System.currentTimeMillis()) / 1000.0
-            player.sendMessage("§c[药毒] 身体还在排斥药力，无法继续服用！(剩余 %.1f秒)".format(leftTime))
+            sendSicknessMessage(player, playerData.pillSicknessEnd)
             return
         }
-
-        // 【修改点】从玩家吃下的物品本身获取对应的药毒时间
-        val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
-        val resourceData = if (consumeResourceId != null) plugin.resourceManager.getLocalResource(consumeResourceId) else null
 
         // 没写默认给 10 秒
         val sicknessTime = resourceData?.sicknessTime ?: 10
@@ -101,11 +132,12 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
         val cooldownTicks = (sicknessMillis / 50L).toInt()
         applyPillCooldownComponent(item)
+        val cooldownItem = item.clone().apply { amount = 1 }
 
         // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
         item.subtract(1)
         player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
-        setPillSicknessCooldown(player, item.type, cooldownTicks)
+        setPillSicknessCooldown(player, cooldownItem, cooldownTicks)
 
         player.playSound(player.location, org.bukkit.Sound.ENTITY_GENERIC_DRINK, 1f, 1f)
         player.playSound(player.location, org.bukkit.Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 2f)
@@ -116,6 +148,62 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             playerData.activePills.add(pill)
         }
         playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    fun onFengHouSplash(event: PotionSplashEvent) {
+        val item = event.potion.item
+        val pdc = item.itemMeta?.persistentDataContainer ?: return
+        val resourceId = pdc.get(resourceIdKey, PersistentDataType.STRING) ?: return
+        val tier = when (resourceId) {
+            "fenghou0" -> AlchemyTier.LOW
+            "fenghou1" -> AlchemyTier.MID
+            "fenghou2" -> AlchemyTier.HIGH
+            else -> return
+        }
+
+        val affected = event.affectedEntities.toList()
+        affected.forEach { event.setIntensity(it, 0.0) }
+
+        val thrower = event.potion.shooter as? Player ?: return
+        val playerData = plugin.playerManager.getPlayerData(thrower) ?: return
+        val resourceData = plugin.resourceManager.getLocalResource(resourceId) ?: return
+        if (resourceData.onlyDoctor && playerData.job != DOCTOR_JOB) return
+
+        val multiplier = when (tier) {
+            AlchemyTier.LOW -> 1.5
+            AlchemyTier.MID -> 2.5
+            AlchemyTier.HIGH -> 3.5
+        }
+        val damage = playerData.zfStr * multiplier
+        if (damage <= 0.0) return
+
+        affected.filter { isMonster(it) }.forEach { applyFengHouDamage(thrower, it, damage) }
+    }
+
+    private fun applyFengHouDamage(attacker: Player, target: LivingEntity, damage: Double) {
+        val oldMaximum = target.maximumNoDamageTicks
+        target.noDamageTicks = 0
+        target.maximumNoDamageTicks = 0
+        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
+        try {
+            target.damage(damage, attacker)
+        } finally {
+            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            target.noDamageTicks = 0
+            target.maximumNoDamageTicks = oldMaximum
+        }
+    }
+
+    private fun isMonster(entity: LivingEntity): Boolean {
+        val tags = entity.scoreboardTags
+        return entity !is Player && entity.isValid && !entity.isDead &&
+            (entity is Monster || (tags.contains("panling") && tags.contains("monster")))
+    }
+
+    private fun sendSicknessMessage(player: Player, sicknessEnd: Long) {
+        val leftTime = (sicknessEnd - System.currentTimeMillis()) / 1000.0
+        player.sendMessage("§c[药毒] 身体还在排斥药力，无法继续服用！(剩余 %.1f秒)".format(leftTime))
     }
 
     @EventHandler
@@ -222,6 +310,10 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         else if (holder is AlchemyPlayerGui) {
             event.isCancelled = true
             if (event.clickedInventory == event.view.topInventory) {
+                if (holder.selectCategory(slot)) {
+                    player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
+                    return
+                }
                 val recipe = holder.displayRecipes[slot]
                 if (recipe != null) {
                     player.playSound(player.location, org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1f)
@@ -282,37 +374,9 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    private fun setPillSicknessCooldown(player: org.bukkit.entity.Player, material: Material, ticks: Int) {
-        if (ticks <= 0 || material == Material.AIR) return
-
-        if (!sendPacketCooldown(player, pillCooldownKey, ticks)) {
-            player.setCooldown(material, ticks)
-        }
-    }
-
-    private fun sendPacketCooldown(player: org.bukkit.entity.Player, key: NamespacedKey, ticks: Int): Boolean {
-        try {
-            val craftPlayerMethod = player.javaClass.getMethod("getHandle")
-            val nmsPlayer = craftPlayerMethod.invoke(player)
-            val connectionField = nmsPlayer.javaClass.fields.firstOrNull {
-                it.type.name.contains("ServerGamePacketListenerImpl") || it.name == "c" || it.name == "connection"
-            } ?: throw NoSuchFieldException("No connection field")
-            val connection = connectionField.get(nmsPlayer)
-
-            val resourceLocationClass = Class.forName("net.minecraft.resources.ResourceLocation")
-            val parseMethod = resourceLocationClass.getMethod("parse", String::class.java)
-            val nmsKey = parseMethod.invoke(null, key.toString())
-
-            val packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundCooldownPacket")
-            val packetConstructor = packetClass.getConstructor(resourceLocationClass, Int::class.javaPrimitiveType)
-            val packet = packetConstructor.newInstance(nmsKey, ticks)
-
-            val sendMethod = connection.javaClass.getMethod("send", Class.forName("net.minecraft.network.protocol.Packet"))
-            sendMethod.invoke(connection, packet)
-            return true
-        } catch (e: Exception) {
-            return false
-        }
+    private fun setPillSicknessCooldown(player: Player, item: ItemStack, ticks: Int) {
+        if (ticks <= 0 || item.type == Material.AIR) return
+        player.setCooldown(item, ticks)
     }
 
     private fun loadRegisteredCauldrons() {
@@ -333,5 +397,10 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private fun locationKey(location: Location): String {
         val worldId = location.world?.uid ?: "unknown"
         return "$worldId:${location.blockX}:${location.blockY}:${location.blockZ}"
+    }
+
+    companion object {
+        private const val DOCTOR_JOB = 3
+        private const val FENGHOU_PREFIX = "fenghou"
     }
 }

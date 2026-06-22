@@ -361,6 +361,7 @@ weapons:
     display: "&a黑铁弩[游侠]"
     rarity: 2  # 1级=白色1星
     material: CROSSBOW
+    custom_model_data: 120
     lore:
       - "&6限制职业:[弓] 限制等级:&b10"
       - "&7&o使用生铁铸成的弩"
@@ -419,6 +420,7 @@ weapons:
     display: "&9红翎弩[游侠]"
     rarity: 3  # 1级=白色1星
     material: CROSSBOW
+    custom_model_data: 130
     lore:
       - "&6限制职业:[弓] 限制等级:&b20"
       - "&7&o传说由凤凰落下的羽毛制成的十字弩"
@@ -480,6 +482,7 @@ weapons:
     display: "&d蛟龙弩[游侠]"
     rarity: 4  # 1级=白色1星
     material: CROSSBOW
+    custom_model_data: 140
     lore:
       - "&6限制职业:[弓] 限制等级:&b30"
       - "&7&o寄宿着水龙力量的弩箭"
@@ -544,6 +547,7 @@ weapons:
     display: "&e日月流星弩[游侠]"
     rarity: 5  # 1级=白色1星
     material: CROSSBOW
+    custom_model_data: 150
     lore:
       - "&6限制职业:[弓] 限制等级:&b40"
       - "&7&o射出的箭矢有如流星一般致命而绚丽"
@@ -684,7 +688,7 @@ weapons:
     rarity: 1
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 21
     lore:
       - "&6限制职业:[术] 限制等级:&b无"
       - "&7&o随处可见的普通丹炉"
@@ -709,7 +713,7 @@ weapons:
     rarity: 2
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 22
     lore:
       - "&6限制职业:[术] 限制等级:&b10"
       - "&7&o术师视同性命的工具"
@@ -734,7 +738,7 @@ weapons:
     rarity: 3
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 23
     lore:
       - "&6限制职业:[术] 限制等级:&b20"
       - "&7&o较为优秀的术士武器"
@@ -759,7 +763,7 @@ weapons:
     rarity: 4
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 24
     lore:
       - "&6限制职业:[术] 限制等级:&b30"
       - "&7&o术法炉中的上品"
@@ -785,7 +789,7 @@ weapons:
     rarity: 5
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 25
     lore:
       - "&6限制职业:[术] 限制等级:&b40"
       - "&7&o极品术法炉,术师梦寐以求的术法武器"
@@ -811,7 +815,7 @@ weapons:
     rarity: 6
     material: CARROT_ON_A_STICK
     # 【新增】自定义材质数据
-    custom_model_data: 30023
+    custom_model_data: 26
     lore:
       - "&6限制职业:[术] 限制等级:&b50"
       - "&7&o传说中天地未分之时就存在的法宝"

@@ -220,4 +220,9 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         loc.add(x, 0.0, z)
         player.world.spawnParticle(Particle.SOUL, loc, 0, 0.0, 0.1, 0.0) // 幽灵粒子
     }
+
+    override fun deactivate(player: Player) {
+        activeBuffs.remove(player.uniqueId)
+        chargeCooldowns.remove(player.uniqueId)
+    }
 }

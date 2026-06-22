@@ -41,8 +41,15 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
         object : BukkitRunnable() {
             override fun run() {
                 val weaponKey = NamespacedKey(plugin, "weapon_id")
+                val pluginMain = plugin as? com.hjh_database.Hjh_database ?: return
 
                 for (player in Bukkit.getOnlinePlayers()) {
+                    if (!pluginMain.weaponSkillManager.isWeaponActivated(player, "beidoumieshengong")) {
+                        if (activeStars.containsKey(player.uniqueId) || starTicks.containsKey(player.uniqueId)) {
+                            deactivate(player)
+                        }
+                        continue
+                    }
                     val item = player.inventory.itemInMainHand
                     if (!item.hasItemMeta()) continue
 
@@ -202,10 +209,9 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
     // === 武器失活处理 ===
     override fun deactivate(player: Player) {
         val uuid = player.uniqueId
-        // 清理星与倒计时，但不再发出任何文本提示
-        if (activeStars.remove(uuid) != null) {
-            starTicks[uuid] = 0
-            updateStarBuff(player, 0)
-        }
+        // 无条件清理，连同异常情况下可能残留的属性键一起移除。
+        activeStars.remove(uuid)
+        starTicks.remove(uuid)
+        updateStarBuff(player, 0)
     }
 }

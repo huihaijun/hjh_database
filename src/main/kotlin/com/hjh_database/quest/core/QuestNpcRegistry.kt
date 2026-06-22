@@ -150,8 +150,21 @@ enum class StoryNpcs(
         Villager.Profession.NITWIT,
         Villager.Type.TAIGA,
         255.5, 48.5, 45.5, 0f
+    ),
+        TIANJIGEZONGGUANSUNYUAN(
+        "tianjigezongguansunyuan",
+        "§a§l孙元",
+        Villager.Profession.NITWIT,
+        Villager.Type.PLAINS,
+        120.5, 49.5, -5.5, 0f
+    ),
+        WULINGHE(
+        "wulinghe",
+        "§a§l武凌河",
+        Villager.Profession.NITWIT,
+        Villager.Type.TAIGA,
+        118.5, 59.5, -23.5, 0f
     );
-
 
 
     // 后续有新 NPC 直接往这里加...

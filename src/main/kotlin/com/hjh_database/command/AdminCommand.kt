@@ -64,10 +64,49 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 【新增】副本系统提示
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dungeon <trigger|set> - 副本系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medicaltest <玩家名> <view|add|remove> <试炼ID>")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin kw <list|reload|setlevel|setenergy> - 开物术管理")
             return true
         }
 
         val subCommand = args[0].lowercase()
+
+        // === kw (开物术管理) ===
+        if (subCommand == "kw") {
+            if (args.size < 2) {
+                sender.sendMessage("§6=== 开物术管理 ===")
+                sender.sendMessage("§7/hjhadmin kw list §8- §f查看、编辑全部资源点")
+                sender.sendMessage("§7/hjhadmin kw reload §8- §f重载开物配置和资源点")
+                sender.sendMessage("§7/hjhadmin kw setlevel <玩家> <等级>")
+                sender.sendMessage("§7/hjhadmin kw setenergy <玩家> <数值>")
+                return true
+            }
+            when (args[1].lowercase()) {
+                "list", "open" -> {
+                    if (sender !is Player) return error(sender, "只有玩家可以打开资源点界面。")
+                    plugin.kaiWuAdminGui.open(sender)
+                }
+                "reload" -> {
+                    plugin.kaiWuManager.loadConfig()
+                    plugin.kaiWuManager.loadNodes()
+                    sender.sendMessage("§a开物术配置与资源点已重载。")
+                }
+                "setlevel", "setenergy" -> {
+                    if (args.size < 4) return error(sender, "用法: /hjhadmin kw ${args[1]} <玩家> <数值>")
+                    val target = Bukkit.getPlayerExact(args[2]) ?: return error(sender, "玩家不在线。")
+                    if (args[1].equals("setlevel", true)) {
+                        val level = args[3].toIntOrNull() ?: return error(sender, "等级必须为整数。")
+                        plugin.kaiWuManager.setPlayerLevel(target, level)
+                        sender.sendMessage("§a已设置 ${target.name} 的开物等级为 ${level.coerceAtLeast(1)}。")
+                    } else {
+                        val energy = args[3].toDoubleOrNull() ?: return error(sender, "精力必须为数字。")
+                        plugin.kaiWuManager.setPlayerEnergy(target, energy)
+                        sender.sendMessage("§a已设置 ${target.name} 的开物精力。")
+                    }
+                }
+                else -> return error(sender, "未知开物术子指令。使用 /hjhadmin kw 查看帮助。")
+            }
+            return true
+        }
 
         // === reload (重载) ===
         if (subCommand == "reload") {
@@ -972,7 +1011,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest"
+                "medicaltest", "kw"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -982,6 +1021,21 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === 2. 二级及以上补全 (根据主指令分支) ===
         when (subCmd) {
+            "kw" -> {
+                if (args.size == 2) {
+                    return listOf("list", "reload", "setlevel", "setenergy")
+                        .filter { it.startsWith(args[1].lowercase()) }
+                }
+                if (args.size == 3 && (args[1].equals("setlevel", true) || args[1].equals("setenergy", true))) {
+                    return null
+                }
+                if (args.size == 4 && args[1].equals("setlevel", true)) {
+                    return listOf("1", "5", "10", "20").filter { it.startsWith(args[3]) }
+                }
+                if (args.size == 4 && args[1].equals("setenergy", true)) {
+                    return listOf("0", "50", "100", "200").filter { it.startsWith(args[3]) }
+                }
+            }
             "chonghua" -> {
                 // 【修复】：严格分离 size == 2 和 size == 3
                 if (args.size == 2) {

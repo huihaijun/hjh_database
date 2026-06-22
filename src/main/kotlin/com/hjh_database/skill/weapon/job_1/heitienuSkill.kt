@@ -147,4 +147,8 @@ class heitienuSkill : WeaponSkill, Listener {
         // 提示消失
         player.playSound(player.location, Sound.BLOCK_CHAIN_BREAK, 1f, 1.5f)
     }
+
+    override fun deactivate(player: Player) {
+        if (activeBuffs.remove(player.uniqueId) != null) removeBuff(player)
+    }
 }

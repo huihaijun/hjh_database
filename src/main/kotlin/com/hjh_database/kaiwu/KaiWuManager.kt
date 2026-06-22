@@ -39,6 +39,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
     // 粒子颜色缓存
     private var dustDepleted: Particle.DustOptions? = null
     private var dustRecovering: Particle.DustOptions? = null
+    private val energyRecoveryKey = "__kaiwu_energy_recovery_until"
 
     init {
         loadConfig()
@@ -206,6 +207,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
 
         // 修复3: 空安全处理
         if ((data.kaiwuEnergy ?: 0.0) < finalEnergyCost) {
+            ensureEnergyRecovery(data)
             player.sendMessage("§c精力不足！需要 " + String.format("%.1f", finalEnergyCost) + " 点。")
             return
         }
@@ -270,6 +272,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
         val currentEnergy = data.kaiwuEnergy ?: 0.0
         if (currentEnergy < energyCost) return
         data.kaiwuEnergy = currentEnergy - energyCost
+        ensureEnergyRecovery(data)
 
         val now = System.currentTimeMillis()
 
@@ -430,23 +433,47 @@ class KaiWuManager(private val plugin: Hjh_database) {
     // ==========================================
 
     private fun startRegenTask() {
-        val interval = config.getInt("energy.regen_interval_min", 10)
-        val amount = config.getDouble("energy.regen_amount", 20.0)
         object : BukkitRunnable() {
             override fun run() {
                 for (p in Bukkit.getOnlinePlayers()) {
-                    val data = plugin.playerManager.getPlayerData(p)
-                    if (data != null) {
-                        // 修复6: 空安全
-                        val current = data.kaiwuEnergy ?: 0.0
-                        val max = data.maxKaiWuEnergy ?: 100.0 // 假设有这个字段
-                        if (current < max) {
-                            data.kaiwuEnergy = (current + amount).coerceAtMost(max)
-                        }
-                    }
+                    val data = plugin.playerManager.getPlayerData(p) ?: continue
+                    ensureEnergyRecovery(data)
                 }
             }
-        }.runTaskTimer(plugin, (interval * 60 * 20).toLong(), (interval * 60 * 20).toLong())
+        }.runTaskTimer(plugin, 20L, 20L)
+    }
+
+    fun getMillisUntilEnergyFull(data: PlayerData): Long {
+        return ensureEnergyRecovery(data)
+    }
+
+    /**
+     * 精力只使用一个固定恢复窗口：首次不满时开始计时，期间不会因开采或精力不足而顺延。
+     * 到期后直接回满，并通过数据库后台写入队列持久化。
+     */
+    private fun ensureEnergyRecovery(data: PlayerData): Long {
+        val now = System.currentTimeMillis()
+        if (data.kaiwuEnergy >= data.maxKaiWuEnergy) {
+            if (data.nodeCoolDowns.remove(energyRecoveryKey) != null) {
+                plugin.databaseManager.queuePlayerSave(data)
+            }
+            return 0L
+        }
+
+        val existingDeadline = data.nodeCoolDowns[energyRecoveryKey]
+        if (existingDeadline != null) {
+            if (now < existingDeadline) return existingDeadline - now
+
+            data.kaiwuEnergy = data.maxKaiWuEnergy
+            data.nodeCoolDowns.remove(energyRecoveryKey)
+            plugin.databaseManager.queuePlayerSave(data)
+            return 0L
+        }
+
+        val deadline = now + config.getInt("energy.regen_interval_min", 10).coerceAtLeast(1) * 60_000L
+        data.nodeCoolDowns[energyRecoveryKey] = deadline
+        plugin.databaseManager.queuePlayerSave(data)
+        return deadline - now
     }
 
     fun removeNode(p: Player?, locKey: String) {
@@ -594,6 +621,9 @@ class KaiWuManager(private val plugin: Hjh_database) {
         return nodeCache[key]
     }
 
+    fun getAllNodes(): List<Pair<String, NodeConfig>> = nodeCache.entries
+        .map { it.key to it.value }
+
     fun isNode(loc: Location): Boolean {
         return nodeCache.containsKey(serializeLoc(loc))
     }
@@ -601,16 +631,21 @@ class KaiWuManager(private val plugin: Hjh_database) {
     fun setPlayerLevel(p: Player, lv: Int) {
         val data = plugin.playerManager.getPlayerData(p)
         if (data != null) {
-            data.kaiwuLevel = lv
-            p.sendMessage("§a等级已设为 $lv")
+            data.kaiwuLevel = lv.coerceAtLeast(1)
+            data.kaiwuEnergy = data.kaiwuEnergy.coerceAtMost(data.maxKaiWuEnergy)
+            ensureEnergyRecovery(data)
+            plugin.databaseManager.queuePlayerSave(data, 1L)
+            p.sendMessage("§a等级已设为 ${data.kaiwuLevel}")
         }
     }
 
     fun setPlayerEnergy(p: Player, energy: Double) {
         val data = plugin.playerManager.getPlayerData(p)
         if (data != null) {
-            data.kaiwuEnergy = energy
-            p.sendMessage("§a精力已设为 $energy")
+            data.kaiwuEnergy = energy.coerceIn(0.0, data.maxKaiWuEnergy)
+            ensureEnergyRecovery(data)
+            plugin.databaseManager.queuePlayerSave(data, 1L)
+            p.sendMessage("§a精力已设为 ${data.kaiwuEnergy}")
         }
     }
 

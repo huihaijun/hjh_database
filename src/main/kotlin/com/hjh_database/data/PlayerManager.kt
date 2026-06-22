@@ -180,7 +180,13 @@ class PlayerManager(private val plugin: Hjh_database) {
     }
 
     private fun tryAutoAcceptLevelQuests(player: Player, data: PlayerData) {
-        val questIds = listOf("side_warrior_shield_book", "side_archer_quiver_book", "side_warlock_backflow_book", "side_medical_taolizhi_book")
+        val questIds = listOf(
+            "side_warrior_shield_book",
+            "side_archer_quiver_book",
+            "side_warlock_backflow_book",
+            "side_medical_taolizhi_book",
+            "side_tianjige_rumor"
+        )
         for (questId in questIds) {
             val quest = plugin.questManager.getQuest(questId) ?: continue
             val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED
@@ -221,6 +227,7 @@ class PlayerManager(private val plugin: Hjh_database) {
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     updateStats(player)
                     syncToVanilla(player, finalData)
+                    tryAutoAcceptLevelQuests(player, finalData)
                     if (migratedExpCurve) {
                         player.sendMessage("§a[经验系统] §7已按新版经验曲线无损折算你的等级与经验。")
                     }

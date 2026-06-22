@@ -17,10 +17,13 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.util.Vector
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class jutongzhanchuiSkill : WeaponSkill {
 
     private val plugin = JavaPlugin.getProvidingPlugin(this::class.java)
+    private val shieldedPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
     override fun castActive(player: Player?, data: PlayerData?, config: ConfigurationSection?, projectile: Entity?): Boolean {
         if (player == null || data == null || config == null) return false
@@ -51,6 +54,7 @@ class jutongzhanchuiSkill : WeaponSkill {
         // 移除旧的护盾(如果有)，加上新的
         player.removePotionEffect(PotionEffectType.ABSORPTION)
         player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, (shieldDuration * 20).toInt(), amplifier))
+        shieldedPlayers.add(player.uniqueId)
 
         // 4. AOE 伤害与控制逻辑
         val nearby = player.getNearbyEntities(radius, 3.0, radius)
@@ -102,6 +106,12 @@ class jutongzhanchuiSkill : WeaponSkill {
             if (victim.hasMetadata("hjh_physical_skill")) {
                 victim.removeMetadata("hjh_physical_skill", plugin)
             }
+        }
+    }
+
+    override fun deactivate(player: Player) {
+        if (shieldedPlayers.remove(player.uniqueId)) {
+            player.removePotionEffect(PotionEffectType.ABSORPTION)
         }
     }
 }

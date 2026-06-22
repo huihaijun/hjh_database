@@ -129,7 +129,6 @@ class ElementZfManager(private val plugin: Hjh_database) {
      */
     private fun setVisualCooldown(player: Player, type: String, seconds: Double) {
         val item = player.inventory.itemInMainHand
-        if (item.type.isAir) return
         val groupKey = groupKeys[type] ?: return
         val ticks = (seconds * 20).toInt()
         try {
@@ -144,7 +143,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
             plugin.logger.warning("设置视觉冷却失败: ${e.message}")
             e.printStackTrace()
             // 降级处理：如果失败，就用普通的材质冷却
-            player.setCooldown(item.type, ticks)
+            if (!item.type.isAir) player.setCooldown(item.type, ticks)
         }
     }
 
@@ -287,14 +286,16 @@ class ElementZfManager(private val plugin: Hjh_database) {
     }
 
     private fun getEnhancedCooldown(type: String): Double {
-        return config?.getDouble("skills.$type.enhanced_cooldown") ?: when (type.uppercase()) {
-            "METAL" -> 15.0
-            "WOOD" -> 15.0
-            "WATER" -> 15.0
-            "FIRE" -> 15.0
-            "EARTH" -> 15.0
-            else -> 15.0
+        val normalizedType = type.uppercase()
+        val fallback = when (normalizedType) {
+            "METAL" -> 25.0
+            "WOOD" -> 20.0
+            "WATER" -> 25.0
+            "FIRE" -> 30.0
+            "EARTH" -> 40.0
+            else -> 20.0
         }
+        return config?.getDouble("skills.$normalizedType.enhanced_cooldown", fallback) ?: fallback
     }
 
     private fun consumeOneElementFromMainHand(player: Player) {

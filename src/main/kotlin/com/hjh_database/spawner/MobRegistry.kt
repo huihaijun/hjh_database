@@ -76,6 +76,7 @@ object MobRegistry {
 //            mainHand = Material.IRON_SWORD,
 //            offHand = Material.SHIELD
         ))
+        // ================ 东方区域怪物 ===================
         register(MobDefinition(
             id = "senlinjiangshi",
             name = "&c森林僵尸",
@@ -95,7 +96,9 @@ object MobRegistry {
                 // 10%掉落重生石
                 MobDrop("relive_stone", 1, 1, 0.1),
                 // 20%掉落皮革 卖钱的
-                MobDrop("pojiupige", 1, 1, 0.1)
+                MobDrop("pojiupige", 1, 1, 0.1),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
             helmet = Material.LEATHER_HELMET,
@@ -117,7 +120,9 @@ object MobRegistry {
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1)
+                MobDrop("relive_stone", 1, 1, 0.1),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
             helmet = Material.LEATHER_HELMET,
@@ -141,8 +146,10 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 10%掉落重生石
                 MobDrop("relive_stone", 1, 1, 0.1),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 1, 0.3)
+                // 50%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 1, 0.5),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
         ))
@@ -165,7 +172,9 @@ object MobRegistry {
                 // 30%掉落重生石
                 MobDrop("relive_stone", 1, 1, 0.3),
                 // 40%掉落皮革 卖钱的
-                MobDrop("pojiupige", 1, 1, 0.4)
+                MobDrop("pojiupige", 1, 1, 0.4),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
             helmet = Material.LEATHER_HELMET,
@@ -188,7 +197,9 @@ object MobRegistry {
                 // 70%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 3, 0.7),
                 // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3)
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
             helmet = Material.LEATHER_HELMET,
@@ -212,8 +223,10 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 3, 0.7),
                 // 10%掉落重生石
                 MobDrop("relive_stone", 1, 1, 0.2),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 2, 0.5)
+                // 60%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.6),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
         ))
@@ -273,7 +286,9 @@ object MobRegistry {
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 25%掉落贡品
-                MobDrop("shanshengongpin", 1, 2, 0.25)
+                MobDrop("shanshengongpin", 1, 2, 0.25),
+                // 40%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.4)
             ),
             affixes = listOf()
         ))
@@ -291,9 +306,11 @@ object MobRegistry {
                 MobDrop("wood", 1, 2, 1.0),
                 MobDrop("hjh_tongqian", 3, 5, 0.9),
                 MobDrop("relive_stone", 1, 2, 1.0),
-                MobDrop("zhizhuyan", 1, 3, 0.7),
+                MobDrop("zhizhuyan", 1, 3, 0.9),
                 //赤铜锭
-                MobDrop("chitongding", 1, 1, 0.25)
+                MobDrop("chitongding", 1, 1, 0.25),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.15)
             ),
             affixes = listOf()
         ))
@@ -356,8 +373,11 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 2, 1.0),
                 MobDrop("renshen", 1, 2, 0.5),
                 //赤铜锭
-                MobDrop("chitongding", 1, 1, 0.25)
-
+                MobDrop("chitongding", 1, 1, 0.25),
+                //龙鳞神木
+                MobDrop("longlinshenmu", 1, 1, 0.25),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.2)
             ),
             affixes = listOf(),
             helmet = Material.IRON_HELMET,
@@ -381,6 +401,7 @@ object MobRegistry {
             helmet = Material.IRON_HELMET, // 纯装饰铁头盔
             mainHand = Material.IRON_AXE   // 纯装饰铁斧
         ))
+        // ================ 南方区域怪物 ===================
         // === 朱雀试炼 ===
         register(MobDefinition(
             id = "zhuqueshiwei",
@@ -399,9 +420,9 @@ object MobRegistry {
             id = "zhuque_yanbing_zombie",
             name = "&6朱雀炎兵-僵尸",
             type = EntityType.ZOMBIE,
-            health = 25.0,
+            health = 20.0,
             damage = 8.0,
-            armor = 15.0,
+            armor = 12.0,
             exp=10,
             speed = 0.2,
             maxNearby = 1,
@@ -414,9 +435,9 @@ object MobRegistry {
             id = "zhuque_yanbing_kulou",
             name = "&6朱雀炎兵-骷髅",
             type = EntityType.SKELETON,
-            health = 15.0,
+            health = 12.0,
             damage = 5.0,
-            armor = 8.0,
+            armor = 6.0,
             exp=10,
             speed = 0.25,
             maxNearby = 1,
@@ -449,6 +470,8 @@ object MobRegistry {
                 MobDrop("meitan", 1, 1, 0.2),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH),
         ))
@@ -475,6 +498,8 @@ object MobRegistry {
                 MobDrop("meitan", 1, 1, 0.05),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH),
         ))
@@ -501,6 +526,8 @@ object MobRegistry {
                 MobDrop("meitan", 1, 1, 0.05),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH),
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -531,6 +558,8 @@ object MobRegistry {
                 MobDrop("meitan", 1, 1, 0.3),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -561,6 +590,8 @@ object MobRegistry {
                 MobDrop("wangyuanwaibeiqiangzoudehuowu", 1, 2, 0.3),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -591,6 +622,8 @@ object MobRegistry {
                 MobDrop("renshen", 1, 1, 0.1),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.05)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -621,6 +654,8 @@ object MobRegistry {
                 MobDrop("yanshazhixin", 1, 2, 0.6),
                 // 掉落三阶武器材料
                 MobDrop("yanjingshi", 1, 1, 0.3),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.1)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -652,6 +687,7 @@ object MobRegistry {
                 MobDrop("shangxianwenxian", 1, 2, 0.3),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
+
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
         ))
@@ -814,6 +850,8 @@ object MobRegistry {
                 MobDrop("yanshazhixin", 2, 3, 0.6),
                 // 掉落三阶材料 黄风眼
                 MobDrop("huangfengyan", 1, 1, 0.35),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.1)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
         ))
@@ -838,6 +876,8 @@ object MobRegistry {
                 MobDrop("yanshazhixin", 3, 4, 0.6),
                 // 掉落恶魂丹
                 MobDrop("ehundan", 1, 1, 0.4),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.1)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
         ))

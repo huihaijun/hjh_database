@@ -9,6 +9,7 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.ItemFlag
@@ -42,6 +43,7 @@ class MenuManager(private val plugin: Hjh_database) {
 
     init {
         reload()
+        startDynamicMenuUpdates()
     }
 
     // === 枚举定义 ===
@@ -121,29 +123,7 @@ class MenuManager(private val plugin: Hjh_database) {
             for (key in itemsSec.getKeys(false)) {
                 val itemSec = itemsSec.getConfigurationSection(key) ?: continue
                 val slot = itemSec.getInt("slot", 0)
-                val matStr = itemSec.getString("material", "STONE")
-                var mat = Material.getMaterial(matStr!!)
-                if (mat == null) mat = Material.STONE
-                val name = itemSec.getString("name", "Button")
-                val lore = itemSec.getStringList("lore")
-                val icon = ItemStack(mat!!)
-                val meta = icon.itemMeta
-
-                if (matStr == "PLAYER_HEAD" && meta is SkullMeta) {
-                    meta.owningPlayer = player
-                }
-                if (meta != null) {
-                    meta.setDisplayName(format(replacePlaceholders(name!!, player, data)))
-                    val finalLore: MutableList<String> = ArrayList()
-                    for (line in lore) {
-                        val replacedLine = replacePlaceholders(line, player, data)
-                        finalLore.add(format(replacedLine))
-                    }
-                    meta.lore = finalLore
-                    meta.persistentDataContainer.set(tokenKey, PersistentDataType.STRING, "gui_item")
-                    icon.itemMeta = meta
-                }
-                inv.setItem(slot, icon)
+                inv.setItem(slot, createConfiguredIcon(player, data, itemSec))
             }
         }
 
@@ -188,7 +168,71 @@ class MenuManager(private val plugin: Hjh_database) {
             "§7§o踏入§b§o[秘境]§7§o之中,此力便不可施展"
         )))
 
+        inv.setItem(
+            TianjiUtilityMenus.DUSTBIN_BUTTON_SLOT,
+            createMenuButton(Material.COMPOSTER, "§7§l归尘匣", listOf(
+                "§7将不再需要的物品投入匣中",
+                "§7确认之后，它们便会归于尘土",
+                "",
+                "§b▶ 点击打开"
+            ))
+        )
+        inv.setItem(
+            TianjiUtilityMenus.SHOWCASE_BUTTON_SLOT,
+            createMenuButton(Material.MUSIC_DISC_13, "§e§l世尘镜", listOf(
+                "§7映照你的背包与快捷栏",
+                "§7点击镜中物品即可向众人展示",
+                "",
+                "§b▶ 点击打开"
+            )).apply {
+                val mirrorMeta = itemMeta
+                mirrorMeta?.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+                if (mirrorMeta?.hasJukeboxPlayable() == true) {
+                    val jukeboxPlayable = mirrorMeta.jukeboxPlayable
+                    jukeboxPlayable.isShowInTooltip = false
+                    mirrorMeta.setJukeboxPlayable(jukeboxPlayable)
+                }
+                itemMeta = mirrorMeta
+            }
+        )
+
         player.openInventory(inv)
+    }
+
+    private fun startDynamicMenuUpdates() {
+        // 仅每秒刷新正在查看天机令的玩家，避免为未打开菜单的玩家创建物品。
+        plugin.server.scheduler.runTaskTimer(plugin, Runnable {
+            val section = config.getConfigurationSection("gui.items.personal_info") ?: return@Runnable
+            val slot = section.getInt("slot", 13)
+            for (player in Bukkit.getOnlinePlayers()) {
+                if (!isMainMenuTitle(player.openInventory.title)) continue
+                val data = plugin.playerManager.getData(player.uniqueId) ?: continue
+                player.openInventory.topInventory.setItem(slot, createConfiguredIcon(player, data, section))
+            }
+        }, 20L, 20L)
+    }
+
+    private fun createConfiguredIcon(player: Player, data: PlayerData, section: ConfigurationSection): ItemStack {
+        val materialName = section.getString("material", "STONE") ?: "STONE"
+        val material = Material.getMaterial(materialName) ?: Material.STONE
+        val icon = ItemStack(material)
+        val meta = icon.itemMeta
+        if (material == Material.PLAYER_HEAD && meta is SkullMeta) meta.owningPlayer = player
+        if (meta != null) {
+            meta.setDisplayName(format(replacePlaceholders(section.getString("name", "Button") ?: "Button", player, data)))
+            meta.lore = section.getStringList("lore").map { configuredLine ->
+                // 兼容服务器数据目录中的旧 menus.yml，无需删除配置也能显示倒计时。
+                val line = if (configuredLine.contains("%kaiwu_max_energy%") &&
+                    !configuredLine.contains("%kaiwu_full_countdown%")
+                ) {
+                    "$configuredLine &7(%kaiwu_full_countdown%)"
+                } else configuredLine
+                format(replacePlaceholders(line, player, data))
+            }
+            meta.persistentDataContainer.set(tokenKey, PersistentDataType.STRING, "gui_item")
+            icon.itemMeta = meta
+        }
+        return icon
     }
 
     private fun createMenuButton(material: Material, name: String, lore: List<String>): ItemStack {
@@ -323,6 +367,9 @@ class MenuManager(private val plugin: Hjh_database) {
         if (result.contains("%kaiwu_next_exp%")) result = result.replace("%kaiwu_next_exp%", data.kaiWuNextLevelExp.toString())
         if (result.contains("%kaiwu_energy%")) result = result.replace("%kaiwu_energy%", String.format("%.1f", data.kaiwuEnergy))
         if (result.contains("%kaiwu_max_energy%")) result = result.replace("%kaiwu_max_energy%", String.format("%.1f", data.maxKaiWuEnergy))
+        if (result.contains("%kaiwu_full_countdown%")) {
+            result = result.replace("%kaiwu_full_countdown%", formatDuration(plugin.kaiWuManager.getMillisUntilEnergyFull(data)))
+        }
 
         if (result.contains("%exp%") || result.contains("%max_exp%") || result.contains("%exp_percent%")) {
             val currentExp = data.exp
@@ -382,6 +429,16 @@ class MenuManager(private val plugin: Hjh_database) {
             result = result.replace("%main_stat_line%", replacement)
         }
         return result
+    }
+
+    private fun formatDuration(millis: Long): String {
+        if (millis <= 0L) return "已回满"
+        val totalSeconds = kotlin.math.ceil(millis / 1000.0).toLong()
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds)
+        else "%02d:%02d".format(minutes, seconds)
     }
 
     private fun getRarityDisplayString(player: Player, data: PlayerData): String {

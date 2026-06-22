@@ -51,6 +51,14 @@ shanshengongpin:
     - "&7&o怪物抢走的山神庙贡品"
     - "&7&o收集一些交给庙公吧"
 
+longlinshenmu:
+  material: MANGROVE_LOG
+  name: "&b龙鳞神木"
+  rarity: 2
+  lore:
+    - "&7&o赤木如鳞,断而不枯,殷红汁液自木心渗出,似有脉搏"
+    - "&7&o生于龙陨之地,浸染龙血,历经万载仍温润如初"
+
 meitan:
   material: COAL
   name: "&7煤炭"

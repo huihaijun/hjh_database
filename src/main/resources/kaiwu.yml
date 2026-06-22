@@ -2,8 +2,7 @@
 
 # 精力系统
 energy:
-  regen_interval_min: 10   # 自动恢复间隔 (分钟)
-  regen_amount: 20.0       # 每次恢复数值
+  regen_interval_min: 10   # 精力首次不满后，经过该时间直接回满；期间不会重复累计
   base_max: 100.0          # 基础精力上限
   level_bonus: 10.0        # 每级增加的上限 (总上限 = 基础 + 等级 * 此值)
 

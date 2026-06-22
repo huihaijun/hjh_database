@@ -200,4 +200,8 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
             )
         }
     }
+
+    override fun deactivate(player: Player) {
+        markedTargets.remove(player.uniqueId)
+    }
 }

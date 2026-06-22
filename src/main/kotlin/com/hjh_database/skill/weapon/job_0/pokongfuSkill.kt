@@ -245,4 +245,26 @@ class pokongfuSkill : WeaponSkill, Listener {
         task.runTaskTimer(plugin, 10L, 10L)
         info.bleedingTaskId = task.taskId
     }
+
+    override fun deactivate(player: Player) {
+        val playerId = player.uniqueId
+        primedPlayers.remove(playerId)
+        playerLocks.remove(playerId)
+
+        val mobIterator = mobStackMap.iterator()
+        while (mobIterator.hasNext()) {
+            val entry = mobIterator.next()
+            val info = entry.value.remove(playerId) ?: continue
+            if (info.expireTaskId != -1) Bukkit.getScheduler().cancelTask(info.expireTaskId)
+            if (info.bleedingTaskId != -1) Bukkit.getScheduler().cancelTask(info.bleedingTaskId)
+
+            val victim = Bukkit.getEntity(entry.key) as? LivingEntity
+            if (entry.value.isEmpty()) {
+                mobIterator.remove()
+                if (victim != null) restoreOriginalArmor(victim)
+            } else if (victim != null && victim.isValid) {
+                updateMobArmorPDC(victim, entry.value)
+            }
+        }
+    }
 }

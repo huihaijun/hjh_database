@@ -35,12 +35,6 @@ commands:
     permission: hjh.admin
     permission-message: §c你没有权限执行此操作。
 
-  # 在 commands: 下面添加
-  hjhkw:
-    description: 开物术系统指令 (OP)
-    usage: /hjhkw <reload|save>
-    permission: hjh.op
-
   # ... (上面是你原来的 commands 等配置)
 libraries:
   - org.jetbrains.kotlin:kotlin-stdlib:2.0.21

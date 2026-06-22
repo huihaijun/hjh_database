@@ -5,6 +5,12 @@ import com.hjh_database.data.PlayerData
 import com.hjh_database.ui.MenuManager.ElementType
 import com.hjh_database.ui.MenuManager.Companion.PORTABLE_WAREHOUSE_BUTTON_SLOT
 import com.hjh_database.ui.MenuManager.Companion.SUICIDE_BUTTON_SLOT
+import com.hjh_database.ui.DustbinMenuHolder
+import com.hjh_database.ui.ItemShowcaseMenuHolder
+import com.hjh_database.ui.TianjiUtilityMenus
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
@@ -16,6 +22,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerRecipeBookSettingsChangeEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -25,6 +32,8 @@ import org.bukkit.persistence.PersistentDataType
 
 class MenuListener(private val plugin: Hjh_database) : Listener {
     private val suicideConfirmClicks = mutableMapOf<java.util.UUID, Long>()
+    private val dustbinConfirmClicks = mutableMapOf<java.util.UUID, Long>()
+    private val showcaseLastDisplays = mutableMapOf<java.util.UUID, Long>()
 
     // 1. 监听玩家右键 (打开菜单)
     @EventHandler
@@ -59,6 +68,17 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
     fun onInventoryClick(event: InventoryClickEvent) {
         val title = event.view.title
         val player = event.whoClicked as? Player ?: return
+        val holder = event.view.topInventory.holder
+
+        if (holder is DustbinMenuHolder) {
+            handleDustbinClick(event, player, holder)
+            return
+        }
+
+        if (holder is ItemShowcaseMenuHolder) {
+            handleShowcaseClick(event, player)
+            return
+        }
 
         // 1. 处理主菜单
         if (plugin.menuManager.isMainMenuTitle(title)) {
@@ -98,6 +118,16 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
 
             else if (event.rawSlot == PORTABLE_WAREHOUSE_BUTTON_SLOT) {
                 openPortableWarehouse(player)
+            }
+
+            else if (event.rawSlot == TianjiUtilityMenus.DUSTBIN_BUTTON_SLOT) {
+                TianjiUtilityMenus.openDustbin(player)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+            }
+
+            else if (event.rawSlot == TianjiUtilityMenus.SHOWCASE_BUTTON_SLOT) {
+                TianjiUtilityMenus.openItemShowcase(player)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
         }
         // 2. 处理道天图录菜单
@@ -156,6 +186,19 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onInventoryDrag(event: InventoryDragEvent) {
+        when (event.view.topInventory.holder) {
+            is DustbinMenuHolder -> {
+                if (event.rawSlots.any { it in TianjiUtilityMenus.DUSTBIN_STORAGE_SIZE until event.view.topInventory.size }) {
+                    event.isCancelled = true
+                }
+                return
+            }
+            is ItemShowcaseMenuHolder -> {
+                event.isCancelled = true
+                return
+            }
+        }
+
         val title = event.view.title
         if (!plugin.menuManager.isMainMenuTitle(title)) return
 
@@ -163,6 +206,76 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
         if (event.rawSlots.any { it < topSize }) {
             event.isCancelled = true
         }
+    }
+
+    @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        val holder = event.inventory.holder as? DustbinMenuHolder ?: return
+        val player = event.player as? Player ?: return
+        dustbinConfirmClicks.remove(player.uniqueId)
+        TianjiUtilityMenus.returnDustbinContents(player, event.inventory, holder)
+    }
+
+    private fun handleDustbinClick(event: InventoryClickEvent, player: Player, holder: DustbinMenuHolder) {
+        val topSize = event.view.topInventory.size
+        if (event.rawSlot == TianjiUtilityMenus.DUSTBIN_CONFIRM_SLOT) {
+            event.isCancelled = true
+            val now = System.currentTimeMillis()
+            val lastClick = dustbinConfirmClicks[player.uniqueId] ?: 0L
+            if (now - lastClick > 1500L) {
+                dustbinConfirmClicks[player.uniqueId] = now
+                player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.8f)
+                return
+            }
+
+            dustbinConfirmClicks.remove(player.uniqueId)
+            holder.settled = true
+            for (slot in 0 until TianjiUtilityMenus.DUSTBIN_STORAGE_SIZE) {
+                event.view.topInventory.setItem(slot, null)
+            }
+            player.closeInventory()
+            player.sendMessage("§7[归尘匣] §f匣中物品已归于尘土。")
+            player.playSound(player.location, Sound.BLOCK_COMPOSTER_FILL_SUCCESS, 1f, 0.8f)
+            return
+        }
+
+        // 防止从下方背包双击同类物品时，把控制栏玻璃一并收走。
+        if (event.click == ClickType.DOUBLE_CLICK) {
+            event.isCancelled = true
+            return
+        }
+
+        // 前五行是投放区；最后一行只作为控制栏使用。
+        if (event.rawSlot in TianjiUtilityMenus.DUSTBIN_STORAGE_SIZE until topSize) {
+            event.isCancelled = true
+        }
+    }
+
+    private fun handleShowcaseClick(event: InventoryClickEvent, player: Player) {
+        event.isCancelled = true
+        if (event.rawSlot !in 0 until event.view.topInventory.size) return
+        val item = event.currentItem?.takeUnless { it.type.isAir } ?: return
+
+        val now = System.currentTimeMillis()
+        val lastDisplay = showcaseLastDisplays[player.uniqueId] ?: 0L
+        if (now - lastDisplay < 2000L) {
+            player.sendActionBar(Component.text("世尘镜尚在冷却中……", NamedTextColor.RED))
+            return
+        }
+        showcaseLastDisplays[player.uniqueId] = now
+
+        val itemName = item.itemMeta?.displayName()
+            ?: Component.translatable(item.type.translationKey())
+        val shownItem = Component.text("[")
+            .append(itemName)
+            .append(Component.text("]"))
+            .hoverEvent(item.asHoverEvent { it })
+        Bukkit.broadcast(
+            Component.text(player.name, NamedTextColor.YELLOW)
+                .append(Component.text("展示了物品——", NamedTextColor.WHITE))
+                .append(shownItem)
+        )
+        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.8f, 1.2f)
     }
 
     private fun handleSuicideButton(player: Player) {

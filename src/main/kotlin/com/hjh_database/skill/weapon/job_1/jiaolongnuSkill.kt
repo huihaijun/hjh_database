@@ -46,6 +46,11 @@ class jiaolongnuSkill : WeaponSkill, Listener {
             override fun run() {
                 val weaponKey = NamespacedKey(plugin, "weapon_id")
                 for (player in Bukkit.getOnlinePlayers()) {
+                    val pluginMain = plugin as? com.hjh_database.Hjh_database ?: return
+                    if (!pluginMain.weaponSkillManager.isWeaponActivated(player, "jiaolongnu")) {
+                        player.removePotionEffect(PotionEffectType.WATER_BREATHING)
+                        continue
+                    }
                     val item = player.inventory.itemInMainHand
                     if (!item.hasItemMeta()) continue
 
@@ -190,5 +195,15 @@ class jiaolongnuSkill : WeaponSkill, Listener {
         arrow.pierceLevel = 127
         // 记录穿透计数，初始为 0
         arrow.setMetadata("hjh_jiaolong_arrow", FixedMetadataValue(plugin, 0))
+    }
+
+    override fun deactivate(player: Player) {
+        activeBuffs.remove(player.uniqueId)
+        val pluginMain = plugin as com.hjh_database.Hjh_database
+        val data = pluginMain.playerManager.getData(player.uniqueId) ?: return
+        if (data.tempBonuses.remove("speed_percent") != null) {
+            pluginMain.playerManager.updateStats(player)
+        }
+        player.removePotionEffect(PotionEffectType.WATER_BREATHING)
     }
 }

@@ -4,6 +4,7 @@ import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.configuration.ConfigurationSection
 import java.util.ArrayList
+import java.util.Locale
 
 /**
  * 资源物品数据类
@@ -19,6 +20,7 @@ class ResourceItem(
     val rarity: Int = 0, // 默认为 0，表示没有稀有度
     val maxStackSize: Int? = null, // 【新增】可选的最大堆叠数
     val colorHex: String? = null, // 【新增】用于存储药水的 Hex 颜色
+    val category: String = "OTHER",
 
     val onlyDoctor: Boolean = false,
     val reqLevel: Int = 1,
@@ -74,6 +76,7 @@ class ResourceItem(
         maxStackSize = if (sec.contains("max_stack_size")) sec.getInt("max_stack_size") else null,
         // 【新增】从 yml 读取 color 字段
         colorHex = sec.getString("color"),
+        category = (sec.getString("category", "OTHER") ?: "OTHER").trim().uppercase(Locale.ROOT),
         reqLevel = sec.getInt("req_level", 1),
         onlyDoctor = sec.getBoolean("only_doctor", false),
         baseExp = sec.getInt("base_exp", 5),

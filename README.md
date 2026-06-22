@@ -155,11 +155,12 @@
 
 | 指令用法 | 功能描述 | 示例 |
 | :--- | :--- | :--- |
-| `/hjhkw reload` | 重载开物术节点配置。 | `/hjhkw reload` |
-| `/hjhkw setlevel <玩家> <等级>` | 设置玩家开物术等级。 | `/hjhkw setlevel Notch 5` |
-| `/hjhkw setenergy <玩家> <数值>` | 设置玩家开物术精力。 | `/hjhkw setenergy Notch 100` |
+| `/hjhadmin kw list` | 打开全部开物资源点分页管理界面。 | `/hjhadmin kw list` |
+| `/hjhadmin kw reload` | 重载开物术配置与节点配置。 | `/hjhadmin kw reload` |
+| `/hjhadmin kw setlevel <玩家> <等级>` | 设置玩家开物术等级。 | `/hjhadmin kw setlevel Notch 5` |
+| `/hjhadmin kw setenergy <玩家> <数值>` | 设置玩家开物术精力。 | `/hjhadmin kw setenergy Notch 100` |
 
-> **权限提示**：`plugin.yml` 中 `/hjhkw` 写的是 `hjh.op`，但命令代码实际检查 `hjh.kaiwu.op`。如果权限插件无法执行，请同时检查这两个权限节点。
+> **权限提示**：开物术管理现已统一归入需要 `hjh.admin` 的 `/hjhadmin kw` 指令树。
 
 ---
 
@@ -189,7 +190,6 @@
 | `/hjhdz` | `hjh.admin`，部分子命令还要求 `OP` | 锻造系统入口。 |
 | `/zfset` | `hjh.admin` | 五行阵法等级管理入口。 |
 | `/hjhweapon` | `hjh.op` 且代码检查 `OP` | 武器获取与重载入口。 |
-| `/hjhkw` | `hjh.op` / `hjh.kaiwu.op` | 开物术管理入口。 |
 | `/testmob` | `hjh.op` 且代码检查 `OP` | 测伤人偶生成与清理。 |
 | `/hjhstats` | 玩家指令 | 查看自己的属性面板。 |
 
@@ -200,6 +200,5 @@
 | 项目 | 说明 |
 | :--- | :--- |
 | `/hjhadmin alchemy list/give` | 补全逻辑里有提示，但当前源码没有实际执行分支。 |
-| `/hjhkw` 权限 | `plugin.yml` 与代码检查的权限节点不一致，建议后续统一。 |
 | `/jobtrial` | `JobTrialManager` 中尝试注册 `/jobtrial`，但 `plugin.yml` 当前未声明该命令，因此默认不可用。 |
 | 数据库配置 | `config.yml` 保留了 MySQL 字段，但当前 `DatabaseManager` 实际连接 SQLite。 |

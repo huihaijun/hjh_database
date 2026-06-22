@@ -9,6 +9,7 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.ItemFlag
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.PotionMeta
@@ -269,15 +270,18 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (res.isUnbreakable) {
             meta.isUnbreakable = true
         }
-        // 【新增】如果配置了颜色，并且该物品支持药水颜色（PotionMeta）
-        if (res.colorHex != null && meta is PotionMeta) {
-            try {
-                // 过滤掉 "#" 号并转为 RGB 颜色
-                val cleanHex = res.colorHex.replace("#", "")
-                val rgb = cleanHex.toInt(16)
-                meta.color = Color.fromRGB(rgb)
-            } catch (e: Exception) {
-                plugin.logger.warning("物品 ${res.id} 的颜色配置错误: ${res.colorHex}")
+        if (meta is PotionMeta) {
+            meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_ATTRIBUTES)
+
+            // 如果配置了颜色，则应用自定义药水颜色。
+            if (res.colorHex != null) {
+                try {
+                    val cleanHex = res.colorHex.replace("#", "")
+                    val rgb = cleanHex.toInt(16)
+                    meta.color = Color.fromRGB(rgb)
+                } catch (e: Exception) {
+                    plugin.logger.warning("物品 ${res.id} 的颜色配置错误: ${res.colorHex}")
+                }
             }
         }
     }

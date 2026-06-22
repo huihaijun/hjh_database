@@ -48,6 +48,8 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     // 1. 【新增】记录哪些玩家正在维持某种技能状态
     // Key: 玩家UUID, Value: 对应的技能实例
     private val activeToggles = ConcurrentHashMap<UUID, String>() // 存 weaponId 即可
+    // 上一 tick 真正满足槽位、职业和等级要求的武器；被动状态也统一走此生命周期。
+    private val activeWeapons = ConcurrentHashMap<UUID, String>()
 
     init {
         registerSkills()
@@ -56,9 +58,10 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         // 2. 【新增】启动唯一的全局检测任务 (0.1秒检测一次，极度省性能)
         object : BukkitRunnable() {
             override fun run() {
+                checkActiveWeaponChanges()
                 checkAllToggles()
             }
-        }.runTaskTimer(plugin, 2L, 2L)
+        }.runTaskTimer(plugin, 1L, 1L)
     }
 
     fun reload() {
@@ -231,6 +234,42 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     //【新增】供技能调用的注销方法：手动关闭
     fun unregisterToggle(player: Player) {
         activeToggles.remove(player.uniqueId)
+    }
+
+    /** 武器失去激活条件时，在同一游戏 tick 内清理旧武器的全部临时状态。 */
+    private fun checkActiveWeaponChanges() {
+        val online = HashSet<UUID>()
+        for (player in plugin.server.onlinePlayers) {
+            val uuid = player.uniqueId
+            online.add(uuid)
+            val current = findActiveWeaponId(player)
+            val previous = activeWeapons[uuid]
+
+            if (previous != null && previous != current) {
+                skillRegistry[previous]?.deactivate(player)
+                activeToggles.remove(uuid)
+            }
+
+            if (current == null) activeWeapons.remove(uuid) else activeWeapons[uuid] = current
+        }
+        activeWeapons.keys.removeIf { it !in online }
+        activeToggles.keys.removeIf { it !in online }
+    }
+
+    private fun findActiveWeaponId(player: Player): String? {
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return null
+        for (slot in 0..8) {
+            val id = getWeaponIdFromItem(player.inventory.getItem(slot)) ?: continue
+            val weapon = plugin.weaponManager.loadedWeapons[id] ?: continue
+            val slotMatches = if (weapon.activateSlot == -1) player.inventory.heldItemSlot == slot
+                              else weapon.activateSlot == slot
+            if (slotMatches && data.job == weapon.reqJob && data.lv >= weapon.reqLv) return id
+        }
+        return null
+    }
+
+    fun isWeaponActivated(player: Player, weaponId: String): Boolean {
+        return findActiveWeaponId(player) == weaponId.lowercase()
     }
 
     //【核心逻辑】全局检测函数

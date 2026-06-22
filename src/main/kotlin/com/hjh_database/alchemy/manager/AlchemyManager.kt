@@ -39,29 +39,6 @@ class AlchemyManager(private val plugin: Hjh_database) {
     // === 效果注册接口 ===
     fun registerEffect(effect: AlchemyEffect) {
         effects[effect.id] = effect
-
-        // 获取代码默认配置
-        val defaultRecipe = effect.getDefaultRecipe()
-
-        // 1. 如果内存/文件中完全没有这个配方，直接使用代码默认值并保存
-        if (!recipes.containsKey(effect.id)) {
-//            recipes[effect.id] = defaultRecipe
-//            saveRecipes() // 立即保存默认配置到文件
-//            plugin.logger.info("§a[丹药] 载入并保存默认配置: ${effect.id}")
-        } else {
-            // 2. 如果文件里有配置，检查是否缺失某些品质，只做增量补充，不覆盖已有修改
-            val existing = recipes[effect.id]!!
-            var updated = false
-
-            for ((tier, config) in defaultRecipe.tierData) {
-                if (!existing.tierData.containsKey(tier)) {
-                    existing.tierData[tier] = config
-                    updated = true
-                    plugin.logger.info("§e[丹药] 为 ${effect.id} 补充默认 $tier 配置")
-                }
-            }
-            if (updated) saveRecipes()
-        }
     }
 
     fun getEffect(id: String): AlchemyEffect? = effects[id]

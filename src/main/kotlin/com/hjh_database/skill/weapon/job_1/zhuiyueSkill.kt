@@ -166,9 +166,7 @@ class zhuiyueSkill : WeaponSkill, Listener {
     }
 
     override fun deactivate(player: Player) {
-        val uuid = player.uniqueId
-        activeStates.remove(uuid)
-        setZhuiyueQuickCharge(player, 3)
+        clearPlayer(player)
         plugin.weaponSkillManager?.unregisterToggle(player)
     }
 

@@ -10,6 +10,52 @@ yy_yuhedan:
     - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
   custom_model_data: 10137
 
+yy_qinglingdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]清灵丹"
+  lore:
+    - "&f▶ &b清灵丹 &f药引"
+    - "&8  | &7&o一尘不染,丹心如镜"
+    - "&8  | &7&o似有微风自丹内流转,轻拂过处,滞涩全无"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+  custom_model_data: 10137
+
+yy_huilingdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]回灵丹"
+  lore:
+    - "&f▶ &b回灵丹 &f药引"
+    - "&8  | &7&o凝聚天地灵气的恢复型丹药"
+    - "&8  | &7&o服下后可徐徐滋养神识，补充灵力"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_zhuangyangdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]壮阳丹"
+  lore:
+    - "&f▶ &b壮阳丹 &f药引"
+    - "&8  | &7&o丹色淡赤,入手微温,一缕浅薄的阳气游走于丹纹之间"
+    - "&8  | &7&o吞服后体内隐约凝成一层气盾,虽不厚重,聊胜于无"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_fenghou:
+  material: GOLD_NUGGET
+  name: "&c[药引]封喉"
+  lore:
+    - "&6限制职业:[医]"
+    - "&f▶ &c封喉 &f药引"
+    - "&8  | &7&o隐隐透出一丝寒芒,触之指尖微麻"
+    - "&8  | &7&o掷出散作毒雾,如毒蛇吐信,直取咽喉"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+
 dengxincao:
   material: SEA_PICKLE
   name: "&b灯心草"

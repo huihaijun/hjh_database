@@ -146,4 +146,8 @@ class chitongjianSkill : WeaponSkill, Listener {
             }
         }.runTaskTimer(plugin, 20L, 20L) // 延迟20tick执行第一次，之后每20tick执行一次
     }
+
+    override fun deactivate(player: Player) {
+        primedPlayers.remove(player.uniqueId)
+    }
 }

@@ -107,4 +107,8 @@ class kaishandaoSkill : WeaponSkill, Listener {
             }
         }
     }
+
+    override fun deactivate(player: Player) {
+        activeBuffs.remove(player.uniqueId)
+    }
 }

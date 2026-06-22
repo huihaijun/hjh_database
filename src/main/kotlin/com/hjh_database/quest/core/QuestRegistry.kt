@@ -16,6 +16,7 @@ import com.hjh_database.quest.impl.main.south.South_04
 import com.hjh_database.quest.impl.main.south.South_05
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
+import com.hjh_database.quest.impl.side.Side_Tianjige_Rumor
 import com.hjh_database.quest.impl.side.Side_Warrior_ShieldBook
 import com.hjh_database.quest.impl.side.Side_Warlock_BackflowBook
 import com.hjh_database.quest.impl.side.ren.Side_Ren_01
@@ -53,5 +54,6 @@ object QuestRegistry {
         manager.register(Side_Archer_QuiverBook())
         manager.register(Side_Warlock_BackflowBook())
         manager.register(Side_Medical_TaolizhiBook())
+        manager.register(Side_Tianjige_Rumor())
     }
 }

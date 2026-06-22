@@ -11,8 +11,10 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.util.ArrayList
+import java.util.UUID
 
 class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuManager) {
+    private val skipSaveOnClose = mutableSetOf<UUID>()
 
     // --- 新增：缓存上一次保存的配置，作为新建节点的默认值 ---
     private var lastTimeSeconds = 10.0
@@ -131,6 +133,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
             else if (item.type == Material.ENCHANTED_BOOK) updateVal(item, if (isLeft) 10.0 else -10.0, 5.0, 3600.0, "秒")
             else if (item.type == Material.BARRIER) {
                 val locKey = title.replace("§0开物点编辑: ", "")
+                skipSaveOnClose += p.uniqueId
                 manager.removeNode(p, locKey)
                 p.closeInventory()
             }
@@ -141,6 +144,7 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
     fun handleClose(e: InventoryCloseEvent) {
         val title = e.view.title
         if (!title.startsWith("§0开物点编辑: ")) return
+        if (skipSaveOnClose.remove(e.player.uniqueId)) return
 
         val locKey = title.replace("§0开物点编辑: ", "")
         val inv = e.inventory
