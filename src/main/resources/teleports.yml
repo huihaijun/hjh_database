@@ -44,6 +44,17 @@ points:
       custom_action: "CHOOSE_HUMAN_START"
       message: "&7你选择了[人族]，正在前往新手前置之地"
 
+  选择妖族-前往新手前置:
+    world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40      # 449.40 - 360 = 89.40 (角度归一化，效果一样)
+    pitch: 2.10
+    actions:
+      custom_action: "CHOOSE_YAO_START"
+      message: "&7你选择了[妖族]，正在前往新手前置之地"
+
   新手前置回初始点:
     world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
     x: 1248.05
@@ -271,4 +282,32 @@ points:
     pitch: 0.0
     actions:
       custom_action: "NO_STONE_TO_RACE"
+
+  妖族-皇城:
+    world: "world"
+    x: 402.5
+    y: 50.5
+    z: 83.5
+    yaw: 90.0
+    pitch: 0.0
+    #=== 限制条件 ===
+    conditions:
+      # 状态限制 (必须等于其中之一)
+      status:
+        values: [ 3, 4 ]
+        message: "&c妖族守卫对你说,请先再多了解一下,再离开叶灵谷吧(请先完成主线剧情)"
+
+  镇妖塔-塔顶:
+    world: "world"
+    x: -203.5
+    y: 148.5
+    z: -181.5
+    yaw: 90.0
+    pitch: 0.0
+    #=== 限制条件 ===
+    conditions:
+      # 状态限制 (必须等于其中之一)
+      race:
+        values: 4
+        message: "&7这里的洞口太小了，还是放弃吧……"
 

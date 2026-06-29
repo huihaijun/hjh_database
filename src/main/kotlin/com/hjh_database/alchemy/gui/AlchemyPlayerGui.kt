@@ -75,7 +75,13 @@ class AlchemyPlayerGui(
             val iconItem = firstTier.result.clone()
             val meta = iconItem.itemMeta
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
-            meta.lore = listOf(" ", "§a点击选择炼制等级")
+            val lore = ArrayList<String>()
+            lore.addAll(meta.lore ?: emptyList())
+            if (lore.isNotEmpty()) {
+                lore.add(" ")
+            }
+            lore.add("§a点击选择炼制等级")
+            meta.lore = lore
             iconItem.itemMeta = meta
 
             inventory.setItem(slot, iconItem)
@@ -95,8 +101,8 @@ class AlchemyPlayerGui(
             val meta = icon.itemMeta
             val isSelected = category == selectedCategory
             meta.setDisplayName(
-                if (isSelected) "§a§l${categoryDisplayName(category)}丹药 §f[当前]"
-                else "§e${categoryDisplayName(category)}丹药 §7[点击切换]"
+                if (isSelected) "§a§l${categoryDisplayName(category)} §f[当前]"
+                else "§e${categoryDisplayName(category)} §7[点击切换]"
             )
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
             icon.itemMeta = meta

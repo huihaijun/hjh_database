@@ -1,0 +1,163 @@
+copper_ore:
+  material: WET_SPONGE
+  name: "&b山泉水"
+  lore:
+    - "&7&o从人族峡谷最东部的山坡开采的山泉水"
+    - "&7&o甘甜无比，沁人心脾，村长最喜欢用它泡茶喝了"
+    - "&e[任务物品]"
+
+tianjihe:
+  material: HEAVY_CORE
+  name: "&b天机核"
+  lore:
+    - "&7&o蕴藏天机阁无限奥秘的核心"
+    - "&7&o其内部运转的机械让万人着迷"
+    - "&e[任务物品]"
+
+tiezhen:
+  material: BREEZE_ROD
+  name: "&b铁针"
+  lore:
+    - "&7&o铁质的针头,用处还挺多的"
+    - "&e[任务物品]"
+
+hjh_xsyy:
+  material: GOLD_NUGGET
+  name: "&b[药引]新手疗愈丹"
+  lore:
+    - "&7&o用来冶炼&b&o新手疗愈丹&7&o的药引"
+    - "&7&o需要配合3株草药才能成功炼制"
+    - "&e[任务物品]"
+  custom_model_data: 10137
+
+hjh_cy:
+  material: SEAGRASS
+  name: "&b草药"
+  lore:
+    - "&7&o遍地都能开采到的草药"
+    - "&7&o可以用来冶炼丹药"
+    - "&e[任务物品]"
+
+hjh_zybj:
+  material: BOOK
+  name: "&b前辈的笔记"
+  lore:
+    - "&7&o李公公交付于你人族前辈的笔记"
+    - "&7&o记载了皇宫四大职业导师的具体方位"
+    - "&7&o战士与弓箭手导师位于皇城东门北侧的两栋房内"
+    - "&7&o术士导师位于通往南门干道的东侧四合院内"
+    - "&7&o医师就在凤花楼东边的小屋内"
+    - "&e[任务物品]"
+
+yy_lianxindan:
+  material: GOLD_NUGGET
+  custom_model_data: 10137
+  name: "&b[药引]莲心丹"
+  lore:
+    - "&7&o用来冶炼&6&o莲心丹&7&o的药引"
+    - "&7&o需要配合5枚土元素和5枚火元素炼制"
+    - "&e[任务物品]"
+
+
+jiaogeizhenzhangdexinjian:
+  material: BLAZE_POWDER
+  name: "&b交给镇长的信件"
+  lore:
+    - "&7&o莲心委托你交给镇长的信件,鼓鼓囊囊的"
+    - "&7&o不知为何她不自己亲手去交……"
+    - "&7&o或许有秘密,还是不要拆开看的好"
+    - "&e[任务物品]"
+
+geimoshengrendexin:
+  material: BLAZE_POWDER
+  name: "&b给陌生人的信"
+  lore:
+    - "&7&o镇长说这封信是给我的……"
+    - "&7&o里面到底写了什么呢？"
+    - "&a请主手持有,右键打开读信"
+    - "&c阅读后信件自动销毁,请注意保管！"
+    - "&e[任务物品]"
+
+
+taoyuanshengniurou:
+  material: BEEF
+  name: "&b桃源生牛肉"
+  lore:
+    - "&7&o世外桃源养殖的优质牛肉"
+    - "&7&o肉质紧实,烤熟一定是天下美味!"
+    - "&e[任务物品]"
+
+wanmeideniupai:
+  material: COOKED_BEEF
+  name: "&b完美的牛排"
+  lore:
+    - "&7&o完美烹饪得到的烤牛排,香气扑鼻"
+    - "&7&o去交给老战士吧,可不要自己吃了!"
+    - "&e[任务物品]"
+
+buwanmeideniupai:
+  material: COOKED_BEEF
+  name: "&b不完美的牛排"
+  lore:
+    - "&7&o要么太老,要么太生,这样是不能通过考验的"
+    - "&7&o问问老战士还有什么补救方法吗……"
+    - "&e[任务物品]"
+
+laozhanshidemeitan:
+  material: COAL
+  name: "&b老战士的煤炭"
+  lore:
+    - "&7&o老战士邵斌囤积的煤炭"
+    - "&7&o用来烧火烤肉,解解嘴馋"
+    - "&e[任务物品]"
+
+shoujicaoliaodetong:
+  material: COMPOSTER
+  name: "&b收集草药的桶"
+  lore:
+    - "&7&o用来给旦野师傅收集草药的桶"
+    - "&7&o确实如他所说有点脏乱"
+    - "&e[任务物品]"
+
+wangyuanwai_qiannianlingzhi:
+  material: POTATO
+  name: "&b王员外的千年灵芝"
+  lore:
+    - "&7&o王员外不慎被抢走的千年灵芝"
+    - "&7&o喜寒厌热,十分娇贵,拿到后快还给他吧"
+    - "&e[任务物品]"
+
+wenquan_caoyaoguan:
+  material: BOWL
+  name: "&b温泉客栈装草药的罐子"
+  lore:
+    - "&7&o温泉客栈老板盛放草药的罐子"
+    - "&7&o按照他的要求倒入到温泉里吧!"
+
+shangxian_shuazi:
+  material: BRUSH
+  name: "&b上仙的刷子"
+  lore:
+    - "&7&o用来擦去石碑上灰尘的刷子"
+    - "&7&o按照上仙的要求去帮帮他"
+
+qilingguo:
+  material: GLOW_BERRIES
+  name: "&b启灵果"
+  lore:
+    - "&7&o生长在妖族参天古树下的奇异果实"
+    - "&7&o吸收天地精华,吃下后仿佛七窍清明"
+    - "&e[任务物品]"
+
+yao_zybj:
+  material: BOOK
+  name: "&b妖族前辈的笔记"
+  lore:
+    - "&7&o华夭交付于你妖族前辈的笔记"
+    - "&7&o上面写着四大导师的方位"
+    - "&7&o由于不敢逗留太久,记录得稍显粗糙"
+    - "&7&o顾镇岳教剑技——皇城东门北侧"
+    - "&7&o余步云授射术——皇城东门北侧"
+    - "&7&o秦观星传术法——南门干道东边四合院"
+    - "&7&o韩济世行医术——凤花楼东边小屋"
+    - "&e[任务物品]"

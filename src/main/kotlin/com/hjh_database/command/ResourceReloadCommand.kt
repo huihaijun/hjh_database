@@ -23,6 +23,7 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             plugin.resourceManager.reload()
             plugin.jianghuXindeManager.reload()
             plugin.jianghuXindeManager.ensureStationBlock()
+            plugin.bgmManager.reload()
             sender.sendMessage(ChatColor.GREEN.toString() + "重载完成！在线玩家的物品已更新。")
             return true
         }

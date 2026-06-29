@@ -164,6 +164,50 @@ waypoints:
       z: 62.5
       yaw: 180.47
       pitch: 7.05
+  west_zhenyaota:
+    region: WEST
+    name: 镇妖塔
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -177.5
+      y: 63.5
+      z: -180.5
+      yaw: 90.0
+      pitch: 0.0
+  west_chendaifu_caoyaowu:
+    region: WEST
+    name: 陈大夫的草药屋
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -132.5
+      y: 45.0
+      z: 140.5
+      yaw: 270.0
+      pitch: 3.0
+  west_hujinzhen:
+    region: WEST
+    name: 虎金镇
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -400.5
+      y: 111.0
+      z: 145.5
+      yaw: 90.0
+      pitch: 1.0
+  west_baihujitan:
+    region: WEST
+    name: 白虎祭坛
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: 2206.5
+      y: 85.0
+      z: -895.5
+      yaw: 0.0
+      pitch: -8.0
   north_huangcheng:
     region: NORTH
     name: 皇城

@@ -164,6 +164,55 @@ enum class StoryNpcs(
         Villager.Profession.NITWIT,
         Villager.Type.TAIGA,
         118.5, 59.5, -23.5, 0f
+    ),
+        YAO_XIAOHUA(
+        "yao_xiaohua",
+        "§a§l新手引导员-小花",
+        Villager.Profession.NONE,
+        Villager.Type.JUNGLE,
+        2849.5, 48.5, 885.5, 0f
+    ),
+    YAO_GUZHU(
+        "yao_guzhu",
+        "§a§l叶灵谷谷主",
+        Villager.Profession.TOOLSMITH,
+        Villager.Type.JUNGLE,
+        2784.5, 53.5, 864.5, 0f
+    ),
+    YAO_XIAOMAN(
+        "yao_xiaoman",
+        "§a§l小蔓",
+        Villager.Profession.NONE,
+        Villager.Type.JUNGLE,
+        2758.5, 51.5, 861.5, 0f
+    ),
+    YAO_TIEJIANGPUZHANGGUI(
+        "yao_tiejiangpuzhanggui",
+        "§a§l铁匠铺掌柜",
+        Villager.Profession.NONE,
+        Villager.Type.JUNGLE,
+        2648.5, 96.5, 862.5, 0f
+    ),
+    YAO_DANYAOPUZHANGGUI(
+        "yao_danyaopuzhanggui",
+        "§a§l丹药铺掌柜",
+        Villager.Profession.NONE,
+        Villager.Type.JUNGLE,
+        2656.5, 89.5, 895.5, 0f
+    ),
+    YAO_HUAYAO(
+        "yao_huayao",
+        "§a§l华夭",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -196.5, 65.5, -172.5, 0f
+    ),
+    YAO_DAZHANGLAO(
+        "yao_dazhanglao",
+        "§a§l妖族大长老-蚩尤",
+        Villager.Profession.LEATHERWORKER,
+        Villager.Type.DESERT,
+        -198.5, 148.5, -176.5, 0f
     );
 
 

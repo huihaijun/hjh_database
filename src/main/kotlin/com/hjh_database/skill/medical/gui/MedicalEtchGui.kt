@@ -9,6 +9,8 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryDragEvent
@@ -16,12 +18,18 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.persistence.PersistentDataType
+import java.io.File
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
     private val manager: MedicalManager = plugin.medicalManager
     private val deleteConfirm: MutableMap<UUID, Long> = HashMap()
+    private val stationFile = File(plugin.dataFolder, "medical_stations.yml")
+    private val stationLocations: MutableSet<String> = HashSet()
 
     // 内部 Holder 类
     class MainMenuHolder : InventoryHolder { override fun getInventory(): Inventory = null!! }
@@ -46,6 +54,10 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
 
     private val etchInteractiveSlots: Set<Int> = HashSet(Arrays.asList(SLOT_ETCH_BANNER, SLOT_ETCH_BOOK, SLOT_ETCH_RESULT))
     private val separateInteractiveSlots: Set<Int> = HashSet(Arrays.asList(SLOT_SEP_INPUT, SLOT_SEP_OUT_BANNER, SLOT_SEP_OUT_BOOK))
+
+    init {
+        loadStationLocations()
+    }
 
     fun openMainMenu(p: Player) {
         val inv = Bukkit.createInventory(MainMenuHolder(), 27, TITLE_MAIN)
@@ -104,12 +116,36 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onBlockInteract(e: PlayerInteractEvent) {
+        if (e.hand != EquipmentSlot.HAND) return
         if (e.action != Action.RIGHT_CLICK_BLOCK) return
         if (e.clickedBlock == null) return
-        if (e.clickedBlock!!.type == Material.END_PORTAL_FRAME) {
-            e.isCancelled = true
-            openMainMenu(e.player)
-            e.player.playSound(e.player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
+        val block = e.clickedBlock!!
+        if (block.type != Material.END_PORTAL_FRAME) return
+        if (!stationLocations.contains(locToString(block.location))) return
+
+        e.isCancelled = true
+        openMainMenu(e.player)
+        e.player.playSound(e.player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
+    }
+
+    @EventHandler
+    fun onStationPlace(e: BlockPlaceEvent) {
+        val item = e.itemInHand
+        if (item.type != Material.END_PORTAL_FRAME || !item.hasItemMeta()) return
+        val hasStationKey = item.itemMeta?.persistentDataContainer
+            ?.has(manager.keyMedicalStation, PersistentDataType.STRING) == true
+        if (!hasStationKey) return
+
+        stationLocations.add(locToString(e.blockPlaced.location))
+        saveStationLocations()
+        e.player.sendMessage("§a成功放置医术绘制台。")
+    }
+
+    @EventHandler
+    fun onStationBreak(e: BlockBreakEvent) {
+        val loc = locToString(e.block.location)
+        if (stationLocations.remove(loc)) {
+            saveStationLocations()
         }
     }
 
@@ -289,5 +325,22 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         if (lore.isNotEmpty()) meta.lore = Arrays.asList(*lore)
         item.itemMeta = meta
         return item
+    }
+
+    private fun loadStationLocations() {
+        if (!stationFile.exists()) return
+        val config = YamlConfiguration.loadConfiguration(stationFile)
+        stationLocations.clear()
+        stationLocations.addAll(config.getStringList("stations"))
+    }
+
+    private fun saveStationLocations() {
+        val config = YamlConfiguration()
+        config.set("stations", stationLocations.toList())
+        config.save(stationFile)
+    }
+
+    private fun locToString(loc: org.bukkit.Location): String {
+        return "${loc.world?.name},${loc.blockX},${loc.blockY},${loc.blockZ}"
     }
 }

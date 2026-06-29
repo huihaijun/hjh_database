@@ -42,7 +42,7 @@ class Ren_08 : QuestBase("main_ren_8", "[人族主线]青龙神庙", QuestType.M
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f再这样下去,结界最终将会完全消失,世界的秩序会崩溃的…",
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f虽然很急,但是我没法离开神庙,也没办法做什么,因为我只是§4§n青龙大人§f的一缕意识罢了",
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f不过所幸§2§o祭坛§f目前还剩下一些能量,足够给通过试炼者青龙的祝福",
-        "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f不过你得知道,§4§n青龙大人§f司掌智慧与灵识,祂的试炼考验的是你对这片天地的了解",
+        "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f不过你得知道,§4§n青龙大人§f司掌智慧与灵识,它的试炼考验的是你对这片天地的了解",
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f或许等得到了祝福,你能感应到§4§n青龙大人§f现在的位置,告诉他结界减弱的危机…",
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f如果还是不行的话,可能就需要其他三§2§o圣兽祭坛§f的帮助了",
         "§e[${StoryNpcs.QINGLONGFENHUN.displayName}§e] §f青龙试炼可以从§2§o神庙的二楼§f雕像进行,希望你能成功通过试炼",

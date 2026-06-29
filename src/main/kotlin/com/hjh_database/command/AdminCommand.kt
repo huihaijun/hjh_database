@@ -52,8 +52,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin level <玩家> [set|add] [数值] - 查看或修改玩家等级")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin job <玩家> <职业> - 设置职业")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin race <玩家> <种族> - 设置种族")
-            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medical <技能ID> - 获取医术秘籍")
-            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getstation - 获取医术绘制台")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medical <技能ID|getstation> - 获取医术秘籍/医术绘制台")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin quest <玩家> <ID> <状态> - 修改任务进度")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gennpc <ID|ALL> - 生成剧情NPC")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin spawn - 生成自定义刷怪笼等")
@@ -69,6 +68,50 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         }
 
         val subCommand = args[0].lowercase()
+
+        if (subCommand == "baihudz") {
+            if (args.size < 2) {
+                sender.sendMessage("§6=== 虎瘴装锻造管理 ===")
+                sender.sendMessage("§e/hjhadmin baihudz station §7- 获取虎瘴锻造台")
+                sender.sendMessage("§e/hjhadmin baihudz reload §7- 重载虎瘴装与配方")
+                sender.sendMessage("§e/hjhadmin baihudz give <weapon|artifact> <id> [数量] §7- 获取虎瘴装")
+                return true
+            }
+
+            when (args[1].lowercase()) {
+                "station" -> {
+                    if (sender !is Player) return error(sender, "只有玩家可以获取虎瘴锻造台。")
+                    val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.DISPENSER)
+                    val meta = item.itemMeta
+                    meta?.setDisplayName("§6§l虎瘴锻造台")
+                    meta?.lore = listOf("§7放置后可锻造白虎洞专属装备", "§6仅支持虎瘴武器与虎瘴法宝")
+                    meta?.persistentDataContainer?.set(plugin.baihuDzManager.stationKey, org.bukkit.persistence.PersistentDataType.STRING, "true")
+                    item.itemMeta = meta
+                    sender.inventory.addItem(item)
+                    sender.sendMessage("§a已获得虎瘴锻造台。")
+                }
+                "reload" -> {
+                    plugin.baihuDzManager.reload()
+                    plugin.baihuWeaponSkillManager.reload()
+                    sender.sendMessage("§a虎瘴装配置与配方已重载。")
+                }
+                "give" -> {
+                    if (sender !is Player) return error(sender, "只有玩家可以获取虎瘴装。")
+                    if (args.size < 4) return error(sender, "用法: /hjhadmin baihudz give <weapon|artifact> <id> [数量]")
+                    val id = args[3].lowercase()
+                    val item = when (args[2].lowercase()) {
+                        "weapon" -> plugin.baihuDzManager.buildWeaponItem(id)
+                        "artifact" -> plugin.baihuDzManager.buildArtifactItem(id)
+                        else -> return error(sender, "类型只能是 weapon 或 artifact。")
+                    } ?: return error(sender, "未找到虎瘴装 ID: $id")
+                    item.amount = args.getOrNull(4)?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    sender.inventory.addItem(item)
+                    sender.sendMessage("§a已获得虎瘴装 $id x${item.amount}。")
+                }
+                else -> return error(sender, "未知虎瘴装子指令。")
+            }
+            return true
+        }
 
         // === kw (开物术管理) ===
         if (subCommand == "kw") {
@@ -116,6 +159,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.playerManager.armorManager.reload()
             plugin.playerManager.crystalManager.reload()
             plugin.weaponSkillManager.reload()
+            plugin.baihuDzManager.reload()
+            plugin.baihuWeaponSkillManager.reload()
             plugin.chonghuaManager.reload()
 
             // 重载 Resource 物品
@@ -182,7 +227,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size < 2) return error(sender, "用法: /hjhadmin <get|give> <物品ID或名字> [数量]")
 
             val itemName = args[1]
-            val item = plugin.resourceManager.getItem(itemName)
+            val item = plugin.resourceManager.getItem(itemName) ?: plugin.baihuDzManager.getItem(itemName)
 
             if (item == null) {
                 return error(sender, "未找到名为 [$itemName] 的物品！请检查 resources 文件夹。")
@@ -211,10 +256,16 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
             val player = sender
 
-            if (args.size < 2) return error(sender, "用法: /hjhadmin medical <技能ID>")
+            if (args.size < 2) return error(sender, "用法: /hjhadmin medical <技能ID|getstation>")
 
             val skillId = args[1]
             if (plugin.medicalManager != null) {
+                if (skillId.equals("getstation", ignoreCase = true) || skillId.equals("station", ignoreCase = true)) {
+                    player.inventory.addItem(plugin.medicalManager.getMedicalStationItem())
+                    player.sendMessage("§a已获取医术绘制台！")
+                    return true
+                }
+
                 val book = plugin.medicalManager.getSkillBook(skillId)
                 if (book != null) {
                     player.inventory.addItem(book)
@@ -228,6 +279,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         if (args.size == 1 && args[0].equals("getstation", ignoreCase = true)) {
             if (plugin.medicalManager != null) {
+                if (sender !is Player) return error(sender, "只有玩家可以使用此命令。")
                 val p = sender as Player
                 p.inventory.addItem(plugin.medicalManager.getMedicalStationItem())
                 p.sendMessage("§a已获取医术绘制台！")
@@ -1009,9 +1061,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         if (args.size == 1) {
             val rootCommands = listOf(
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
-                "medical", "getstation", "quest", "gennpc", "alchemy", "spawner",
+                "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest", "kw"
+                "medicaltest", "kw", "baihudz"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1021,6 +1073,19 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === 2. 二级及以上补全 (根据主指令分支) ===
         when (subCmd) {
+            "baihudz" -> {
+                if (args.size == 2) return listOf("station", "reload", "give").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 3 && args[1].equals("give", true)) {
+                    return listOf("weapon", "artifact").filter { it.startsWith(args[2].lowercase()) }
+                }
+                if (args.size == 4 && args[1].equals("give", true)) {
+                    return when (args[2].lowercase()) {
+                        "weapon" -> plugin.baihuDzManager.weapons.keys.filter { it.startsWith(args[3].lowercase()) }
+                        "artifact" -> plugin.baihuDzManager.artifacts.keys.filter { it.startsWith(args[3].lowercase()) }
+                        else -> emptyList()
+                    }
+                }
+            }
             "kw" -> {
                 if (args.size == 2) {
                     return listOf("list", "reload", "setlevel", "setenergy")
@@ -1096,7 +1161,11 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             "medical" -> {
                 if (args.size == 2 && plugin.medicalManager != null) {
-                    return ArrayList(plugin.medicalManager.getAllSkillIds()).filter { it.startsWith(args[1]) }
+                    val options = ArrayList<String>()
+                    options.add("getstation")
+                    options.add("station")
+                    options.addAll(plugin.medicalManager.getAllSkillIds())
+                    return options.filter { it.startsWith(args[1]) }
                 }
             }
 

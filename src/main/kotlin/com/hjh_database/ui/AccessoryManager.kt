@@ -1,4 +1,4 @@
-package com.hjh_database.ui
+﻿package com.hjh_database.ui
 
 import com.hjh_database.Hjh_database
 import org.bukkit.Bukkit
@@ -20,13 +20,13 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
     private val invKey = NamespacedKey(plugin, "player_accessory_inv")
     val INVENTORY_TITLE = "§8个人饰品栏"
 
-    // 打开饰品栏
+    // 鎵撳紑楗板搧鏍?
     fun openAccessoryMenu(player: Player) {
 
         val inv = Bukkit.createInventory(null, 9, INVENTORY_TITLE)
         val savedBytes = player.persistentDataContainer.get(invKey, PersistentDataType.BYTE_ARRAY)
 
-        // 反序列化读取玩家此前的饰品
+        // 鍙嶅簭鍒楀寲璇诲彇鐜╁姝ゅ墠鐨勯グ鍝?
         if (savedBytes != null) {
             try {
                 BukkitObjectInputStream(ByteArrayInputStream(savedBytes)).use { ois ->
@@ -46,7 +46,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
         if (event.view.title == INVENTORY_TITLE) {
-            // 【修复1】屏蔽副手(按F键)和数字键(按1-9)快捷交换，防止刷物品和二次触发Bug
+            // 銆愪慨澶?銆戝睆钄藉壇鎵?鎸塅閿?鍜屾暟瀛楅敭(鎸?-9)蹇嵎浜ゆ崲锛岄槻姝㈠埛鐗╁搧鍜屼簩娆¤Е鍙態ug
             if (event.click == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND ||
                 event.click == org.bukkit.event.inventory.ClickType.NUMBER_KEY) {
                 event.isCancelled = true
@@ -58,11 +58,25 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
                 if (item != null) {
                     val meta = item.itemMeta
                     val crystalKey = NamespacedKey(plugin, "crystal_id")
+                    val baihuArtifact = plugin.baihuDzManager.getArtifactDataFromItem(item)
+                    if (baihuArtifact != null) {
+                        val slotKey = "accessory_${event.rawSlot}"
+                        if (!plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)) {
+                            event.isCancelled = true
+                            return
+                        }
+                        val isExtract = (clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT)
+                        if (plugin.accessorySkillManager.routeAccessoryClick(player, item, isExtract, plugin.baihuDzManager.toCrystalData(baihuArtifact))) {
+                            plugin.baihuDzManager.consumeDurability(player, item, baihuArtifact)
+                            event.isCancelled = true
+                            return
+                        }
+                    }
                     if (meta != null && meta.persistentDataContainer.has(crystalKey, PersistentDataType.STRING)) {
                         val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING)
                         val cData = plugin.playerManager.crystalManager.loadedCrystals[cid]
 
-                        // 【修改】判断当前点击的槽位，是否在该饰品的激活列表里
+                        // 銆愪慨鏀广€戝垽鏂綋鍓嶇偣鍑荤殑妲戒綅锛屾槸鍚﹀湪璇ラグ鍝佺殑婵€娲诲垪琛ㄩ噷
                         val slotKey = "accessory_${event.rawSlot}"
                         if (cData != null && cData.activations.containsKey(slotKey)) {
 
@@ -75,7 +89,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
                                 }
                             }
 
-                            // 路由接管
+                            // 璺敱鎺ョ
                             val isExtract = (clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT)
                             if (plugin.accessorySkillManager.routeAccessoryClick(player, item, isExtract, cData)) {
                                 event.isCancelled = true
@@ -97,7 +111,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
     fun onInventoryDrag(event: InventoryDragEvent) {
         val player = event.whoClicked as? Player ?: return
 
-        // 兼容玩家右键滑动平摊物品的情况
+        // 鍏煎鐜╁鍙抽敭婊戝姩骞虫憡鐗╁搧鐨勬儏鍐?
         if (event.view.title == INVENTORY_TITLE) {
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 val topInv = event.view.topInventory
@@ -106,7 +120,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // 监听关闭界面，自动保存物品到玩家 PDC
+    // 鐩戝惉鍏抽棴鐣岄潰锛岃嚜鍔ㄤ繚瀛樼墿鍝佸埌鐜╁ PDC
     @EventHandler
     fun onInventoryClose(event: InventoryCloseEvent) {
         val player = event.player as? Player ?: return
@@ -120,11 +134,11 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
                         oos.writeObject(inv.getItem(i))
                     }
                 }
-                // 保存为 Byte Array
+                // 淇濆瓨涓?Byte Array
                 player.persistentDataContainer.set(invKey, PersistentDataType.BYTE_ARRAY, bos.toByteArray())
 
-                // 【重要】关闭饰品栏后触发一次玩家属性刷新
-                // 假设你的 PlayerListener 中有个 public 的刷新方法或者直接调用 plugin.playerManager 刷新
+                // 銆愰噸瑕併€戝叧闂グ鍝佹爮鍚庤Е鍙戜竴娆＄帺瀹跺睘鎬у埛鏂?
+                // 鍋囪浣犵殑 PlayerListener 涓湁涓?public 鐨勫埛鏂版柟娉曟垨鑰呯洿鎺ヨ皟鐢?plugin.playerManager 鍒锋柊
                 plugin.playerManager.updateStats(player)
                 plugin.playerManager.crystalManager.refreshPlayerCrystals(player)
 
@@ -134,7 +148,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
         }
     }
     // ==========================================
-    // 后台读写饰品数据，供技能(如箭袋)在不打开界面时调用
+    // 鍚庡彴璇诲啓楗板搧鏁版嵁锛屼緵鎶€鑳?濡傜琚?鍦ㄤ笉鎵撳紑鐣岄潰鏃惰皟鐢?
     // ==========================================
     fun getAccessoryContents(player: Player): Array<ItemStack?>? {
         val savedBytes = player.persistentDataContainer.get(invKey, PersistentDataType.BYTE_ARRAY) ?: return null
@@ -166,4 +180,9 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
             e.printStackTrace()
         }
     }
+
+    fun clearAccessoryContents(player: Player) {
+        player.persistentDataContainer.remove(invKey)
+    }
 }
+

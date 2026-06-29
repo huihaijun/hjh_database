@@ -28,9 +28,10 @@ class HumanSpeedFeather : FeatherBase {
     )
 
     override fun canUse(player: Player, data: PlayerData): Boolean {
-        // 2. 检查任务
-        if (!data.completedQuests.contains("main_ren_5")) {
-            player.sendMessage("§c[提示] 请先完成前置任务(main_ren_5)，再来使用羽毛")
+        val hasProofQuest = data.completedQuests.contains("main_ren_5") ||
+                data.completedQuests.contains("main_yao_5")
+        if (!hasProofQuest) {
+            player.sendMessage("§c[提示] 请先完成前置任务后，再来使用新芽之羽。")
             return false
         }
         return true

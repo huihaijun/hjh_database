@@ -1,0 +1,53 @@
+artifacts:
+  baihu_huiliuyi:
+    display: "&6虎瘴·回流仪"
+    material: RECOVERY_COMPASS
+    rarity: 4
+    skill_id: huiliuyi
+    req_job: 2
+    req_lv: 20
+    durability:
+      max: 80
+      skill_cost: 2
+    lore:
+      - "&7白虎洞虎瘴浸染的回流法宝。"
+      - "&8===========&6虎瘴属性&8============"
+      - "&e[饰品栏第9格] &f阵法强度 +8"
+      - "&f武器/阵法冷却 -5%"
+      - "&8===========&6虎瘴技能&8============"
+      - "&e[下蹲+右键] &f切换回流状态"
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 8.0
+          cool_reduce: 0.05
+
+  baihu_taolizhi:
+    display: "&6虎瘴·桃李枝"
+    material: BLAZE_ROD
+    rarity: 4
+    skill_id: taolizhi
+    req_job: 3
+    req_lv: 20
+    durability:
+      max: 90
+      skill_cost: 2
+    taolizhi_data:
+      max_storage: 140.0
+      trigger_storage: 24.0
+      cooldown: 3.0
+      range: 10.0
+      zf_multiplier: 1.5
+      storage_multiplier: 0.5
+    lore:
+      - "&7白虎洞虎瘴浸染的医师法宝。"
+      - "&8===========&6虎瘴属性&8============"
+      - "&e[饰品栏第9格] &f阵法强度 +8"
+      - "&f灵力 +20"
+      - "&8===========&6虎瘴技能&8============"
+      - "&f储存溢出治疗: &a{stored}&7/&a{max_storage}"
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 8.0
+          lingli: 20.0

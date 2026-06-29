@@ -81,7 +81,7 @@ skills:
     levels:
       1:
         cooldown: 8.0         # 冷却 6秒
-        damage_percent: 1.0   # 120% 伤害
+        damage_percent: 1.0   # 100% 伤害
         range: 5.0            # 距离 5格
         slow_duration: 3.0    # 减速 3秒
         slow_amplifier: 0     # 减速 I级 (0开始算)

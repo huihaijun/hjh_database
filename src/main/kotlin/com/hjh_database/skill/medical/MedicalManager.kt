@@ -27,6 +27,7 @@ class MedicalManager(private val plugin: Hjh_database) {
 
     val keySkillId: NamespacedKey = NamespacedKey(plugin, "med_skill_id")
     val keyIgnoreRefresh: NamespacedKey = NamespacedKey(plugin, "hjh_ignore_refresh")
+    val keyMedicalStation: NamespacedKey = NamespacedKey(plugin, "hjh_medical_station")
 
     private val loomSessions: MutableMap<UUID, Array<ItemStack?>> = ConcurrentHashMap()
 
@@ -134,6 +135,7 @@ class MedicalManager(private val plugin: Hjh_database) {
         val meta = item.itemMeta!!
         meta.setDisplayName("§b§l医术绘制台")
         meta.lore = Arrays.asList("§7放置后右键点击打开医术界面")
+        meta.persistentDataContainer.set(keyMedicalStation, PersistentDataType.STRING, "true")
         item.itemMeta = meta
         return item
     }

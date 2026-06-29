@@ -119,7 +119,11 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
     private fun hasRequiredPreviousQuest(data: PlayerData, quest: QuestBase, quests: List<QuestBase>): Boolean {
         if (quest.order <= 1) return true
 
-        val prevQuest = quests.find { it.order == quest.order - 1 } ?: return false
+        val prevQuest = quests.find {
+            it.order == quest.order - 1 &&
+                    it.raceLimit == quest.raceLimit
+        } ?: return false
+
         return data.questStatuses[prevQuest.id] == QuestStatus.COMPLETED || data.completedQuests.contains(prevQuest.id)
     }
 

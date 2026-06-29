@@ -14,12 +14,14 @@ import java.util.UUID
 
 class Side_Ren_01 : QuestBase("side_ren_1", "[支线]重华晶的奥秘", QuestType.SIDE, 1) {
 
-    // 只有人族可接
-    override val raceLimit = 2
-
     override fun canAccept(player: Player, data: PlayerData): Boolean {
         return super.canAccept(player, data) &&
-                (data.completedQuests.contains("main_ren_6") || data.questStatuses["main_ren_6"] == QuestStatus.COMPLETED)
+                (
+                        data.completedQuests.contains("main_ren_6") ||
+                                data.questStatuses["main_ren_6"] == QuestStatus.COMPLETED ||
+                                data.completedQuests.contains("main_yao_7") ||
+                                data.questStatuses["main_yao_7"] == QuestStatus.COMPLETED
+                        )
     }
 
     // 任务追踪描述

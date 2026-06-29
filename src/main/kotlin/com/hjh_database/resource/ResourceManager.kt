@@ -1,4 +1,4 @@
-package com.hjh_database.resource
+﻿package com.hjh_database.resource
 
 import com.hjh_database.Hjh_database
 import io.papermc.paper.datacomponent.DataComponentTypes
@@ -21,14 +21,14 @@ import java.util.logging.Level
 
 class ResourceManager(private val plugin: Hjh_database) {
 
-    // 仅存储 resources 文件夹下的杂项物品
+    // 浠呭瓨鍌?resources 鏂囦欢澶逛笅鐨勬潅椤圭墿鍝?
     private val localResources: MutableMap<String, ResourceItem> = HashMap()
 
-    // 全局名称索引 (中文名 -> ID)，包含 武器 + 护甲 + 杂项
+    // 鍏ㄥ眬鍚嶇О绱㈠紩 (涓枃鍚?-> ID)锛屽寘鍚?姝﹀櫒 + 鎶ょ敳 + 鏉傞」
     private val nameIndex: MutableMap<String, String> = HashMap()
 
     private val keyId: NamespacedKey = NamespacedKey(plugin, "resource_id")
-    // 【新增】定义免刷新锁的 Key
+    // 銆愭柊澧炪€戝畾涔夊厤鍒锋柊閿佺殑 Key
     private val keyIgnoreRefresh: NamespacedKey = NamespacedKey(plugin, "hjh_ignore_refresh")
 
     init {
@@ -36,13 +36,13 @@ class ResourceManager(private val plugin: Hjh_database) {
     }
 
     fun reload() {
-        // 先重载另外两个管理器，确保数据最新
+        // 鍏堥噸杞藉彟澶栦袱涓鐞嗗櫒锛岀‘淇濇暟鎹渶鏂?
         plugin.playerManager.weaponManager.reload()
         plugin.playerManager.armorManager.reload()
 
         loadAll()
 
-        // 刷新在线玩家背包
+        // 鍒锋柊鍦ㄧ嚎鐜╁鑳屽寘
         for (p in Bukkit.getOnlinePlayers()) {
             refreshInventory(p.inventory)
         }
@@ -52,17 +52,17 @@ class ResourceManager(private val plugin: Hjh_database) {
         localResources.clear()
         nameIndex.clear()
 
-        // 1. 加载 resources 文件夹下的杂项 (非 RPG 武器/护甲)
+        // 1. 鍔犺浇 resources 鏂囦欢澶逛笅鐨勬潅椤?(闈?RPG 姝﹀櫒/鎶ょ敳)
         loadLocalResources()
 
-        // 2. 索引 WeaponManager 的物品
+        // 2. 绱㈠紩 WeaponManager 鐨勭墿鍝?
         val wm = plugin.playerManager.weaponManager
         for (id in wm.allIds) {
             val name = wm.getNameById(id)
             if (name != null) nameIndex[name] = id
         }
 
-        // 3. 索引 ArmorManager 的物品
+        // 3. 绱㈠紩 ArmorManager 鐨勭墿鍝?
         val am = plugin.playerManager.armorManager
         for (id in am.allIds) {
             val name = am.getNameById(id)
@@ -78,7 +78,7 @@ class ResourceManager(private val plugin: Hjh_database) {
             folder.mkdirs()
         }
 
-        // Kotlin Lambda 写法
+        // Kotlin Lambda 鍐欐硶
         val files = folder.listFiles { _, name -> name.endsWith(".yml") }
         if (files == null) return
 
@@ -88,58 +88,62 @@ class ResourceManager(private val plugin: Hjh_database) {
                 try {
                     val sec = config.getConfigurationSection(key) ?: continue
 
-                    // 构建 ResourceItem 对象 (仅作为数据容器)
+                    // 鏋勫缓 ResourceItem 瀵硅薄 (浠呬綔涓烘暟鎹鍣?
                     val item = ResourceItem(key, sec)
                     localResources[key] = item
 
-                    // 添加到名称索引
+                    // 娣诲姞鍒板悕绉扮储寮?
                     val strippedName = ChatColor.stripColor(item.name)
                     if (strippedName != null) {
                         nameIndex[strippedName] = key
                     }
 
                 } catch (e: Exception) {
-                    plugin.logger.log(Level.WARNING, "加载资源物品 $key 失败", e)
+                    plugin.logger.log(Level.WARNING, "鍔犺浇璧勬簮鐗╁搧 $key 澶辫触", e)
                 }
             }
         }
     }
 
     /**
-     * 【核心】获取物品
-     * 优先级：WeaponManager -> ArmorManager -> LocalResources
+     * 銆愭牳蹇冦€戣幏鍙栫墿鍝?
+     * 浼樺厛绾э細WeaponManager -> ArmorManager -> LocalResources
      */
     fun getItem(idOrName: String): ItemStack? {
-        // 1. 如果是中文名，先转成 ID
+        // 1. 濡傛灉鏄腑鏂囧悕锛屽厛杞垚 ID
         var id = idOrName
         if (nameIndex.containsKey(idOrName)) {
-            // !! 是安全的，因为上面检查了 containsKey
+            // !! 鏄畨鍏ㄧ殑锛屽洜涓轰笂闈㈡鏌ヤ簡 containsKey
             id = nameIndex[idOrName]!!
         } else {
-            // 尝试检查是否是ID (如果不在nameIndex里，可能是因为ID和Name不匹配，或者是直接输入的ID)
-            // 这里不做处理，直接用输入的字符串当ID去查
+            // 灏濊瘯妫€鏌ユ槸鍚︽槸ID (濡傛灉涓嶅湪nameIndex閲岋紝鍙兘鏄洜涓篒D鍜孨ame涓嶅尮閰嶏紝鎴栬€呮槸鐩存帴杈撳叆鐨処D)
+            // 杩欓噷涓嶅仛澶勭悊锛岀洿鎺ョ敤杈撳叆鐨勫瓧绗︿覆褰揑D鍘绘煡
         }
 
-        // 2. 尝试从 WeaponManager 获取 (自带 RPG 属性)
+        // 2. 灏濊瘯浠?WeaponManager 鑾峰彇 (鑷甫 RPG 灞炴€?
         val wm = plugin.playerManager.weaponManager
         if (wm.allIds.contains(id)) {
             return wm.getItemStack(id)
         }
 
-        // 3. 尝试从 ArmorManager 获取 (自带 RPG 属性)
+        // 3. 灏濊瘯浠?ArmorManager 鑾峰彇 (鑷甫 RPG 灞炴€?
         val am = plugin.playerManager.armorManager
         if (am.allIds.contains(id)) {
             return am.getItemStack(id)
         }
 
-        // 4. 尝试从 CrystalManager 获取结晶
+        // 4. 灏濊瘯浠?CrystalManager 鑾峰彇缁撴櫠
         val cm = plugin.playerManager.crystalManager
         if (cm.allIds.contains(id)) {
-            // 调用 CrystalManager 中的 buildItem 方法生成结晶
+            // 璋冪敤 CrystalManager 涓殑 buildItem 鏂规硶鐢熸垚缁撴櫠
             return cm.buildItem(id)
         }
 
-        // 5. 尝试从 LocalResources 获取 (杂项)
+        if (plugin.isBaihuDzManagerInitialized()) {
+            plugin.baihuDzManager.getItem(id)?.let { return it }
+        }
+
+        // 5. 灏濊瘯浠?LocalResources 鑾峰彇 (鏉傞」)
         val res = localResources[id]
         if (res != null) {
             return buildLocalItem(res)
@@ -149,43 +153,43 @@ class ResourceManager(private val plugin: Hjh_database) {
     }
 
     /**
-     * 【新增】获取物品的原始数据对象 (用于炼丹系统读取 yml 中的等级、药毒等配置)
+     * 銆愭柊澧炪€戣幏鍙栫墿鍝佺殑鍘熷鏁版嵁瀵硅薄 (鐢ㄤ簬鐐间腹绯荤粺璇诲彇 yml 涓殑绛夌骇銆佽嵂姣掔瓑閰嶇疆)
      */
     fun getLocalResource(id: String): ResourceItem? {
         return localResources[id]
     }
 
     /**
-     * 刷新已有物品 (用于 ResourceListener)
+     * 鍒锋柊宸叉湁鐗╁搧 (鐢ㄤ簬 ResourceListener)
      */
     fun refreshItem(item: ItemStack?): Boolean {
         if (item == null || item.type == Material.AIR || !item.hasItemMeta()) return false
         val meta = item.itemMeta ?: return false
 
-        // 检查是否是本插件的自定义物品
+        // 妫€鏌ユ槸鍚︽槸鏈彃浠剁殑鑷畾涔夌墿鍝?
         if (!meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) return false
         val id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING) ?: return false
 
         // ==========================================================================
-        // 【核心修改：智能刷新】先提取可能存在的医术 ID，不直接拦截！
+        // 銆愭牳蹇冧慨鏀癸細鏅鸿兘鍒锋柊銆戝厛鎻愬彇鍙兘瀛樺湪鐨勫尰鏈?ID锛屼笉鐩存帴鎷︽埅锛?
         val keySkillId = NamespacedKey(plugin, "med_skill_id")
         val skillId = meta.persistentDataContainer.get(keySkillId, PersistentDataType.STRING)
         // ==========================================================================
 
         var isRefreshed = false
 
-        // --- 逻辑分支 (接受 YML 最新配置覆盖) ---
-        // A. 如果是武器
+        // --- 閫昏緫鍒嗘敮 (鎺ュ彈 YML 鏈€鏂伴厤缃鐩? ---
+        // A. 濡傛灉鏄鍣?
         val wm = plugin.playerManager.weaponManager
         if (wm.allIds.contains(id)) {
             val newItem = wm.getItemStack(id)
             if (newItem != null) {
                 item.type = newItem.type
-                item.itemMeta = newItem.itemMeta // 这里会覆盖成 YML 最新版，但原本的 NBT 和图案会丢失！
+                item.itemMeta = newItem.itemMeta // 杩欓噷浼氳鐩栨垚 YML 鏈€鏂扮増锛屼絾鍘熸湰鐨?NBT 鍜屽浘妗堜細涓㈠け锛?
                 isRefreshed = true
             }
         }
-        // B. 如果是护甲
+        // B. 濡傛灉鏄姢鐢?
         else if (plugin.playerManager.armorManager.allIds.contains(id)) {
             val newItem = plugin.playerManager.armorManager.getItemStack(id)
             if (newItem != null) {
@@ -194,16 +198,16 @@ class ResourceManager(private val plugin: Hjh_database) {
                 isRefreshed = true
             }
         }
-        // C. 如果是杂项
+        // C. 濡傛灉鏄潅椤?
         else {
             val res = localResources[id]
             if (res != null) {
                 if (item.type != res.material) item.type = res.material
-                // 【新增】刷新时同步堆叠组件
+                // 銆愭柊澧炪€戝埛鏂版椂鍚屾鍫嗗彔缁勪欢
                 if (res.maxStackSize != null) {
                     item.setData(DataComponentTypes.MAX_STACK_SIZE, res.maxStackSize.coerceIn(1, 99))
                 } else {
-                    // 如果配置里删掉了，就移除该组件恢复原版默认
+                    // 濡傛灉閰嶇疆閲屽垹鎺変簡锛屽氨绉婚櫎璇ョ粍浠舵仮澶嶅師鐗堥粯璁?
                     item.resetData(DataComponentTypes.MAX_STACK_SIZE)
                 }
                 val newMeta = item.itemMeta!!
@@ -215,9 +219,9 @@ class ResourceManager(private val plugin: Hjh_database) {
         }
 
         // ==========================================================================
-        // 【重塑医旗】如果物品刷新成功，且它原本是一把刻有医术的旗帜
+        // 銆愰噸濉戝尰鏃椼€戝鏋滅墿鍝佸埛鏂版垚鍔燂紝涓斿畠鍘熸湰鏄竴鎶婂埢鏈夊尰鏈殑鏃楀笢
         if (isRefreshed && skillId != null) {
-            // 调用 MedicalManager 把医术独有的属性重新“拼”上去！
+            // 璋冪敤 MedicalManager 鎶婂尰鏈嫭鏈夌殑灞炴€ч噸鏂扳€滄嫾鈥濅笂鍘伙紒
             plugin.medicalManager.rebuildEtchedBanner(item, skillId)
         }
         // ==========================================================================
@@ -225,13 +229,13 @@ class ResourceManager(private val plugin: Hjh_database) {
         return isRefreshed
     }
 
-    // 构建杂项物品
+    // 鏋勫缓鏉傞」鐗╁搧
     private fun buildLocalItem(res: ResourceItem): ItemStack {
         val item = ItemStack(res.material)
 
-        // 【新增】设置最大堆叠数量组件
+        // 銆愭柊澧炪€戣缃渶澶у爢鍙犳暟閲忕粍浠?
         res.maxStackSize?.let { size ->
-            // 确保数值在 1-99 之间（Minecraft 限制）
+            // 纭繚鏁板€煎湪 1-99 涔嬮棿锛圡inecraft 闄愬埗锛?
             val validatedSize = size.coerceIn(1, 99)
             item.setData(DataComponentTypes.MAX_STACK_SIZE, validatedSize)
         }
@@ -280,7 +284,7 @@ class ResourceManager(private val plugin: Hjh_database) {
                     val rgb = cleanHex.toInt(16)
                     meta.color = Color.fromRGB(rgb)
                 } catch (e: Exception) {
-                    plugin.logger.warning("物品 ${res.id} 的颜色配置错误: ${res.colorHex}")
+                    plugin.logger.warning("鐗╁搧 ${res.id} 鐨勯鑹查厤缃敊璇? ${res.colorHex}")
                 }
             }
         }
@@ -294,12 +298,17 @@ class ResourceManager(private val plugin: Hjh_database) {
 
     fun getAllItemNames(): List<String> {
         val list: MutableList<String> = ArrayList()
-        list.addAll(nameIndex.keys) // 中文名
-        list.addAll(localResources.keys) // 杂项ID
-        list.addAll(plugin.playerManager.weaponManager.allIds) // 武器ID
-        list.addAll(plugin.playerManager.armorManager.allIds) // 护甲ID
+        list.addAll(nameIndex.keys) // 涓枃鍚?
+        list.addAll(localResources.keys) // 鏉傞」ID
+        list.addAll(plugin.playerManager.weaponManager.allIds) // 姝﹀櫒ID
+        list.addAll(plugin.playerManager.armorManager.allIds) // 鎶ょ敳ID
         list.addAll(plugin.playerManager.crystalManager.allIds)
+        if (plugin.isBaihuDzManagerInitialized()) {
+            list.addAll(plugin.baihuDzManager.weapons.keys)
+            list.addAll(plugin.baihuDzManager.artifacts.keys)
+        }
         return list
     }
 
 }
+

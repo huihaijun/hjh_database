@@ -4,6 +4,10 @@ import com.hjh_database.accessory.AccessorySkillManager
 import com.hjh_database.accessory.skill.quiver.JiandaiSkill
 import com.hjh_database.alchemy.listener.AlchemyListener
 import com.hjh_database.alchemy.manager.AlchemyManager
+import com.hjh_database.baihu_dz.BaihuDzManager
+import com.hjh_database.baihu_dz.BaihuDzStationListener
+import com.hjh_database.baihu_dz.BaihuWeaponSkillListener
+import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.chonghua.ChonghuaManager
 import com.hjh_database.command.AdminCommand
 import com.hjh_database.command.ResourceReloadCommand
@@ -23,6 +27,7 @@ import com.hjh_database.listener.CombatListener
 import com.hjh_database.listener.MenuListener
 import com.hjh_database.ui.TianjiUtilityMenus
 import com.hjh_database.listener.PlayerListener
+import com.hjh_database.rebirth.RebirthListener
 import com.hjh_database.resource.ResourceListener
 import com.hjh_database.resource.ResourceManager
 import com.hjh_database.skill.element_zf.ElementZfManager
@@ -38,6 +43,7 @@ import com.hjh_database.quest.core.QuestManager
 import com.hjh_database.quest.gui.QuestGui
 import com.hjh_database.skill.element_zf.gui.ElementZfGui
 import com.hjh_database.spawner.SpawnerBlockManager
+import com.hjh_database.spawner.BaihuMiasmaManager
 import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
 import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
@@ -72,7 +78,11 @@ class Hjh_database : JavaPlugin() {
     lateinit var alchemyManager: AlchemyManager
     lateinit var raceModule: com.hjh_database.race.RaceManager
     lateinit var spawnerBlockManager: SpawnerBlockManager
+    lateinit var baihuMiasmaManager: BaihuMiasmaManager
+    lateinit var baihuDzManager: BaihuDzManager
+    lateinit var baihuWeaponSkillManager: BaihuWeaponSkillManager
     lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
+    lateinit var bgmManager: com.hjh_database.bgm.BgmManager
     lateinit var jobTrialManager: JobTrialManager
     lateinit var elementZfGui: ElementZfGui
     lateinit var chonghuaManager: ChonghuaManager
@@ -89,6 +99,10 @@ class Hjh_database : JavaPlugin() {
 
     lateinit var elementCrystalManager: ElementCrystalManager
     lateinit var elementCrystalGui: ElementCrystalGui
+
+    fun isBaihuDzManagerInitialized(): Boolean {
+        return this::baihuDzManager.isInitialized
+    }
 
     override fun onEnable() {
         instance = this
@@ -114,7 +128,11 @@ class Hjh_database : JavaPlugin() {
         this.questManager = QuestManager(this)
         this.raceModule = com.hjh_database.race.RaceManager(this)
         this.spawnerBlockManager = SpawnerBlockManager(this)
+        this.baihuMiasmaManager = BaihuMiasmaManager(this)
+        this.baihuDzManager = BaihuDzManager(this)
+        this.baihuWeaponSkillManager = BaihuWeaponSkillManager(this)
         this.teleportManager = com.hjh_database.teleport.TeleportManager(this)
+        this.bgmManager = com.hjh_database.bgm.BgmManager(this)
         this.jobTrialManager = JobTrialManager(this)
 
         // 重华晶系统初始化
@@ -171,15 +189,21 @@ class Hjh_database : JavaPlugin() {
         // 第三阶段：注册所有事件监听器 (Listeners)
         // ==========================================
         val pm = server.pluginManager
+        val rebirthListener = RebirthListener(this)
+        rebirthListener.initAltar()
 
         // 1. 基础系统监听
         pm.registerEvents(PlayerListener(this), this)
+        pm.registerEvents(rebirthListener, this)
         pm.registerEvents(CombatListener(this), this)
         pm.registerEvents(MenuListener(this), this) // 依赖 questGui，放在后面注册合理
         pm.registerEvents(ResourceListener(this), this)
         pm.registerEvents(StationListener(this), this)
+        pm.registerEvents(BaihuDzStationListener(this), this)
+        pm.registerEvents(BaihuWeaponSkillListener(this), this)
         pm.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
+        pm.registerEvents(this.baihuMiasmaManager, this)
         pm.registerEvents(com.hjh_database.npc.listener.NpcInteractListener(this), this)
         pm.registerEvents(com.hjh_database.listener.TestDummySignListener(this), this)
 
@@ -212,6 +236,8 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseGuiListener(this), this)
         // 【新增】医术试炼监听
         pm.registerEvents(this.medicalTrialManager, this)
+
+        this.baihuMiasmaManager.start()
 
 
         // ==========================================
@@ -290,6 +316,14 @@ class Hjh_database : JavaPlugin() {
 
         if (::playerManager.isInitialized) {
             playerManager.saveAllOnline()
+        }
+
+        if (::baihuMiasmaManager.isInitialized) {
+            baihuMiasmaManager.shutdown()
+        }
+
+        if (::bgmManager.isInitialized) {
+            bgmManager.shutdown()
         }
 
         if (::elementCrystalManager.isInitialized) {

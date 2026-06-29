@@ -126,6 +126,7 @@ class WeaponManager(private val plugin: Hjh_database) {
             if (item == null || !item.hasItemMeta()) continue
 
             val meta = item.itemMeta ?: continue
+            if (meta.persistentDataContainer.has(NamespacedKey(plugin, "baihu_weapon_id"), PersistentDataType.STRING)) continue
 
             // 检查是否是武器 (优先检查 weapon_id，兼容 resource_id)
             var id = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
@@ -292,6 +293,7 @@ class WeaponManager(private val plugin: Hjh_database) {
 
             // 获取ID (优先 weapon_id，其次 resource_id)
             val meta = item.itemMeta ?: continue
+            if (meta.persistentDataContainer.has(NamespacedKey(plugin, "baihu_weapon_id"), PersistentDataType.STRING)) continue
             var id = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
             if (id == null) id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING)
             if (id == null) continue

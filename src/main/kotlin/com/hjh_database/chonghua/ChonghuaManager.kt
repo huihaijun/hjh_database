@@ -210,8 +210,12 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         add("feiqicunzhuang", "SOUTH", "废弃村庄", 335.5, 50.5, 781.5, 591.77f, -2.25f)
         add("zhuquejitan", "SOUTH", "朱雀祭坛", 3233.5, 148.5, -799.5, -90.13f, -3.60f)
 
-        // --- 西方 (暂未给坐标，先只放皇城) ---
+        // --- 西方 ---
         add("west_huangcheng", "WEST", "皇城", 179.5, 42.5, 62.5, 180.47f, 7.05f) // 西区皇城
+        add("west_zhenyaota", "WEST", "镇妖塔", -177.5, 63.5, -180.5, 90.0f, 0.0f)
+        add("west_chendaifu_caoyaowu", "WEST", "陈大夫的草药屋", -132.5, 45.0, 140.5, 270.0f, 3.0f)
+        add("west_hujinzhen", "WEST", "虎金镇", -400.5, 111.0, 145.5, 90.0f, 1.0f)
+        add("west_baihujitan", "WEST", "白虎祭坛", 2206.5, 85.0, -895.5, 0.0f, -8.0f)
 
         // --- 北方 (暂未给坐标，先只放皇城) ---
         add("north_huangcheng", "NORTH", "皇城", 179.5, 42.5, 62.5, 180.47f, 7.05f) // 北区皇城

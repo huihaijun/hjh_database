@@ -1,0 +1,90 @@
+enabled: true
+check-interval-ticks: 20
+
+# Sound ids are resource-pack sound events.
+# If your 1.21.3 pack uses another namespace, change panling: to that namespace here.
+areas:
+  middle:
+    sound: "panling:bgm_middle"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 175.0
+      y: 128.0
+      z: -63.0
+    radius: 320.0
+    volume: 19.0
+    pitch: 1.0
+    loop-ticks: 2400
+  ren:
+    sound: "panling:bgm_ren"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 1711.0
+      y: 128.0
+      z: 159.0
+    radius: 208.0
+    volume: 13.0
+    pitch: 1.0
+    loop-ticks: 2900
+  xian:
+    sound: "panling:bgm_xian"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 3247.0
+      y: 128.0
+      z: 911.0
+    radius: 256.0
+    volume: 16.0
+    pitch: 1.0
+    loop-ticks: 1360
+  shen:
+    sound: "panling:bgm_shen"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 3247.0
+      y: 128.0
+      z: 287.0
+    radius: 208.0
+    volume: 13.0
+    pitch: 1.0
+    loop-ticks: 1340
+  yao:
+    sound: "panling:bgm_yao"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 2735.0
+      y: 128.0
+      z: 927.0
+    radius: 208.0
+    volume: 13.0
+    pitch: 1.0
+    loop-ticks: 1800
+  zhan:
+    sound: "panling:bgm_zhan"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 3247.0
+      y: 128.0
+      z: -224.0
+    radius: 208.0
+    volume: 13.0
+    pitch: 1.0
+    loop-ticks: 2360
+  penglai:
+    sound: "panling:bgm_penglai"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 354.0
+      y: 128.0
+      z: -689.0
+    radius: 160.0
+    volume: 9.0
+    pitch: 1.0
+    loop-ticks: 2400

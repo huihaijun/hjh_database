@@ -2,6 +2,7 @@ package com.hjh_database.kaiwu
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.race.impl.YaoRace
 import org.bukkit.*
 import org.bukkit.boss.BarColor
 import org.bukkit.boss.BarStyle
@@ -14,6 +15,7 @@ import java.io.File
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 class KaiWuManager(private val plugin: Hjh_database) {
@@ -189,8 +191,10 @@ class KaiWuManager(private val plugin: Hjh_database) {
         var timeMult = 1.0
         var energyMult = 1.0
         var yieldMult = 1.0
+        val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
+        val ignoresDepletedPenalty = yaoRace?.ignoresDepletedPenalty(player) == true
 
-        if (isDepleted) {
+        if (isDepleted && !ignoresDepletedPenalty) {
             timeMult = config.getDouble("mining.depleted_time_multiplier", 2.0)
             energyMult = config.getDouble("mining.depleted_energy_multiplier", 1.5)
             yieldMult = config.getDouble("mining.depleted_yield_ratio", 0.5)
@@ -203,7 +207,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
         }
 
         val finalEnergyCost = node.energyCost * energyMult
-        val finalTime = node.timeSeconds * timeMult
+        val finalTime = node.timeSeconds * timeMult * (yaoRace?.getKaiwuMiningTimeMultiplier(player) ?: 1.0)
 
         // 修复3: 空安全处理
         if ((data.kaiwuEnergy ?: 0.0) < finalEnergyCost) {
@@ -338,9 +342,11 @@ class KaiWuManager(private val plugin: Hjh_database) {
         object : BukkitRunnable() {
             override fun run() {
                 if (!config.getBoolean("visual.enabled", true)) return
-                val range = config.getDouble("visual.default_range", 10.0)
+                val baseRange = config.getDouble("visual.default_range", 10.0)
+                val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
                 for (p in Bukkit.getOnlinePlayers()) {
                     try {
+                        val range = yaoRace?.getKaiwuSenseRange(p, baseRange) ?: baseRange
                         highlightNodes(p, range)
                     } catch (ignored: Exception) {
                     }
@@ -366,8 +372,9 @@ class KaiWuManager(private val plugin: Hjh_database) {
         val now = System.currentTimeMillis()
         val particleCount = config.getInt("visual.particle_count", 3)
 
-        for (cx in pChunkX - 1..pChunkX + 1) {
-            for (cz in pChunkZ - 1..pChunkZ + 1) {
+        val chunkRadius = ceil(range / 16.0).toInt().coerceAtLeast(1)
+        for (cx in pChunkX - chunkRadius..pChunkX + chunkRadius) {
+            for (cz in pChunkZ - chunkRadius..pChunkZ + chunkRadius) {
                 val chunkKey = "$worldName,$cx,$cz"
                 val nodes = chunkNodeMap[chunkKey] ?: continue
 
@@ -470,10 +477,19 @@ class KaiWuManager(private val plugin: Hjh_database) {
             return 0L
         }
 
-        val deadline = now + config.getInt("energy.regen_interval_min", 10).coerceAtLeast(1) * 60_000L
+        val deadline = now + getEnergyRegenIntervalMillis(data)
         data.nodeCoolDowns[energyRecoveryKey] = deadline
         plugin.databaseManager.queuePlayerSave(data)
         return deadline - now
+    }
+
+    private fun getEnergyRegenIntervalMillis(data: PlayerData): Long {
+        val baseMillis = config.getInt("energy.regen_interval_min", 10).coerceAtLeast(1) * 60_000L
+        return if (YaoRace.isNatureSpiritActive(data)) {
+            (baseMillis * 0.8).toLong().coerceAtLeast(1L)
+        } else {
+            baseMillis
+        }
     }
 
     fun removeNode(p: Player?, locKey: String) {

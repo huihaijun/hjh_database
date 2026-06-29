@@ -14,6 +14,15 @@ import com.hjh_database.quest.impl.main.south.South_02
 import com.hjh_database.quest.impl.main.south.South_03
 import com.hjh_database.quest.impl.main.south.South_04
 import com.hjh_database.quest.impl.main.south.South_05
+import com.hjh_database.quest.impl.main.yao.Yao_01
+import com.hjh_database.quest.impl.main.yao.Yao_02
+import com.hjh_database.quest.impl.main.yao.Yao_03
+import com.hjh_database.quest.impl.main.yao.Yao_04
+import com.hjh_database.quest.impl.main.yao.Yao_05
+import com.hjh_database.quest.impl.main.yao.Yao_06
+import com.hjh_database.quest.impl.main.yao.Yao_07
+import com.hjh_database.quest.impl.main.yao.Yao_08
+import com.hjh_database.quest.impl.main.yao.Yao_09
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
 import com.hjh_database.quest.impl.side.Side_Tianjige_Rumor
@@ -44,6 +53,16 @@ object QuestRegistry {
 //        manager.register(South_06())
 
 
+        // === 妖族主线 ===
+        manager.register(Yao_01())
+        manager.register(Yao_02())
+        manager.register(Yao_03())
+        manager.register(Yao_04())
+        manager.register(Yao_05())
+        manager.register(Yao_06())
+        manager.register(Yao_07())
+        manager.register(Yao_08())
+        manager.register(Yao_09())
 
         // === 仙族主线 ===
         // manager.register(Xian_01_Begin())

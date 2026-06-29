@@ -77,6 +77,13 @@ class WarehouseManager(private val plugin: Hjh_database) {
         return cache.values.toList()
     }
 
+    fun resetCachedData(player: Player): WarehouseData {
+        val data = WarehouseData(player.uniqueId, player.name)
+        cache[player.uniqueId] = data
+        renamingPlayers.remove(player.uniqueId)
+        return data
+    }
+
     /**
      * 打开主菜单
      */

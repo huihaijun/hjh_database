@@ -81,6 +81,16 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    fun resetPlayerData(player: Player): ElementCrystalData {
+        val data = ElementCrystalData(player.uniqueId, player.name)
+        cache[player.uniqueId] = data
+        warriorMastery.cleanup(player.uniqueId)
+        archerMastery.cleanup(player.uniqueId)
+        warlockMastery.cleanup(player.uniqueId)
+        medicalMastery.cleanup(player.uniqueId)
+        return data
+    }
+
     fun getStats(data: ElementCrystalData): Map<String, Double> {
         val stats = mutableMapOf<String, Double>()
         if (data.goldPoints > 0) stats["power"] = data.goldPoints * 1.5

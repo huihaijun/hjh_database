@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType
 
 class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
     private val weaponKey: NamespacedKey = NamespacedKey(plugin, "weapon_id")
+    private val baihuWeaponKey: NamespacedKey = NamespacedKey(plugin, "baihu_weapon_id")
 
     // 战士触发
     @EventHandler
@@ -25,9 +26,11 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
 
         val item = event.item
         if (item == null || !item.hasItemMeta()) return
+        if (isBaihuWeapon(item)) return
 
         val weaponId = getWeaponId(item)
         if (weaponId == null) return
+        if (plugin.baihuDzManager.isBaihuWeaponSkillId(weaponId)) return
 
         val typeName = item.type.toString()
         if (typeName.contains("SWORD") || typeName.contains("AXE")) {
@@ -49,9 +52,11 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
 
         val bow = event.bow
         if (bow == null || !bow.hasItemMeta()) return
+        if (isBaihuWeapon(bow)) return
 
         val weaponId = getWeaponId(bow)
         if (weaponId == null) return
+        if (plugin.baihuDzManager.isBaihuWeaponSkillId(weaponId)) return
 
         // 【关键】传入射出的箭矢 (event.getProjectile())
         // 使用 !! 断言 manager 非空
@@ -69,8 +74,10 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
 
         val item = player.inventory.itemInMainHand
         if (!item.hasItemMeta()) return
+        if (isBaihuWeapon(item)) return
 
         val weaponId = getWeaponId(item) ?: return
+        if (plugin.baihuDzManager.isBaihuWeaponSkillId(weaponId)) return
 
         // ==========================================
         // 【核心安全过滤】近战特化弓白名单
@@ -92,5 +99,10 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
         val meta = item.itemMeta
         if (meta == null) return null
         return meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
+    }
+
+    private fun isBaihuWeapon(item: ItemStack): Boolean {
+        val meta = item.itemMeta ?: return false
+        return meta.persistentDataContainer.has(baihuWeaponKey, PersistentDataType.STRING)
     }
 }

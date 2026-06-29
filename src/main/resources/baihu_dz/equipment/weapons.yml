@@ -1,0 +1,77 @@
+weapons:
+  baihu_kaishandao:
+    display: "&6虎瘴·开山刀"
+    material: IRON_AXE
+    rarity: 4
+    skill_id: kaishandao
+    req_job: 0
+    req_lv: 20
+    activate_slot: 0
+    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
+    durability:
+      max: 120
+      skill_cost: 3
+    lore:
+      - "&7白虎洞虎瘴浸染的山刀。"
+      - "&8===========&6虎瘴属性&8============"
+      - "&f近战强度 +10"
+      - "&f速度 +5%"
+      - "&8===========&6虎瘴技能&8============"
+      - "&e[主动] &f复用开山刀技能"
+    stats:
+      attack: 10.0
+      speed_percent: 0.05
+
+  baihu_honglingnu:
+    display: "&6虎瘴·红翎弩"
+    material: CROSSBOW
+    rarity: 4
+    skill_id: honglingnu
+    req_job: 1
+    req_lv: 20
+    activate_slot: 0
+    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
+    durability:
+      max: 100
+      skill_cost: 2
+    lore:
+      - "&7白虎洞虎瘴浸染的弩机。"
+      - "&8===========&6虎瘴属性&8============"
+      - "&f箭矢强度 +9"
+      - "&f暴击率 +5%"
+      - "&8===========&6虎瘴技能&8============"
+      - "&e[主动] &f复用红翎弩技能"
+    stats:
+      archer_damage: 9.0
+      crit_chance: 0.05
+
+  ciguheiren:
+    display: "&7刺骨黑刃[虎瘴]"
+    material: STONE_AXE
+    rarity: 4
+    skill_id: ciguheiren
+    req_job: 0
+    req_lv: 25
+    activate_slot: 0
+    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
+    durability:
+      max: 100
+      skill_cost: 5
+    lore:
+      - "&6限制职业:[战] 限制等级:&b25"
+      - "&7&o被虎瘴侵染的长柄刺刃"
+      - "&7&o能够穿透心脏,吸取魔物身上的瘴气"
+      - "&8===========&2&n&l武器属性&8============"
+      - "&f近战强度 +13 攻击速度 2.0"
+      - "&f耐久度 100"
+      - "&7[虎瘴] &c最大生命 -10% &c移动速度 -8%"
+      - "&8===========&2&n&l武器技能&8============"
+      - "&e[主动] &7[开锋]"
+      - "&e[下蹲+右键] &f冷却:&b5&f秒 &f耐久损耗:&b5&f点"
+      - "&f横扫前方&b4&f格范围内的怪物,造成&b220%🗡&f的伤害"
+      - "&f在&b3&f内可以再次使用,向前方&b冲刺5格"
+      - "&f对路径上的怪物造成&b220%🗡&f的伤害"
+    stats:
+      attack: 13.0
+      speed_percent: -0.08
+      max_health_percent: -0.10

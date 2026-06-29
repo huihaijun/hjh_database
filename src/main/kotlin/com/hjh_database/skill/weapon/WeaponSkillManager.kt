@@ -2,15 +2,16 @@ package com.hjh_database.skill.weapon
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.skill.weapon.job_0.baihuajianSkill
 import com.hjh_database.skill.weapon.job_0.chitongjianSkill
 import com.hjh_database.skill.weapon.job_0.jutongzhanchuiSkill
 import com.hjh_database.skill.weapon.job_0.kaishandaoSkill
 import com.hjh_database.skill.weapon.job_0.kunlunfeixianjianSkill
 import com.hjh_database.skill.weapon.job_0.pokongfuSkill
-import com.hjh_database.skill.weapon.job_0.taomujianSkill
 import com.hjh_database.skill.weapon.job_0.qintongjianSkill
 import com.hjh_database.skill.weapon.job_0.sanbaoyuruyiSkill
 import com.hjh_database.skill.weapon.job_0.taijijianSkill
+import com.hjh_database.skill.weapon.job_0.taomujianSkill
 import com.hjh_database.skill.weapon.job_1.NoviceBowSkill
 import com.hjh_database.skill.weapon.job_1.beidoumieshengongSkill
 import com.hjh_database.skill.weapon.job_1.heitienuSkill
@@ -22,7 +23,6 @@ import com.hjh_database.skill.weapon.job_1.tengmugongSkill
 import com.hjh_database.skill.weapon.job_1.tingchaoSkill
 import com.hjh_database.skill.weapon.job_1.yantiegongSkill
 import com.hjh_database.skill.weapon.job_1.zhongchuigongSkill
-import com.hjh_database.skill.weapon.job_0.baihuajianSkill
 import com.hjh_database.skill.weapon.job_1.zhuiyueSkill
 import com.hjh_database.weapon.WeaponManager
 import net.md_5.bungee.api.ChatMessageType
@@ -35,9 +35,9 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
 import java.io.File
-import java.util.HashMap
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -45,17 +45,18 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private val skillConfigCache: MutableMap<String, ConfigurationSection> = HashMap()
     private val skillRegistry: MutableMap<String, WeaponSkill> = HashMap()
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
-    // 1. 【新增】记录哪些玩家正在维持某种技能状态
-    // Key: 玩家UUID, Value: 对应的技能实例
-    private val activeToggles = ConcurrentHashMap<UUID, String>() // 存 weaponId 即可
-    // 上一 tick 真正满足槽位、职业和等级要求的武器；被动状态也统一走此生命周期。
+
+    // 记录由技能主动维持的持续状态。Key: 玩家 UUID, Value: 武器/技能 ID。
+    private val activeToggles = ConcurrentHashMap<UUID, String>()
+
+    // 上一 tick 满足激活要求的普通武器，用于在武器移出激活位时清理持续类技能状态。
     private val activeWeapons = ConcurrentHashMap<UUID, String>()
 
     init {
         registerSkills()
         reload()
 
-        // 2. 【新增】启动唯一的全局检测任务 (0.1秒检测一次，极度省性能)
+        // 每 tick 检查一次即可，避免每个技能各自启动重复任务。
         object : BukkitRunnable() {
             override fun run() {
                 checkActiveWeaponChanges()
@@ -80,16 +81,14 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
             if (file.isDirectory) {
                 loadSkillFiles(file)
             } else if (file.name.endsWith(".yml")) {
-                val fileName = file.name.replace(".yml", "").lowercase()
-//                val fileName = file.name.replace(".yml", "")
-                val yml = YamlConfiguration.loadConfiguration(file)
-                skillConfigCache[fileName] = yml
+                val fileName = file.name.removeSuffix(".yml").lowercase()
+                skillConfigCache[fileName] = YamlConfiguration.loadConfiguration(file)
             }
         }
     }
 
     private fun createDefaultSkillFile(root: File) {
-        // 暂时省略创建默认yml 因为已经有了
+        // 默认技能配置已经随插件资源提供，这里只负责确保目录存在。
     }
 
     private fun registerSkills() {
@@ -102,7 +101,9 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["taijijian"] = taijijianSkill()
         skillRegistry["sanbaoyuruyi"] = sanbaoyuruyiSkill()
         skillRegistry["kunlunfeixianjian"] = kunlunfeixianjianSkill()
-//        弓箭手技能注册
+        skillRegistry["baihuajian"] = baihuajianSkill()
+
+        // 弓箭手技能
         skillRegistry["tengmugong"] = tengmugongSkill()
         skillRegistry["heitienu"] = heitienuSkill()
         skillRegistry["qingtonggong"] = qingtonggongSkill()
@@ -113,21 +114,20 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["riyueliuxingnu"] = riyueliuxingnuSkill()
         skillRegistry["beidoumieshengong"] = beidoumieshengongSkill()
         skillRegistry["tingchao"] = tingchaoSkill()
-        skillRegistry["baihuajian"] = baihuajianSkill()
         skillRegistry["zhuiyue"] = zhuiyueSkill()
-
 
         skillRegistry["novice_bow"] = NoviceBowSkill()
     }
 
     fun tryCastSkill(player: Player, rawWeaponId: String, item: ItemStack, projectile: Entity?) {
-        // 1. 【修复】强制转为小写，确保 "Novice_Bow" 能匹配到 "novice_bow"
-        val weaponId = rawWeaponId.lowercase()
+        // 白虎武器拥有独立技能系统，不进入普通武器技能管理器。
+        if (plugin.baihuDzManager.getWeaponDataFromItem(item) != null) return
 
-        // 2. 检查注册表中是否有这个技能
+        val weaponId = rawWeaponId.lowercase()
+        if (plugin.baihuDzManager.isBaihuWeaponSkillId(weaponId)) return
+
         if (!skillRegistry.containsKey(weaponId)) {
-            // 可选：加个调试日志，如果以后还按不出来，取消注释这一行就能看到
-            plugin.logger.warning("未找到注册的技能 ID: $weaponId (原始ID: $rawWeaponId)")
+            plugin.logger.warning("未找到注册的技能 ID: $weaponId (原始 ID: $rawWeaponId)")
             return
         }
 
@@ -136,24 +136,18 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 
         val weaponData = plugin.playerManager.weaponManager.getWeaponData(weaponId)
         if (weaponData == null) {
-            // 可选：调试日志
             plugin.logger.warning("未找到武器数据配置: $weaponId")
             return
         }
 
-        // 【关键】必须显式使用 !! 断言将其转换为非空类型
-        val data = plugin.playerManager.getData(player.uniqueId)!!
-
-        if (!isWeaponActive(player, item, weaponData, data)) {
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        if (!isWeaponActive(player, weaponData, data)) {
             player.sendMessage(ChatColor.RED.toString() + weaponData.activeLoreLine)
             return
         }
 
-        // 1. 冷却检查 (红色提示)
         if (isOnCooldown(player)) {
-            // 【关键】Map 获取可能为空，但逻辑上 isOnCooldown 保证了它存在，使用 !! 断言
             val preciseTime = (globalCooldowns[player.uniqueId]!! - System.currentTimeMillis()) / 1000.0
-            // 【修改】改为红色提示
             val cdMsg = String.format("&c&l武器技处于冷却中，剩余 %.1f 秒", preciseTime)
             player.spigot().sendMessage(
                 ChatMessageType.ACTION_BAR,
@@ -162,18 +156,22 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
             return
         }
 
-        val skill = skillRegistry[weaponId]
-        // 【关键】ConfigurationSection 获取可能为空，使用 !! 模拟 Java 的直接调用行为
-        val activeConfig = config.getConfigurationSection("active")!!
+        val skill = skillRegistry[weaponId] ?: return
+        val activeConfig = config.getConfigurationSection("active") ?: return
 
-        // 注意：projectile 在 Kotlin 中可能需要处理 nullable，取决于 WeaponSkill 接口定义，此处传入原值
-        if (skill!!.castActive(player, data, activeConfig, projectile)) {
+        if (skill.castActive(player, data, activeConfig, projectile)) {
             val baseCd = activeConfig.getDouble("cooldown", 10.0)
             applyCooldown(player, data, item.type, baseCd)
-            plugin.elementCrystalManager.triggerWaterSkill(player, "weapon", weaponId, baseCd * (1.0 - data.coolReduce), item.type)
+            plugin.elementCrystalManager.triggerWaterSkill(
+                player,
+                "weapon",
+                weaponId,
+                baseCd * (1.0 - data.coolReduce),
+                item.type
+            )
 
             val successMsg = activeConfig.getString("message")
-            if (successMsg != null && !successMsg.isEmpty()) {
+            if (!successMsg.isNullOrEmpty()) {
                 player.spigot().sendMessage(
                     ChatMessageType.ACTION_BAR,
                     TextComponent(ChatColor.translateAlternateColorCodes('&', successMsg))
@@ -182,7 +180,11 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         }
     }
 
-    private fun isWeaponActive(player: Player, item: ItemStack, weaponData: WeaponManager.WeaponData, data: PlayerData): Boolean {
+    private fun isWeaponActive(
+        player: Player,
+        weaponData: WeaponManager.WeaponData,
+        data: PlayerData
+    ): Boolean {
         val slot = player.inventory.heldItemSlot
         if (weaponData.activateSlot != -1 && weaponData.activateSlot != slot) return false
         if (data.job != weaponData.reqJob) return false
@@ -191,24 +193,20 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     }
 
     private fun applyCooldown(player: Player, data: PlayerData, mat: Material, baseSeconds: Double) {
-        var reduce = data.coolReduce
-        if (reduce > 0.5) reduce = 0.5
+        val reduce = data.coolReduce.coerceAtMost(0.5)
         val finalSeconds = baseSeconds * (1.0 - reduce)
         val ticks = (finalSeconds * 20).toInt()
 
-        // 如果不是弓/弩，才设置视觉冷却，防止弓无法拉开
+        // 弓和弩不设置原版物品冷却，否则会影响拉弓/装填手感。
         if (mat != Material.BOW && mat != Material.CROSSBOW) {
             player.setCooldown(mat, ticks)
         }
 
-        val endTime = System.currentTimeMillis() + (finalSeconds * 1000).toLong()
-        globalCooldowns[player.uniqueId] = endTime
+        globalCooldowns[player.uniqueId] = System.currentTimeMillis() + (finalSeconds * 1000).toLong()
 
-        // 【新增】冷却结束后的提示任务
         object : BukkitRunnable() {
             override fun run() {
                 if (!player.isOnline) return
-                // 只有当玩家当前确实不在冷却中时（防止重复提示），发送提示
                 if (!isOnCooldown(player)) {
                     player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_CHIME, 0.5f, 2.0f)
                     player.spigot().sendMessage(
@@ -217,31 +215,27 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
                     )
                 }
             }
-        }.runTaskLater(plugin, (ticks + 1).toLong()) // 延迟 1 tick 确保状态已过
+        }.runTaskLater(plugin, (ticks + 1).toLong())
     }
 
     private fun isOnCooldown(player: Player): Boolean {
-        if (!globalCooldowns.containsKey(player.uniqueId)) return false
-        // 【关键】使用 !! 断言
-        return globalCooldowns[player.uniqueId]!! > System.currentTimeMillis()
+        return (globalCooldowns[player.uniqueId] ?: return false) > System.currentTimeMillis()
     }
 
-    //【新增】供技能调用的注册方法：开启状态
     fun registerToggle(player: Player, weaponId: String) {
         activeToggles[player.uniqueId] = weaponId.lowercase()
     }
 
-    //【新增】供技能调用的注销方法：手动关闭
     fun unregisterToggle(player: Player) {
         activeToggles.remove(player.uniqueId)
     }
 
-    /** 武器失去激活条件时，在同一游戏 tick 内清理旧武器的全部临时状态。 */
     private fun checkActiveWeaponChanges() {
         val online = HashSet<UUID>()
         for (player in plugin.server.onlinePlayers) {
             val uuid = player.uniqueId
             online.add(uuid)
+
             val current = findActiveWeaponId(player)
             val previous = activeWeapons[uuid]
 
@@ -250,8 +244,13 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
                 activeToggles.remove(uuid)
             }
 
-            if (current == null) activeWeapons.remove(uuid) else activeWeapons[uuid] = current
+            if (current == null) {
+                activeWeapons.remove(uuid)
+            } else {
+                activeWeapons[uuid] = current
+            }
         }
+
         activeWeapons.keys.removeIf { it !in online }
         activeToggles.keys.removeIf { it !in online }
     }
@@ -259,10 +258,20 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private fun findActiveWeaponId(player: Player): String? {
         val data = plugin.playerManager.getData(player.uniqueId) ?: return null
         for (slot in 0..8) {
-            val id = getWeaponIdFromItem(player.inventory.getItem(slot)) ?: continue
+            val item = player.inventory.getItem(slot) ?: continue
+
+            // 白虎武器不参与普通武器持续状态生命周期。
+            if (plugin.baihuDzManager.getWeaponDataFromItem(item) != null) continue
+
+            val id = getWeaponIdFromItem(item) ?: continue
+            if (plugin.baihuDzManager.isBaihuWeaponSkillId(id)) continue
+
             val weapon = plugin.weaponManager.loadedWeapons[id] ?: continue
-            val slotMatches = if (weapon.activateSlot == -1) player.inventory.heldItemSlot == slot
-                              else weapon.activateSlot == slot
+            val slotMatches = if (weapon.activateSlot == -1) {
+                player.inventory.heldItemSlot == slot
+            } else {
+                weapon.activateSlot == slot
+            }
             if (slotMatches && data.job == weapon.reqJob && data.lv >= weapon.reqLv) return id
         }
         return null
@@ -272,67 +281,37 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         return findActiveWeaponId(player) == weaponId.lowercase()
     }
 
-    //【核心逻辑】全局检测函数
     private fun checkAllToggles() {
         if (activeToggles.isEmpty()) return
 
         val iterator = activeToggles.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
-            val uuid = entry.key
+            val player = plugin.server.getPlayer(entry.key)
             val weaponId = entry.value
-            val player = plugin.server.getPlayer(uuid)
 
-            // 1. 玩家离线，移除并清理
             if (player == null || !player.isOnline) {
                 iterator.remove()
                 continue
             }
 
-            val weaponManager = plugin.weaponManager
-
-            val weaponData = weaponManager.loadedWeapons[weaponId]
-
-            if (weaponData == null) {
-                // 如果配置都被删了，那肯定要关闭
-                deactivateAndRemove(iterator, player, weaponId)
-                continue
-            }
-
-            // 现在 weaponData 已经被智能转换为非空，可以安全调用 .activateSlot 了
-            val requiredSlot = weaponData.activateSlot
-            val itemInSlot = player.inventory.getItem(requiredSlot)
-
-            // 获取槽位里物品的 ID
-            val idInSlot = getWeaponIdFromItem(itemInSlot)
-
-            // 4. 判断：如果激活槽位里的东西不再是这把武器（比如被移走了），则失效
-            if (idInSlot != weaponId) {
-                // 只有当“激活槽位”里的武器不对了，才移除效果
-                // 玩家切手持物品完全不会影响这里
+            if (findActiveWeaponId(player) != weaponId) {
                 deactivateAndRemove(iterator, player, weaponId)
             }
         }
     }
 
-    // (这个辅助方法保持不变，或者根据你需要放入逻辑)
     private fun deactivateAndRemove(iterator: MutableIterator<*>, player: Player, weaponId: String) {
-        val skill = skillRegistry[weaponId]
-        // 这里会调用你 qintongjianSkill 里重写过的 deactivate
-        skill?.deactivate(player)
+        skillRegistry[weaponId]?.deactivate(player)
         iterator.remove()
-        // 提示语可以改得更贴切一点
-        // player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§c武器移出激活栏，被动失效"))
     }
 
-    // 辅助方法：从物品获取 ID (把 WeaponSkillListener 里的逻辑提出来复用)
     private fun getWeaponIdFromItem(item: ItemStack?): String? {
         if (item == null || !item.hasItemMeta()) return null
         val key = org.bukkit.NamespacedKey(plugin, "weapon_id")
-        return item.itemMeta!!.persistentDataContainer.get(key, org.bukkit.persistence.PersistentDataType.STRING)?.lowercase()
+        return item.itemMeta!!.persistentDataContainer.get(key, PersistentDataType.STRING)?.lowercase()
     }
 
-    // 提供给外部获取管理器的方法
     fun getPlugin(): Hjh_database {
         return plugin
     }

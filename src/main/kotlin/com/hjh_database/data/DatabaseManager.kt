@@ -138,6 +138,95 @@ class DatabaseManager(private val plugin: Hjh_database) {
         queuedPlayerSaves.clear()
     }
 
+    fun cancelQueuedPlayerSave(uuid: UUID) {
+        queuedPlayerSaves.remove(uuid)?.let { task ->
+            if (!task.isCancelled) task.cancel()
+        }
+    }
+
+    fun resetPlayerPersistentData(uuid: UUID, playerName: String) {
+        cancelQueuedPlayerSave(uuid)
+
+        val freshData = PlayerData(uuid, playerName).apply {
+            updateStatus(0)
+        }
+        savePlayer(freshData)
+
+        dataSource?.connection?.use { conn ->
+            val originalAutoCommit = conn.autoCommit
+            conn.autoCommit = false
+            try {
+                conn.prepareStatement("DELETE FROM player_quests WHERE uuid = ?").use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.executeUpdate()
+                }
+
+                subsystems.saveWarehouse(conn, WarehouseData(uuid, playerName))
+
+                conn.prepareStatement(
+                    """
+                    INSERT INTO player_chonghua (uuid, player_name, unlocked_waypoints, waypoint_cooldowns)
+                    VALUES (?, ?, '[]', '{}')
+                    ON CONFLICT(uuid) DO UPDATE SET
+                        player_name = excluded.player_name,
+                        unlocked_waypoints = excluded.unlocked_waypoints,
+                        waypoint_cooldowns = excluded.waypoint_cooldowns
+                    """.trimIndent()
+                ).use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.setString(2, playerName)
+                    ps.executeUpdate()
+                }
+
+                conn.prepareStatement(
+                    """
+                    INSERT INTO player_element_crystal (player_uuid, player_name, gold_points, wood_points, water_points, fire_points, earth_points)
+                    VALUES (?, ?, 0, 0, 0, 0, 0)
+                    ON CONFLICT(player_uuid) DO UPDATE SET
+                        player_name = excluded.player_name,
+                        gold_points = 0,
+                        wood_points = 0,
+                        water_points = 0,
+                        fire_points = 0,
+                        earth_points = 0
+                    """.trimIndent()
+                ).use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.setString(2, playerName)
+                    ps.executeUpdate()
+                }
+
+                conn.prepareStatement(
+                    """
+                    INSERT INTO player_test (uuid, player_name, qinglong, baihu, zhuque, xuanwu)
+                    VALUES (?, ?, 0, 0, 0, 0)
+                    ON CONFLICT(uuid) DO UPDATE SET
+                        player_name = excluded.player_name,
+                        qinglong = 0,
+                        baihu = 0,
+                        zhuque = 0,
+                        xuanwu = 0
+                    """.trimIndent()
+                ).use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.setString(2, playerName)
+                    ps.executeUpdate()
+                }
+
+                conn.commit()
+            } catch (ex: Exception) {
+                try {
+                    conn.rollback()
+                } catch (rollbackEx: Exception) {
+                    ex.addSuppressed(rollbackEx)
+                }
+                throw ex
+            } finally {
+                conn.autoCommit = originalAutoCommit
+            }
+        }
+    }
+
     fun loadPlayer(uuid: UUID, playerName: String): CompletableFuture<PlayerData> =
         players.loadPlayer(uuid, playerName)
 
