@@ -6,6 +6,7 @@ import com.hjh_database.alchemy.listener.AlchemyListener
 import com.hjh_database.alchemy.manager.AlchemyManager
 import com.hjh_database.baihu_dz.BaihuDzManager
 import com.hjh_database.baihu_dz.BaihuDzStationListener
+import com.hjh_database.baihu_dz.BaihuEquipmentDamageMarkerListener
 import com.hjh_database.baihu_dz.BaihuWeaponSkillListener
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.chonghua.ChonghuaManager
@@ -14,6 +15,10 @@ import com.hjh_database.command.ResourceReloadCommand
 import com.hjh_database.command.StatsCommand
 import com.hjh_database.data.DatabaseManager
 import com.hjh_database.data.PlayerManager
+import com.hjh_database.farming.listener.FarmingEntranceListener
+import com.hjh_database.farming.listener.FarmingGuiListener
+import com.hjh_database.farming.listener.FarmingPlayerListener
+import com.hjh_database.farming.manager.FarmingManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.qinglong.QingLongManager
@@ -44,10 +49,12 @@ import com.hjh_database.quest.gui.QuestGui
 import com.hjh_database.skill.element_zf.gui.ElementZfGui
 import com.hjh_database.spawner.SpawnerBlockManager
 import com.hjh_database.spawner.BaihuMiasmaManager
+import com.hjh_database.spawner.BaihuTownFireManager
 import com.hjh_database.ui.AccessoryManager
 import com.hjh_database.weapon.WeaponManager
 import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术试炼管理器
 import com.hjh_database.spawner.impl.CustomMagmaCubeListener
+import com.hjh_database.spawner.impl.BaihuWestSkill
 import com.hjh_database.spawner.impl.DesertSouthSkill
 import com.hjh_database.accessory.element.ElementCrystalManager
 import com.hjh_database.accessory.element.ElementCrystalGui
@@ -79,6 +86,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var raceModule: com.hjh_database.race.RaceManager
     lateinit var spawnerBlockManager: SpawnerBlockManager
     lateinit var baihuMiasmaManager: BaihuMiasmaManager
+    lateinit var baihuTownFireManager: BaihuTownFireManager
     lateinit var baihuDzManager: BaihuDzManager
     lateinit var baihuWeaponSkillManager: BaihuWeaponSkillManager
     lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
@@ -99,6 +107,7 @@ class Hjh_database : JavaPlugin() {
 
     lateinit var elementCrystalManager: ElementCrystalManager
     lateinit var elementCrystalGui: ElementCrystalGui
+    lateinit var farmingManager: FarmingManager
 
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
@@ -129,11 +138,13 @@ class Hjh_database : JavaPlugin() {
         this.raceModule = com.hjh_database.race.RaceManager(this)
         this.spawnerBlockManager = SpawnerBlockManager(this)
         this.baihuMiasmaManager = BaihuMiasmaManager(this)
+        this.baihuTownFireManager = BaihuTownFireManager(this)
         this.baihuDzManager = BaihuDzManager(this)
         this.baihuWeaponSkillManager = BaihuWeaponSkillManager(this)
         this.teleportManager = com.hjh_database.teleport.TeleportManager(this)
         this.bgmManager = com.hjh_database.bgm.BgmManager(this)
         this.jobTrialManager = JobTrialManager(this)
+        this.farmingManager = FarmingManager(this)
 
         // 重华晶系统初始化
         this.chonghuaManager = ChonghuaManager(this)
@@ -166,6 +177,7 @@ class Hjh_database : JavaPlugin() {
         this.jianghuXindeManager = com.hjh_database.jianghu.JianghuXindeManager(this)
         // 南方沙漠 着火机制
         DesertSouthSkill.init(this)
+        BaihuWestSkill.init(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI
@@ -200,10 +212,12 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(ResourceListener(this), this)
         pm.registerEvents(StationListener(this), this)
         pm.registerEvents(BaihuDzStationListener(this), this)
+        pm.registerEvents(BaihuEquipmentDamageMarkerListener(this), this)
         pm.registerEvents(BaihuWeaponSkillListener(this), this)
         pm.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(this.baihuMiasmaManager, this)
+        pm.registerEvents(this.baihuTownFireManager, this)
         pm.registerEvents(com.hjh_database.npc.listener.NpcInteractListener(this), this)
         pm.registerEvents(com.hjh_database.listener.TestDummySignListener(this), this)
 
@@ -213,7 +227,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.kaiwu.KaiWuListener(this), this)
         pm.registerEvents(this.kaiWuAdminGui, this)
         pm.registerEvents(MedicalSpellListener(this), this)
-        pm.registerEvents(CustomMagmaCubeListener(), this)
+        pm.registerEvents(CustomMagmaCubeListener(this), this)
 
         // 3. 独立系统与GUI监听
         pm.registerEvents(com.hjh_database.skill.medical.gui.MedicalEtchGui(this), this)
@@ -236,8 +250,13 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseGuiListener(this), this)
         // 【新增】医术试炼监听
         pm.registerEvents(this.medicalTrialManager, this)
+        pm.registerEvents(FarmingEntranceListener(this.farmingManager), this)
+        pm.registerEvents(FarmingGuiListener(this.farmingManager), this)
+        pm.registerEvents(FarmingPlayerListener(this.farmingManager), this)
 
         this.baihuMiasmaManager.start()
+        this.baihuTownFireManager.start()
+        this.farmingManager.start()
 
 
         // ==========================================
@@ -274,6 +293,7 @@ class Hjh_database : JavaPlugin() {
                 warehouseManager.loadAndCache(player)
                 // 【新增】同时加载玩家的元素结晶数据！
                 elementCrystalManager.loadPlayer(player)
+                farmingManager.loadAndCache(player)
             }
         }, 10L)
 
@@ -283,6 +303,9 @@ class Hjh_database : JavaPlugin() {
             warehouseManager.saveAllOnline()
             if (::elementCrystalManager.isInitialized) {
                 elementCrystalManager.saveAll()
+            }
+            if (::farmingManager.isInitialized) {
+                farmingManager.saveAllOnline()
             }
         }, 6000L, 6000L)
 
@@ -322,12 +345,20 @@ class Hjh_database : JavaPlugin() {
             baihuMiasmaManager.shutdown()
         }
 
+        if (::baihuTownFireManager.isInitialized) {
+            baihuTownFireManager.shutdown()
+        }
+
         if (::bgmManager.isInitialized) {
             bgmManager.shutdown()
         }
 
         if (::elementCrystalManager.isInitialized) {
             elementCrystalManager.saveAll()
+        }
+
+        if (::farmingManager.isInitialized) {
+            farmingManager.shutdown()
         }
 
         // 【新增】关服时清理所有正在进行的医术试炼，防止 BossBar 残留或刷出幽灵实体

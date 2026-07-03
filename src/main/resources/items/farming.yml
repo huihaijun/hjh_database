@@ -1,0 +1,482 @@
+# Farming items. Use /hjhadmin get <id> [amount] to obtain them.
+
+chixueshen_seed:
+  material: WHEAT_SEEDS
+  custom_model_data: 10001
+  name: "&4赤血参·种"
+  lore:
+    - "&7✦ 一品药种 ✦"
+    - "&7孕育之期：&f十刻"
+    - "&7采收之量：&f2-4株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「赤根凝血，补虚扶弱」"
+
+chixueshen_harvest:
+  material: RED_DYE
+  custom_model_data: 10002
+  name: "&4赤血参"
+  lore:
+    - "&7✦ 一品药材 ✦"
+    - "&7补气血之上品，入药炼丹皆宜"
+
+jinyinhuaqi_seed:
+  material: BEETROOT_SEEDS
+  custom_model_data: 10003
+  name: "&e金银黄芪·种"
+  lore:
+    - "&7✦ 一品药种 ✦"
+    - "&7孕育之期：&f十刻"
+    - "&7采收之量：&f3-5株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「金叶银脉，御风固卫」"
+
+jinyinhuaqi_harvest:
+  material: GLOWSTONE_DUST
+  custom_model_data: 10004
+  name: "&e金银黄芪"
+  lore:
+    - "&7✦ 一品药材 ✦"
+    - "&7补气固表之要药"
+
+yuguogouqi_seed:
+  material: MELON_SEEDS
+  custom_model_data: 10005
+  name: "&f玉果枸杞·种"
+  lore:
+    - "&7✦ 一品药种 ✦"
+    - "&7孕育之期：&f十二刻"
+    - "&7采收之量：&f3-6枚"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「白玉为果，润肝滋目」"
+
+yuguogouqi_harvest:
+  material: SUGAR
+  custom_model_data: 10006
+  name: "&f玉果枸杞"
+  lore:
+    - "&7✦ 一品药材 ✦"
+    - "&7养肝明目之佳品"
+
+biluofu_seed:
+  material: PUMPKIN_SEEDS
+  custom_model_data: 10007
+  name: "&3碧落茯苓·种"
+  lore:
+    - "&7✦ 二品药种 ✦"
+    - "&7孕育之期：&f十五刻"
+    - "&7采收之量：&f2-4块"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「碧落凝华，渗湿利水」"
+
+biluofu_harvest:
+  material: PRISMARINE_CRYSTALS
+  custom_model_data: 10008
+  name: "&3碧落茯苓"
+  lore:
+    - "&7✦ 二品药材 ✦"
+    - "&7利水渗湿，宁心安神"
+
+zishuangdan_seed:
+  material: NETHER_WART
+  custom_model_data: 10009
+  name: "&5紫霜丹参·种"
+  lore:
+    - "&7✦ 二品药种 ✦"
+    - "&7孕育之期：&f十五刻"
+    - "&7采收之量：&f1-3株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「紫霜为衣，化瘀通脉」"
+
+zishuangdan_harvest:
+  material: NETHER_WART
+  custom_model_data: 10010
+  name: "&5紫霜丹参"
+  lore:
+    - "&7✦ 二品药材 ✦"
+    - "&7活血化瘀，通络止痛"
+
+jiuzhuan_seed:
+  material: TORCHFLOWER_SEEDS
+  custom_model_data: 10011
+  name: "&6九转甘草·种"
+  lore:
+    - "&7✦ 二品药种 ✦"
+    - "&7孕育之期：&f十六刻"
+    - "&7采收之量：&f2-5根"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「九转方成，调和诸药」"
+
+jiuzhuan_harvest:
+  material: HONEYCOMB
+  custom_model_data: 10012
+  name: "&6九转甘草"
+  lore:
+    - "&7✦ 二品药材 ✦"
+    - "&7调和百药，解百毒"
+
+guimiantian_seed:
+  material: PITCHER_POD
+  custom_model_data: 10013
+  name: "&8鬼面天麻·种"
+  lore:
+    - "&7✦ 三品药种 ✦"
+    - "&7孕育之期：&f二十刻"
+    - "&7采收之量：&f1-2株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「面如鬼魅，定惊安神」"
+
+guimiantian_harvest:
+  material: PITCHER_PLANT
+  custom_model_data: 10014
+  name: "&8鬼面天麻"
+  lore:
+    - "&7✦ 三品药材 ✦"
+    - "&7定惊熄风，通络止痛"
+
+yusui_seed:
+  material: WHEAT_SEEDS
+  custom_model_data: 10015
+  name: "&f玉髓黄精·种"
+  lore:
+    - "&7✦ 三品药种 ✦"
+    - "&7孕育之期：&f二十刻"
+    - "&7采收之量：&f2-4根"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「晶莹如玉，填精益髓」"
+
+yusui_harvest:
+  material: BONE_MEAL
+  custom_model_data: 10016
+  name: "&f玉髓黄精"
+  lore:
+    - "&7✦ 三品药材 ✦"
+    - "&7补中益气，填精壮骨"
+
+longxian_seed:
+  material: SHORT_GRASS
+  custom_model_data: 10017
+  name: "&2龙涎草·种"
+  lore:
+    - "&7✦ 三品药种 ✦"
+    - "&7孕育之期：&f二十一 刻"
+    - "&7采收之量：&f2-5株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「龙涎所化，清肝泻火」"
+
+longxian_harvest:
+  material: SLIME_BALL
+  custom_model_data: 10018
+  name: "&2龙涎草"
+  lore:
+    - "&7✦ 三品药材 ✦"
+    - "&7清肝泻火，凉血解毒"
+
+qingming_seed:
+  material: TWISTING_VINES
+  custom_model_data: 10019
+  name: "&3青冥桑寄·种"
+  lore:
+    - "&7✦ 四品药种 ✦"
+    - "&7孕育之期：&f二十五刻"
+    - "&7采收之量：&f1-3株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「青藤绕木，强筋健骨」"
+
+qingming_harvest:
+  material: WEEPING_VINES
+  custom_model_data: 10020
+  name: "&3青冥桑寄"
+  lore:
+    - "&7✦ 四品药材 ✦"
+    - "&7强筋健骨，安胎固元"
+
+yanyangban_seed:
+  material: SUNFLOWER
+  custom_model_data: 10021
+  name: "&6炎阳半夏·种"
+  lore:
+    - "&7✦ 四品药种 ✦"
+    - "&7孕育之期：&f二十六刻"
+    - "&7采收之量：&f2-5块"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「炎阳所育，燥湿化痰」"
+
+yanyangban_harvest:
+  material: BLAZE_POWDER
+  custom_model_data: 10022
+  name: "&6炎阳半夏"
+  lore:
+    - "&7✦ 四品药材 ✦"
+    - "&7燥湿化痰，降逆止呕"
+
+xingwen_seed:
+  material: COCOA_BEANS
+  custom_model_data: 10023
+  name: "&9星纹葛根·种"
+  lore:
+    - "&7✦ 四品药种 ✦"
+    - "&7孕育之期：&f二十八刻"
+    - "&7采收之量：&f2-5根"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「星纹入药，解肌退热」"
+
+xingwen_harvest:
+  material: AMETHYST_SHARD
+  custom_model_data: 10024
+  name: "&9星纹葛根"
+  lore:
+    - "&7✦ 四品药材 ✦"
+    - "&7解肌退热，生津止渴"
+
+yunying_seed:
+  material: LILY_OF_THE_VALLEY
+  custom_model_data: 10025
+  name: "&f云英桔梗·种"
+  lore:
+    - "&7✦ 五品药种 ✦"
+    - "&7孕育之期：&f三十刻"
+    - "&7采收之量：&f1-3株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「花开如云，宣肺利咽」"
+
+yunying_harvest:
+  material: WHITE_DYE
+  custom_model_data: 10026
+  name: "&f云英桔梗"
+  lore:
+    - "&7✦ 五品药材 ✦"
+    - "&7宣肺利咽，祛痰排脓"
+
+tiegu_seed:
+  material: BAMBOO_SIGN
+  custom_model_data: 10027
+  name: "&7铁骨杜仲·种"
+  lore:
+    - "&7✦ 五品药种 ✦"
+    - "&7孕育之期：&f三十二刻"
+    - "&7采收之量：&f1-3块"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「其坚如铁，强腰健肾」"
+
+tiegu_harvest:
+  material: IRON_NUGGET
+  custom_model_data: 10028
+  name: "&7铁骨杜仲"
+  lore:
+    - "&7✦ 五品药材 ✦"
+    - "&7补肝肾，强筋骨"
+
+yinye_seed:
+  material: FERN
+  custom_model_data: 10029
+  name: "&7银叶柴胡·种"
+  lore:
+    - "&7✦ 五品药种 ✦"
+    - "&7孕育之期：&f三十四刻"
+    - "&7采收之量：&f2-4株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「银叶疏风，解郁调经」"
+
+yinye_harvest:
+  material: IRON_INGOT
+  custom_model_data: 10030
+  name: "&7银叶柴胡"
+  lore:
+    - "&7✦ 五品药材 ✦"
+    - "&7疏肝解郁，升举阳气"
+
+fengxue_seed:
+  material: RED_TULIP
+  custom_model_data: 10031
+  name: "&c凤血红花·种"
+  lore:
+    - "&7✦ 六品药种 ✦"
+    - "&7孕育之期：&f三十八刻"
+    - "&7采收之量：&f1-3朵"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「凤血染就，活血通经」"
+
+fengxue_harvest:
+  material: REDSTONE
+  custom_model_data: 10032
+  name: "&c凤血红花"
+  lore:
+    - "&7✦ 六品药材 ✦"
+    - "&7活血通经，散瘀止痛"
+
+bingpo_seed:
+  material: ORANGE_TULIP
+  custom_model_data: 10033
+  name: "&b冰魄雪参·种"
+  lore:
+    - "&7✦ 七品药种 ✦"
+    - "&7孕育之期：&f四十八刻"
+    - "&7采收之量：&f1-2株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&7「冰晶为魄，大补元气」"
+
+bingpo_harvest:
+  material: DIAMOND
+  custom_model_data: 10034
+  name: "&b冰魄雪参"
+  lore:
+    - "&7✦ 七品药材 ✦"
+    - "&7大补元气，回阳救逆"
+
+jiuseling_seed:
+  material: SPORE_BLOSSOM
+  custom_model_data: 10035
+  name: "&5✦ 九色灵芝·仙种"
+  lore:
+    - "&7✦ 八品仙种 ✦"
+    - "&7孕育之期：&f六十四刻"
+    - "&7采收之量：&f1株"
+    - "&7┈┈┈┈┈┈┈┈┈┈"
+    - "&d「九色流转，生死人肉」"
+    - "&d此乃药王之境，非凡俗可窥"
+
+jiuseling_harvest:
+  material: NETHER_STAR
+  custom_model_data: 10036
+  name: "&5✦ 九色灵芝"
+  lore:
+    - "&7✦ 八品仙材 ✦"
+    - "&d含大道碎片，可炼续命金丹"
+
+yimulingye:
+  name: "&a✦ 乙木灵液"
+  material: GLOWSTONE_DUST
+  custom_model_data: 30001
+  lore:
+    - "&7✦ 一品灵液 ✦"
+    - "&7蕴乙木精华，催生灵药"
+    - "&7功效：&f生长速度翻倍"
+    - "&7药效持续：&f十刻钟"
+
+yuehuaninglu:
+  name: "&d✦ 月华凝露"
+  material: EXPERIENCE_BOTTLE
+  custom_model_data: 30002
+  lore:
+    - "&7✦ 三品灵液 ✦"
+    - "&7采集月华凝结而成"
+    - "&7功效：&f生长速度五倍"
+    - "&7药效持续：&f二刻钟"
+
+wannianshenglingru:
+  name: "&5✦ 万年生灵乳"
+  material: DRAGON_BREATH
+  custom_model_data: 30003
+  lore:
+    - "&7✦ 五品灵液 ✦"
+    - "&5万年灵石钟乳所化"
+    - "&7功效：&f生长速度十倍"
+    - "&7药效持续：&f一刻钟"
+
+fengraobaolu:
+  name: "&6✦ 丰饶宝箓"
+  material: PAPER
+  custom_model_data: 40001
+  lore:
+    - "&7✦ 二品灵卷 ✦"
+    - "&7以灵墨书写丰饶符文"
+    - "&7功效：&f采收翻倍"
+
+sanbeifengraolu:
+  name: "&6✦ 三倍丰饶箓"
+  material: PAPER
+  custom_model_data: 40002
+  lore:
+    - "&7✦ 三品灵卷 ✦"
+    - "&7蕴含天地丰饶法则"
+    - "&7功效：&f采收三倍"
+
+wugufengdengchiling:
+  name: "&5✦ 五谷丰登敕令"
+  material: PAPER
+  custom_model_data: 40003
+  lore:
+    - "&7✦ 五品灵卷 ✦"
+    - "&5天界五谷星君敕令"
+    - "&7功效：&f采收五倍"
+
+lingtiankaituoling:
+  material: PAPER
+  custom_model_data: 50001
+  name: "&6&l✦ 灵田开拓令 ✦"
+  lore:
+    - "&7以灵力灌注的田契"
+    - "&7可开辟一方新的灵田"
+    - "&e▶ 在灵田界面中点击未解锁灵田使用"
+
+huachongfu:
+  name: "&a✦ 化虫符"
+  material: PAPER
+  custom_model_data: 20001
+  lore:
+    - "&7以灵墨绘就，可化一切虫害"
+    - "&7抵御：银蠓侵蚀·锯螽啃灵"
+    - "&7灵气持续：&f十二时辰"
+
+dingfengfu:
+  name: "&b✦ 定风符"
+  material: PAPER
+  custom_model_data: 20002
+  lore:
+    - "&7以风纹定住四方气象"
+    - "&7抵御：阴风·霜降·暴雨·天火"
+    - "&7灵气持续：&f十二时辰"
+
+bishuifu:
+  name: "&3✦ 避水符"
+  material: PAPER
+  custom_model_data: 20003
+  lore:
+    - "&7以分水古篆写成"
+    - "&7抵御：寒潮侵袭·浊水浸根"
+    - "&7灵气持续：&f十二时辰"
+
+zhenshoufu:
+  name: "&e✦ 镇兽符"
+  material: PAPER
+  custom_model_data: 20004
+  lore:
+    - "&7散发灵威以震慑走兽飞禽"
+    - "&7抵御：田鼠盗食·灵雀啄穗"
+    - "&7灵气持续：&f十二时辰"
+
+zhenlingfu:
+  name: "&5✦ 镇灵符"
+  material: PAPER
+  custom_model_data: 20005
+  lore:
+    - "&7以精纯灵念凝结而成"
+    - "&7抵御：灵力紊乱·毒藤寄生·鬼雾弥漫"
+    - "&7灵气持续：&f十二时辰"
+
+gutufu:
+  name: "&8✦ 固土符"
+  material: PAPER
+  custom_model_data: 20006
+  lore:
+    - "&7固本培元，护持灵田地脉"
+    - "&7抵御：地脉枯竭·虫土泛滥"
+    - "&7灵气持续：&f十二时辰"
+
+qubingfu:
+  name: "&a✦ 祛病符"
+  material: PAPER
+  custom_model_data: 20007
+  lore:
+    - "&7以百草精粹绘成"
+    - "&7抵御：黄萎病害·白粉病菌"
+    - "&7灵气持续：&f十二时辰"
+
+yutianfu:
+  name: "&c✦ 御天符"
+  material: PAPER
+  custom_model_data: 20008
+  lore:
+    - "&7调和阴阳，抵御异常天候"
+    - "&7抵御：寒热交替"
+    - "&7灵气持续：&f十二时辰"

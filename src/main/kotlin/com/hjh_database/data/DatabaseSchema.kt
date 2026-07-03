@@ -26,6 +26,7 @@ internal class DatabaseSchema(
         createMedicalTestTable()
         createJianghuXindeTable()
         createElementCrystalTable()
+        createFarmingTable()
         updateTables()
     }
 
@@ -360,6 +361,43 @@ internal class DatabaseSchema(
             );
         """.trimIndent()
         executeSql(sql)
+    }
+
+    private fun createFarmingTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_farming_profile (
+                uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32),
+                max_fields INT DEFAULT 1,
+                total_harvests INT DEFAULT 0,
+                updated_at BIGINT DEFAULT 0
+            );
+            """.trimIndent()
+        )
+
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_farming_fields (
+                uuid VARCHAR(36) NOT NULL,
+                player_name VARCHAR(32),
+                field_index INT NOT NULL,
+                is_unlocked INT DEFAULT 0,
+                plant_type VARCHAR(64),
+                planted_at BIGINT DEFAULT 0,
+                matures_at BIGINT DEFAULT 0,
+                growth_stage INT DEFAULT 0,
+                accelerator_id VARCHAR(64),
+                booster_id VARCHAR(64),
+                protection_id VARCHAR(64),
+                protection_until BIGINT DEFAULT 0,
+                yield_penalty DOUBLE DEFAULT 0.0,
+                delay_penalty_ms BIGINT DEFAULT 0,
+                updated_at BIGINT DEFAULT 0,
+                PRIMARY KEY (uuid, field_index)
+            );
+            """.trimIndent()
+        )
     }
 
 }

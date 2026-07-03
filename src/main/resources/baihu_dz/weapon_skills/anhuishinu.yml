@@ -1,0 +1,11 @@
+active:
+  enable: true
+  cooldown: 5.0
+  ignore_cool_reduce: true
+  message: "&b&l武器技【寒骨箭】已发动"
+  damage_multiplier: 2.4
+  range: 15.0
+  half_width: 0.5
+  vertical_tolerance: 1.35
+  slow_seconds: 5.0
+  slow_amplifier: 1

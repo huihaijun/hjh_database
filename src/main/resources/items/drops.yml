@@ -125,6 +125,54 @@ wenquankezhanbujipin:
     - "&7&o从怪物身上找到的补给品"
     - "&7&o收集一些给温泉客栈吧"
 
+fumanzhangqidemeitan:
+  material: COAL
+  name: "&7附满瘴气的煤炭"
+  lore:
+    - "&7&o圣虎迷阵的魔物所掉落"
+    - "&7&o受虎瘴影响,表面覆满了瘴气"
+    - "&7&o估计没多少人稀罕这玩意"
 
+hujin:
+  material: DEEPSLATE_GOLD_ORE
+  name: "&b虎金"
+  rarity: 4
+  lore:
+    - "&7&o白虎洞内蕴藏的稀世奇金"
+    - "&7&o历代矿夫魂牵梦萦之物，然因百年滥采，几近绝迹"
+    - "&7&o铸为兵刃则锋芒毕露，有吹毛断发之利"
 
+hupo:
+  material: GLOW_INK_SAC
+  name: "&b虎魄"
+  rarity: 4
+  lore:
+    - "&7&o一缕携有白虎神威的残魂"
+    - "&7&o灵气暴动后散入山野，寄于魔物体内"
+    - "&7&o融入甲胄之中，可令其坚不可摧，万钧难破"
 
+fumanzhangqidezhuangbeihexin:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 4
+  name: "&7附满瘴气的装备核心"
+  lore:
+    - "&7&o被虎瘴侵蚀殆尽的装备核心，灵气尽失"
+    - "&7&o若强行以此为胚锻造，所出之物必受瘴毒反噬"
+
+fumanzhangqidexuantieding:
+  material: GOLD_NUGGET
+  custom_model_data: 10056
+  rarity: 4
+  name: "&7附满瘴气的玄铁锭"
+  lore:
+    - "&7&o被虎瘴侵蚀殆尽的玄铁锭，灵光不再"
+    - "&7&o若强行以此为材锻造，所出之物必受瘴毒反噬"
+
+zhichunzhixin:
+  material: PRISMARINE_CRYSTALS
+  rarity: 4
+  name: "&b至纯之心"
+  lore:
+    - "&7&o澄澈如冰，莹润似玉，不染一丝尘埃"
+    - "&7&o蕴藏着涤荡万物的纯净之力"

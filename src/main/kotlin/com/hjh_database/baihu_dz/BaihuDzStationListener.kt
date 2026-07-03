@@ -1,6 +1,7 @@
 package com.hjh_database.baihu_dz
 
 import com.hjh_database.Hjh_database
+import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.block.TileState
 import org.bukkit.event.EventHandler
@@ -22,7 +23,15 @@ class BaihuDzStationListener(private val plugin: Hjh_database) : Listener {
         if (!state.persistentDataContainer.has(plugin.baihuDzManager.stationKey, PersistentDataType.STRING)) return
 
         event.isCancelled = true
-        BaihuDzCategoryGui(plugin, event.player).open()
+        val player = event.player
+        val handItem = player.inventory.itemInMainHand
+        if (player.isOp && handItem.type == Material.WOODEN_HOE) {
+            player.sendMessage("${ChatColor.GREEN}[管理员] 已打开白虎配方管理界面")
+            BaihuDzCategoryGui(plugin, player, true).open()
+            return
+        }
+
+        BaihuDzCategoryGui(plugin, player).open()
     }
 
     @EventHandler

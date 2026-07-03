@@ -10,6 +10,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.Material
 
 class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
     @EventHandler
@@ -18,10 +19,11 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
         if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
 
         val player = event.player
-        if (!player.isSneaking) return
 
         val item = player.inventory.itemInMainHand
-        if (plugin.baihuDzManager.getWeaponDataFromItem(item) == null) return
+        val weaponData = plugin.baihuDzManager.getWeaponDataFromItem(item) ?: return
+        if (item.type == Material.BOW || item.type == Material.CROSSBOW) return
+        if (!player.isSneaking && weaponData.skillId !in RIGHT_CLICK_ONLY_SKILLS) return
 
         event.isCancelled = true
         plugin.baihuWeaponSkillManager.tryCastSkill(player, item, null)
@@ -51,5 +53,9 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
         if (!typeName.contains("BOW") && !typeName.contains("CROSSBOW")) return
 
         plugin.baihuWeaponSkillManager.tryCastSkill(player, item, event.entity)
+    }
+
+    companion object {
+        private val RIGHT_CLICK_ONLY_SKILLS = setOf("duhuozhu", "huzhizhanqi")
     }
 }

@@ -13,13 +13,13 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.math.max
 
 class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
@@ -44,8 +44,14 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         var playerName: String,
         var value: Int = 0,
         var lastIncreaseMs: Long = 0L,
+        var lastFullDamageMs: Long = 0L,
         var lastInCave: Boolean = false,
         var dirty: Boolean = false
+    )
+
+    private data class IncreaseModifier(
+        val multiplier: Double,
+        val expireAt: Long
     )
 
     private val regions = listOf(
@@ -70,6 +76,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     )
 
     private val statuses = ConcurrentHashMap<UUID, MiasmaStatus>()
+    private val increaseModifiers = ConcurrentHashMap<UUID, MutableMap<String, IncreaseModifier>>()
     private val bossBars = ConcurrentHashMap<UUID, BossBar>()
     private val ioExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "hjh-baihu-miasma-db").apply { isDaemon = true }
@@ -177,7 +184,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
                 status.lastInCave = true
                 if (now - status.lastIncreaseMs >= INCREASE_INTERVAL_MS) {
                     val steps = ((now - status.lastIncreaseMs) / INCREASE_INTERVAL_MS).toInt().coerceAtLeast(1)
-                    changeMiasma(status, INCREASE_PER_STEP * steps, player, true)
+                    val rawIncrease = INCREASE_PER_STEP * steps
+                    val adjustedIncrease = (rawIncrease * getIncreaseMultiplier(player)).toInt().coerceAtLeast(0)
+                    if (adjustedIncrease > 0) {
+                        changeMiasma(status, adjustedIncrease, player, true)
+                    }
                     status.lastIncreaseMs += INCREASE_INTERVAL_MS * steps
                 }
             } else {
@@ -216,19 +227,63 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun notifyCrossedDebuffThresholds(player: Player, oldValue: Int, newValue: Int) {
-        if (oldValue < 300 && newValue >= 300) {
-            player.sendMessage(color("&c白虎洞窒息的气息让你寸步难行……"))
+        val status = statuses[player.uniqueId]
+        if (oldValue < SPEED_THRESHOLD && newValue >= SPEED_THRESHOLD) {
+            dealMagicDamage(player, 10.0)
+            player.sendMessage(color("&c虎瘴骤然侵入经脉，你的步伐变得沉重……"))
         }
-        if (oldValue < 600 && newValue >= 600) {
+        if (oldValue < ARMOR_THRESHOLD && newValue >= ARMOR_THRESHOLD) {
+            dealMagicDamage(player, 15.0)
             player.sendMessage(color("&c瘴气侵入了你的甲胄，好像变得更加脆弱了……"))
         }
-        if (oldValue < 900 && newValue >= 900) {
+        if (oldValue < HEALTH_THRESHOLD && newValue >= HEALTH_THRESHOLD) {
+            dealMagicDamage(player, 20.0)
             player.sendMessage(color("&c瘴气入体，你感受到一股威压，让你经脉受损……"))
+        }
+        if (oldValue < FULL_THRESHOLD && newValue >= FULL_THRESHOLD) {
+            dealMagicDamage(player, 30.0)
+            status?.lastFullDamageMs = System.currentTimeMillis()
+            player.sendMessage(color("&4虎瘴彻底压入心脉，痛楚开始持续蔓延……"))
         }
     }
 
     private fun isInBaihuCave(player: Player): Boolean {
         return regions.any { it.contains(player) }
+    }
+
+    fun setTemporaryIncreaseMultiplier(player: Player, source: String, multiplier: Double, durationTicks: Long) {
+        val expireAt = System.currentTimeMillis() + durationTicks.coerceAtLeast(1L) * 50L
+        val modifiers = increaseModifiers.computeIfAbsent(player.uniqueId) { ConcurrentHashMap() }
+        modifiers[source] = IncreaseModifier(multiplier.coerceAtLeast(0.0), expireAt)
+    }
+
+    fun reduceMiasma(player: Player, amount: Int): Int {
+        if (amount <= 0) return getMiasma(player)
+        val status = statuses[player.uniqueId] ?: return 0
+        changeMiasma(status, -amount, player, false)
+        updateBossBar(player, status.value)
+        applyMiasmaBonuses(player, status.value)
+        return status.value
+    }
+
+    fun addMiasmaDirect(player: Player, amount: Int): Int {
+        if (amount <= 0) return getMiasma(player)
+        val status = statuses[player.uniqueId] ?: return 0
+        changeMiasma(status, amount, player, true)
+        updateBossBar(player, status.value)
+        applyMiasmaBonuses(player, status.value)
+        return status.value
+    }
+
+    private fun getIncreaseMultiplier(player: Player): Double {
+        val modifiers = increaseModifiers[player.uniqueId] ?: return 1.0
+        val now = System.currentTimeMillis()
+        modifiers.entries.removeIf { it.value.expireAt <= now }
+        if (modifiers.isEmpty()) {
+            increaseModifiers.remove(player.uniqueId)
+            return 1.0
+        }
+        return modifiers.values.minOf { it.multiplier }.coerceAtMost(1.0)
     }
 
     private fun updateBossBar(player: Player, value: Int) {
@@ -264,9 +319,9 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         val data = plugin.playerManager.getData(player.uniqueId) ?: return
 
         var changed = false
-        changed = setOrRemoveBonus(data.tempBonuses, SPEED_DEBUFF_KEY, value >= 300, -0.08) || changed
-        changed = setOrRemoveBonus(data.tempBonuses, ARMOR_DEBUFF_KEY, value >= 600, -0.15) || changed
-        changed = setOrRemoveBonus(data.tempBonuses, MAX_HEALTH_DEBUFF_KEY, value >= 900, -0.15) || changed
+        changed = setOrRemoveBonus(data.tempBonuses, SPEED_DEBUFF_KEY, value >= SPEED_THRESHOLD, -0.15) || changed
+        changed = setOrRemoveBonus(data.tempBonuses, ARMOR_DEBUFF_KEY, value >= ARMOR_THRESHOLD, -0.30) || changed
+        changed = setOrRemoveBonus(data.tempBonuses, MAX_HEALTH_DEBUFF_KEY, value >= HEALTH_THRESHOLD, -0.30) || changed
 
         if (changed) {
             plugin.playerManager.updateStats(player)
@@ -289,9 +344,29 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     private fun damageAtFullMiasma(player: Player) {
         if (player.isDead || player.health <= 0.0) return
+        val status = statuses[player.uniqueId] ?: return
+        val now = System.currentTimeMillis()
+        if (now - status.lastFullDamageMs < FULL_DAMAGE_INTERVAL_MS) return
+        status.lastFullDamageMs = now
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-        val damage = 2.0 + maxHealth * 0.03
-        player.health = max(0.0, player.health - damage)
+        dealMagicDamage(player, maxHealth * 0.05)
+    }
+
+    private fun dealMagicDamage(player: Player, damage: Double) {
+        if (damage <= 0.0 || player.isDead || player.health <= 0.0) return
+        player.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
+        val previousMaximum = player.maximumNoDamageTicks
+        player.noDamageTicks = 0
+        player.maximumNoDamageTicks = 0
+        try {
+            player.damage(damage)
+        } finally {
+            if (player.hasMetadata("HJH_MAGIC_DAMAGE")) {
+                player.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            }
+            player.noDamageTicks = 0
+            player.maximumNoDamageTicks = previousMaximum
+        }
     }
 
     @EventHandler
@@ -309,6 +384,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         }
         bossBars.remove(player.uniqueId)?.removeAll()
         statuses.remove(player.uniqueId)
+        increaseModifiers.remove(player.uniqueId)
     }
 
     @EventHandler
@@ -394,9 +470,14 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     companion object {
         private const val INCREASE_INTERVAL_MS = 5_000L
-        private const val INCREASE_PER_STEP = 20
+        private const val INCREASE_PER_STEP = 40
         private const val ENTRY_MIASMA = 60
         private const val OUTSIDE_DECAY_PER_TICK = 50
+        private const val SPEED_THRESHOLD = 200
+        private const val ARMOR_THRESHOLD = 400
+        private const val HEALTH_THRESHOLD = 800
+        private const val FULL_THRESHOLD = 1000
+        private const val FULL_DAMAGE_INTERVAL_MS = 2_000L
         private const val SPEED_DEBUFF_KEY = "baihu_miasma_speed_percent"
         private const val ARMOR_DEBUFF_KEY = "baihu_miasma_armor_percent"
         private const val MAX_HEALTH_DEBUFF_KEY = "baihu_miasma_max_health_percent"

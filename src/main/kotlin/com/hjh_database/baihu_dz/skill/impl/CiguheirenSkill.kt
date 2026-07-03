@@ -1,6 +1,7 @@
 package com.hjh_database.baihu_dz.skill.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.baihu_dz.BaihuEquipmentDamageTag
 import com.hjh_database.baihu_dz.BaihuWeaponData
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
@@ -230,6 +231,7 @@ class CiguheirenSkill(
     }
 
     private fun damageTarget(player: Player, target: LivingEntity, amount: Double) {
+        BaihuEquipmentDamageTag.markTarget(plugin, target)
         target.setMetadata("hjh_physical_skill", FixedMetadataValue(plugin, true))
         target.noDamageTicks = 0
         try {
@@ -238,6 +240,7 @@ class CiguheirenSkill(
             if (target.hasMetadata("hjh_physical_skill")) {
                 target.removeMetadata("hjh_physical_skill", plugin)
             }
+            BaihuEquipmentDamageTag.clearTarget(plugin, target)
             target.noDamageTicks = 0
         }
     }

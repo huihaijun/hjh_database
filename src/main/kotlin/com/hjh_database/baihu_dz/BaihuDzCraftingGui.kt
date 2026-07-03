@@ -89,7 +89,11 @@ class BaihuDzCraftingGui(
             val item = ItemStack(Material.ANVIL)
             item.itemMeta = item.itemMeta?.apply {
                 setDisplayName("§a§l开始锻造虎瘴装")
-                lore = listOf("§7材料与锻造要求均已满足", "§6成品仅身负虎瘴时生效")
+                lore = if (recipe.category == "material") {
+                    listOf("§7材料与锻造要求均已满足")
+                } else {
+                    listOf("§7材料与锻造要求均已满足", "§6成品仅身负虎瘴时生效")
+                }
             }
             inv.setItem(49, item)
         } else {

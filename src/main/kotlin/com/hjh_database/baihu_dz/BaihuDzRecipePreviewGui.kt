@@ -47,13 +47,16 @@ class BaihuDzRecipePreviewGui(
         val item = ItemStack(Material.PAPER)
         item.itemMeta = item.itemMeta?.apply {
             setDisplayName("§6虎瘴锻造要求")
-            lore = listOf(
+            val lines = mutableListOf(
                 "§7职业: §f${if (recipe.reqJob == -1) "通用" else DzUtil.getJobName(recipe.reqJob)}",
                 "§7锻造等级: §fLv.${recipe.reqForgeLevel}",
                 "§7锻造资质: §f${recipe.reqLicense}",
-                "§7成功经验: §e${recipe.expReward}",
-                "§6额外: §f成品仅身负虎瘴时激活"
+                "§7成功经验: §e${recipe.expReward}"
             )
+            if (recipe.category != "material") {
+                lines.add("§6额外: §f成品仅身负虎瘴时激活")
+            }
+            lore = lines
         }
         return item
     }

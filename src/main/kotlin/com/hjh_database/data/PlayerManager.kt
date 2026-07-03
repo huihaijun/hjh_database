@@ -163,7 +163,7 @@ class PlayerManager(private val plugin: Hjh_database) {
             maxExp = getMaxExpRequired(data.lv)
             leveledUp = true
 
-            player.sendMessage("搂a搂l[鍗囩骇] 搂e浣犵殑绛夌骇鎻愬崌鍒颁簡 " + data.lv + " 绾э紒")
+            player.sendMessage("§a§l[升级] §e你的等级提升到了 " + data.lv + " 级！")
             player.playSound(player.location, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f)
         }
 
@@ -192,7 +192,7 @@ class PlayerManager(private val plugin: Hjh_database) {
             val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED
             if (status == QuestStatus.LOCKED && quest.canAccept(player, data)) {
                 plugin.questManager.acceptQuest(player, quest.id)
-                player.sendMessage("搂a[浠诲姟绯荤粺] 鏂颁换鍔″凡鎺ュ彇: ${quest.title}")
+                player.sendMessage("§a[任务系统] 新任务已接取: ${quest.title}")
             }
         }
     }

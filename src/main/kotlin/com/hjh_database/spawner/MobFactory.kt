@@ -13,11 +13,14 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import kotlin.math.min
 
 object MobFactory {
 
     val KEY_MOB_ID = NamespacedKey.fromString("hjh_database:mob_id")!!
-    private val KEY_CUSTOM_ARMOR = NamespacedKey.fromString("hjh_database:hjh_mob_armor")!!
+    val KEY_CUSTOM_ARMOR = NamespacedKey.fromString("hjh_database:hjh_mob_armor")!!
+    val KEY_CUSTOM_DAMAGE = NamespacedKey.fromString("hjh_database:hjh_mob_damage")!!
+    val KEY_NO_REWARD = NamespacedKey.fromString("hjh_database:no_reward")!!
     private val KEY_MOB_AFFIXES = NamespacedKey.fromString("hjh_database:mob_affixes")!!
 
     fun spawnMob(plugin: Hjh_database, location: Location, mobId: String, removeWhenFarAway: Boolean = false): LivingEntity? {
@@ -69,14 +72,20 @@ object MobFactory {
         entity.customName = ChatColor.translateAlternateColorCodes('&', def.name)
         entity.isCustomNameVisible = true
 
-        entity.getAttribute(Attribute.MAX_HEALTH)?.baseValue = def.health
-        entity.health = def.health
+        entity.getAttribute(Attribute.MAX_HEALTH)?.let { maxHealth ->
+            maxHealth.modifiers.toList().forEach { modifier ->
+                maxHealth.removeModifier(modifier)
+            }
+            maxHealth.baseValue = def.health
+            entity.health = min(def.health, maxHealth.value)
+        }
 //        entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = def.damage
         entity.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = def.speed
 
         // 2. 护甲系统适配
         entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
         entity.persistentDataContainer.set(KEY_CUSTOM_ARMOR, PersistentDataType.DOUBLE, def.armor)
+        entity.persistentDataContainer.set(KEY_CUSTOM_DAMAGE, PersistentDataType.DOUBLE, def.damage)
 
         // 3. Tags
         entity.addScoreboardTag("panling")

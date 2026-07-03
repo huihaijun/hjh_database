@@ -4,8 +4,8 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.element.ElementCrystalDamageDealtEvent
 import com.hjh_database.accessory.element.ElementCrystalDamageTakenEvent
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
+import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
 import com.hjh_database.command.TestMobCommand
-import com.hjh_database.spawner.MobAffix
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
 import net.md_5.bungee.api.ChatMessageType
@@ -35,14 +35,10 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     private val weaponKey = NamespacedKey(plugin, "weapon_id")
     private val multishotSideKey = NamespacedKey(plugin, "multishot_side")
     private val isBowKey = NamespacedKey(plugin, "is_bow_shot") // [新增] 用于弓箭2.5倍伤害判断
-    private val affixKey = NamespacedKey(plugin, "mob_affixes")
     private val mobIdKey = MobFactory.KEY_MOB_ID
     // [新增] 用于存储箭矢射出瞬间的属性快照
     private val storedDamageKey = NamespacedKey(plugin, "stored_arrow_damage")
     private val storedCritKey = NamespacedKey(plugin, "stored_arrow_crit")
-    // === 【新增】恶土之炎的专属 PDC 烙印 Key ===
-    private val desertSouthSneaksKey = NamespacedKey(plugin, "desert_south_sneaks")
-
     companion object {
         private const val TEST_DUMMY_TAG = "hjh_test_dummy"
 
@@ -147,18 +143,9 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     val def = MobRegistry.get(mobId)
                     if (def != null) {
                         // ★ 核心：无论原版怎么算，直接把基础伤害覆写为 MobRegistry 配置的数值
-                        damage = def.damage
+                        damage = pdc.get(MobFactory.KEY_CUSTOM_DAMAGE, PersistentDataType.DOUBLE) ?: def.damage
                     }
                 }
-                if (entity is Player) {
-                    val affixes = getMobAffixes(realAttacker)
-                    // ================= 【恶土之炎 触发】 =================
-                    if (affixes.contains(MobAffix.DESERT_SOUTH) && ThreadLocalRandom.current().nextDouble() <= 0.6) {
-                        com.hjh_database.spawner.impl.DesertSouthSkill.trigger(entity)
-                    }
-                    // ====================================================
-                }
-
             }
             // =============================================================
             if (!isMagicDamage) {
@@ -251,6 +238,16 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             val calculationEvent = CombatDamageCalculationEvent(source, entity, damage)
             plugin.server.pluginManager.callEvent(calculationEvent)
             damage = calculationEvent.damage
+            val vulnerableUntil = entity.getMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (vulnerableUntil != null) {
+                if (vulnerableUntil > System.currentTimeMillis()) {
+                    damage *= DuhuozhuSkill.VULNERABLE_MULTIPLIER
+                } else {
+                    entity.removeMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA, plugin)
+                }
+            }
         }
 
         // 6. 受击者逻辑 (护甲计算)
@@ -340,34 +337,9 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         msgTarget?.sendMessage("§e[测试] §f造成伤害: §c%.2f".format(event.finalDamage))
     }
 
-    // 优化：采用 EnumSet 返回更轻量级和高效的枚举集合
-    private fun getMobAffixes(entity: LivingEntity): Set<MobAffix> {
-        val str = entity.persistentDataContainer.get(affixKey, PersistentDataType.STRING) ?: return emptySet()
-        if (str.isEmpty()) return emptySet()
-
-        val resultSet = EnumSet.noneOf(MobAffix::class.java)
-        str.split(',').forEach { id ->
-            MobAffix.fromId(id)?.let { resultSet.add(it) }
-        }
-        return resultSet
-    }
-
     @EventHandler(ignoreCancelled = true)
     fun onDeath(event: EntityDeathEvent) {
         val entity = event.entity
-        // === 【新增修复】拦截非最大尺寸的史莱姆和岩浆怪 ===
-        // org.bukkit.entity.MagmaCube 继承自 org.bukkit.entity.Slime，所以判断 Slime 即可涵盖两者
-        if (entity is org.bukkit.entity.Slime) {
-            // 如果尺寸小于 4 (即非最大尺寸分裂出来的中、小体型)
-            if (entity.size < 4) {
-                // 清空原版掉落物
-                event.drops.clear()
-                // 清空原版经验掉落
-                event.droppedExp = 0
-                // ★ 直接 return，阻止后续 CombatListener 里的自定义经验发放和掉落逻辑
-                return
-            }
-        }
         val killer = entity.killer
 
         // 1. 给击杀者发放经验

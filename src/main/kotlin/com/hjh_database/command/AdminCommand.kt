@@ -184,7 +184,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.alchemyManager.loadRecipes()
             // 重载传送点
             plugin.teleportManager.reload()
-            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶)已重载！")
+            plugin.farmingManager.reload()
+            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶/灵田)已重载！")
             return true
         }
 

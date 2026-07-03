@@ -3,30 +3,35 @@ package com.hjh_database.spawner
 import com.hjh_database.Hjh_database
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.block.CreatureSpawner
+import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.round
 
 class SpawnerBlockManager(private val plugin: Hjh_database) {
 
     private val keyMobId = NamespacedKey(plugin, "hjh_spawner_mobid_block")
     private val keyTarget = NamespacedKey(plugin, "hjh_spawner_target_block")
-    // 下次生成的冷却时间标记
     private val keyNextSpawn = NamespacedKey(plugin, "hjh_spawner_next_spawn")
-    private val activationRange = 10.0
+    private val keyDelayTicks = NamespacedKey(plugin, "hjh_spawner_delay_ticks")
+
+    private val activationRange = 16.0
     private val activationRangeSquared = activationRange * activationRange
     private val maxNearbyRange = 20.0
     private val maxNearbyRangeSquared = maxNearbyRange * maxNearbyRange
 
     init {
-        // 记得在 onEnable 调用 MobRegistry.init()
         MobRegistry.init()
         startSpawnerTask()
     }
 
-    // 写入数据工具方法 (给 Listener 用)
     fun writeToSpawner(spawner: CreatureSpawner, mobId: String, targetStr: String?) {
         spawner.persistentDataContainer.set(keyMobId, PersistentDataType.STRING, mobId)
         if (targetStr != null) {
@@ -34,131 +39,222 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         } else {
             spawner.persistentDataContainer.remove(keyTarget)
         }
-        // 禁用原版生成逻辑
+
         spawner.spawnCount = 0
         spawner.requiredPlayerRange = 0
         spawner.maxNearbyEntities = 0
 
-        // === 【修改】放置刷怪笼时，根据怪物的配置给一个初始随机冷却 ===
         val def = MobRegistry.get(mobId)
-        val minDelay = def?.minSpawnDelay ?: 20
-        val maxDelay = (def?.maxSpawnDelay ?: 50).coerceAtLeast(minDelay) // 确保 max >= min
-        val delaySeconds = if (minDelay == maxDelay) minDelay else java.util.concurrent.ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
-
-        spawner.persistentDataContainer.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + delaySeconds * 1000L)
+        spawner.persistentDataContainer.set(keyDelayTicks, PersistentDataType.INTEGER, randomDelayTicks(def))
+        spawner.persistentDataContainer.remove(keyNextSpawn)
         spawner.update()
     }
 
     private fun startSpawnerTask() {
         object : BukkitRunnable() {
             override fun run() {
-                for (player in Bukkit.getOnlinePlayers()) {
-                    // === 【新增修改】忽略创造模式和旁观模式的玩家，不触发他们周围的刷怪笼 ===
-                    if (player.gameMode == org.bukkit.GameMode.CREATIVE || player.gameMode == org.bukkit.GameMode.SPECTATOR) {
-                        continue
-                    }
-                    processPlayerSurroundings(player)
+                val activeSpawners = collectActiveSpawners()
+                for (spawner in activeSpawners) {
+                    attemptSpawn(spawner)
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L)
+        }.runTaskTimer(plugin, TASK_PERIOD_TICKS, TASK_PERIOD_TICKS)
     }
 
-    private fun processPlayerSurroundings(player: Player) {
-        val chunk = player.location.chunk
-        // 扫描周围区块
-        for (x in -1..1) {
-            for (z in -1..1) {
-                val currentChunk = player.world.getChunkAt(chunk.x + x, chunk.z + z)
-                if (!currentChunk.isLoaded) continue
+    private fun collectActiveSpawners(): List<CreatureSpawner> {
+        val candidates = ArrayList<CreatureSpawner>()
+        val seen = HashSet<String>()
 
-                for (tile in currentChunk.tileEntities) {
-                    if (tile is CreatureSpawner) {
-                        attemptSpawn(tile)
+        for (player in Bukkit.getOnlinePlayers()) {
+            if (!canActivateSpawner(player)) continue
+
+            val playerLoc = player.location
+            val chunk = playerLoc.chunk
+            val world = player.world
+
+            for (chunkXOffset in -1..1) {
+                for (chunkZOffset in -1..1) {
+                    val chunkX = chunk.x + chunkXOffset
+                    val chunkZ = chunk.z + chunkZOffset
+                    if (!world.isChunkLoaded(chunkX, chunkZ)) continue
+
+                    val currentChunk = world.getChunkAt(chunkX, chunkZ)
+                    for (tile in currentChunk.tileEntities) {
+                        val spawner = tile as? CreatureSpawner ?: continue
+                        val center = spawner.location.clone().add(0.5, 0.5, 0.5)
+                        if (playerLoc.distanceSquared(center) > activationRangeSquared) continue
+
+                        val loc = spawner.location
+                        val key = "${world.uid}:${loc.blockX}:${loc.blockY}:${loc.blockZ}"
+                        if (seen.add(key)) {
+                            candidates.add(spawner)
+                        }
                     }
                 }
             }
         }
+
+        return candidates
+    }
+
+    private fun canActivateSpawner(player: Player): Boolean {
+        return !player.isDead &&
+            player.gameMode != org.bukkit.GameMode.CREATIVE &&
+            player.gameMode != org.bukkit.GameMode.SPECTATOR
     }
 
     private fun attemptSpawn(spawner: CreatureSpawner) {
         val pdc = spawner.persistentDataContainer
         val mobId = pdc.get(keyMobId, PersistentDataType.STRING) ?: return
-        val def = MobRegistry.get(mobId) ?: return // 如果 ID 不存在则跳过
+        val def = MobRegistry.get(mobId) ?: return
 
-        // =========================================================================
-        // 1. 检查玩家激活距离 (对应原版 NBT: RequiredPlayerRange: 18s)
-        // =========================================================================
-        val spawnerCenter = spawner.location.clone().add(0.5, 0.5, 0.5)
-        // 这里的 16.0 控制激活距离。它代表检测以刷怪笼为中心，正负 16 格半径内的玩家。
-        val hasPlayerNearby = spawnerCenter.world!!.players
-            .any { !it.isDead &&
-                    it.gameMode != org.bukkit.GameMode.SPECTATOR &&
-                    it.gameMode != org.bukkit.GameMode.CREATIVE &&
-                    it.location.distanceSquared(spawnerCenter) <= activationRangeSquared }
-        // 如果周围没玩家，直接 return。这会让刷怪笼“休眠”卡在当前冷却状态，不会重置时间也不会刷怪
-        if (!hasPlayerNearby) return
-
-        // 2. 检查冷却
-        val nextSpawn = pdc.get(keyNextSpawn, PersistentDataType.LONG) ?: 0L
-        if (System.currentTimeMillis() < nextSpawn) return
-
-        // =========================================================================
-        // 3. 确定生成位置
-        // =========================================================================
-        val targetStr = pdc.get(keyTarget, PersistentDataType.STRING)
-        val spawnLoc = if (targetStr != null) {
-            parseLocation(targetStr) ?: spawner.location.clone().add(0.5, 1.0, 0.5) // 解析失败则回退
-        } else {
-            // 【修改点】：移除了在此处计算随机坐标偏移的代码。
-            // 因为你在 SpawnerListener 已经规定好了坐标，这里直接返回基础坐标即可。
-            // 注意加上 clone() 防止误修改原方块的 Location 对象
-            spawner.location.clone().add(0.5, 1.0, 0.5)
+        val remainingTicks = readDelayTicks(spawner, def)
+        if (remainingTicks > TASK_PERIOD_TICKS) {
+            setDelayTicks(spawner, remainingTicks - TASK_PERIOD_TICKS.toInt())
+            return
         }
 
-        if (spawnLoc.world == null) return
+        val baseLoc = pdc.get(keyTarget, PersistentDataType.STRING)?.let { parseLocation(it) }
+            ?: spawner.location.clone().add(0.5, 1.0, 0.5)
+        val spawnLoc = findNearbySpawnLocation(baseLoc, def.type)
+        if (spawnLoc == null) {
+            resetDelay(spawner, def)
+            return
+        }
 
-        // =========================================================================
-        // 4. 检查数量上限
-        // =========================================================================
-        // 【修改点】：检测中心重新改为 spawnLoc (怪物生成点)！
-        // 【修改点】：检测半径从 4.0 扩大至 20.0 格！适用于同一区域拥有密集刷怪笼的情况。
         val nearby = spawnLoc.world!!.getNearbyEntities(spawnLoc, maxNearbyRange, maxNearbyRange, maxNearbyRange)
             .count {
                 it.location.distanceSquared(spawnLoc) <= maxNearbyRangeSquared &&
-                        it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId
+                    it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId
             }
 
         if (nearby >= def.maxNearby) {
-            val minDelay = def.minSpawnDelay
-            val maxDelay = def.maxSpawnDelay.coerceAtLeast(minDelay)
-            val delaySeconds = if (minDelay == maxDelay) {
-                minDelay
-            } else {
-                java.util.concurrent.ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
-            }
-            spawner.persistentDataContainer.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + delaySeconds * 1000L)
-            spawner.update()
-
-            return // 退出本次生成
+            resetDelay(spawner, def)
+            return
         }
 
-        // 5. 生成怪物 (传入 plugin 以便 Factory 访问 ResourceManager 等)
         MobFactory.spawnMob(plugin, spawnLoc, mobId, removeWhenFarAway = true)
+        resetDelay(spawner, def)
+    }
 
-        // =========================================================================
-        // 6. 设置下次冷却时间
-        // =========================================================================
-        val minDelay = def.minSpawnDelay
-        val maxDelay = def.maxSpawnDelay.coerceAtLeast(minDelay) // 确保最大值不小于最小值
-        // 计算随机秒数，对应在 minDelay 和 maxDelay 之间 roll 冷却时间
-        val delaySeconds = if (minDelay == maxDelay) {
+    private fun readDelayTicks(spawner: CreatureSpawner, def: MobDefinition): Int {
+        val pdc = spawner.persistentDataContainer
+        pdc.get(keyDelayTicks, PersistentDataType.INTEGER)?.let { return it.coerceAtLeast(0) }
+
+        val convertedTicks = pdc.get(keyNextSpawn, PersistentDataType.LONG)?.let { oldNextSpawn ->
+            val remainingMillis = (oldNextSpawn - System.currentTimeMillis()).coerceAtLeast(0L)
+            ((remainingMillis + 49L) / 50L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        } ?: randomDelayTicks(def)
+
+        setDelayTicks(spawner, convertedTicks)
+        return convertedTicks
+    }
+
+    private fun resetDelay(spawner: CreatureSpawner, def: MobDefinition) {
+        setDelayTicks(spawner, randomDelayTicks(def))
+    }
+
+    private fun setDelayTicks(spawner: CreatureSpawner, ticks: Int) {
+        spawner.persistentDataContainer.set(keyDelayTicks, PersistentDataType.INTEGER, ticks.coerceAtLeast(0))
+        spawner.persistentDataContainer.remove(keyNextSpawn)
+        spawner.update()
+    }
+
+    private fun randomDelayTicks(def: MobDefinition?): Int {
+        val minDelay = def?.minSpawnDelay ?: 20
+        val maxDelay = (def?.maxSpawnDelay ?: 50).coerceAtLeast(minDelay)
+        val seconds = if (minDelay == maxDelay) {
             minDelay
         } else {
-            java.util.concurrent.ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
+            ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
         }
-        // 写入下次生成的时间戳 = 当前时间 + 随机秒数 * 1000毫秒
-        spawner.persistentDataContainer.set(keyNextSpawn, PersistentDataType.LONG, System.currentTimeMillis() + delaySeconds * 1000L)
-        spawner.update()
+        return seconds.coerceAtLeast(1) * 20
+    }
+
+    private fun findNearbySpawnLocation(baseLoc: Location, type: EntityType): Location? {
+        if (baseLoc.world == null) return null
+
+        val centered = centerIfBlockAligned(baseLoc)
+        val candidates = ArrayList<Location>()
+        if (isBlockAligned(baseLoc.x) && isBlockAligned(baseLoc.z)) {
+            candidates.add(centered)
+            candidates.add(baseLoc)
+        } else {
+            candidates.add(baseLoc)
+            candidates.add(centered)
+        }
+
+        val offsets = ArrayList<Triple<Int, Int, Int>>()
+        for (y in listOf(0, 1, -1)) {
+            for (x in -2..2) {
+                for (z in -2..2) {
+                    if (x == 0 && y == 0 && z == 0) continue
+                    offsets.add(Triple(x, y, z))
+                }
+            }
+        }
+        offsets.sortBy { (x, y, z) -> x * x + y * y + z * z }
+        offsets.forEach { (x, y, z) ->
+            candidates.add(centered.clone().add(x.toDouble(), y.toDouble(), z.toDouble()))
+        }
+
+        val tested = HashSet<String>()
+        for (candidate in candidates) {
+            val key = "${candidate.world!!.uid}:${candidate.x}:${candidate.y}:${candidate.z}"
+            if (!tested.add(key)) continue
+            if (isSpawnSpaceClear(candidate, type)) return candidate
+        }
+        return null
+    }
+
+    private fun isSpawnSpaceClear(location: Location, type: EntityType): Boolean {
+        val world = location.world ?: return false
+        val footprint = footprintFor(type)
+        val minX = floor(location.x - footprint.radius + EPSILON).toInt()
+        val maxX = floor(location.x + footprint.radius - EPSILON).toInt()
+        val minY = floor(location.y + EPSILON).toInt()
+        val maxY = floor(location.y + footprint.height - EPSILON).toInt()
+        val minZ = floor(location.z - footprint.radius + EPSILON).toInt()
+        val maxZ = floor(location.z + footprint.radius - EPSILON).toInt()
+
+        for (x in minX..maxX) {
+            for (y in minY..maxY) {
+                for (z in minZ..maxZ) {
+                    val block = world.getBlockAt(x, y, z)
+                    if (!block.isPassable || block.type in BLOCKED_SPAWN_MATERIALS) {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    private fun footprintFor(type: EntityType): SpawnFootprint {
+        return when (type) {
+            EntityType.SPIDER -> SpawnFootprint(0.75, 1.0)
+            EntityType.CAVE_SPIDER -> SpawnFootprint(0.45, 0.7)
+            EntityType.SLIME, EntityType.MAGMA_CUBE -> SpawnFootprint(1.05, 2.1)
+            EntityType.PHANTOM -> SpawnFootprint(0.95, 0.6)
+            EntityType.BLAZE, EntityType.BREEZE -> SpawnFootprint(0.45, 1.8)
+            else -> SpawnFootprint(0.35, 1.95)
+        }
+    }
+
+    private fun centerIfBlockAligned(location: Location): Location {
+        if (!isBlockAligned(location.x) || !isBlockAligned(location.z)) return location.clone()
+        return Location(
+            location.world,
+            location.blockX + 0.5,
+            location.y,
+            location.blockZ + 0.5,
+            location.yaw,
+            location.pitch
+        )
+    }
+
+    private fun isBlockAligned(value: Double): Boolean {
+        return abs(value - round(value)) < EPSILON
     }
 
     private fun parseLocation(str: String): Location? {
@@ -167,6 +263,22 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         val world = Bukkit.getWorld(parts[0]) ?: return null
         return try {
             Location(world, parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private data class SpawnFootprint(val radius: Double, val height: Double)
+
+    private companion object {
+        private const val TASK_PERIOD_TICKS = 20L
+        private const val EPSILON = 1.0E-6
+        private val BLOCKED_SPAWN_MATERIALS = setOf(
+            Material.WATER,
+            Material.LAVA,
+            Material.FIRE,
+            Material.SOUL_FIRE,
+            Material.POWDER_SNOW
+        )
     }
 }

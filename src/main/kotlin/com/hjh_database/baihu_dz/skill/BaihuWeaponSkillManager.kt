@@ -2,7 +2,10 @@ package com.hjh_database.baihu_dz.skill
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.baihu_dz.BaihuWeaponData
+import com.hjh_database.baihu_dz.skill.impl.AnhuishinuSkill
 import com.hjh_database.baihu_dz.skill.impl.CiguheirenSkill
+import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
+import com.hjh_database.baihu_dz.skill.impl.HuzhizhanqiSkill
 import com.hjh_database.data.PlayerData
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -34,6 +37,9 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         val rootDir = File(plugin.dataFolder, "baihu_dz/weapon_skills")
         if (!rootDir.exists()) rootDir.mkdirs()
         copyIfMissing("baihu_dz/weapon_skills/ciguheiren.yml")
+        copyIfMissing("baihu_dz/weapon_skills/anhuishinu.yml")
+        copyIfMissing("baihu_dz/weapon_skills/duhuozhu.yml")
+        copyIfMissing("baihu_dz/weapon_skills/huzhizhanqi.yml")
         loadSkillFiles(rootDir)
     }
 
@@ -58,6 +64,9 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
 
     private fun registerSkills() {
         skillRegistry["ciguheiren"] = CiguheirenSkill(plugin, this)
+        skillRegistry["anhuishinu"] = AnhuishinuSkill(plugin)
+        skillRegistry["duhuozhu"] = DuhuozhuSkill(plugin)
+        skillRegistry["huzhizhanqi"] = HuzhizhanqiSkill(plugin)
     }
 
     fun tryCastSkill(player: Player, item: ItemStack, projectile: Entity?) {

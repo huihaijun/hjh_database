@@ -1,3 +1,4 @@
+#近战🗡 💥 ※  生命❤   ⚡  ⚔  ☯  箭矢🏹  『』
 weapons:
   baihu_kaishandao:
     display: "&6虎瘴·开山刀"
@@ -75,3 +76,94 @@ weapons:
       attack: 13.0
       speed_percent: -0.08
       max_health_percent: -0.10
+
+  anhuishinu:
+    display: "&7暗灰蚀弩[虎瘴]"
+    material: CROSSBOW
+    rarity: 4
+    skill_id: anhuishinu
+    req_job: 1
+    req_lv: 25
+    activate_slot: 0
+    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
+    durability:
+      max: 100
+      skill_cost: 5
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b25"
+      - "&7&o被虎瘴侵染的弓弩"
+      - "&7&o可一箭封喉,散落瘴气"
+      - "&8===========&2&n&l武器属性&8============"
+      - "&f箭矢强度 +27 耐久度 100"
+      - "&7[虎瘴] &c移动速度 -10% &f快速装填 散射箭"
+      - "&8===========&2&n&l武器技能&8============"
+      - "&e[主动] &7[寒骨箭]"
+      - "&e[下蹲+射击] &f冷却:&b5&f秒 &f耐久损耗:&b5&f点"
+      - "&f令本次射击改为射出寒气,贯穿路径上&b15格&f的怪物"
+      - "&f对他们造成&b240%🏹&f的伤害并令其&b减速&f持续&b5&f秒"
+    stats:
+      archer_damage: 27.0      # 只有手持时生效
+      speed_percent: -0.10
+
+  duhuozhu:
+    display: "&7毒火烛[虎瘴] [法器]"
+    rarity: 4
+    material: LIGHT_GRAY_CANDLE
+    skill_id: duhuozhu
+    req_job: 2
+    req_lv: 25
+    activate_slot: 7
+    active_lore_line: "&c请放在快捷栏第八格激活"
+    durability:
+      max: 100
+      skill_cost: 5
+    lore:
+      - "&6限制职业:[术] 限制等级:&b25"
+      - "&7&o由白虎洞内营火旁的燃灰制成"
+      - "&7&o借助虎瘴的毒力催生火种"
+      - "&8===========&2&n&l法器属性&8============"
+      - "&f阵法强度 +4 耐久度 100"
+      - "&7[虎瘴] &c最大生命 -5%"
+      - "&8===========&2&n&l武器技能&8============"
+      - "&e[主动] &7[轮火烬染] &f灵力消耗:&b20&f点"
+      - "&e[(副手法炉)主手持有+右键] &f冷却:&c5&f秒 &f耐久损耗:&b5&f点"
+      - "&f向周围&b8格&f范围逐渐散出火圈,一共三轮"
+      - "&f分别造成&b80%&7&o/&b110%&7&o/&b140%⚡伤害"
+      - "&f最后一轮火圈会令怪物获得&b25%&f的易伤持续&b5&f秒"
+    stats:
+      zf_str: 4.0      # 增加阵法强度
+      max_health_percent: -0.05
+
+  huzhizhanqi:
+    display: "&7虎志战旗[虎瘴]"
+    rarity: 4
+    material: LIGHT_GRAY_BANNER
+    skill_id: huzhizhanqi
+    req_job: 3
+    req_lv: 25
+    activate_slot: 7
+    active_lore_line: "&c请放在快捷栏第八格激活"
+    durability:
+      max: 100
+      skill_cost: 5
+    lore:
+      - "&6限制职业:[医] 限制等级:&b25"
+      - "&7&o传闻是通过了白虎大人试炼的医师所留"
+      - "&7&o战旗的图案已经消磨殆尽,但白虎之志尚存"
+      - "&7&o鼓舞着冒险者们冲破虎瘴,走向光明"
+      - "&8===========&2&n&l武器属性&8============"
+      - "&f阵法强度 +3 最大生命 +6"
+      - "&f耐久度 100"
+      - "&7[虎瘴] &c护甲 -10%"
+      - "&8===========&2&n&l武器技能&8============"
+      - "&e[主动] &7[虎志战阵] &f灵力消耗:&b20&f点"
+      - "&e[主手持有+右键] &f冷却:&c10&f秒 &f耐久损耗:&b5&f点"
+      - "&f将旗帜插入地中形成&b15&f格范围的&b[战阵]&f持续&b8&f秒"
+      - "&f&b[战阵]&f形成和结束时,对阵内的怪物造成&b125%⚡&f的伤害"
+      - "&b[战阵]&f:阵内玩家&7虎瘴&f增速减缓&b50%&f"
+      - "&f阵内的&b战士/弓箭手&f进攻属性增加&b20%"
+      - "&b术士/医师&f每秒回复&b5&f点灵力"
+    stats:
+      zf_str: 3.0
+      max_health: 6.0
+      armor_percent: -0.1

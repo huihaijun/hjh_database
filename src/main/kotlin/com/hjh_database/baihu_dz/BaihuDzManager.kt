@@ -21,6 +21,7 @@ import org.bukkit.util.io.BukkitObjectOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.util.Locale
 
 class BaihuDzManager(private val plugin: Hjh_database) {
@@ -60,6 +61,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         copyIfMissing("baihu_dz/equipment/artifacts.yml")
         copyIfMissing("baihu_dz/recipes/weapon.yml")
         copyIfMissing("baihu_dz/recipes/artifact.yml")
+        copyIfMissing("baihu_dz/recipes/material.yml")
     }
 
     private fun copyIfMissing(path: String) {
@@ -92,6 +94,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         recipes.clear()
         loadRecipeCategory("weapon")
         loadRecipeCategory("artifact")
+        loadRecipeCategory("material")
     }
 
     private fun loadRecipeCategory(category: String) {
@@ -139,11 +142,80 @@ class BaihuDzManager(private val plugin: Hjh_database) {
     }
 
     fun getRecipesByCategory(category: String): List<DzRecipe> {
+        if (category == "equipment") {
+            return listOf("weapon", "artifact").flatMap { recipes[it]?.values?.toList() ?: emptyList() }
+        }
         return recipes[category]?.values?.toList() ?: emptyList()
     }
 
     fun getRecipe(category: String, id: String): DzRecipe? {
+        if (category == "equipment") {
+            return recipes["weapon"]?.get(id) ?: recipes["artifact"]?.get(id)
+        }
         return recipes[category]?.get(id)
+    }
+
+    fun saveRecipe(recipe: DzRecipe) {
+        val actualCategory = resolveSaveCategory(recipe)
+        val storedRecipe = DzRecipe(
+            recipe.id,
+            actualCategory,
+            recipe.result,
+            recipe.ingredients,
+            recipe.reqJob,
+            recipe.reqForgeLevel,
+            recipe.reqLicense,
+            recipe.expReward
+        )
+        val file = File(plugin.dataFolder, "baihu_dz/recipes/$actualCategory.yml")
+        if (!file.parentFile.exists()) file.parentFile.mkdirs()
+        val config = YamlConfiguration.loadConfiguration(file)
+        val path = storedRecipe.id
+
+        val resultId = ItemUtil.getPublicId(storedRecipe.result)
+        config.set("$path.result_id", "$resultId:${storedRecipe.result.amount}")
+
+        val ingredients = storedRecipe.ingredients.map { item ->
+            if (item.type == Material.AIR) {
+                "AIR:1"
+            } else {
+                "${ItemUtil.getPublicId(item)}:${item.amount}"
+            }
+        }
+        config.set("$path.ingredients", ingredients)
+        config.set("$path.req_job", storedRecipe.reqJob)
+        config.set("$path.req_level", storedRecipe.reqForgeLevel)
+        config.set("$path.req_license", storedRecipe.reqLicense)
+        config.set("$path.exp_reward", storedRecipe.expReward)
+
+        try {
+            config.save(file)
+            recipes.computeIfAbsent(actualCategory) { linkedMapOf() }[storedRecipe.id] = storedRecipe
+        } catch (e: IOException) {
+            plugin.logger.warning("保存白虎锻造配方 ${storedRecipe.id} 失败: ${e.message}")
+        }
+    }
+
+    fun deleteRecipe(category: String, id: String) {
+        val actualCategory = if (category == "equipment") getRecipe(category, id)?.category ?: category else category
+        val file = File(plugin.dataFolder, "baihu_dz/recipes/$actualCategory.yml")
+        val config = YamlConfiguration.loadConfiguration(file)
+        config.set(id, null)
+        try {
+            config.save(file)
+            recipes[actualCategory]?.remove(id)
+        } catch (e: IOException) {
+            plugin.logger.warning("删除白虎锻造配方 $id 失败: ${e.message}")
+        }
+    }
+
+    private fun resolveSaveCategory(recipe: DzRecipe): String {
+        if (recipe.category != "equipment") return recipe.category
+        return when {
+            getWeaponDataFromItem(recipe.result) != null -> "weapon"
+            getArtifactDataFromItem(recipe.result) != null -> "artifact"
+            else -> "weapon"
+        }
     }
 
     fun getItem(id: String): ItemStack? {
@@ -250,7 +322,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         meta.persistentDataContainer.set(durabilityKey, PersistentDataType.INTEGER, next)
         item.itemMeta = meta
         if (data is BaihuWeaponData) {
-            updateWeaponLore(item, data, player)
+            updateWeaponLore(item, data, player, findInventorySlot(player, item))
         } else if (data is BaihuArtifactData) {
             updateArtifactLore(item, data, player, null)
         }
@@ -259,6 +331,13 @@ class BaihuDzManager(private val plugin: Hjh_database) {
             plugin.playerManager.updateStats(player)
         }
         return true
+    }
+
+    private fun findInventorySlot(player: Player, item: ItemStack): Int {
+        for (slot in 0 until player.inventory.size) {
+            if (player.inventory.getItem(slot) === item) return slot
+        }
+        return player.inventory.heldItemSlot
     }
 
     fun calculateWeaponStats(player: Player, data: PlayerData): Map<String, Double> {
@@ -339,9 +418,10 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         data.lore.forEach { lore.add(color(it)) }
         lore.add("")
         lore.add("§6虎瘴耐久: §f${getDurability(item, data)}§7/§f${data.maxDurability} §8(技能-${data.durabilityCost})")
+        var active = false
         if (player != null) {
             val playerData = plugin.playerManager.getData(player.uniqueId)
-            val active = playerData != null &&
+            active = playerData != null &&
                 canUse(player, item, data) &&
                 (data.activateSlot == -1 || data.activateSlot == slot) &&
                 data.isActivated(playerData)
@@ -353,8 +433,21 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         } else {
             lore.add("§7需身负虎瘴方可激活")
         }
+        applyCrossbowEnchantments(item, meta, active)
         meta.lore = lore
         item.itemMeta = meta
+    }
+
+    private fun applyCrossbowEnchantments(item: ItemStack, meta: org.bukkit.inventory.meta.ItemMeta, active: Boolean) {
+        if (item.type != Material.CROSSBOW) return
+        if (active) {
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+        } else {
+            meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
+            meta.removeEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE)
+        }
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS)
     }
 
     private fun updateArtifactLore(
@@ -397,7 +490,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
             pData == null -> lore.add("§c⚠ 玩家数据未加载")
             data.reqJob != -1 && pData.job != data.reqJob -> lore.add("§c⚠ 职业不符")
             pData.lv < data.reqLv -> lore.add("§c⚠ 等级不足 (${pData.lv}/${data.reqLv})")
-            data is BaihuWeaponData && data.activateSlot != -1 && data.activateSlot != slot -> lore.add("§7◆ 未放入指定激活栏")
+            data is BaihuWeaponData && data.activateSlot != -1 && data.activateSlot != slot -> lore.add(color(data.activeLoreLine))
             data is BaihuArtifactData && slot is String && !data.activations.containsKey(slot) -> lore.add("§7◆ 未放入指定激活栏")
             else -> lore.add("§7◆ 未激活")
         }

@@ -18,9 +18,10 @@ import org.bukkit.persistence.PersistentDataType
 
 class BaihuDzCategoryGui(
     private val plugin: Hjh_database,
-    private val player: Player
+    private val player: Player,
+    private val manageMode: Boolean = false
 ) : InventoryHolder, Listener {
-    private val inv: Inventory = Bukkit.createInventory(this, 27, "§6虎瘴锻造台")
+    private val inv: Inventory = Bukkit.createInventory(this, 27, "§8§l白虎锻造台")
     private val categoryKey = NamespacedKey(plugin, "baihu_dz_category")
 
     init {
@@ -36,16 +37,16 @@ class BaihuDzCategoryGui(
         setCategory(
             11,
             Material.IRON_SWORD,
-            "weapon",
-            "§c§l虎瘴武器",
-            listOf("§7白虎洞虎瘴浸染的兵刃", "§6需身负虎瘴方可激活")
+            "equipment",
+            "§c§l武器&法器",
+            listOf("§7白虎洞虎瘴浸染的兵刃与法器", "§6释放技能时消耗虎瘴耐久")
         )
         setCategory(
             15,
-            Material.END_CRYSTAL,
-            "artifact",
-            "§d§l虎瘴法宝",
-            listOf("§7放入饰品栏或指定栏位激活", "§6释放技能时消耗虎瘴耐久")
+            Material.AMETHYST_SHARD,
+            "material",
+            "§b§l材料",
+            listOf("§7锻造白虎装备所需的特殊材料")
         )
     }
 
@@ -75,7 +76,6 @@ class BaihuDzCategoryGui(
         val meta = event.currentItem?.itemMeta ?: return
         val category = meta.persistentDataContainer.get(categoryKey, PersistentDataType.STRING) ?: return
         player.closeInventory()
-        val manageMode = player.isOp && player.inventory.itemInMainHand.type == Material.WOODEN_HOE
         BaihuDzRecipeListGui(plugin, player, category, manageMode).open()
     }
 }

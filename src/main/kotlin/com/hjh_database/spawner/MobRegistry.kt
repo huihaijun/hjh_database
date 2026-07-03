@@ -82,7 +82,7 @@ object MobRegistry {
             name = "&c森林僵尸",
             type = EntityType.ZOMBIE,
             health = 20.0,
-            damage = 2.0,
+            damage = 3.0,
             armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             maxNearby = 3,
@@ -133,7 +133,7 @@ object MobRegistry {
             name = "&c森林蜘蛛",
             type = EntityType.SPIDER,
             health = 10.0,
-            damage = 3.0,
+            damage = 4.0,
             armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.3,
             maxNearby = 3,
@@ -158,8 +158,8 @@ object MobRegistry {
             name = "&c精英-森林僵尸",
             type = EntityType.ZOMBIE,
             health = 35.0,
-            damage = 5.0,
-            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            damage = 5.5,
+            armor = 6.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             maxNearby = 3,
             drops = listOf(
@@ -185,7 +185,7 @@ object MobRegistry {
             name = "&c精英-森林骷髅",
             type = EntityType.SKELETON,
             health = 16.0,
-            damage = 4.0,
+            damage = 6.0,
             armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             maxNearby = 3,
@@ -209,9 +209,9 @@ object MobRegistry {
             id = "jy_senlinzhizhu",
             name = "&c精英-森林蜘蛛",
             type = EntityType.SPIDER,
-            health = 16.0,
-            damage = 5.0,
-            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 22.0,
+            damage = 7.0,
+            armor = 6.5, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.3,
             maxNearby = 3,
             drops = listOf(
@@ -236,7 +236,7 @@ object MobRegistry {
             type = EntityType.SKELETON,
             health = 14.0,
             damage = 4.0,
-            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            armor = 2.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.25,
             maxNearby = 2,
             drops = listOf(
@@ -256,8 +256,8 @@ object MobRegistry {
             name = "&c携带贡品的僵尸",
             type = EntityType.ZOMBIE,
             health = 24.0,
-            damage = 3.0,
-            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            damage = 4.5,
+            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             maxNearby = 3,
             drops = listOf(
@@ -276,8 +276,8 @@ object MobRegistry {
             name = "&c携带贡品的蜘蛛",
             type = EntityType.SPIDER,
             health = 15.0,
-            damage = 3.0,
-            armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            damage = 5.5,
+            armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.3,
             maxNearby = 3,
             drops = listOf(
@@ -296,11 +296,11 @@ object MobRegistry {
             id = "zhizhunvwang",
             name = "&6神速的 蜘蛛女王",
             type = EntityType.SPIDER,
-            health = 200.0,
-            damage = 8.0,
+            health = 250.0,
+            damage = 11.5,
             exp = 50,       // 经验值
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
-            speed = 0.35,
+            armor = 11.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            speed = 0.4,
             maxNearby = 1,
             drops = listOf(
                 MobDrop("wood", 1, 2, 1.0),
@@ -318,7 +318,7 @@ object MobRegistry {
             id = "yssl_jiangshi",
             name = "&c试图抢劫贡品的僵尸",
             type = EntityType.ZOMBIE,
-            health = 7.5,
+            health = 9.5,
             damage = 2.0,
             armor = 0.0,
             speed = 0.2,
@@ -332,7 +332,7 @@ object MobRegistry {
             id = "yssl_kulou",
             name = "&c试图抢劫贡品的骷髅",
             type = EntityType.SKELETON,
-            health = 6.0,
+            health = 7.0,
             damage = 3.5,
             armor = 0.0,
             speed = 0.25,
@@ -347,7 +347,7 @@ object MobRegistry {
             id = "yssl_zhizhu",
             name = "&c试图抢劫贡品的蜘蛛",
             type = EntityType.SPIDER,
-            health = 6.5,
+            health = 8.5,
             damage = 3.0,
             armor = 0.0,
             speed = 0.3,
@@ -360,8 +360,8 @@ object MobRegistry {
             id = "shenmushouwei",
             name = "&6千斤的 神木守卫",
             type = EntityType.ZOMBIE,
-            health = 300.0,
-            damage = 10.0,
+            health = 360.0,
+            damage = 15.0,
             armor = 15.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             exp = 100,       // 经验值
             speed = 0.2,
@@ -420,7 +420,7 @@ object MobRegistry {
             id = "zhuque_yanbing_zombie",
             name = "&6朱雀炎兵-僵尸",
             type = EntityType.ZOMBIE,
-            health = 20.0,
+            health = 16.0,
             damage = 8.0,
             armor = 12.0,
             exp=10,
@@ -437,7 +437,7 @@ object MobRegistry {
             type = EntityType.SKELETON,
             health = 12.0,
             damage = 5.0,
-            armor = 6.0,
+            armor = 4.0,
             exp=10,
             speed = 0.25,
             maxNearby = 1,
@@ -451,9 +451,9 @@ object MobRegistry {
             id = "etuzhihun",
             name = "&c燃烧的 恶土之魂",
             type = EntityType.MAGMA_CUBE,
-            health = 12.0,
-            damage = 2.5,
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 24.0,
+            damage = 4.0,
+            armor = 12.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=35,
             maxNearby = 2,
@@ -479,9 +479,9 @@ object MobRegistry {
             id = "huoyanmo",
             name = "&c燃烧的 火焰魔",
             type = EntityType.BLAZE,
-            health = 15.0,
-            damage = 5.0,
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 35.0,
+            damage = 10.0,
+            armor = 12.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=35,
             maxNearby = 2,
@@ -507,9 +507,9 @@ object MobRegistry {
             id = "huangshatubing",
             name = "&c黄沙土兵",
             type = EntityType.HUSK,
-            health = 20.0,
-            damage = 4.0,
-            armor = 8.0,
+            health = 45.0,
+            damage = 8.0,
+            armor = 14.0,
             speed = 0.2,
             exp=35,
             maxNearby = 2,
@@ -537,10 +537,10 @@ object MobRegistry {
             id = "heiguzhanshi",
             name = "&c燃烧的 黑骨战士",
             type = EntityType.WITHER_SKELETON,
-            health = 14.0,
-            damage = 6.0,
-            armor = 4.0,
-            speed = 0.22,
+            health = 30.0,
+            damage = 11.0,
+            armor = 8.0,
+            speed = 0.23,
             exp=40,
             maxNearby = 2,
             drops = listOf(
@@ -569,9 +569,9 @@ object MobRegistry {
             id = "mazeituanshibing",
             name = "&c燃烧的 马贼团士兵",
             type = EntityType.ZOMBIE,
-            health = 21.0,
-            damage = 4.0,
-            armor = 6.0,
+            health = 40.0,
+            damage = 8.0,
+            armor = 12.0,
             speed = 0.2,
             exp=45,
             maxNearby = 2,
@@ -601,9 +601,9 @@ object MobRegistry {
             id = "shamogongshou",
             name = "&c燃烧的 沙漠弓手",
             type = EntityType.SKELETON,
-            health = 12.0,
-            damage = 6.0,
-            armor = 2.0,
+            health = 28.0,
+            damage = 8.0,
+            armor = 8.0,
             speed = 0.2,
             exp=45,
             maxNearby = 2,
@@ -633,10 +633,10 @@ object MobRegistry {
             id = "mazeituantuanzhang",
             name = "&6燃烧千斤的 马贼团团长",
             type = EntityType.HUSK,
-            health = 400.0,
-            damage = 10.0,
-            armor = 12.0,
-            speed = 0.2,
+            health = 540.0,
+            damage = 16.0,
+            armor = 23.0,
+            speed = 0.3,
             exp=80,
             maxNearby = 1,
             drops = listOf(
@@ -666,9 +666,9 @@ object MobRegistry {
             id = "wenxian_huoyanmo",
             name = "&c携带文献的 火焰魔",
             type = EntityType.BLAZE,
-            health = 18.0,
-            damage = 4.0,
-            armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 32.0,
+            damage = 10.0,
+            armor = 14.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
             maxNearby = 2,
@@ -695,9 +695,9 @@ object MobRegistry {
             id = "wenxian_etuhun",
             name = "&c携带文献的 恶土魂",
             type = EntityType.MAGMA_CUBE,
-            health = 14.0,
-            damage = 3.0,
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 30.0,
+            damage = 8.0,
+            armor = 9.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
             maxNearby = 2,
@@ -721,9 +721,9 @@ object MobRegistry {
             id = "wenxian_zombie",
             name = "&c携带文献的 僵尸",
             type = EntityType.ZOMBIE,
-            health = 24.0,
-            damage = 6.0,
-            armor = 8.0,
+            health = 46.0,
+            damage = 9.0,
+            armor = 16.0,
             speed = 0.2,
             exp=60,
             maxNearby = 2,
@@ -751,9 +751,9 @@ object MobRegistry {
             id = "wenquan_huoyanmo",
             name = "&c骚扰客栈的 火焰魔",
             type = EntityType.BLAZE,
-            health = 18.0,
-            damage = 4.0,
-            armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 30.0,
+            damage = 9.0,
+            armor = 11.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
             maxNearby = 2,
@@ -779,9 +779,9 @@ object MobRegistry {
             id = "wenquan_etuhun",
             name = "&c骚扰客栈的 恶土魂",
             type = EntityType.MAGMA_CUBE,
-            health = 14.0,
-            damage = 3.0,
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            health = 30.0,
+            damage = 6.0,
+            armor = 9.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
             exp=60,
             maxNearby = 2,
@@ -805,9 +805,9 @@ object MobRegistry {
             id = "wenquan_huangshatubing",
             name = "&c骚扰客栈的 黄沙土兵",
             type = EntityType.HUSK,
-            health = 25.0,
-            damage = 6.0,
-            armor = 9.0,
+            health = 50.0,
+            damage = 8.0,
+            armor = 16.0,
             speed = 0.2,
             exp=50,
             maxNearby = 2,
@@ -833,9 +833,9 @@ object MobRegistry {
             id = "shamofengbao",
             name = "&6千斤的 沙漠风暴",
             type = EntityType.BREEZE,
-            health = 400.0,
-            damage = 10.0,
-            armor = 15.0,
+            health = 560.0,
+            damage = 19.0,
+            armor = 26.0,
             speed = 0.15,
             exp=80,
             maxNearby = 1,
@@ -859,9 +859,9 @@ object MobRegistry {
             id = "xiongshentaisui",
             name = "&6千斤的 凶神太岁",
             type = EntityType.MAGMA_CUBE,
-            health = 400.0,
-            damage = 10.0,
-            armor = 30.0,
+            health = 650.0,
+            damage = 20.0,
+            armor = 35.0,
             speed = 0.22,
             exp=100,
             maxNearby = 1,
@@ -880,6 +880,127 @@ object MobRegistry {
                 MobDrop("jianghuxinde_yanshadamo", 1, 1, 0.1)
             ),
             affixes = listOf(MobAffix.DESERT_SOUTH), // 南方词条
+        ))
+        // ================ 西方区域怪物 ===================
+        register(MobDefinition(
+            id = "baihudong_ceshi_zombie",
+            name = "&c附满虎瘴的 测试僵尸",
+            type = EntityType.ZOMBIE,
+            health = 100.0,
+            damage = 18.0,
+            armor = 0.0,
+            speed = 0.1,
+            exp= 0,
+            maxNearby = 2,
+            drops = listOf(
+                ),
+            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.DIAMOND_PICKAXE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "baihudong_zombie",
+            name = "&c附满虎瘴的 矿洞僵尸",
+            type = EntityType.ZOMBIE,
+            health = 100.0,
+            damage = 18.0,
+            armor = 30.0,
+            speed = 0.24,
+            exp= 120,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+
+            ),
+            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.DIAMOND_PICKAXE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "baihudong_kulou",
+            name = "&c附满虎瘴的 矿洞白骨",
+            type = EntityType.SKELETON,
+            health = 75.0,
+            damage = 16.0,
+            armor = 25.0,
+            speed = 0.22,
+            exp= 120,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                ),
+            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.DIAMOND_PICKAXE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "baihudong_zhizhu",
+            name = "&c附满虎瘴的 矿洞蜘蛛",
+            type = EntityType.SPIDER,
+            health = 85.0,
+            damage = 22.0,
+            armor = 21.0,
+            speed = 0.25,
+            exp= 120,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+            ),
+            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
+        ))
+        register(MobDefinition(
+            id = "jiaoguzhanshi",
+            name = "&6焦骨战士",
+            type = EntityType.WITHER_SKELETON,
+            health = 650.0,
+            damage = 30.0,
+            armor = 45.0,
+            speed = 0.25,
+            exp= 240,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 5, 5, 0.95),
+                // 掉落土元素
+                MobDrop("earth", 4, 5, 0.95),
+                // 70%掉落金元宝
+                MobDrop("hjh_tongqian", 1, 2, 0.7),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 1, 2, 1.0),
+                // 50%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 2, 2, 0.5),
+                // 35%掉落虎魄
+                MobDrop("hupo", 1, 2, 0.35),
+
+            ),
+            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
         ))
     }
 }

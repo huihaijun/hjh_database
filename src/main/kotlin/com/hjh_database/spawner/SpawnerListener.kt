@@ -151,6 +151,11 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     fun onDeath(event: EntityDeathEvent) {
         val entity = event.entity
         val pdc = entity.persistentDataContainer
+        if (pdc.has(MobFactory.KEY_NO_REWARD, PersistentDataType.BYTE)) {
+            event.drops.clear()
+            event.droppedExp = 0
+            return
+        }
 
         // 1. 检查是不是我们的自定义怪物 (读取 MobFactory 写入的 ID)
         val mobId = pdc.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) ?: return

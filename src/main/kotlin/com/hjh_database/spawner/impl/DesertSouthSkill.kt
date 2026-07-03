@@ -1,6 +1,8 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.spawner.MobAffix
+import com.hjh_database.spawner.MobAffixSupport
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.Bukkit
@@ -9,9 +11,12 @@ import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.PlayerToggleSneakEvent
 import org.bukkit.persistence.PersistentDataType
+import java.util.concurrent.ThreadLocalRandom
 
 /**
  * 恶土之炎 技能实现
@@ -50,6 +55,17 @@ object DesertSouthSkill : Listener {
         // 3. 提示
         player.sendMessage("§c你被焱砂之火点燃了……")
         player.playSound(player.location, Sound.ENTITY_BLAZE_SHOOT, 1f, 1f)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onAffixMobDamagePlayer(event: EntityDamageByEntityEvent) {
+        val player = event.entity as? Player ?: return
+        val attacker = MobAffixSupport.realAttacker(event.damager) ?: return
+        if (attacker is Player) return
+        if (!MobAffixSupport.hasAffix(attacker, MobAffix.DESERT_SOUTH)) return
+        if (ThreadLocalRandom.current().nextDouble() <= 0.6) {
+            trigger(player)
+        }
     }
 
     /**

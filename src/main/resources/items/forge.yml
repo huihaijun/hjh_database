@@ -17,6 +17,15 @@ armor_core_3:
     - "&7&o稀有的防具核心"
     - "&7&o是用来锻造三阶防具的原材料"
 
+armor_core_4:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 4
+  name: "&b四阶防具核心"
+  lore:
+    - "&7&o精美且珍贵的防具核心"
+    - "&7&o是用来锻造四阶防具的原材料"
+
 weapon_book_3:
   material: BOOK
   rarity: 3
@@ -255,3 +264,13 @@ taolizhi_chuxing:
     - "&7&o用来制作医师饰品——&9桃李枝&7&o的雏形"
     - "&7&o将其放置在锻造台上,根据配方加入其他材料"
     - "&7&o就能锻造出医师饰品——&9桃李枝"
+
+huzhang_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d虎瘴雏形"
+  lore:
+    - "&7&o取洞内遗骨遗物为胚，锻以白虎洞特有之瘴气"
+    - "&7&o上有扭曲的纹路缠绕其间，透着一股诡异"
+    - "&7&o以此为基锻造的兵刃质地偏脆，难以久经战阵"

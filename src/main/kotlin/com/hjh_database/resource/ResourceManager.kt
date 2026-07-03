@@ -77,6 +77,10 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (!folder.exists()) {
             folder.mkdirs()
         }
+        val farmingItems = File(plugin.dataFolder, "resources/items/farming.yml")
+        if (!farmingItems.exists()) {
+            saveBundledResource("items/farming.yml", farmingItems)
+        }
 
         // Kotlin Lambda 鍐欐硶
         val files = folder.listFiles { _, name -> name.endsWith(".yml") }
@@ -101,6 +105,23 @@ class ResourceManager(private val plugin: Hjh_database) {
                 } catch (e: Exception) {
                     plugin.logger.log(Level.WARNING, "鍔犺浇璧勬簮鐗╁搧 $key 澶辫触", e)
                 }
+            }
+        }
+    }
+
+    private fun saveBundledResource(resourcePath: String, targetFile: File) {
+        if (targetFile.exists()) return
+
+        targetFile.parentFile?.mkdirs()
+        val input = plugin.getResource(resourcePath)
+        if (input == null) {
+            plugin.logger.warning("内置资源不存在，无法释放到数据目录: $resourcePath")
+            return
+        }
+
+        input.use { source ->
+            targetFile.outputStream().use { target ->
+                source.copyTo(target)
             }
         }
     }

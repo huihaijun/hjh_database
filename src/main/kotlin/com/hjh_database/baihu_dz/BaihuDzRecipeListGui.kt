@@ -10,6 +10,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
+import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.Inventory
@@ -25,7 +26,13 @@ class BaihuDzRecipeListGui(
     private val inv: Inventory = Bukkit.createInventory(
         this,
         54,
-        if (category == "weapon") "§6虎瘴武器配方" else "§6虎瘴法宝配方"
+        when (category) {
+            "equipment" -> "§6白虎武器&法器配方"
+            "material" -> "§6白虎材料配方"
+            "weapon" -> "§6白虎武器配方"
+            "artifact" -> "§6白虎法器配方"
+            else -> "§6白虎配方"
+        }
     )
     private val slotMap = mutableMapOf<Int, String>()
 
@@ -40,7 +47,10 @@ class BaihuDzRecipeListGui(
         val filler = ItemStack(Material.BLACK_STAINED_GLASS_PANE)
         filler.itemMeta = filler.itemMeta?.apply { setDisplayName(" ") }
         for (i in 45 until 54) inv.setItem(i, filler)
-        setButton(49, Material.BARRIER, "§c返回虎瘴锻造台")
+        setButton(45, Material.BARRIER, "§c返回白虎锻造台")
+        if (manageMode) {
+            setButton(49, Material.ANVIL, "§a§l[+ 新建白虎配方]")
+        }
 
         val recipes = plugin.baihuDzManager.getRecipesByCategory(category)
             .filter { manageMode || it.reqJob == -1 || it.reqJob == (plugin.playerManager.getData(player.uniqueId)?.job ?: -999) }
@@ -61,13 +71,16 @@ class BaihuDzRecipeListGui(
 
     private fun iconFor(recipe: DzRecipe): ItemStack {
         val item = recipe.result.clone()
-        val meta = item.itemMeta ?: return item
+        val meta = item.itemMeta ?: Bukkit.getItemFactory().getItemMeta(item.type) ?: return item
         val lore = (meta.lore ?: mutableListOf()).toMutableList()
         val dzData = plugin.playerManager.getDzData(player.uniqueId)
         val rpgData = plugin.playerManager.getData(player.uniqueId)
+        val materialRecipe = recipe.category == "material" || category == "material"
         lore.add("")
         lore.add("§8§m------------------")
-        lore.add("§6虎瘴要求: ${if (plugin.baihuDzManager.hasMiasma(player)) "§a已身负虎瘴" else "§c未身负虎瘴"}")
+        if (!materialRecipe) {
+            lore.add("§6虎瘴要求: ${if (plugin.baihuDzManager.hasMiasma(player)) "§a已身负虎瘴" else "§c未身负虎瘴"}")
+        }
         if (recipe.reqJob != -1) {
             val ok = rpgData?.job == recipe.reqJob
             lore.add("§7职业: §f${DzUtil.getJobName(recipe.reqJob)} ${if (ok) "§a✓" else "§c✗"}")
@@ -80,7 +93,13 @@ class BaihuDzRecipeListGui(
         }
         if (recipe.expReward > 0) lore.add("§7锻造经验: §e+${recipe.expReward}")
         lore.add("")
-        lore.add("§e点击查看虎瘴配方")
+        if (manageMode) {
+            lore.add("§7配方ID: §8${recipe.id}")
+            lore.add("§7分类: §f${displayCategoryName(recipe.category)}")
+            lore.add("§a[左键] 编辑  §c[右键] 删除")
+        } else {
+            lore.add("§e点击查看白虎配方")
+        }
         meta.lore = lore
         item.itemMeta = meta
         return item
@@ -90,6 +109,15 @@ class BaihuDzRecipeListGui(
         val item = ItemStack(material)
         item.itemMeta = item.itemMeta?.apply { setDisplayName(name) }
         inv.setItem(slot, item)
+    }
+
+    private fun displayCategoryName(value: String): String {
+        return when (value) {
+            "weapon" -> "武器"
+            "artifact" -> "法器"
+            "material" -> "材料"
+            else -> value
+        }
     }
 
     fun open() = player.openInventory(inv)
@@ -105,12 +133,28 @@ class BaihuDzRecipeListGui(
         if (event.inventory != inv) return
         event.isCancelled = true
         when (event.slot) {
-            49 -> {
+            45 -> {
                 player.closeInventory()
-                BaihuDzCategoryGui(plugin, player).open()
+                BaihuDzCategoryGui(plugin, player, manageMode).open()
+            }
+            49 -> {
+                if (!manageMode) return
+                player.closeInventory()
+                BaihuDzRecipeEditorGui(plugin, player, category, null).open()
             }
             else -> {
                 val recipeId = slotMap[event.slot] ?: return
+                if (manageMode) {
+                    if (event.click == ClickType.RIGHT) {
+                        plugin.baihuDzManager.deleteRecipe(category, recipeId)
+                        player.sendMessage("§c已删除白虎配方: $recipeId")
+                        setup()
+                    } else {
+                        player.closeInventory()
+                        BaihuDzRecipeEditorGui(plugin, player, category, recipeId).open()
+                    }
+                    return
+                }
                 player.closeInventory()
                 BaihuDzRecipePreviewGui(plugin, player, category, recipeId, manageMode).open()
             }
