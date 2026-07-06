@@ -47,8 +47,9 @@ abstract class BaseShieldSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
         // dot > 0 说明攻击者在玩家视角的正前方 (原版盾牌只能挡前方)
         if (dot > 0) {
             // 3. 设置双端冷却 (原版盾牌置灰CD + 饰品技能CD由子类决定)
-            player.setCooldown(Material.SHIELD, 100)
-            setCooldown(player, getBlockCooldownMillis(crystalData))
+            val cooldownMillis = getBlockCooldownMillis(crystalData)
+            player.setCooldown(Material.SHIELD, (cooldownMillis / 50L).toInt().coerceAtLeast(1))
+            setCooldown(player, cooldownMillis)
 
             // 4. 强制打断当前的举盾动作
             player.clearActiveItem()

@@ -50,6 +50,24 @@ class AlchemySession(
         }
     }
 
+    fun refreshRecipeItems(): Int {
+        var refreshed = 0
+        val config = recipe.tierData[tier] ?: return 0
+        if (refreshItemKeepingAmount(config.result)) refreshed++
+        for (tracker in trackers) {
+            if (refreshItemKeepingAmount(tracker.template)) refreshed++
+        }
+        updateDisplayText()
+        return refreshed
+    }
+
+    private fun refreshItemKeepingAmount(item: ItemStack): Boolean {
+        val amount = item.amount
+        val changed = plugin.resourceManager.refreshItem(item)
+        if (changed) item.amount = amount
+        return changed
+    }
+
     fun start() {
         val config = recipe.tierData[tier]!!
         val resultName = config.result.itemMeta?.displayName ?: "未知丹药"

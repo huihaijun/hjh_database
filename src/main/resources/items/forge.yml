@@ -49,6 +49,23 @@ access_book_3:
   lore:
     - "&7&o写满了锻造饰品所需材料和方法的书籍"
     - "&7&o凭借它可以掌握锻造出三阶饰品的方法"
+    -
+weapon_book_4:
+  material: BOOK
+  rarity: 4
+  name: "&d四阶武器制作书"
+  lore:
+    - "&7&o写满了锻造武器所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造四阶武器的方法"
+
+armor_book_4:
+  material: BOOK
+  rarity: 4
+  name: "&d四阶防具制作书"
+  lore:
+    - "&7&o写满了锻造防具所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造四阶防具的方法"
+
 
 access_book_4:
   material: BOOK
@@ -66,6 +83,16 @@ chitongding:
   lore:
     - "&7&o比较稀有的金属材料"
     - "&7&o用它打造装饰的饰品往往色泽鲜艳"
+
+xuantieding:
+  material: GOLD_NUGGET
+  custom_model_data: 10056
+  rarity: 4
+  name: "&b玄铁锭"
+  lore:
+    - "&7&o非常珍贵的金属材料"
+    - "&7&o打造中加入,能大大增加装备的耐久度"
+
 
 kaishandao_chuxing:
   material: GOLD_NUGGET
@@ -274,3 +301,64 @@ huzhang_chuxing:
     - "&7&o取洞内遗骨遗物为胚，锻以白虎洞特有之瘴气"
     - "&7&o上有扭曲的纹路缠绕其间，透着一股诡异"
     - "&7&o以此为基锻造的兵刃质地偏脆，难以久经战阵"
+
+pokongfu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d破空斧雏形[破军]"
+  lore:
+    - "&7&o用来制作战士武器——&d破空斧&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&d破空斧"
+
+taijijian_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d太极剑雏形[金钟]"
+  lore:
+    - "&7&o用来制作战士武器——&d太极剑&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&d太极剑"
+
+jiaolongnu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d蛟龙弩雏形[游侠]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&d蛟龙弩&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&d蛟龙弩"
+
+zhongchuigong_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d重锤弓雏形[狙击]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&d重锤弓&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&d重锤弓"
+
+suohunlu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d锁魂炉雏形"
+  lore:
+    - "&7&o用来制作术士武器——&d锁魂炉&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士武器——&d锁魂炉"
+
+xuantianqi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d玄天旗雏形"
+  lore:
+    - "&7&o用来制作医师武器——&d玄天旗&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师武器——&d玄天旗"
+    - "&e注意:&f锻造前,请先将医术从医旗上剥离"

@@ -4,9 +4,11 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.alchemy.data.ActivePill
 import com.hjh_database.alchemy.data.AlchemyRecipe
 import com.hjh_database.alchemy.data.AlchemyTier
+import com.hjh_database.alchemy.effect.impl.DuoHun
 import com.hjh_database.alchemy.gui.AlchemyAdminGui
 import com.hjh_database.alchemy.gui.AlchemyAdminListGui // 导入新 GUI
 import com.hjh_database.alchemy.gui.AlchemyPlayerGui
+import com.hjh_database.listener.CombatDamageCalculationEvent
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
@@ -15,7 +17,6 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.LivingEntity
-import org.bukkit.entity.Monster
 import org.bukkit.entity.Player
 import org.bukkit.entity.ThrownPotion
 import org.bukkit.event.EventHandler
@@ -88,7 +89,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val resourceData = consumeResourceId?.let { plugin.resourceManager.getLocalResource(it) }
 
         // 可堆叠的自定义喷溅药水由插件接管投掷和扣除，避免原版不消耗物品。
-        if (item.type == Material.SPLASH_POTION && effectId.startsWith(FENGHOU_PREFIX)) {
+        if (item.type == Material.SPLASH_POTION && isManagedSplashPill(effectId, consumeResourceId)) {
             event.isCancelled = true
             val canApplyEffect = resourceData?.onlyDoctor != true || playerData.job == DOCTOR_JOB
 
@@ -151,16 +152,11 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    fun onFengHouSplash(event: PotionSplashEvent) {
+    fun onAlchemySplash(event: PotionSplashEvent) {
         val item = event.potion.item
         val pdc = item.itemMeta?.persistentDataContainer ?: return
         val resourceId = pdc.get(resourceIdKey, PersistentDataType.STRING) ?: return
-        val tier = when (resourceId) {
-            "fenghou0" -> AlchemyTier.LOW
-            "fenghou1" -> AlchemyTier.MID
-            "fenghou2" -> AlchemyTier.HIGH
-            else -> return
-        }
+        val tier = getSplashTier(resourceId) ?: return
 
         val affected = event.affectedEntities.toList()
         affected.forEach { event.setIntensity(it, 0.0) }
@@ -169,6 +165,12 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val playerData = plugin.playerManager.getPlayerData(thrower) ?: return
         val resourceData = plugin.resourceManager.getLocalResource(resourceId) ?: return
         if (resourceData.onlyDoctor && playerData.job != DOCTOR_JOB) return
+
+        if (resourceId.startsWith(DUOHUN_PREFIX)) {
+            affected.filter { isMonster(it) }.forEach { DuoHun.apply(plugin, thrower, it, tier) }
+            return
+        }
+        if (!resourceId.startsWith(FENGHOU_PREFIX)) return
 
         val multiplier = when (tier) {
             AlchemyTier.LOW -> 1.5
@@ -195,10 +197,15 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    @EventHandler
+    fun onCombatDamageCalculation(event: CombatDamageCalculationEvent) {
+        event.damage = DuoHun.applyVulnerability(event.victim, event.damage)
+    }
+
     private fun isMonster(entity: LivingEntity): Boolean {
         val tags = entity.scoreboardTags
         return entity !is Player && entity.isValid && !entity.isDead &&
-            (entity is Monster || (tags.contains("panling") && tags.contains("monster")))
+            tags.contains("panling") && tags.contains("monster")
     }
 
     private fun sendSicknessMessage(player: Player, sicknessEnd: Long) {
@@ -379,6 +386,20 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         player.setCooldown(item, ticks)
     }
 
+    private fun isManagedSplashPill(effectId: String, resourceId: String?): Boolean {
+        return effectId.startsWith(FENGHOU_PREFIX) ||
+            effectId.startsWith(DUOHUN_PREFIX) ||
+            resourceId?.startsWith(FENGHOU_PREFIX) == true ||
+            resourceId?.startsWith(DUOHUN_PREFIX) == true
+    }
+
+    private fun getSplashTier(resourceId: String): AlchemyTier? = when (resourceId) {
+        "fenghou0", "duohun0" -> AlchemyTier.LOW
+        "fenghou1", "duohun1" -> AlchemyTier.MID
+        "fenghou2", "duohun2" -> AlchemyTier.HIGH
+        else -> null
+    }
+
     private fun loadRegisteredCauldrons() {
         if (!cauldronDataFile.exists()) return
 
@@ -402,5 +423,6 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     companion object {
         private const val DOCTOR_JOB = 3
         private const val FENGHOU_PREFIX = "fenghou"
+        private const val DUOHUN_PREFIX = "duohun"
     }
 }

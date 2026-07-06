@@ -286,3 +286,169 @@ juezhangdan:
     - "&f瞬间移除自身&b8%&f的&7虎瘴"
     - "&f然后若自身&7虎瘴&f大于&b40%&f"
     - "&f获得一个&b15点&f的护盾持续&b30&f秒"
+
+juliwan0:
+  material: POTION
+  name: "&b巨力丸[助势][初级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 8
+  max_stack_size: 64
+  lore:
+    - "&7&o药性初显,气力渐生"
+    - "&7&o服后短暂激起体内潜能,力贯双臂"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b8&f秒"
+    - "&f接下来&b10&f秒内.提升自己&b25%&f进攻属性"
+    - "&f至多以此法提升&b20&f点"
+
+juliwan1:
+  material: POTION
+  name: "&b巨力丸[助势][中级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 16
+  max_stack_size: 64
+  lore:
+    - "&7&o丹体饱满,握于掌心竟生出几分沉坠之感"
+    - "&7&o一股蛮横力道自丹田涌起,拳脚之间虎虎生风"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b16&f秒"
+    - "&f接下来&b12&f秒内.提升自己&b30%&f进攻属性"
+    - "&f至多以此法提升&b30&f点"
+
+juliwan2:
+  material: POTION
+  name: "&b巨力丸[助势][高级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 4
+  base_exp: 30
+  sickness_time: 32
+  max_stack_size: 64
+  lore:
+    - "&7&o丹纹层叠,药力内敛却难掩霸道之气"
+    - "&7&o服之双臂有千钧之力,开碑裂石不过等闲"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b32&f秒"
+    - "&f接下来&b15&f秒内.提升自己&b50%&f进攻属性"
+    - "&f至多以此法提升&b50&f点"
+
+duohun0:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][初级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 2
+  base_exp: 10
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o丹气幽微,凝而不散"
+    - "&7&o触及目标的瞬间,似有一缕寒意渗入骨髓"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b0.8秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b20%"
+    - "&c非医师职业使用,将毫无作用"
+
+duohun1:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][中级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 3
+  base_exp: 20
+  sickness_time: 6
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色阴沉,冷意逼人"
+    - "&7&o药力如暗流涌动,悄无声息地侵蚀着防御"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b6&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b1秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b30%"
+    - "&c非医师职业使用,将毫无作用"
+
+duohun2:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][高级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 4
+  base_exp: 30
+  sickness_time: 7
+  max_stack_size: 64
+  lore:
+    - "&7&o丹心一墨,周遭灵息为之凝滞"
+    - "&7&o所过之处,坚甲如纸,护体之力尽数瓦解"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b7&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b1秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b40%"
+    - "&c非医师职业使用,将毫无作用"
+
+fengmuhuichun0:
+  material: POTION
+  name: "&b逢木回春[归元][初级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 10
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色青翠,草木气息隐约流转"
+    - "&7&o入口清润,一缕温和生机徐徐浸润经脉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b10&f秒"
+    - "&f瞬间恢复&b8点&f生命"
+    - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅰ&f效果"
+
+fengmuhuichun1:
+  material: POTION
+  name: "&b逢木回春[归元][中级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o通透如碧玉,萦绕着淡淡的甘润之气"
+    - "&7&o暖意如春日溪流,绵绵不绝地滋养周身"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f瞬间恢复&b16点&f生命"
+    - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅱ&f效果"
+
+fengmuhuichun2:
+  material: POTION
+  name: "&b逢木回春[归元][高级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 4
+  base_exp: 30
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o翠色欲滴,丹纹如新叶脉络般细密繁复"
+    - "&7&o仿若枯木逢雨,生机自内而外层层涌出"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f瞬间恢复&b24点&f生命"
+    - "&f并获得持续持续&b15&f秒的&b生命恢复Ⅱ&f效果"
+

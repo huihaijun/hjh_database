@@ -164,8 +164,12 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.chonghuaManager.reload()
 
             // 重载 Resource 物品
+            var refreshedAlchemyItems = 0
             if (plugin.resourceManager != null) {
                 plugin.resourceManager.reload()
+                plugin.recipeManager.loadAllRecipes()
+                plugin.baihuDzManager.reload()
+                refreshedAlchemyItems = plugin.alchemyManager.reloadRecipes()
                 plugin.jianghuXindeManager.reload()
                 plugin.jianghuXindeManager.ensureStationBlock()
             }
@@ -181,7 +185,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
 
             // 重载丹药配方
-            plugin.alchemyManager.loadRecipes()
+            if (refreshedAlchemyItems == 0) {
+                refreshedAlchemyItems = plugin.alchemyManager.reloadRecipes()
+            }
             // 重载传送点
             plugin.teleportManager.reload()
             plugin.farmingManager.reload()

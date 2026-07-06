@@ -23,6 +23,10 @@ import com.hjh_database.quest.impl.main.yao.Yao_06
 import com.hjh_database.quest.impl.main.yao.Yao_07
 import com.hjh_database.quest.impl.main.yao.Yao_08
 import com.hjh_database.quest.impl.main.yao.Yao_09
+import com.hjh_database.quest.impl.main.west.West_01
+import com.hjh_database.quest.impl.main.west.West_02
+import com.hjh_database.quest.impl.main.west.West_03
+import com.hjh_database.quest.impl.main.west.West_04
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
 import com.hjh_database.quest.impl.side.Side_Tianjige_Rumor
@@ -52,6 +56,11 @@ object QuestRegistry {
         manager.register(South_05())
 //        manager.register(South_06())
 
+        // === 西方主线任务 ===
+        manager.register(West_01())
+        manager.register(West_02())
+        manager.register(West_03())
+        manager.register(West_04())
 
         // === 妖族主线 ===
         manager.register(Yao_01())

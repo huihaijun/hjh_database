@@ -84,6 +84,15 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         task = null
     }
 
+    fun isNearBurningFire(location: Location, radius: Double): Boolean {
+        val currentWorld = world() ?: return false
+        if (location.world != currentWorld) return false
+        val radiusSquared = radius * radius
+        return points.any { point ->
+            point.remainingSeconds > 0.0 && location.distanceSquared(point.center(currentWorld)) <= radiusSquared
+        }
+    }
+
     private fun tick() {
         elapsedSeconds++
         val world = world() ?: return
@@ -222,7 +231,7 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
             point.miasmaCoalWindowStart = now
             point.miasmaCoalCount = 0
         }
-        if (now - point.reliveWindowStart >= LIMIT_WINDOW_MS) {
+        if (now - point.reliveWindowStart >= RELIVE_STONE_LIMIT_WINDOW_MS) {
             point.reliveWindowStart = now
             point.reliveCount = 0
         }
@@ -304,7 +313,8 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
             LimitType.MIASMA_COAL -> MIASMA_COAL_LIMIT
             LimitType.RELIVE_STONE -> RELIVE_STONE_LIMIT
         }
-        player.sendMessage(color("&c【白虎镇火】&7此处镇火 8 分钟内可投入的 &e$name &7已达到上限 &c$limit&7。"))
+        val minutes = if (type == LimitType.RELIVE_STONE) 6 else 8
+        player.sendMessage(color("&c【白虎镇火】&7此处镇火 $minutes 分钟内可投入的 &e$name &7已达到上限 &c$limit&7。"))
     }
 
     private fun playersInside(center: Location): List<Player> {
@@ -362,11 +372,11 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
 
     private fun fuelById(id: String): Fuel? {
         return when (id) {
-            "meitan" -> Fuel(5)
-            "fire", "earth" -> Fuel(3, LimitType.ELEMENT)
+            "meitan" -> Fuel(8)
+            "fire", "earth" -> Fuel(5, LimitType.ELEMENT)
             "pojiupige" -> Fuel(7)
             "zhizhuyan" -> Fuel(4)
-            "fumanzhangqidemeitan" -> Fuel(10, LimitType.MIASMA_COAL)
+            "fumanzhangqidemeitan" -> Fuel(15, LimitType.MIASMA_COAL)
             "relive_stone" -> Fuel(30, LimitType.RELIVE_STONE)
             else -> null
         }
@@ -384,11 +394,12 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
     }
 
     companion object {
-        private const val MAX_SECONDS = 120.0
+        private const val MAX_SECONDS = 300.0
         private const val RANGE = 5.0
         private const val RANGE_SQUARED = RANGE * RANGE
         private const val FUEL_PICKUP_RADIUS = 1.75
         private const val LIMIT_WINDOW_MS = 8 * 60 * 1000L
+        private const val RELIVE_STONE_LIMIT_WINDOW_MS = 6 * 60 * 1000L
         private const val LIMIT_WARNING_COOLDOWN_MS = 5_000L
         private const val STATUS_DISPLAY_SECONDS = 5
         private const val ELEMENT_LIMIT = 100

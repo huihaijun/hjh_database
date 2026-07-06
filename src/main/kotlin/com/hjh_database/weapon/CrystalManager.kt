@@ -2,9 +2,14 @@ package com.hjh_database.weapon
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.BannerPatternLayers
 import org.bukkit.ChatColor
+import org.bukkit.DyeColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.Registry
+import org.bukkit.block.banner.Pattern
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
@@ -18,6 +23,9 @@ import java.io.File
 // 新增类：用于存放每个独立槽位的属性配置
 class ActivationConfig(val stats: Map<String, Double>)
 
+data class ShieldPatternLayerConfig(val pattern: String, val color: DyeColor)
+data class ShieldPatternConfig(val baseColor: DyeColor, val layers: List<ShieldPatternLayerConfig>)
+
 class CrystalData(val id: String, sec: ConfigurationSection) {
 
     val display: String = sec.getString("display", "&f未知结晶")!!
@@ -27,6 +35,7 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
     val rarity: Int = sec.getInt("rarity", 1)
     val customModelData: Int = sec.getInt("custom_model_data", 0)
     val lore: List<String> = sec.getStringList("lore")
+    val shieldPattern: ShieldPatternConfig? = readShieldPattern(sec)
 
     val skillId: String? = sec.getString("skill_id")
     val maxArrows: Int = if (sec.isConfigurationSection("quiver_data")) sec.getInt("quiver_data.max_arrows", 1024) else 0
@@ -71,6 +80,22 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
         }
     }
 
+    private fun readShieldPattern(sec: ConfigurationSection): ShieldPatternConfig? {
+        val patternSec = sec.getConfigurationSection("shield_pattern") ?: return null
+        val baseColor = parseDyeColor(patternSec.getString("base_color"), DyeColor.BLACK)
+        val layers = patternSec.getMapList("patterns").mapNotNull { layer ->
+            val pattern = layer["pattern"]?.toString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val color = parseDyeColor(layer["color"]?.toString(), DyeColor.WHITE)
+            ShieldPatternLayerConfig(pattern, color)
+        }
+        return ShieldPatternConfig(baseColor, layers)
+    }
+
+    private fun parseDyeColor(raw: String?, fallback: DyeColor): DyeColor {
+        if (raw.isNullOrBlank()) return fallback
+        return runCatching { DyeColor.valueOf(raw.trim().uppercase()) }.getOrDefault(fallback)
+    }
+
     fun isActivated(playerData: PlayerData): Boolean {
         val jobMatch = this.reqJob == -1 || playerData.job == this.reqJob
         return playerData.lv >= this.reqLv && jobMatch
@@ -107,6 +132,9 @@ class CrystalManager(private val plugin: Hjh_database) {
         val meta = item.itemMeta ?: return item
 
         meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', data.display))
+        if (data.customModelData != 0) {
+            meta.setCustomModelData(data.customModelData)
+        }
 
         val newLore = mutableListOf<String>()
         var colorCode = "§7"
@@ -146,10 +174,38 @@ class CrystalManager(private val plugin: Hjh_database) {
         meta.isUnbreakable = true
 
         item.itemMeta = meta
+        applyShieldPattern(item, data)
         return item
     }
 
     // 获取某个物品在玩家背包中所处的“激活槽位标识符”
+    private fun applyShieldPattern(item: ItemStack, data: CrystalData) {
+        if (data.material != Material.SHIELD) return
+        val shieldPattern = data.shieldPattern ?: return
+
+        item.setData(DataComponentTypes.BASE_COLOR, shieldPattern.baseColor)
+
+        val patterns = shieldPattern.layers.mapNotNull { layer ->
+            val key = NamespacedKey.fromString(layer.pattern)
+            if (key == null) {
+                plugin.logger.warning("Invalid shield banner pattern key for crystal ${data.id}: ${layer.pattern}")
+                return@mapNotNull null
+            }
+
+            val patternType = Registry.BANNER_PATTERN.get(key)
+            if (patternType == null) {
+                plugin.logger.warning("Unknown shield banner pattern for crystal ${data.id}: ${layer.pattern}")
+                null
+            } else {
+                Pattern(layer.color, patternType)
+            }
+        }
+
+        if (patterns.isNotEmpty()) {
+            item.setData(DataComponentTypes.BANNER_PATTERNS, BannerPatternLayers.bannerPatternLayers(patterns))
+        }
+    }
+
     private fun getInventorySlotKey(slot: Int): String {
         return when (slot) {
             in 0..8 -> "hotbar_$slot"

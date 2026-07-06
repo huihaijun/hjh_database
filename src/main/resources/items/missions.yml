@@ -161,3 +161,29 @@ yao_zybj:
     - "&7&o秦观星传术法——南门干道东边四合院"
     - "&7&o韩济世行医术——凤花楼东边小屋"
     - "&e[任务物品]"
+
+weihuzizhunbeideganliang:
+  material: BAKED_POTATO
+  name: "&b为虎子准备的干粮"
+  lore:
+    - "&7&o老爷爷为虎子准备的干粮"
+    - "&7&o去交到虎子的手上吧"
+    - "&e[任务物品]"
+
+huzidedudou:
+  material: NETHER_WART
+  name: "&b虎子的肚兜"
+  lore:
+    - "&7&o是老爷爷一家在虎子小时候为他缝制的肚兜"
+    - "&7&o快去交给洞口外的老爷爷吧"
+    - "&e[任务物品]"
+
+shigezhujian:
+  material: BOOK
+  name: "&b记载诗歌的竹简"
+  lore:
+    - "&7&o虎子写下的诗"
+    - "&7&o据说和虎爪山脉的迷阵有关"
+    - "&a请主手持有,右键打开读信"
+    - "&c阅读后信件自动销毁,请注意保管！"
+    - "&e[任务物品]"

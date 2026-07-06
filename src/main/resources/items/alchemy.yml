@@ -55,6 +55,40 @@ yy_fenghou:
     - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
   custom_model_data: 10137
 
+yy_juliwan:
+  material: GOLD_NUGGET
+  name: "&b[药引]巨力丸"
+  lore:
+    - "&f▶ &b巨力丸 &f药引"
+    - "&8  | &7&o药性初显,气力渐生"
+    - "&8  | &7&o服后短暂激起体内潜能,力贯双臂"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_duohun:
+  material: GOLD_NUGGET
+  name: "&c[药引]夺魂"
+  lore:
+    - "&6限制职业:[医]"
+    - "&f▶ &c夺魂 &f药引"
+    - "&8  | &7&o丹气幽微,凝而不散"
+    - "&8  | &7&o及目标的瞬间,似有一缕寒意渗入骨髓"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_fengmuhuichun:
+  material: GOLD_NUGGET
+  name: "&b[药引]逢木回春"
+  lore:
+    - "&f▶ &b逢木回春 &f药引"
+    - "&8  | &7&o丹色青翠,草木气息隐约流转"
+    - "&8  | &7&o入口清润,一缕温和生机徐徐浸润经脉"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
 
 dengxincao:
   material: SEA_PICKLE

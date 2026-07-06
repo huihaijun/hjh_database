@@ -3,6 +3,7 @@
 import com.hjh_database.Hjh_database
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
+import org.bukkit.GameMode
 import org.bukkit.attribute.Attribute
 import org.bukkit.boss.BarColor
 import org.bukkit.boss.BarStyle
@@ -173,6 +174,14 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
             val status = statuses[player.uniqueId] ?: continue
             status.playerName = player.name
 
+            if (isAdminBypassMode(player)) {
+                status.lastInCave = isInBaihuCave(player)
+                status.lastIncreaseMs = now
+                updateBossBar(player, status.value)
+                applyMiasmaBonuses(player, status.value)
+                continue
+            }
+
             val inCave = isInBaihuCave(player)
             if (inCave) {
                 if (!status.lastInCave) {
@@ -249,6 +258,10 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     private fun isInBaihuCave(player: Player): Boolean {
         return regions.any { it.contains(player) }
+    }
+
+    private fun isAdminBypassMode(player: Player): Boolean {
+        return player.gameMode == GameMode.CREATIVE || player.gameMode == GameMode.SPECTATOR
     }
 
     fun setTemporaryIncreaseMultiplier(player: Player, source: String, multiplier: Double, durationTicks: Long) {

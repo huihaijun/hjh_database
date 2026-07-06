@@ -1,6 +1,7 @@
 ﻿package com.hjh_database.data
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.alchemy.effect.impl.JuliWan
 import com.hjh_database.dz.data.DzPlayerData
 import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.weapon.ArmorManager
@@ -329,6 +330,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         data.tempBonuses.forEach { (k, v) ->
             bonuses.merge(k, v) { a, b -> a + b }
         }
+        JuliWan.applyStatBonuses(bonuses, data)
 
         // 鈽?鍦ㄨ繖閲屽姞涓婅繖娈典唬鐮侊細浠?Map 涓彁鍙栨€荤█鏈夊害骞朵繚瀛?
         if (bonuses.containsKey("total_rarity")) {

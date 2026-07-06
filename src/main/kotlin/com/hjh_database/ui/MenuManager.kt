@@ -422,7 +422,7 @@ class MenuManager(private val plugin: Hjh_database) {
                     0 -> "&f近战强度: &b" + String.format("%.1f", data.attack)
                     1 -> "&f箭矢强度: &b" + String.format("%.1f", data.archerDamage)
                     2 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr)
-                    3 -> "&f医术: &b" + String.format("%.1f", data.zfStr)
+                    3 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr)
                     else -> "&f主属性: &7未知"
                 }
             }

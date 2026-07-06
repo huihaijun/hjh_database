@@ -42,10 +42,41 @@ class ResourceManager(private val plugin: Hjh_database) {
 
         loadAll()
 
-        // 鍒锋柊鍦ㄧ嚎鐜╁鑳屽寘
-        for (p in Bukkit.getOnlinePlayers()) {
-            refreshInventory(p.inventory)
+        val refreshed = refreshOnlinePlayerContainers()
+        plugin.logger.info("资源物品刷新完成，共刷新 $refreshed 个在线玩家容器物品。")
+    }
+
+    fun refreshOnlinePlayerContainers(): Int {
+        var refreshed = 0
+        for (player in Bukkit.getOnlinePlayers()) {
+            refreshed += refreshInventory(player.inventory)
+            refreshed += refreshInventory(player.enderChest)
+            refreshed += refreshInventory(player.openInventory.topInventory)
+
+            val accessoryContents = plugin.accessoryManager.getAccessoryContents(player)
+            if (accessoryContents != null) {
+                var changed = false
+                for (item in accessoryContents) {
+                    if (refreshItem(item)) {
+                        refreshed++
+                        changed = true
+                    }
+                }
+                if (changed) {
+                    plugin.accessoryManager.saveAccessoryContents(player, accessoryContents)
+                }
+            }
         }
+
+        for (warehouseData in plugin.warehouseManager.getAllCachedData()) {
+            for (subWarehouse in warehouseData.items) {
+                for (item in subWarehouse) {
+                    if (refreshItem(item)) refreshed++
+                }
+            }
+        }
+
+        return refreshed
     }
 
     private fun loadAll() {
@@ -311,10 +342,12 @@ class ResourceManager(private val plugin: Hjh_database) {
         }
     }
 
-    fun refreshInventory(inv: Inventory) {
+    fun refreshInventory(inv: Inventory): Int {
+        var refreshed = 0
         for (item in inv.contents) {
-            refreshItem(item)
+            if (refreshItem(item)) refreshed++
         }
+        return refreshed
     }
 
     fun getAllItemNames(): List<String> {

@@ -68,8 +68,9 @@ crystals:
   #================圣兽饰品================
   huishi:
     display: "&9慧识[饰品]"
-    material: SHULKER_SHELL
+    material: STICK
     rarity: 3
+    custom_model_data: 6004
     lore:
       - "&6限制职业:&b无&6  限制等级:&b10"
       - "&7&o龙之鳞片化作的晶莹饰品"
@@ -87,8 +88,9 @@ crystals:
 
   yanxin:
     display: "&9炎心[饰品]"
-    material: TORCH
+    material: STICK
     rarity: 3
+    custom_model_data: 6005
     lore:
       - "&6限制职业:&b无&6  限制等级:&b15"
       - "&7&o朱雀神力凝聚的圣火之芯"
@@ -102,6 +104,24 @@ crystals:
         stats:
           max_health: 10.0 # 统一的进攻属性
 
+  xiaofeng:
+    display: "&9啸风[饰品]"
+    material: STICK
+    rarity: 3
+    custom_model_data: 6006
+    lore:
+      - "&6限制职业:&b无&6  限制等级:&b25"
+      - "&7&o白虎利齿所化，杀伐之气凝而不散"
+      - "&7&o指尖触及之处，似有风雷之力奔涌不息"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f进攻属性 +2  速度 +5%"
+    req_lv: 25
+    req_job: -1
+    activation:
+      accessory_3: # 饰品栏第4格 (索引2)
+        stats:
+          power: 2.0 # 统一的进攻属性
+          speed_percent: 0.05 # 5%移速
 
 
 
@@ -202,12 +222,12 @@ crystals:
     rarity: 3
     skill_id: "taolizhi"
     taolizhi_data:
-      max_storage: 100.0
-      trigger_storage: 20.0
+      max_storage: 150.0
+      trigger_storage: 25.0
       cooldown: 3.0
       range: 10.0
-      zf_multiplier: 1.5
-      storage_multiplier: 0.5
+      zf_multiplier: 1.0
+      storage_multiplier: 0.4
     lore:
       - "&6限制职业:[医] 限制等级:&b15"
       - "&7&o一枝桃李满琼枝,仁心所至,生机自来"
@@ -217,11 +237,13 @@ crystals:
       - "&e[于&b饰品栏&e激活时]"
       - "&f最大生命 +4  阵法强度 +1"
       - "&8===========&2&n&l饰品技能&8============="
+      - "&e[被动] &9[盼暖春来]"
       - "&e[于&b饰品栏&e激活时] &f冷却:&b3&f秒"
-      - "&f当释放医术回复生命时,会将&b溢出&f的回复值存入此枝(最多&b100&f点)"
-      - "&f当存储值到达或超过&b20&f点时,会消耗全部存储值召唤&b1&f只&b[灵鸟]&f"
-      - "&f对离自己&b10&f格范围内最近的&b1&f名怪物发起冲击"
-      - "&f造成(&b150%阵法强度&f+&b50%消耗存储值&f)点伤害"
+      - "&f当释放医术回复生命时,将&b溢出&f的回复值存入(最多&b150&f点)"
+      - "&f当超过&b25&f点时,消耗全部存储值召唤&b1&f只&b[灵鸟]&f"
+      - "&f飞向&b10&f格范围内受伤的友军,为其回复&b35%存储值&f的生命"
+      - "&f若周围不存在受伤的友军,则随机飞向同范围内的怪物"
+      - "&f造成(&b100%⚡&f+&b40%存储值&f)点伤害"
       - "&8===========&2&n&l当前状态&8============="
       - "&f存储生命: &a{stored} &f/ &a{max_storage}"
     req_lv: 15
@@ -232,29 +254,53 @@ crystals:
           zf_str: 1.0
           max_health: 4.0
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#============================四阶===============================
+  yanjingdunpai:
+    display: "&d炎晶盾牌[饰品]"
+    material: SHIELD
+    rarity: 4
+    custom_model_data: 6000
+    shield_pattern:
+      base_color: BLACK
+      patterns:
+        - pattern: "hjh:yanjingdunpai"
+          color: WHITE
+    skill_id: "yanjingdunpai" # 标识激活哪个技能类
+    lore:
+      - "&6限制职业:[战]  限制等级:&b30"
+      - "&7&o取大漠深处的炎火奇石与灼沙熔铸而成"
+      - "&7&o盾面温热，隐隐透出如脉搏般的律动"
+      - "&7&o愈挫愈坚，生生不息"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f护甲 +6"
+      - "&e[于&b副手&e激活时]"
+      - "&f护甲 +9    最大生命 +16"
+      - "&c移动速度 -8%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[主动] &d[炎盾]"
+      - "&e[于&b副手&e时右键] &f冷却:&b3&f秒"
+      - "&f抵挡受到的近战/远程伤害(仍会被某些武器破盾)"
+      - "&f抵挡成功后,召唤&b[焰火]&f随身持续&b8&f秒"
+      - "&b[焰火]&f:自身获得&b20%&f的&b免伤&f效果以及&b抗火&f效果"
+      - "&f持续期间每&b2.5&f秒移除自身的&c中毒&7/&c凋零&f效果"
+    req_lv: 30
+    req_job: 0
+    activation:
+      accessory_8: # 饰品栏第9格 (索引8)
+        stats:
+          armor: 6.0
+      offhand: # 副手
+        stats:
+          armor: 9.0
+          max_health: 16.0
+          speed_percent: -0.08 # -5%移速
 
   ranhuojiandai:
     display: "&d燃火箭袋[饰品]"
-    material: ENDER_EYE
+    material: STICK
     rarity: 4
-    custom_model_data: 30056
+    custom_model_data: 6001
     activate_slot: 8
     #    ===========箭袋的设置==========
     skill_id: "ranhuojiandai" # 标识激活哪个技能类
@@ -263,18 +309,23 @@ crystals:
       replenish_threshold: 16   #门槛
       replenish_amount: 32   #每次拿多少
     lore:
-      - "&6限制职业:[弓]  限制等级:&b25"
-      - "&7&o采用焱砂大漠魔物身上的皮革包裹的箭袋"
-      - "&7&o似乎能让存放的箭矢具备掠火之力"
+      - "&6限制职业:[弓]  限制等级:&b30"
+      - "&7&o袋内暗藏炎脉，如一口活炉，温热不熄"
+      - "&7&o箭矢入囊便受火灵温养，蓄势待发"
+      - "&7&o出弦时炽风裹挟，如流火掠空，中者皆焚"
       - "&8===========&2&n&l饰品属性&8============="
-      - "&f箭矢强度 +5"
-      - "&f移动速度 +10%"
+      - "&f箭矢强度 +5 移动速度 +10%"
       - "&8===========&2&n&l饰品技能&8============="
       - "&e[于&b饰品栏&e中&b下蹲+右键&e此饰品]"
       - "&f将背包内的所有箭矢存入箭袋,最多&b{max_arrows}&f支"
       - "&f射击时若背包箭矢少于&b{threshold}&f支,则补充&b{amount}&f支"
       - "&e[于&b饰品栏&e中&b下蹲+左键&e此饰品]"
       - "&f将箭袋中的箭矢&b全部取出&f"
+      - "&e[被动] &d[流火矢]"
+      - "&e[于&b饰品栏&e激活时+射击] &f冷却:&b5&f秒"
+      - "&f令本次射出的箭矢持续点燃飞行路径周围&b3格&f的怪物"
+      - "&f被点燃的怪物会受到&b150%🏹&f的伤害"
+      - "&f且在&b5秒&f内自身&b护甲&f降低&b35%"
       - "&8===========&2&n&l当前状态&8============="
       - "&f存储箭矢: &a{arrows} &f/ &a{max_arrows}"
     req_lv: 25
@@ -282,5 +333,77 @@ crystals:
     activation:
       accessory_8: # 饰品栏第9格 (索引8)
         stats:
-          archer_damage: 3.0 # 统一的进攻属性
+          archer_damage: 5.0 # 统一的进攻属性
           speed_percent: 0.1 # 10%移速
+
+  yanling:
+    display: "&d炎灵[饰品]"
+    material: STICK
+    rarity: 4
+    custom_model_data: 6002
+    skill_id: "yanling"
+    lore:
+      - "&6限制职业:[术] 限制等级:&b30"
+      - "&7&o诞生于大漠精火中的灵动生灵"
+      - "&7&o形貌玲珑可爱,体内却蕴着一颗炽热的心"
+      - "&7&o随身相伴,如怀抱一团不灭的暖意"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f阵法强度 +5 移动速度 +10%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&f开启/关闭&b[回流]&f状态"
+      - "&b[回流]&f:若自身灵力大于&b50%&f,释放元素阵法时"
+      - "&f有&b50%&f概率不消耗元素,改为消耗&b(阵法等级*3)&f点灵力"
+      - "&e[被动] &d[炎灵祝礼]"
+      - "&e[于&b饰品栏&e激活时] &f冷却:&b15&f秒"
+      - "&f释放元素阵法时召唤&b炎灵&f助阵持续&b10&f秒"
+      - "&b[炎灵]&f:期间增加自身&b25%⚡&f"
+      - "&f并且持续降低周围怪物的移动速度"
+    req_lv: 30
+    req_job: 2
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 5.0
+          speed_percent: 0.1 # 10%移速
+
+  jinshengzhi:
+    display: "&d烬生枝[饰品]"
+    material: STICK
+    rarity: 4
+    custom_model_data: 6003
+    skill_id: "jinshengzhi"
+    taolizhi_data:
+      max_storage: 200.0
+      trigger_storage: 25.0
+      cooldown: 3.0
+      range: 15.0
+      zf_multiplier: 1.2
+      storage_multiplier: 0.5
+    lore:
+      - "&6限制职业:[医] 限制等级:&b30"
+      - "&7&o一截焦而不朽的古木断枝,余烬未消"
+      - "&7&o炎息外放可灼伤来犯之敌,内蕴则能燃尽沉疴,促发新生"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f最大生命 +8  阵法强度 +3"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[被动] &d[生火不息]"
+      - "&e[于&b饰品栏&e激活时] &f冷却:&b3&f秒"
+      - "&f当释放医术回复生命时,将&b溢出&f的回复值存入(最多&b200&f点)"
+      - "&f当超过&b25&f点时,消耗全部存储值召唤&b2&f只&b[火灵鸟]&f"
+      - "&f飞向&b15&f格范围内受伤的友军,为其回复&b50%存储值&f的生命"
+      - "&f同时叠加&b抗火&f和&b速度&f效果持续&b10秒"
+      - "&f若周围不存在受伤的友军,则随机飞向同范围内的怪物"
+      - "&f造成(&b120%⚡&f+&b50%存储值&f)点伤害"
+      - "&f并对怪物造成轻微的&b击退&f效果"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储生命: &a{stored} &f/ &a{max_storage}"
+    req_lv: 30
+    req_job: 3
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 3.0
+          max_health: 8.0

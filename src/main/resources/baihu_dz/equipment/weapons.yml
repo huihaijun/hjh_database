@@ -1,54 +1,9 @@
 #近战🗡 💥 ※  生命❤   ⚡  ⚔  ☯  箭矢🏹  『』
 weapons:
-  baihu_kaishandao:
-    display: "&6虎瘴·开山刀"
-    material: IRON_AXE
-    rarity: 4
-    skill_id: kaishandao
-    req_job: 0
-    req_lv: 20
-    activate_slot: 0
-    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
-    durability:
-      max: 120
-      skill_cost: 3
-    lore:
-      - "&7白虎洞虎瘴浸染的山刀。"
-      - "&8===========&6虎瘴属性&8============"
-      - "&f近战强度 +10"
-      - "&f速度 +5%"
-      - "&8===========&6虎瘴技能&8============"
-      - "&e[主动] &f复用开山刀技能"
-    stats:
-      attack: 10.0
-      speed_percent: 0.05
-
-  baihu_honglingnu:
-    display: "&6虎瘴·红翎弩"
-    material: CROSSBOW
-    rarity: 4
-    skill_id: honglingnu
-    req_job: 1
-    req_lv: 20
-    activate_slot: 0
-    active_lore_line: "&c请放在快捷栏第1格，并身负虎瘴。"
-    durability:
-      max: 100
-      skill_cost: 2
-    lore:
-      - "&7白虎洞虎瘴浸染的弩机。"
-      - "&8===========&6虎瘴属性&8============"
-      - "&f箭矢强度 +9"
-      - "&f暴击率 +5%"
-      - "&8===========&6虎瘴技能&8============"
-      - "&e[主动] &f复用红翎弩技能"
-    stats:
-      archer_damage: 9.0
-      crit_chance: 0.05
-
   ciguheiren:
     display: "&7刺骨黑刃[虎瘴]"
     material: STONE_AXE
+    custom_model_data: 160
     rarity: 4
     skill_id: ciguheiren
     req_job: 0

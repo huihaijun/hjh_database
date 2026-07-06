@@ -2,11 +2,15 @@
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
+import com.hjh_database.accessory.skill.medical.JinshengzhiSkill
 import com.hjh_database.accessory.skill.medical.TaolizhiSkill
 import com.hjh_database.accessory.skill.quiver.*
 import com.hjh_database.accessory.skill.shield.*
 import com.hjh_database.accessory.skill.warlock.BaseRefluxSkill
 import com.hjh_database.accessory.skill.warlock.HuiliuyiSkill
+import com.hjh_database.accessory.skill.warlock.YanlingSkill
+import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
+import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalHealEvent
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.Material
@@ -17,8 +21,10 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot // 銆愭柊澧炲鍏ャ€戠敤浜庡垽鏂富鍓墜
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
@@ -31,8 +37,11 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         "jiandai" to JiandaiSkill(plugin),
         "ranhuojiandai" to RanhuoJiandaiSkill(plugin),
         "qingshidunpai" to QingshidunpaiSkill(plugin),
+        "yanjingdunpai" to YanjingdunpaiSkill(plugin),
         "huiliuyi" to HuiliuyiSkill(plugin),
-        "taolizhi" to TaolizhiSkill(plugin)
+        "yanling" to YanlingSkill(plugin),
+        "taolizhi" to TaolizhiSkill(plugin),
+        "jinshengzhi" to JinshengzhiSkill(plugin)
     )
 
     /**
@@ -187,6 +196,53 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onYanjingFlameDamage(event: EntityDamageEvent) {
+        val skillClass = skills["yanjingdunpai"] as? YanjingdunpaiSkill ?: return
+        skillClass.onPlayerDamage(event)
+    }
+
+    @EventHandler
+    fun onRanhuoArmorCalculation(event: ElementCrystalArmorCalculationEvent) {
+        val skillClass = skills["ranhuojiandai"] as? RanhuoJiandaiSkill ?: return
+        skillClass.onArmorCalculation(event)
+    }
+
+    fun onElementFormationCast(player: Player, data: PlayerData) {
+        val activeItems = getActiveAccessories(player)
+
+        for ((item, slotKey) in activeItems) {
+            val meta = item.itemMeta ?: continue
+            val baihuArtifact = plugin.baihuDzManager.getArtifactDataFromItem(item)
+            val cData = if (baihuArtifact != null) {
+                plugin.baihuDzManager.toCrystalData(baihuArtifact)
+            } else {
+                val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING) ?: continue
+                plugin.playerManager.crystalManager.loadedCrystals[cid] ?: continue
+            }
+
+            val active = if (baihuArtifact != null) {
+                plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
+            } else {
+                cData.activations.containsKey(slotKey) && cData.isActivated(data)
+            }
+            if (!active) continue
+
+            val targetId = cData.skillId ?: cData.id
+            val skillClass = skills[targetId] as? YanlingSkill ?: continue
+            skillClass.onElementFormationCast(player, data)
+            if (baihuArtifact != null) {
+                plugin.baihuDzManager.consumeDurability(player, item, baihuArtifact)
+            }
+            break
+        }
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        (skills["yanling"] as? YanlingSkill)?.cleanup(event.player)
     }
 
     @EventHandler

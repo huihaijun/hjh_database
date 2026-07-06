@@ -52,7 +52,8 @@ shanshengongpin:
     - "&7&o收集一些交给庙公吧"
 
 longlinshenmu:
-  material: MANGROVE_LOG
+  material: STICK
+  custom_model_data: 7000
   name: "&b龙鳞神木"
   rarity: 2
   lore:
@@ -82,7 +83,8 @@ shangxianwenxian:
     - "&7&o收集一些一起还给他吧"
 
 yanshazhixin:
-  material: HONEYCOMB
+  material: STICK
+  custom_model_data: 7001
   name: "&b焱砂之心"
   rarity: 3
   lore:
@@ -92,16 +94,18 @@ yanshazhixin:
     - "&7&o估计能换到一些好东西"
 
 yanjingshi:
-  material: FIRE_CHARGE
+  material: STICK
+  custom_model_data: 7002
   name: "&9炎晶石"
   rarity: 3
   lore:
     - "&7&o黑里透红的神奇晶石"
     - "&7&o石头里的熔岩似乎总想奔涌而出"
-    - "&7&o此物在锻造中能够赋予武器熊熊的火焰 "
+    - "&7&o此物在锻造中能够赋予武器熊熊的火焰"
 
 huangfengyan:
-  material: CONDUIT
+  material: STICK
+  custom_model_data: 7003
   name: "&9黄风眼"
   rarity: 3
   lore:
@@ -110,7 +114,8 @@ huangfengyan:
     - "&7&o锻造时将其融入,能让铠甲更加坚固"
 
 ehundan:
-  material: ARMADILLO_SCUTE
+  material: STICK
+  custom_model_data: 7004
   name: "&d恶魂丹"
   rarity: 4
   lore:
@@ -134,8 +139,9 @@ fumanzhangqidemeitan:
     - "&7&o估计没多少人稀罕这玩意"
 
 hujin:
-  material: DEEPSLATE_GOLD_ORE
-  name: "&b虎金"
+  material: STICK
+  custom_model_data: 7005
+  name: "&d虎金"
   rarity: 4
   lore:
     - "&7&o白虎洞内蕴藏的稀世奇金"
@@ -143,8 +149,9 @@ hujin:
     - "&7&o铸为兵刃则锋芒毕露，有吹毛断发之利"
 
 hupo:
-  material: GLOW_INK_SAC
-  name: "&b虎魄"
+  material: STICK
+  custom_model_data: 7006
+  name: "&d虎魄"
   rarity: 4
   lore:
     - "&7&o一缕携有白虎神威的残魂"
@@ -170,9 +177,18 @@ fumanzhangqidexuantieding:
     - "&7&o若强行以此为材锻造，所出之物必受瘴毒反噬"
 
 zhichunzhixin:
-  material: PRISMARINE_CRYSTALS
+  material: STICK
+  custom_model_data: 7007
   rarity: 4
-  name: "&b至纯之心"
+  name: "&d至纯之心"
   lore:
     - "&7&o澄澈如冰，莹润似玉，不染一丝尘埃"
     - "&7&o蕴藏着涤荡万物的纯净之力"
+
+huzhenshangrenshouju:
+  material: ORANGE_DYE
+  name: "&b商人被抢走的收据"
+  lore:
+    - "&7&o虎镇商人被怪物偷走的收据"
+    - "&7&o收集一些一起还给他吧"
+

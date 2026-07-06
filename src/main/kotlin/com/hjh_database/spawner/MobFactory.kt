@@ -1,6 +1,8 @@
 package com.hjh_database.spawner
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.spawner.impl.Jiaoguzhanshi
+import com.hjh_database.spawner.impl.Kuanggongwanghun
 import com.hjh_database.spawner.impl.Shamofengbao
 import com.hjh_database.spawner.impl.Xiongshentaisui
 import org.bukkit.ChatColor
@@ -108,6 +110,8 @@ object MobFactory {
             }
             "shamofengbao" -> Shamofengbao(plugin, entity)
             "xiongshentaisui" -> Xiongshentaisui(plugin, entity)
+            "jiaoguzhanshi" -> Jiaoguzhanshi(plugin, entity)
+            "kuanggongwanghun" -> Kuanggongwanghun(plugin, entity)
             // 以后如果有新 boss，继续往下加就行：
 //             "shiyanguai" -> Shiyanguai(plugin, entity)
             // "kulouwang" -> Kulouwang(plugin, entity)

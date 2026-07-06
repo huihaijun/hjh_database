@@ -107,6 +107,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
             // 水元素 Revelation/启示 触发冷却返还
             plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
+            plugin.accessorySkillManager.onElementFormationCast(player, data)
 
             // 5. 发送提示消息
             val msg = config!!.getString("skills.$type.message")
@@ -268,6 +269,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
         // 水元素 Revelation/启示 触发冷却返还
         plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
+        plugin.accessorySkillManager.onElementFormationCast(player, data)
 
         // 6. 显示最新灵力
         val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"

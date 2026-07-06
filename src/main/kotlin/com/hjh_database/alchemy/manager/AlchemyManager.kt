@@ -30,6 +30,7 @@ class AlchemyManager(private val plugin: Hjh_database) {
 
     private var tickTask: BukkitTask? = null
     private val recipeFile = File(plugin.dataFolder, "alchemy/recipes.yml")
+    private var lastLoadedRecipeRefreshCount = 0
 
     init {
         loadRecipes()
@@ -45,6 +46,8 @@ class AlchemyManager(private val plugin: Hjh_database) {
 
     // === 配方存取 (修复重点：实现真正的保存和读取) ===
     fun loadRecipes() {
+        recipes.clear()
+        lastLoadedRecipeRefreshCount = 0
         if (!recipeFile.exists()) return
         val config = YamlConfiguration.loadConfiguration(recipeFile)
         val section = config.getConfigurationSection("recipes") ?: return
@@ -75,6 +78,40 @@ class AlchemyManager(private val plugin: Hjh_database) {
             }
             recipes[id] = recipe
         }
+        lastLoadedRecipeRefreshCount = refreshLoadedRecipeItems()
+    }
+
+    fun reloadRecipes(): Int {
+        loadRecipes()
+        return lastLoadedRecipeRefreshCount + refreshActiveSessions()
+    }
+
+    fun refreshLoadedRecipeItems(): Int {
+        var refreshed = 0
+        for (recipe in recipes.values) {
+            for (tierConfig in recipe.tierData.values) {
+                for (ingredient in tierConfig.ingredients) {
+                    if (refreshRecipeItem(ingredient)) refreshed++
+                }
+                if (refreshRecipeItem(tierConfig.result)) refreshed++
+            }
+        }
+        return refreshed
+    }
+
+    private fun refreshActiveSessions(): Int {
+        var refreshed = 0
+        for (session in activeSessions.values) {
+            refreshed += session.refreshRecipeItems()
+        }
+        return refreshed
+    }
+
+    private fun refreshRecipeItem(item: ItemStack): Boolean {
+        val amount = item.amount
+        val changed = plugin.resourceManager.refreshItem(item)
+        if (changed) item.amount = amount
+        return changed
     }
 
     fun saveRecipes() {

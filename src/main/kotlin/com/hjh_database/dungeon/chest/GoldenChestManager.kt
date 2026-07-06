@@ -58,6 +58,18 @@ class GoldenChestManager(private val plugin: Hjh_database) {
                 ChestLootItem("yanxin", 1, 1, 100.0)
             )
         )
+        // 静态注册 白虎试炼
+        chestRegistry["baihu_test"] = GoldenChestConfig(
+            dungeonId = "baihu_test",
+            displayName = "白虎试炼", // 【新增】中文名指代副本名
+            keyResourceId = "mijingyaoshi", // 钥匙ID 当前为秘境钥匙
+            keyCost = 1,
+            maxDrops = 1, // 每次开箱弹出1个物品
+            lootTable = listOf(
+                // 权重 100.0，朱雀饰品
+                ChestLootItem("xiaofeng", 1, 1, 100.0)
+            )
+        )
     }
 
     // 核心抽卡逻辑

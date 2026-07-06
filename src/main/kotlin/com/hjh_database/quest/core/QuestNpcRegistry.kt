@@ -213,6 +213,21 @@ enum class StoryNpcs(
         Villager.Profession.LEATHERWORKER,
         Villager.Type.DESERT,
         -198.5, 148.5, -176.5, 0f
+    ),
+//    西方区域NPC
+    SHANGXINDELAOYEYE(
+        "shangxindelaoyeye",
+        "§a§l伤心的老爷爷",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -274.5, 100.5, 88.5, 0f
+    ),
+    GULINGLINGDEXIAONANHAI(
+        "gulinglingdexiaonanhai",
+        "§a§l孤伶伶的小男孩",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -582.5, 109.5, 188.5, 0f
     );
 
 

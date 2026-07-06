@@ -21,6 +21,7 @@ import com.hjh_database.farming.listener.FarmingPlayerListener
 import com.hjh_database.farming.manager.FarmingManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
+import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
 import com.hjh_database.dungeon.zhuque.ZhuQueManager
 import com.hjh_database.dz.command.DzCommand
@@ -97,6 +98,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var accessoryManager: AccessoryManager // 饰品栏管理器
     lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
     lateinit var zhuQueManager: ZhuQueManager// 朱雀试炼管理器
+    lateinit var baihuTrialManager: BaihuTrialManager
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
@@ -168,6 +170,7 @@ class Hjh_database : JavaPlugin() {
         this.qingLongManager = QingLongManager(this)
         // 朱雀试炼
         this.zhuQueManager = ZhuQueManager(this)
+        this.baihuTrialManager = BaihuTrialManager(this)
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
         // 【新增】初始化个人仓库管理器
@@ -242,6 +245,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(this.qingLongManager, this)
         // 朱雀试炼监听
         pm.registerEvents(this.zhuQueManager, this)
+        pm.registerEvents(this.baihuTrialManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
         // 【新增】个人仓库系统监听
@@ -347,6 +351,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::baihuTownFireManager.isInitialized) {
             baihuTownFireManager.shutdown()
+        }
+
+        if (::baihuTrialManager.isInitialized) {
+            baihuTrialManager.shutdown()
         }
 
         if (::bgmManager.isInitialized) {
