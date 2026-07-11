@@ -362,3 +362,43 @@ xuantianqi_chuxing:
     - "&7&o将其放置在锻造台上,根据配方加入其他材料"
     - "&7&o就能锻造出医师武器——&d玄天旗"
     - "&e注意:&f锻造前,请先将医术从医旗上剥离"
+
+yanjingdunpai_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d炎晶盾牌雏形[饰品]"
+  lore:
+    - "&7&o用来制作战士饰品——&d炎晶盾牌&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士饰品——&d炎晶盾牌"
+
+ranhuojiandai_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d燃火箭袋雏形[饰品]"
+  lore:
+    - "&7&o用来制作弓箭手饰品——&d燃火箭袋&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手饰品——&d燃火箭袋"
+
+yanling_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d炎灵雏形[饰品]"
+  lore:
+    - "&7&o用来制作术士饰品——&d炎灵&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士饰品——&d炎灵"
+
+jinshengzhi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 4
+  name: "&d烬生枝雏形[饰品]"
+  lore:
+    - "&7&o用来制作医师饰品——&d烬生枝&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师饰品——&d烬生枝"

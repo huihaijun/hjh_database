@@ -124,7 +124,7 @@ wangyuanwai_qiannianlingzhi:
   name: "&b王员外的千年灵芝"
   lore:
     - "&7&o王员外不慎被抢走的千年灵芝"
-    - "&7&o喜寒厌热,十分娇贵,拿到后快还给他吧"
+    - "&7&o初始温度40度,停下可降温,但最低只能降到30度"
     - "&e[任务物品]"
 
 wenquan_caoyaoguan:
@@ -186,4 +186,12 @@ shigezhujian:
     - "&7&o据说和虎爪山脉的迷阵有关"
     - "&a请主手持有,右键打开读信"
     - "&c阅读后信件自动销毁,请注意保管！"
+    - "&e[任务物品]"
+
+chendafudekonghuofu:
+  material: SNOWBALL
+  name: "&b陈大夫的控火符"
+  lore:
+    - "&7&o陈大夫研究的控温符咒"
+    - "&7&o用它砸向红温的晶块吧"
     - "&e[任务物品]"

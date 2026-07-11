@@ -50,7 +50,7 @@ class Yao_02 : QuestBase("main_yao_2", "[妖族主线]启灵之果", QuestType.M
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f不过你可得记住了——万物有灵，这些资源也是活的呢。你靠近的时候仔细看：要是它身上冒出§a绿莹莹的光§f，那就是它心情正好，处于§a“富饶”§f状态，这时候采集，事半功倍。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f等采过之后，它的光就会变成§e暗黄色§f，这就叫§e“枯竭”§f了。这时候你要是硬来，不仅费时费力，说不定还什么都捞不着，伤己又伤物，可不划算。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f要是你实在缺资源，枯竭了也照采不误——那它就会蒙上一层§7灰扑扑§f的光，像是被抽干了力气，开始“休养”了。没关系，让它好好睡一觉，等它恢复精神，绿光还会再亮起来的。",
-        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f哦对了，施展§b开物术§f可是要消耗§b精力§f的。不过不必担心，每过一阵子精力就会自行恢复，而且你开物术越是纯熟，精力上限也会越高呢。",
+        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f哦对了，施展§b开物术§f可是要消耗§b精力§f的。不过不必担心，每过一阵子精力就会自行恢复。开物术每提升一级，精力上限都会提高，§b开采速度也会增加10%§f，最多增加§b50%§f。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f好啦，说了这么多，快去试试吧！采上§e两颗启灵果§f，就回去找谷主。记住——用指尖去感受，别用脚爬，摔下来我可不接着你！"
     )
 

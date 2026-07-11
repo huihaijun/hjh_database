@@ -42,8 +42,10 @@ class ResourceManager(private val plugin: Hjh_database) {
 
         loadAll()
 
+        val refreshedKaiWuItems = plugin.kaiWuManager.refreshNodeResourceItems()
+        plugin.kaiWuAdminGui.refreshOpenMenus()
         val refreshed = refreshOnlinePlayerContainers()
-        plugin.logger.info("资源物品刷新完成，共刷新 $refreshed 个在线玩家容器物品。")
+        plugin.logger.info("资源物品刷新完成，共刷新 $refreshed 个在线玩家容器物品、$refreshedKaiWuItems 个开物资源点物品。")
     }
 
     fun refreshOnlinePlayerContainers(): Int {

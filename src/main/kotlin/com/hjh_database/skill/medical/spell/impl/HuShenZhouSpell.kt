@@ -35,7 +35,7 @@ class HuShenZhouSpell(private val plugin: Hjh_database) : MedicalSpell, Listener
         val zfStr = data.zfStr
         // 读取配置中的参数
         val multiplier = config?.getDouble("absorption_multiplier", 3.0) ?: 3.0
-        val durationSeconds = config?.getInt("duration", 10) ?: 10
+        val durationSeconds = config?.getInt("duration", 20) ?: 20
         val durationTicks = durationSeconds * 20L
 
         // 吸收伤害量 = 阵法强度 * 300%

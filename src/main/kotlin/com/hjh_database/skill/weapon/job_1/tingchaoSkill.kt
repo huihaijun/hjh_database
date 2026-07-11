@@ -320,13 +320,13 @@ class tingchaoSkill : WeaponSkill, Listener {
         val pData = pluginMain.playerManager.getData(player.uniqueId) ?: return
 
         if (state) {
-            if (pData.tempBonuses["tingchao_speed"] != 0.50) {
-                pData.tempBonuses["tingchao_speed"] = 0.50
+            if (pData.tempBonuses[SPEED_BUFF_KEY] != 0.50) {
+                pData.tempBonuses[SPEED_BUFF_KEY] = 0.50
                 pluginMain.playerManager.updateStats(player)
             }
         } else {
-            if (pData.tempBonuses.containsKey("tingchao_speed")) {
-                pData.tempBonuses.remove("tingchao_speed")
+            if (pData.tempBonuses.containsKey(SPEED_BUFF_KEY)) {
+                pData.tempBonuses.remove(SPEED_BUFF_KEY)
                 pluginMain.playerManager.updateStats(player)
             }
         }
@@ -358,5 +358,9 @@ class tingchaoSkill : WeaponSkill, Listener {
 
         // 【修改位置 5】失活时清理发光状态
         currentTideTarget.remove(uuid)?.isGlowing = false
+    }
+
+    companion object {
+        private const val SPEED_BUFF_KEY = "tingchao::speed_percent"
     }
 }

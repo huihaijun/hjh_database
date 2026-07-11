@@ -21,6 +21,9 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     companion object {
         val activeBuffs = ConcurrentHashMap<UUID, WanXiangBuff>()
+        private const val ATTACK_KEY = "wanxiangsu::attack_percent"
+        private const val ARCHER_KEY = "wanxiangsu::archer_damage_percent"
+        private const val ZF_KEY = "wanxiangsu::zf_str_percent"
     }
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
@@ -72,9 +75,9 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
                 existingBuff.task = createRemoveTask(target.uniqueId, durationTicks)
             } else {
                 // 没有增益：精准赋予三个流派的百分比加成
-                targetData.tempBonuses["attack_percent"] = (targetData.tempBonuses["attack_percent"] ?: 0.0) + statBoost
-                targetData.tempBonuses["archer_damage_percent"] = (targetData.tempBonuses["archer_damage_percent"] ?: 0.0) + statBoost
-                targetData.tempBonuses["zf_str_percent"] = (targetData.tempBonuses["zf_str_percent"] ?: 0.0) + statBoost
+                targetData.tempBonuses[ATTACK_KEY] = statBoost
+                targetData.tempBonuses[ARCHER_KEY] = statBoost
+                targetData.tempBonuses[ZF_KEY] = statBoost
 
                 plugin.playerManager.updateStats(target)
 
@@ -94,9 +97,9 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
                 if (targetData != null) {
                     // 到期精准扣除百分比
-                    targetData.tempBonuses["attack_percent"] = (targetData.tempBonuses["attack_percent"] ?: 0.0) - buff.boostPct
-                    targetData.tempBonuses["archer_damage_percent"] = (targetData.tempBonuses["archer_damage_percent"] ?: 0.0) - buff.boostPct
-                    targetData.tempBonuses["zf_str_percent"] = (targetData.tempBonuses["zf_str_percent"] ?: 0.0) - buff.boostPct
+                    targetData.tempBonuses.remove(ATTACK_KEY)
+                    targetData.tempBonuses.remove(ARCHER_KEY)
+                    targetData.tempBonuses.remove(ZF_KEY)
 
                     val player = plugin.server.getPlayer(uuid)
                     if (player != null && player.isOnline) {
@@ -106,4 +109,5 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
             }
         }.runTaskLater(plugin, delayTicks)
     }
+
 }

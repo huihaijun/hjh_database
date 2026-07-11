@@ -91,9 +91,9 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
 
         if (stars > 0) {
             // 每层星提升 20%
-            pData.tempBonuses["beidou_star_damage_percent"] = stars * 0.20
+            pData.tempBonuses[STAR_DAMAGE_KEY] = stars * 0.20
         } else {
-            pData.tempBonuses.remove("beidou_star_damage_percent")
+            pData.tempBonuses.remove(STAR_DAMAGE_KEY)
         }
 
         pluginMain.playerManager.updateStats(player)
@@ -213,5 +213,9 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
         activeStars.remove(uuid)
         starTicks.remove(uuid)
         updateStarBuff(player, 0)
+    }
+
+    companion object {
+        private const val STAR_DAMAGE_KEY = "beidoumieshengong::archer_damage_percent"
     }
 }

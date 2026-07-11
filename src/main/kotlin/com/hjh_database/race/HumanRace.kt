@@ -13,7 +13,7 @@ class HumanRace(manager: RaceManager) : RaceBase(manager) {
     override val raceId: Int = 2
     override val requiredQuestId: String = "main_ren_5"
 
-    private val minFoodLevel = 6
+    private val minFoodLevel = 8
     private val discountPercentage = 0.20 // 20% 折扣
     private val moneyItemIds = setOf("hjh_tongqian") // 定义哪些物品ID算钱
 

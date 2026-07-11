@@ -91,7 +91,7 @@ class jiaolongnuSkill : WeaponSkill, Listener {
 
                             if (pData != null) {
                                 // 移除 20% 移速
-                                pData.tempBonuses.remove("speed_percent")
+                                pData.tempBonuses.remove(SPEED_BUFF_KEY)
                                 pluginMain.playerManager.updateStats(player)
 
                                 // 赋予 15 秒 (300 ticks) 的 8 点黄心护盾 (Absorption 等级 1 = 4 颗心 = 8 点)
@@ -123,7 +123,7 @@ class jiaolongnuSkill : WeaponSkill, Listener {
         activeBuffs[player.uniqueId] = System.currentTimeMillis() + 7000L
 
         // 2. 增加 20% 移速
-        data?.tempBonuses?.set("speed_percent", 0.20)
+        data?.tempBonuses?.set(SPEED_BUFF_KEY, 0.20)
         pluginMain.playerManager.updateStats(player)
 
         // 3. 提示与音效 (仅保留规定文字，使用波浪音效)
@@ -201,9 +201,13 @@ class jiaolongnuSkill : WeaponSkill, Listener {
         activeBuffs.remove(player.uniqueId)
         val pluginMain = plugin as com.hjh_database.Hjh_database
         val data = pluginMain.playerManager.getData(player.uniqueId) ?: return
-        if (data.tempBonuses.remove("speed_percent") != null) {
+        if (data.tempBonuses.remove(SPEED_BUFF_KEY) != null) {
             pluginMain.playerManager.updateStats(player)
         }
         player.removePotionEffect(PotionEffectType.WATER_BREATHING)
+    }
+
+    companion object {
+        private const val SPEED_BUFF_KEY = "jiaolongnu::speed_percent"
     }
 }

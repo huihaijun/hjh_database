@@ -357,7 +357,7 @@ class CrystalManager(private val plugin: Hjh_database) {
                     val eData = plugin.elementCrystalManager.getData(playerData.uuid)
                     val hasPoints = eData.getTotalPoints() > 0
                     if (hasPoints) {
-                        if (eData.goldPoints > 0) newLore.add("§f进攻属性 +${eData.goldPoints * 1.5}")
+                        if (eData.goldPoints > 0) newLore.add("§f进攻属性 +${eData.goldPoints}")
                         if (eData.woodPoints > 0) newLore.add("§f最大生命 +${eData.woodPoints * 6.0}")
                         if (eData.waterPoints > 0) newLore.add("§f冷却缩减 +${eData.waterPoints * 2}%")
                         if (eData.firePoints > 0) newLore.add("§f暴击率 +${eData.firePoints * 4}%")

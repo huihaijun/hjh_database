@@ -22,7 +22,7 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
     override fun getProgressText(progress: Int): List<String> {
         return when (progress) {
             0 -> listOf("§c前往旧村庄废墟寻找 §e莲心")
-            1 -> listOf("§c收集 §e火元素x20 §c和 §e土元素x20 §c交给莲心")
+            1 -> listOf("§c收集 §e火元素x5 §c和 §e土元素x5 §c交给莲心")
             2 -> listOf("§a已交付元素", "§c继续听 §e莲心 §c说明丹药用法")
             else -> listOf("§a任务已完成")
         }
@@ -57,13 +57,13 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
         "§e[${StoryNpcs.LIANXIN.displayName}§e] §f你要帮我？那我就先谢过了",
         "§e[${StoryNpcs.LIANXIN.displayName}§e] §f药引的事你不用担心，我早就备好了几份，待会儿直接给你便是",
         "§e[${StoryNpcs.LIANXIN.displayName}§e] §f眼下最缺的是元素，尤其是§4§n火元素§f和§4§n土元素§f，火山四周本应遍地都是，奈何我一个人不敢走远",
-        "§e[${StoryNpcs.LIANXIN.displayName}§e] §f劳烦你替我跑一趟，各找来二十枚就好，够数了我便能开炉炼制",
+        "§e[${StoryNpcs.LIANXIN.displayName}§e] §f劳烦你替我跑一趟，各找来五枚就好，够数了我便能开炉炼制",
         "§e[${StoryNpcs.LIANXIN.displayName}§e] §f谢谢你了，时间不多，快去快回吧，我在这里等着"
     )
 
     private val scriptNotEnough = listOf(
         "§e[${StoryNpcs.LIANXIN.displayName}§e] §f收集齐材料了吗？",
-        "§e[${StoryNpcs.LIANXIN.displayName}§e] §f我需要二十枚火元素和二十枚土元素，麻烦你了"
+        "§e[${StoryNpcs.LIANXIN.displayName}§e] §f我需要五枚火元素和五枚土元素，麻烦你了"
     )
 
     private val scriptPart2 = listOf(
@@ -93,7 +93,7 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
             }
             else if (currentProgress == 1) {
                 // 第二阶段：检查物品
-                if (hasResourceItem(player, "fire", 20) && hasResourceItem(player, "earth", 20)) {
+                if (hasResourceItem(player, "fire", 5) && hasResourceItem(player, "earth", 5)) {
                     if (Hjh_database.instance.resourceManager.getItem("lianxindan") == null) {
                         player.sendMessage("§c[错误] 无法获取莲心丹配置，请联系管理员！")
                         return true
@@ -176,12 +176,12 @@ class South_03 : QuestBase("main_south_3", "[主线]伪神之谜", QuestType.MAI
     }
 
     private fun consumeElements(player: Player): Boolean {
-        if (!hasResourceItem(player, "fire", 20) || !hasResourceItem(player, "earth", 20)) {
+        if (!hasResourceItem(player, "fire", 5) || !hasResourceItem(player, "earth", 5)) {
             return false
         }
 
-        val removedFire = removeResourceItem(player, "fire", 20)
-        val removedEarth = removeResourceItem(player, "earth", 20)
+        val removedFire = removeResourceItem(player, "fire", 5)
+        val removedEarth = removeResourceItem(player, "earth", 5)
         return removedFire && removedEarth
     }
 

@@ -328,7 +328,10 @@ class PlayerManager(private val plugin: Hjh_database) {
         // 鈽呪槄鈽?(C) 銆愭柊澧炪€戞妧鑳?Buff 涓存椂鍔犳垚 鈽呪槄鈽?
         // 杩欎竴姝ヨ鎶€鑳藉彲浠ョ洿鎺ュ奖鍝嶆渶缁堥潰鏉匡紝鑰屼笉闇€瑕佹敼鍐?PlayerData 鐨勫叿浣撳瓧娈?
         data.tempBonuses.forEach { (k, v) ->
-            bonuses.merge(k, v) { a, b -> a + b }
+            // 临时属性使用“技能来源::属性名”隔离生命周期；汇总时再还原为真实属性名。
+            // 这样某个技能结束时只会移除自己的条目，不会提前清掉其他技能的同类效果。
+            val statKey = k.substringAfterLast("::", k)
+            bonuses.merge(statKey, v) { a, b -> a + b }
         }
         JuliWan.applyStatBonuses(bonuses, data)
 
@@ -343,10 +346,6 @@ class PlayerManager(private val plugin: Hjh_database) {
         // 澶勭悊鐢熷懡鐧惧垎姣?
         if (bonuses.containsKey("max_health_percent")) {
             val percent = bonuses["max_health_percent"]!!
-            data.maxHealth *= (1.0 + percent)
-        }
-        if (bonuses.containsKey("baihu_miasma_max_health_percent")) {
-            val percent = bonuses["baihu_miasma_max_health_percent"]!!
             data.maxHealth *= (1.0 + percent)
         }
 
@@ -380,12 +379,12 @@ class PlayerManager(private val plugin: Hjh_database) {
         if (bonuses.containsKey("armor_percent")) {
             data.armor *= (1.0 + bonuses["armor_percent"]!!)
         }
-        if (bonuses.containsKey("baihu_miasma_armor_percent")) {
-            data.armor *= (1.0 + bonuses["baihu_miasma_armor_percent"]!!)
-        }
 
         data.knockBackRes += bonuses.getOrDefault("knock_back_res", 0.0)
         data.critChance += bonuses.getOrDefault("crit_chance", 0.0)
+        if (bonuses.getOrDefault("crit_override", 0.0) > 0.0) {
+            data.critChance = max(data.critChance, 1.0)
+        }
         data.coolReduce += bonuses.getOrDefault("cool_reduce", 0.0)
 
         // === 鐏靛姏璁＄畻閫昏緫 (淇濇寔鍘熸牱) ===
@@ -428,10 +427,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         }
         // 澶勭悊绉婚€熺櫨鍒嗘瘮
         if (bonuses.containsKey("speed_percent")) {
-            // speed_percent 涓鸿礋鏁版椂鍗充负鍑忛€?            data.speed *= (1.0 + bonuses["speed_percent"]!!)
-        }
-        if (bonuses.containsKey("baihu_miasma_speed_percent")) {
-            data.speed *= (1.0 + bonuses["baihu_miasma_speed_percent"]!!)
+            data.speed *= (1.0 + bonuses["speed_percent"]!!)
         }
 
         syncToVanilla(player, data)

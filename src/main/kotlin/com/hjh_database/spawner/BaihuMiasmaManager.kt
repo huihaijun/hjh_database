@@ -270,6 +270,9 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         modifiers[source] = IncreaseModifier(multiplier.coerceAtLeast(0.0), expireAt)
     }
 
+    /** 当前所有虎瘴增速修正叠加后的结果是否已被压至 0%。 */
+    fun isMiasmaIncreaseStopped(player: Player): Boolean = getIncreaseMultiplier(player) <= 0.000001
+
     fun reduceMiasma(player: Player, amount: Int): Int {
         if (amount <= 0) return getMiasma(player)
         val status = statuses[player.uniqueId] ?: return 0
@@ -491,9 +494,9 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         private const val HEALTH_THRESHOLD = 800
         private const val FULL_THRESHOLD = 1000
         private const val FULL_DAMAGE_INTERVAL_MS = 2_000L
-        private const val SPEED_DEBUFF_KEY = "baihu_miasma_speed_percent"
-        private const val ARMOR_DEBUFF_KEY = "baihu_miasma_armor_percent"
-        private const val MAX_HEALTH_DEBUFF_KEY = "baihu_miasma_max_health_percent"
+        private const val SPEED_DEBUFF_KEY = "baihu_miasma::speed_percent"
+        private const val ARMOR_DEBUFF_KEY = "baihu_miasma::armor_percent"
+        private const val MAX_HEALTH_DEBUFF_KEY = "baihu_miasma::max_health_percent"
 
         private fun color(text: String): String {
             return ChatColor.translateAlternateColorCodes('&', text)

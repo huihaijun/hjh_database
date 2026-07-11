@@ -3,6 +3,7 @@ package com.hjh_database.kaiwu
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.race.impl.YaoRace
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.*
 import org.bukkit.boss.BarColor
 import org.bukkit.boss.BarStyle
@@ -32,6 +33,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
     private val miningTasks: MutableMap<UUID, Int> = ConcurrentHashMap()
     private val miningBars: MutableMap<UUID, BossBar> = ConcurrentHashMap()
     private val miningStartLoc: MutableMap<UUID, Location> = ConcurrentHashMap()
+    private val inspectionTasks: MutableMap<UUID, Int> = ConcurrentHashMap()
     val deleteConfirmations: MutableMap<UUID, String> = ConcurrentHashMap()
 
     // 状态后缀
@@ -136,9 +138,143 @@ class KaiWuManager(private val plugin: Hjh_database) {
         plugin.logger.info("已加载 " + nodeCache.size + " 个开物资源点。")
     }
 
+    fun refreshNodeResourceItems(): Int {
+        var refreshed = 0
+        for ((key, node) in nodeCache) {
+            var changed = false
+            for (drop in node.drops) {
+                val amount = drop.amount
+                if (plugin.resourceManager.refreshItem(drop)) {
+                    drop.amount = amount
+                    refreshed++
+                    changed = true
+                }
+            }
+            if (changed) {
+                nodesConfig.set("$key.drops", node.drops)
+            }
+        }
+        if (refreshed > 0) {
+            try {
+                nodesConfig.save(nodesFile)
+            } catch (e: IOException) {
+                plugin.logger.warning("保存开物资源点物品刷新结果失败: ${e.message}")
+            }
+        }
+        return refreshed
+    }
+
     // ==========================================
     //           开采逻辑
     // ==========================================
+
+    /**
+     * 左键查看资源点信息。信息会短暂保持并刷新，因此枯竭/恢复倒计时能够实时变化。
+     * 再次查看资源点时会替换玩家之前的查看任务，避免重复调度。
+     */
+    fun showNodeInfo(player: Player, loc: Location) {
+        val locKey = serializeLoc(loc)
+        if (!nodeCache.containsKey(locKey)) return
+
+        cancelInspection(player.uniqueId)
+        sendNodeInfoActionBar(player, locKey)
+
+        val refreshTicks = 5L
+        val displayTicks = 100L
+        val task = object : BukkitRunnable() {
+            var elapsedTicks = 0L
+
+            override fun run() {
+                if (!player.isOnline || !nodeCache.containsKey(locKey) || elapsedTicks >= displayTicks) {
+                    cancelInspection(player.uniqueId)
+                    return
+                }
+
+                sendNodeInfoActionBar(player, locKey)
+                elapsedTicks += refreshTicks
+            }
+        }
+
+        task.runTaskTimer(plugin, refreshTicks, refreshTicks)
+        inspectionTasks[player.uniqueId] = task.taskId
+    }
+
+    private fun sendNodeInfoActionBar(player: Player, locKey: String) {
+        val node = nodeCache[locKey] ?: return
+        val data = plugin.playerManager.getPlayerData(player) ?: return
+        val status = getNodeStatus(data, locKey, System.currentTimeMillis())
+
+        val resources = node.drops
+            .filter { it.type != Material.AIR }
+            .joinToString("§7 / ") { item ->
+                val amount = item.amount.coerceAtLeast(1)
+                val expectedAmount = if (amount == 1) "1" else "1~$amount"
+                "${getDisplayName(item)}§r §7×§f$expectedAmount"
+            }
+            .ifEmpty { "§8未配置" }
+
+        val playerLevel = data.kaiwuLevel
+        val levelText = "§7需求：§eLv.${node.reqLevel} §8(你 Lv.$playerLevel)"
+        val availability = getAvailabilityText(player, data, node, status)
+        val statusText = when (status.state) {
+            NodeState.RICH -> "§a富饶"
+            NodeState.DEPLETED -> "§e枯竭 §f${formatRemainingSeconds(status.deadlineMillis)}"
+            NodeState.RECOVERING -> "§7恢复中 §f${formatRemainingSeconds(status.deadlineMillis)}"
+        }
+
+        val message = "§6【开物】 §7资源：§f$resources §8| $levelText §8| $availability §8| §7状态：$statusText"
+        player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(message))
+    }
+
+    private fun getAvailabilityText(
+        player: Player,
+        data: PlayerData,
+        node: NodeConfig,
+        status: NodeStatus
+    ): String {
+        if (data.kaiwuLevel < node.reqLevel) return "§c✘ 不可开采（等级不足）"
+        if (status.state == NodeState.RECOVERING) return "§c✘ 不可开采（恢复中）"
+        if (isMining(player)) return "§e● 正在开采"
+
+        val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
+        val hasDepletedPenalty = status.state == NodeState.DEPLETED &&
+            yaoRace?.ignoresDepletedPenalty(player) != true
+        val energyMultiplier = if (hasDepletedPenalty) {
+            config.getDouble("mining.depleted_energy_multiplier", 1.5)
+        } else {
+            1.0
+        }
+        val requiredEnergy = node.energyCost * energyMultiplier
+        if (data.kaiwuEnergy < requiredEnergy) return "§c✘ 不可开采（精力不足）"
+
+        return "§a✔ 可以开采"
+    }
+
+    private fun getNodeStatus(data: PlayerData, locKey: String, now: Long): NodeStatus {
+        val recoveringUntil = data.nodeCoolDowns[locKey + SUFFIX_RECOVERING]
+        if (recoveringUntil != null && recoveringUntil > now) {
+            return NodeStatus(NodeState.RECOVERING, recoveringUntil)
+        }
+
+        val depletedUntil = data.nodeCoolDowns[locKey + SUFFIX_DEPLETED]
+        if (depletedUntil != null && depletedUntil > now) {
+            return NodeStatus(NodeState.DEPLETED, depletedUntil)
+        }
+
+        return NodeStatus(NodeState.RICH)
+    }
+
+    private fun formatRemainingSeconds(deadlineMillis: Long?): String {
+        if (deadlineMillis == null) return "0秒"
+        val remainingMillis = (deadlineMillis - System.currentTimeMillis()).coerceAtLeast(0L)
+        val remainingSeconds = (remainingMillis + 999L) / 1000L
+        return "${remainingSeconds}秒"
+    }
+
+    private fun cancelInspection(uuid: UUID) {
+        val taskId = inspectionTasks.remove(uuid) ?: return
+        Bukkit.getScheduler().cancelTask(taskId)
+    }
 
     fun startMining(player: Player, loc: Location) {
         val locKey = serializeLoc(loc)
@@ -207,7 +343,9 @@ class KaiWuManager(private val plugin: Hjh_database) {
         }
 
         val finalEnergyCost = node.energyCost * energyMult
-        val finalTime = node.timeSeconds * timeMult * (yaoRace?.getKaiwuMiningTimeMultiplier(player) ?: 1.0)
+        val levelSpeedMultiplier = getLevelMiningSpeedMultiplier(data.kaiwuLevel)
+        val finalTime = node.timeSeconds * timeMult *
+            (yaoRace?.getKaiwuMiningTimeMultiplier(player) ?: 1.0) / levelSpeedMultiplier
 
         // 修复3: 空安全处理
         if ((data.kaiwuEnergy ?: 0.0) < finalEnergyCost) {
@@ -262,6 +400,13 @@ class KaiWuManager(private val plugin: Hjh_database) {
 
         task.runTaskTimer(plugin, 0L, 1L)
         miningTasks[player.uniqueId] = task.taskId
+    }
+
+    private fun getLevelMiningSpeedMultiplier(level: Int): Double {
+        val bonusPerLevel = config.getDouble("mining.level_speed_bonus_per_level", 0.10).coerceAtLeast(0.0)
+        val maxBonus = config.getDouble("mining.max_level_speed_bonus", 0.50).coerceAtLeast(0.0)
+        val levelBonus = ((level - 1).coerceAtLeast(0) * bonusPerLevel).coerceAtMost(maxBonus)
+        return 1.0 + levelBonus
     }
 
     private fun finishMining(
@@ -678,5 +823,16 @@ class KaiWuManager(private val plugin: Hjh_database) {
         var y: Double = 0.0
         var z: Double = 0.0
         var cachedLoc: Location? = null
+    }
+
+    private data class NodeStatus(
+        val state: NodeState,
+        val deadlineMillis: Long? = null
+    )
+
+    private enum class NodeState {
+        RICH,
+        DEPLETED,
+        RECOVERING
     }
 }

@@ -150,9 +150,10 @@ internal class DatabaseSubsystemRepository(
     // ----------------- Alchemy 丹药 -----------------
     fun saveAlchemyData(conn: Connection, data: PlayerData) {
         val sql = """
-            INSERT INTO player_alchemy (uuid, player_name, alchemy_level, alchemy_exp, pill_sickness_end) 
-            VALUES (?, ?, ?, ?, ?) 
-            ON CONFLICT(uuid) DO UPDATE SET player_name=?, alchemy_level=?, alchemy_exp=?, pill_sickness_end=?
+            INSERT INTO player_alchemy (uuid, player_name, alchemy_level, alchemy_exp, pill_sickness_end, juezhang_pill_sickness_end)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET
+                player_name=?, alchemy_level=?, alchemy_exp=?, pill_sickness_end=?, juezhang_pill_sickness_end=?
         """.trimIndent()
 
         try {
@@ -162,11 +163,13 @@ internal class DatabaseSubsystemRepository(
                 ps.setInt(3, data.alchemyLevel)
                 ps.setInt(4, data.alchemyExp)
                 ps.setLong(5, data.pillSicknessEnd)
+                ps.setLong(6, data.juezhangPillSicknessEnd)
 
-                ps.setString(6, data.playerName)
-                ps.setInt(7, data.alchemyLevel)
-                ps.setInt(8, data.alchemyExp)
-                ps.setLong(9, data.pillSicknessEnd)
+                ps.setString(7, data.playerName)
+                ps.setInt(8, data.alchemyLevel)
+                ps.setInt(9, data.alchemyExp)
+                ps.setLong(10, data.pillSicknessEnd)
+                ps.setLong(11, data.juezhangPillSicknessEnd)
 
                 ps.executeUpdate()
             }
@@ -177,7 +180,7 @@ internal class DatabaseSubsystemRepository(
     }
 
     fun loadAlchemyData(conn: Connection, data: PlayerData) {
-        val sql = "SELECT alchemy_level, alchemy_exp, pill_sickness_end FROM player_alchemy WHERE uuid = ?"
+        val sql = "SELECT alchemy_level, alchemy_exp, pill_sickness_end, juezhang_pill_sickness_end FROM player_alchemy WHERE uuid = ?"
         try {
             conn.prepareStatement(sql).use { ps ->
                 ps.setString(1, data.uuid.toString())
@@ -186,6 +189,7 @@ internal class DatabaseSubsystemRepository(
                         data.alchemyLevel = rs.getInt("alchemy_level")
                         data.alchemyExp = rs.getInt("alchemy_exp")
                         data.pillSicknessEnd = rs.getLong("pill_sickness_end")
+                        data.juezhangPillSicknessEnd = rs.getLong("juezhang_pill_sickness_end")
                     }
                 }
             }

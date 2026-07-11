@@ -57,11 +57,11 @@ class qintongjianSkill : WeaponSkill, Listener {
         // === 新架构：直接写入临时属性 Map ===
 
         // 1. 设置护甲数值加成 (PlayerManager 会读取 armor 并处理)
-        data.tempBonuses["armor"] = armorBonus
+        data.tempBonuses[ARMOR_BONUS_KEY] = armorBonus
 
         // 2. 设置移速百分比减免 (注意：减速是负数，所以这里取负)
         // 例如 speedMalus 是 0.25，这里存入 -0.25，PlayerManager 计算时就是 speed * (1 + (-0.25)) = 0.75倍
-        data.tempBonuses["speed_percent"] = -speedMalus
+        data.tempBonuses[SPEED_BONUS_KEY] = -speedMalus
 
         // 3. 标记玩家状态
         activePlayers[player.uniqueId] = true
@@ -87,8 +87,8 @@ class qintongjianSkill : WeaponSkill, Listener {
         if (activePlayers.remove(player.uniqueId) == null) return
 
         // 2. === 新架构：移除 Key 即可还原 ===
-        data.tempBonuses.remove("armor")
-        data.tempBonuses.remove("speed_percent")
+        data.tempBonuses.remove(ARMOR_BONUS_KEY)
+        data.tempBonuses.remove(SPEED_BONUS_KEY)
 
         // 3. 刷新属性 (属性瞬间变回原样)
         mainPlugin.playerManager.updateStats(player)
@@ -115,5 +115,10 @@ class qintongjianSkill : WeaponSkill, Listener {
 
     private fun formatColor(str: String): String {
         return org.bukkit.ChatColor.translateAlternateColorCodes('&', str)
+    }
+
+    companion object {
+        private const val ARMOR_BONUS_KEY = "qintongjian::armor"
+        private const val SPEED_BONUS_KEY = "qintongjian::speed_percent"
     }
 }

@@ -84,6 +84,16 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun preventXiongshenTaisuiSplit(event: SlimeSplitEvent) {
+        val mobId = event.entity.persistentDataContainer
+            .get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING)
+            ?: return
+        if (mobId == XIONGSHEN_TAISUI_ID) {
+            event.isCancelled = true
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onSplitChildSpawn(event: CreatureSpawnEvent) {
         if (event.spawnReason != CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) return
@@ -102,7 +112,10 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
     fun suppressSplitChildRewards(event: EntityDeathEvent) {
         val entity = event.entity as? Slime ?: return
         val pdc = entity.persistentDataContainer
-        if (!pdc.has(MobFactory.KEY_NO_REWARD, PersistentDataType.BYTE) && inferDefinition(entity) == null) return
+        // 只有分裂后由本监听明确标记的子体才禁止奖励。
+        // 不能按“能否推断出自定义怪物”判断，否则凶神太岁等岩浆怪本体
+        // 会在正常死亡时被提前清除 mob_id/标签，导致掉落和玩家经验监听失效。
+        if (!pdc.has(MobFactory.KEY_NO_REWARD, PersistentDataType.BYTE)) return
 
         event.drops.clear()
         event.droppedExp = 0
@@ -233,5 +246,6 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
 
     private companion object {
         private const val SPLIT_REPAIR_TICKS = 10L
+        private const val XIONGSHEN_TAISUI_ID = "xiongshentaisui"
     }
 }

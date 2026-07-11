@@ -41,6 +41,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         const val PLAYER_DEBUFF_METADATA = "hjh_xiongshentaisui_quicksand_player"
         const val BOSS_BUFF_METADATA = "hjh_xiongshentaisui_quicksand_boss"
         private const val QUICKSAND_DAMAGE_METADATA = "hjh_xiongshentaisui_quicksand_damage"
+        private const val QUICKSAND_SPEED_KEY = "xiongshentaisui_quicksand::speed_percent"
 
         private val MAGIC_CAUSES = EnumSet.of(
             EntityDamageEvent.DamageCause.MAGIC,
@@ -179,11 +180,11 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         val shuffledPlayers = players.shuffled()
 
         shuffledPlayers.take(3).forEach { player ->
-            circles += QuicksandCircle(circleCenterAtFieldHeight(player.location), 5.0)
+            circles += QuicksandCircle(circleCenterAtFieldHeight(player.location), 7.0)
         }
 
         while (circles.size < 3) {
-            circles += QuicksandCircle(randomOffsetLocation(origin, 15.0), 5.0)
+            circles += QuicksandCircle(randomOffsetLocation(origin, 15.0), 7.0)
         }
 
         return circles
@@ -383,7 +384,12 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
                     player.sendMessage("§c快离开流沙区域！")
                     player.playSound(player.location, Sound.BLOCK_SAND_HIT, 1.0f, 0.7f)
                 }
-                player.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 12, 2, false, true, true))
+                if (!affectedPlayers.contains(player.uniqueId)) {
+                    plugin.playerManager.getData(player.uniqueId)?.let { data ->
+                        data.tempBonuses[QUICKSAND_SPEED_KEY] = -0.45
+                        plugin.playerManager.updateStats(player)
+                    }
+                }
 
                 if (fieldAgeTicks % 20 == 0) {
                     damagePlayerInQuicksand(player)
@@ -444,7 +450,11 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     private fun removePlayerEffect(player: Player) {
         if (player.hasMetadata(PLAYER_DEBUFF_METADATA)) {
             player.removeMetadata(PLAYER_DEBUFF_METADATA, plugin)
-            player.removePotionEffect(PotionEffectType.SLOWNESS)
+        }
+        plugin.playerManager.getData(player.uniqueId)?.let { data ->
+            if (data.tempBonuses.remove(QUICKSAND_SPEED_KEY) != null && player.isOnline) {
+                plugin.playerManager.updateStats(player)
+            }
         }
         affectedPlayers.remove(player.uniqueId)
     }

@@ -185,8 +185,12 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                     return
                 }
 
-                // 给 Boss 赋予极速动力
-                boss.velocity = direction.clone().multiply(speed)
+                // 给 Boss 赋予极速动力；腾空时保留竖直速度，避免下一 Tick 的水平冲锋把跳跃抹掉。
+                val dashVelocity = direction.clone().multiply(speed)
+                if (!boss.isOnGround) {
+                    dashVelocity.y = boss.velocity.y
+                }
+                boss.velocity = dashVelocity
                 distanceTraveled += speed
 
                 // 冲锋沿途的烟雾粒子特效
@@ -226,11 +230,12 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                 }
 
                 // 2. 【碰撞障碍物检测 (精准射线法)】
-                // 从头顶 (Y+1.2) 和脚底 (Y+0.2) 向冲锋方向发出射线，探测距离比速度略长一点点 (1.8格)
+                // 从头部 (Y+1.8) 和脚底 (Y+0.2) 向冲锋方向发出射线。
+                // 头部射线高于 1.5 格台阶：台阶只触发起跳，真正的两格高墙才会触发撞墙眩晕。
                 val rayDist = speed + 0.5
 
                 // 探测头部：判断是不是 2 格高的死胡同
-                val eyeLoc = currentLoc.clone().add(0.0, 1.2, 0.0)
+                val eyeLoc = currentLoc.clone().add(0.0, 1.8, 0.0)
                 // true 参数代表忽略高草丛、藤蔓等可以穿透的方块
                 val headRay = boss.world.rayTraceBlocks(eyeLoc, direction, rayDist, org.bukkit.FluidCollisionMode.NEVER, true)
 
@@ -247,8 +252,11 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                 val footRay = boss.world.rayTraceBlocks(footLoc, direction, rayDist, org.bukkit.FluidCollisionMode.NEVER, true)
 
                 if (footRay != null && footRay.hitBlock != null && !footRay.hitBlock!!.isPassable) {
-                    // 脚被挡住了，但头没挡住 -> 给一个向上的力，让它像跑酷一样起跳越过！
-                    boss.velocity = boss.velocity.setY(0.6)
+                    // 脚被挡住了，但头没挡住 -> 起跳越过至多 1.5 格的台阶。
+                    // 只在落地或开始下落时补一次跳跃力，避免连续射线把 Boss 不断向上抬升。
+                    if (boss.isOnGround || boss.velocity.y <= 0.0) {
+                        boss.velocity = boss.velocity.setY(0.75)
+                    }
                 }
 
                 previousLoc = currentLoc.clone()

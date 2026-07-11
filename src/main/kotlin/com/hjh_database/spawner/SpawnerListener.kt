@@ -1,6 +1,7 @@
 package com.hjh_database.spawner
 
 import com.hjh_database.Hjh_database
+import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.block.CreatureSpawner
@@ -9,9 +10,11 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDeathEvent
+import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.util.concurrent.ThreadLocalRandom
-import org.bukkit.event.player.PlayerInteractEvent
 
 class SpawnerListener(private val plugin: Hjh_database) : Listener {
 
@@ -28,6 +31,7 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     private val keyManualTargetBlock = NamespacedKey(plugin, "hjh_spawner_manual_target_block")
     // 【新增】用于快速铺怪笼的 NBT Key
     private val keyFastItem = NamespacedKey(plugin, "hjh_spawner_fast")
+    private val keyInsightStick = NamespacedKey(plugin, "hjh_spawner_insight_stick")
 
     // 放置刷怪笼逻辑 (保持不变)
     @EventHandler
@@ -100,6 +104,12 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     // ★★★ 新增：玩家右键点击地上的手动测试方块 ★★★
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (event.hand != EquipmentSlot.HAND) return
+
+        if (isInsightStick(event.item)) {
+            handleInsightStick(event)
+            return
+        }
         // 仅监听右键方块
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val clickedBlock = event.clickedBlock ?: return
@@ -147,6 +157,87 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     }
 
     // ★★★ 怪物死亡掉落逻辑 (已适配 ResourceManager.getItem) ★★★
+    private fun isInsightStick(item: ItemStack?): Boolean {
+        return item?.type == Material.STICK &&
+            item.itemMeta?.persistentDataContainer?.has(keyInsightStick, PersistentDataType.BYTE) == true
+    }
+
+    private fun handleInsightStick(event: PlayerInteractEvent) {
+        if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
+
+        val player = event.player
+        if (!player.isOp) {
+            player.sendMessage("§c只有管理员可以使用洞察木棍。")
+            return
+        }
+
+        val clickedSpawner = event.clickedBlock
+            ?.takeIf { it.type == Material.SPAWNER }
+            ?.state as? CreatureSpawner
+        if (clickedSpawner != null) {
+            describeSpawner(clickedSpawner)?.let { description ->
+                event.isCancelled = true
+                player.sendMessage("§6[洞察] $description")
+                return
+            }
+        }
+
+        showNearbySpawners(player)
+    }
+
+    private fun showNearbySpawners(player: org.bukkit.entity.Player) {
+        val center = player.location
+        val world = player.world
+        val radiusSquared = INSIGHT_RADIUS * INSIGHT_RADIUS
+        val spawners = ArrayList<CreatureSpawner>()
+        val seen = HashSet<String>()
+        val minChunkX = Math.floorDiv((center.x - INSIGHT_RADIUS).toInt(), 16)
+        val maxChunkX = Math.floorDiv((center.x + INSIGHT_RADIUS).toInt(), 16)
+        val minChunkZ = Math.floorDiv((center.z - INSIGHT_RADIUS).toInt(), 16)
+        val maxChunkZ = Math.floorDiv((center.z + INSIGHT_RADIUS).toInt(), 16)
+
+        for (chunkX in minChunkX..maxChunkX) {
+            for (chunkZ in minChunkZ..maxChunkZ) {
+                if (!world.isChunkLoaded(chunkX, chunkZ)) continue
+                for (tile in world.getChunkAt(chunkX, chunkZ).tileEntities) {
+                    val spawner = tile as? CreatureSpawner ?: continue
+                    val spawnerCenter = spawner.location.clone().add(0.5, 0.5, 0.5)
+                    if (center.distanceSquared(spawnerCenter) > radiusSquared) continue
+                    if (describeSpawner(spawner) == null) continue
+
+                    val location = spawner.location
+                    val key = "${location.blockX}:${location.blockY}:${location.blockZ}"
+                    if (seen.add(key)) spawners.add(spawner)
+                }
+            }
+        }
+
+        if (spawners.isEmpty()) {
+            player.sendMessage("§7[洞察] 20 格内未发现自定义刷怪笼。")
+            return
+        }
+
+        player.sendMessage("§6[洞察] 20 格内发现 ${spawners.size} 个自定义刷怪笼：")
+        spawners.sortedBy { it.location.distanceSquared(center) }.forEach { spawner ->
+            val location = spawner.location
+            player.sendMessage("§7- §f${location.blockX}, ${location.blockY}, ${location.blockZ} §8| ${describeSpawner(spawner)}")
+        }
+    }
+
+    private fun describeSpawner(spawner: CreatureSpawner): String? {
+        val automaticMobId = plugin.spawnerBlockManager.getMobId(spawner)
+        val manualMobId = spawner.persistentDataContainer.get(keyManualMobIdBlock, PersistentDataType.STRING)
+        val mobId = automaticMobId ?: manualMobId ?: return null
+        val mode = if (automaticMobId != null) "§a自动" else "§b按钮"
+        val definition = MobRegistry.get(mobId)
+        val mobName = definition?.let { ChatColor.translateAlternateColorCodes('&', it.name) } ?: "§c未知配置"
+        return "$mode §7| $mobName §8(ID: §f$mobId§8)"
+    }
+
+    private companion object {
+        private const val INSIGHT_RADIUS = 20.0
+    }
+
     @EventHandler
     fun onDeath(event: EntityDeathEvent) {
         val entity = event.entity

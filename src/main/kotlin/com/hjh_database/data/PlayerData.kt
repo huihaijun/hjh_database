@@ -175,6 +175,9 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // 药毒结束时间戳
     var pillSicknessEnd: Long = 0
 
+    // 绝瘴丹使用独立药毒，不与常规丹药互相阻断。
+    var juezhangPillSicknessEnd: Long = 0
+
     val alchemyMaxExp: Int
         get() = alchemyLevel * 50
 
@@ -190,6 +193,8 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     }
 
     fun isSick(): Boolean = System.currentTimeMillis() < pillSicknessEnd
+
+    fun isJuezhangSick(): Boolean = System.currentTimeMillis() < juezhangPillSicknessEnd
 
     // ----------------- 医术试炼 -----------------
     var completedMedicalTrials: MutableSet<String> = HashSet()

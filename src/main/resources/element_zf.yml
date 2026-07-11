@@ -4,40 +4,40 @@ skills:
     message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &e星云术&f！"
     levels:
       1:
-        cooldown: 6.0
-        damage_percent: 1.8
+        cooldown: 5.5
+        damage_percent: 2.0
         range: 4.0
         lingli_add: 1.0
-        max_targets: 1
-        effect_radius: 3.5  # 【新增】1级半径小
+        max_targets: 3
+        effect_radius: 4.0
       2:
         cooldown: 5.5
-        damage_percent: 2.1
+        damage_percent: 2.2
         range: 4.5
         lingli_add: 2.0
-        max_targets: 2
-        effect_radius: 4.0  # 【新增】范围变大
+        max_targets: 4
+        effect_radius: 4.5
       3:
         cooldown: 5.0
         damage_percent: 2.4
         range: 7.0
         lingli_add: 3.0
-        max_targets: 3
-        effect_radius: 4.5  # 【新增】
+        max_targets: 5
+        effect_radius: 5.0
       4:
-        cooldown: 4.5
-        damage_percent: 2.7
+        cooldown: 5.0
+        damage_percent: 2.6
         range: 9.0
         lingli_add: 4.0
-        max_targets: 4
-        effect_radius: 5.0  # 【新增】
+        max_targets: 6
+        effect_radius: 5.5
       5:
         cooldown: 4.0
-        damage_percent: 3.0
+        damage_percent: 2.8
         range: 11.0
         lingli_add: 5.0
-        max_targets: 5
-        effect_radius: 5.5  # 【新增】
+        max_targets: 7
+        effect_radius: 6.0
 
   # === 【新增】木元素配置 ===
   WOOD:
@@ -45,26 +45,26 @@ skills:
     message: "&e%player% &f炼化了 &a木元素&f，释放了法术 —— &a汲魂术&f！"
     levels:
       1:
-        cooldown: 9.0        # 冷却时间
-        damage_percent: 1.8  # 造成 250% 伤害
+        cooldown: 9.0
+        damage_percent: 2.0
         heal_percent: 0.08   # 转化 10% 为生命值
         range: 5.0           # 施法距离
         lingli_add: 1.0
       2:
-        cooldown: 9.0
-        damage_percent: 2.0
+        cooldown: 8.5
+        damage_percent: 2.2
         heal_percent: 0.09
         range: 6.0
         lingli_add: 2.0
       3:
         cooldown: 8.0
-        damage_percent: 2.2
+        damage_percent: 2.4
         heal_percent: 0.10
         range: 7.0
         lingli_add: 3.0
       4:
-        cooldown: 8.0
-        damage_percent: 2.5
+        cooldown: 7.5
+        damage_percent: 2.6
         heal_percent: 0.12
         range: 8.0
         lingli_add: 4.0
@@ -121,31 +121,31 @@ skills:
     levels:
       1:
         cooldown: 12.0         # 冷却时间
-        damage_percent: 2.0   # 300% 伤害 (初始)
+        damage_percent: 3.0
         range: 5.0           # 准心最远距离
         search_radius: 3.0    # 撞墙后，以此为中心找怪的半径
         lingli_add: 1.0
       2:
         cooldown: 11.0
-        damage_percent: 2.6
+        damage_percent: 3.5
         range: 6.0
         search_radius: 3.5
         lingli_add: 2.0
       3:
         cooldown: 10.0
-        damage_percent: 3.2
+        damage_percent: 4.0
         range: 8.0
         search_radius: 4.0
         lingli_add: 3.0
       4:
         cooldown: 9.0
-        damage_percent: 3.8
+        damage_percent: 4.5
         range: 10.0
         search_radius: 4.5
         lingli_add: 4.0
       5:
         cooldown: 8.0
-        damage_percent: 4.5
+        damage_percent: 5.0
         range: 12.0
         search_radius: 5.0
         lingli_add: 5.0

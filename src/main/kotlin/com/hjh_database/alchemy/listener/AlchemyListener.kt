@@ -39,6 +39,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private val alchemyTierKey = NamespacedKey(plugin, "hjh_alchemy_tier")
     private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 【新增】兼容资源管理器自带的 ID 标签
     private val pillCooldownKey = NamespacedKey(plugin, "alchemy_pill_sickness")
+    private val juezhangPillCooldownKey = NamespacedKey(plugin, "alchemy_juezhang_sickness")
     private val presetColors = listOf("#FF5555", "#AA0000", "#5555FF", "#0000AA", "#00AA00", "#55FF55", "#FFAA00", "#FFFF55", "#FF55FF", "#000000")
     private val cauldronDataFile = File(plugin.dataFolder, "alchemy_cauldrons.yml")
     private val registeredCauldrons = mutableSetOf<String>()
@@ -85,6 +86,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val effect = plugin.alchemyManager.getEffect(effectId) ?: return
         val player = event.player
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
+        val usesIndependentSickness = effectId.equals(JUEZHANG_DAN_ID, ignoreCase = true)
         val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
         val resourceData = consumeResourceId?.let { plugin.resourceManager.getLocalResource(it) }
 
@@ -93,13 +95,13 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             event.isCancelled = true
             val canApplyEffect = resourceData?.onlyDoctor != true || playerData.job == DOCTOR_JOB
 
-            if (canApplyEffect && playerData.isSick()) {
-                sendSicknessMessage(player, playerData.pillSicknessEnd)
+            if (canApplyEffect && isSickForThisPill(playerData, usesIndependentSickness)) {
+                sendSicknessMessage(player, sicknessEndFor(playerData, usesIndependentSickness))
                 return
             }
 
             val thrownItem = item.clone().apply { amount = 1 }
-            applyPillCooldownComponent(thrownItem)
+            applyPillCooldownComponent(thrownItem, usesIndependentSickness)
             item.subtract(1)
             player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
 
@@ -110,7 +112,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             if (!canApplyEffect) return
 
             val sicknessMillis = (resourceData?.sicknessTime ?: 10) * 1000L
-            playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
+            setSicknessEnd(playerData, usesIndependentSickness, System.currentTimeMillis() + sicknessMillis)
             setPillSicknessCooldown(player, thrownItem, (sicknessMillis / 50L).toInt())
             return
         }
@@ -122,8 +124,8 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val tierName = pdc.get(alchemyTierKey, PersistentDataType.STRING) ?: "LOW"
         val tier = try { AlchemyTier.valueOf(tierName) } catch (e: Exception) { AlchemyTier.LOW }
 
-        if (playerData.isSick()) {
-            sendSicknessMessage(player, playerData.pillSicknessEnd)
+        if (isSickForThisPill(playerData, usesIndependentSickness)) {
+            sendSicknessMessage(player, sicknessEndFor(playerData, usesIndependentSickness))
             return
         }
 
@@ -132,7 +134,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val sicknessMillis = sicknessTime * 1000L
 
         val cooldownTicks = (sicknessMillis / 50L).toInt()
-        applyPillCooldownComponent(item)
+        applyPillCooldownComponent(item, usesIndependentSickness)
         val cooldownItem = item.clone().apply { amount = 1 }
 
         // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
@@ -148,7 +150,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             val pill = ActivePill(effectId, tier, duration)
             playerData.activePills.add(pill)
         }
-        playerData.pillSicknessEnd = System.currentTimeMillis() + sicknessMillis
+        setSicknessEnd(playerData, usesIndependentSickness, System.currentTimeMillis() + sicknessMillis)
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -211,6 +213,18 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private fun sendSicknessMessage(player: Player, sicknessEnd: Long) {
         val leftTime = (sicknessEnd - System.currentTimeMillis()) / 1000.0
         player.sendMessage("§c[药毒] 身体还在排斥药力，无法继续服用！(剩余 %.1f秒)".format(leftTime))
+    }
+
+    private fun isSickForThisPill(data: com.hjh_database.data.PlayerData, independent: Boolean): Boolean {
+        return if (independent) data.isJuezhangSick() else data.isSick()
+    }
+
+    private fun sicknessEndFor(data: com.hjh_database.data.PlayerData, independent: Boolean): Long {
+        return if (independent) data.juezhangPillSicknessEnd else data.pillSicknessEnd
+    }
+
+    private fun setSicknessEnd(data: com.hjh_database.data.PlayerData, independent: Boolean, end: Long) {
+        if (independent) data.juezhangPillSicknessEnd = end else data.pillSicknessEnd = end
     }
 
     @EventHandler
@@ -367,12 +381,12 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    private fun applyPillCooldownComponent(item: org.bukkit.inventory.ItemStack) {
+    private fun applyPillCooldownComponent(item: org.bukkit.inventory.ItemStack, independent: Boolean) {
         if (item.type == Material.AIR) return
 
         try {
             val cooldownComponent = UseCooldown.useCooldown(0.1f)
-                .cooldownGroup(Key.key(pillCooldownKey.toString()))
+                .cooldownGroup(Key.key((if (independent) juezhangPillCooldownKey else pillCooldownKey).toString()))
                 .build()
 
             item.setData(DataComponentTypes.USE_COOLDOWN, cooldownComponent)
@@ -422,6 +436,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
     companion object {
         private const val DOCTOR_JOB = 3
+        private const val JUEZHANG_DAN_ID = "juezhangdan"
         private const val FENGHOU_PREFIX = "fenghou"
         private const val DUOHUN_PREFIX = "duohun"
     }

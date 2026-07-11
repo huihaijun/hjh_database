@@ -8,6 +8,7 @@ import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
 import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
+import com.hjh_database.skill.weapon.job_0.pokongfuSkill
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.*
@@ -178,8 +179,15 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                             }
 
                             // 高性能并发安全的随机数替代 Math.random()
-                            val critChance = min(0.8, data.critChance)
-                            if (attacker.attackCooldown > 0.9f && ThreadLocalRandom.current().nextDouble() < critChance) {
+                            val forceRiftCrit = data.tempBonuses.containsKey(pokongfuSkill.CRIT_OVERRIDE_KEY)
+                            val critChance = if (forceRiftCrit) {
+                                1.0
+                            } else {
+                                min(0.8, data.critChance)
+                            }
+                            if ((forceRiftCrit || attacker.attackCooldown > 0.9f) &&
+                                ThreadLocalRandom.current().nextDouble() < critChance
+                            ) {
                                 damage *= 1.5
                                 attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
                                 attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
@@ -353,7 +361,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 } ?: plugin.playerManager.getMobExp() // 默认兜底兼容
 
                 plugin.playerManager.giveExp(killer, expAmount)
-                shareExpToNearbyMedicalPlayers(killer, entity, expAmount)
+                shareExpToNearbyMedicalPlayers(killer, expAmount)
                 killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e+ $expAmount 经验"))
             }
         }
@@ -374,7 +382,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    private fun shareExpToNearbyMedicalPlayers(killer: Player, source: LivingEntity, expAmount: Int) {
+    private fun shareExpToNearbyMedicalPlayers(killer: Player, expAmount: Int) {
         if (expAmount <= 0) return
         val killerData = plugin.playerManager.getData(killer.uniqueId) ?: return
         if (killerData.job == 3) return
@@ -382,11 +390,11 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         val sharedExp = expAmount / 2
         if (sharedExp <= 0) return
 
-        val radius = 10.0
+        val radius = 12.0
         val radiusSquared = radius * radius
-        val center = source.location
+        val center = killer.location
 
-        for (entity in source.world.getNearbyEntities(center, radius, radius, radius)) {
+        for (entity in killer.world.getNearbyEntities(center, radius, radius, radius)) {
             val medicalPlayer = entity as? Player ?: continue
             if (medicalPlayer.uniqueId == killer.uniqueId) continue
             if (medicalPlayer.location.distanceSquared(center) > radiusSquared) continue

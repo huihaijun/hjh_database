@@ -162,6 +162,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.baihuDzManager.reload()
             plugin.baihuWeaponSkillManager.reload()
             plugin.chonghuaManager.reload()
+            plugin.kaiWuManager.loadConfig()
+            plugin.kaiWuManager.loadNodes()
 
             // 重载 Resource 物品
             var refreshedAlchemyItems = 0
@@ -573,6 +575,28 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === spawner (刷怪笼 / 手动测试笼 工具) ===
         if (subCommand == "spawner") {
+            if (args.size >= 2 && args[1].equals("insight", ignoreCase = true)) {
+                if (sender !is Player) {
+                    sender.sendMessage("§c只有玩家可以使用此命令。")
+                    return true
+                }
+
+                val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.STICK)
+                val meta = item.itemMeta ?: return true
+                meta.setDisplayName("§6§l洞察木棍")
+                meta.lore = listOf("§7右键查看 20 格内的自定义刷怪笼", "§7右键刷怪笼查看怪物名称与 ID")
+                meta.persistentDataContainer.set(
+                    org.bukkit.NamespacedKey(plugin, "hjh_spawner_insight_stick"),
+                    org.bukkit.persistence.PersistentDataType.BYTE,
+                    1.toByte()
+                )
+                item.itemMeta = meta
+                sender.inventory.addItem(item).values.forEach { leftover ->
+                    sender.world.dropItemNaturally(sender.location, leftover)
+                }
+                sender.sendMessage("§a已获得洞察木棍。")
+                return true
+            }
             // 指令: /hjhadmin spawner <get|button|fast> <MobID> [x] [y] [z]
             if (args.size < 3 || (args[1].lowercase() != "get" && args[1].lowercase() != "button" && args[1].lowercase() != "fast")) {
                 sender.sendMessage("§c用法: /hjhadmin spawner <get|button|fast> <MobID> [x] [y] [z]")
@@ -694,7 +718,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         if (subCommand == "chonghua") {
             if (args.size < 3) {
                 sender.sendMessage("§e=== 重华晶配置指令 ===")
-                sender.sendMessage("§c/hjhadmin chonghua crystal <EAST|SOUTH|WEST|NORTH> §7- 获得区域传送门(黄绿粘土)")
+                sender.sendMessage("§c/hjhadmin chonghua crystal <EAST|SOUTH|WEST|NORTH|HUANGCHENGZHONGXIN> §7- 获得区域传送门(黄绿粘土)")
                 sender.sendMessage("§c/hjhadmin chonghua checkin <地点ID> §7- 获得特定地点的打卡方块(红色粘土)")
                 return true
             }
@@ -707,7 +731,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 val region = try { com.hjh_database.chonghua.Region.valueOf(regionStr) } catch(e: Exception) { null }
 
                 if (region == null) {
-                    sender.sendMessage("§c无效区域！请使用 EAST, SOUTH, WEST, NORTH")
+                    sender.sendMessage("§c无效区域！请使用 EAST, SOUTH, WEST, NORTH, HUANGCHENGZHONGXIN")
                     return true
                 }
 
@@ -1116,7 +1140,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 if (args.size == 3) {
                     val action = args[1].lowercase()
                     if (action == "crystal") {
-                        val regions = listOf("EAST", "SOUTH", "WEST", "NORTH")
+                        val regions = com.hjh_database.chonghua.Region.entries.map { it.name }
                         return regions.filter { it.startsWith(args[2].uppercase()) }
                     }
                     if (action == "checkin") {
@@ -1135,7 +1159,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             "spawner" -> {
                 // 【修复】：移除了重复的代码块
-                if (args.size == 2) return listOf("get", "button","fast").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 2) return listOf("get", "button", "fast", "insight").filter { it.startsWith(args[1].lowercase()) }
                 if (args.size == 3 && (args[1].equals("get", ignoreCase = true) || args[1].equals("button", ignoreCase = true)|| args[1].equals("fast", ignoreCase = true))) {
                     return MobRegistry.getAllIds().filter { it.startsWith(args[2]) }
                 }

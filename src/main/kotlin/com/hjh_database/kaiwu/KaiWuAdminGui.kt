@@ -48,6 +48,20 @@ class KaiWuAdminGui(
         player.openInventory(inventory)
     }
 
+    fun refreshOpenMenus() {
+        for (player in plugin.server.onlinePlayers) {
+            val title = player.openInventory.title
+            if (!title.startsWith(TITLE_PREFIX)) continue
+            val page = title
+                .substringAfter(TITLE_PREFIX, "1")
+                .substringBefore("/")
+                .toIntOrNull()
+                ?.minus(1)
+                ?: 0
+            open(player, page)
+        }
+    }
+
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
         if (!event.view.title.startsWith(TITLE_PREFIX)) return

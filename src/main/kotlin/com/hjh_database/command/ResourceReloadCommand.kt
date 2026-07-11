@@ -19,6 +19,8 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             }
 
             sender.sendMessage(ChatColor.YELLOW.toString() + "正在重载 Resource 物品与相关配方...")
+            plugin.kaiWuManager.loadConfig()
+            plugin.kaiWuManager.loadNodes()
             plugin.resourceManager.reload()
             plugin.recipeManager.loadAllRecipes()
             if (plugin.isBaihuDzManagerInitialized()) {

@@ -32,7 +32,7 @@ class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEn
     // 主动技能：缓慢爬行的藤蔓追踪与禁锢爆发
     // ==========================================
     private fun startActiveSkillTask() {
-        // 每 9 秒 (180 ticks) 触发一次
+        // 登场 5 秒后首次尝试释放，之后每 15 秒尝试一次。
         object : BukkitRunnable() {
             override fun run() {
                 if (boss.isDead || !boss.isValid) {
@@ -59,7 +59,7 @@ class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEn
                     startVineTrackingTask(targets)
                 }
             }
-        }.runTaskTimer(plugin, 300L, 300L)
+        }.runTaskTimer(plugin, 5L * 20L, 15L * 20L)
     }
 
     // 用于记录每一根藤蔓的当前位置

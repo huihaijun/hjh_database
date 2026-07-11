@@ -93,7 +93,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
 
     fun getStats(data: ElementCrystalData): Map<String, Double> {
         val stats = mutableMapOf<String, Double>()
-        if (data.goldPoints > 0) stats["power"] = data.goldPoints * 1.5
+        if (data.goldPoints > 0) stats["power"] = data.goldPoints * 1.0
         if (data.woodPoints > 0) stats["max_health"] = data.woodPoints * 6.0
         if (data.waterPoints > 0) stats["cool_reduce"] = data.waterPoints * 0.02
         if (data.firePoints > 0) stats["crit_chance"] = data.firePoints * 0.04
@@ -274,13 +274,13 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
 
                 val pData = plugin.playerManager.getPlayerData(player)
                 if (pData != null) {
-                    pData.tempBonuses["armor"] = (pData.tempBonuses["armor"] ?: 0.0) + 10.0
+                    val earthArmorKey = "element_crystal_earth_revelation::armor"
+                    pData.tempBonuses[earthArmorKey] = 10.0
                     plugin.playerManager.updateStats(player)
 
                     plugin.server.scheduler.runTaskLater(plugin, Runnable {
                         if (player.isOnline) {
-                            val currentArmor = pData.tempBonuses["armor"] ?: 0.0
-                            pData.tempBonuses["armor"] = (currentArmor - 10.0).coerceAtLeast(0.0)
+                            pData.tempBonuses.remove(earthArmorKey)
                             plugin.playerManager.updateStats(player)
                         }
                     }, 120L) // 6秒持续

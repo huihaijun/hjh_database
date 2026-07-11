@@ -34,8 +34,8 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         // --- 1. 读取配置与计算属性 ---
         val zfStr = data.zfStr
-        val damageMultiplier = config?.getDouble("damage_multiplier", 2.5) ?: 2.5
-        val finalDamage = zfStr * damageMultiplier // 250% 阵法强度伤害
+        val damageMultiplier = config?.getDouble("damage_multiplier", 2.0) ?: 2.0
+        val finalDamage = zfStr * damageMultiplier
 
         val tauntRadius = config?.getDouble("taunt_radius", 5.0) ?: 5.0
         val explosionRadius = config?.getDouble("radius", 3.0) ?: 3.0

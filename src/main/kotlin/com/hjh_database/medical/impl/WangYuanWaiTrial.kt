@@ -27,6 +27,10 @@ class WangYuanWaiTrial(
     override val player: org.bukkit.entity.Player
 ) : BukkitRunnable(), MedicalTrial, Listener {
 
+    private val trialDurationSeconds = 180
+    private val initialLingzhiTemperature = 40.0
+    private val minimumLingzhiTemperature = 30.0
+
     override val trialId = "wangyuanwai"
 
     private enum class Phase {
@@ -38,11 +42,11 @@ class WangYuanWaiTrial(
 
     private var phase = Phase.STORY
     private var tick = 0
-    private var trialTicksLeft = 210 * 20
+    private var trialTicksLeft = trialDurationSeconds * 20
     private var searchProgress = 0.0
     private var lastSearchClickMillis = 0L
     private var lastAcceptedSearchClickMillis = 0L
-    private var lingzhiTemperature = 20.0
+    private var lingzhiTemperature = initialLingzhiTemperature
     private var highTempTicks = 0
     private var hasShownSearchHint = false
     private var lastCarryLocation: Location? = null
@@ -61,7 +65,7 @@ class WangYuanWaiTrial(
         "§f我娘卧病在床许久了，就指着那一株§e千年灵芝§f续命。原想着送完这趟货便带着灵芝回去孝敬她，哪知半路杀出那帮天杀的§c马贼团§f，连人带车抢了个干净……",
         "§f那株灵芝多半被他们头头带回§c老巢§f去了。可恨这茫茫沙漠都是些野菇杂草，只有医师的这双慧眼，才能一眼辨出哪株才是真正的§e千年灵芝§f。大侠，小的只能仰仗您了！",
         "§f您从此地出发，一路§b向东§f，绕过山丘便能瞧见他们的§c大本营§f。这帮贼寇喜欢把抢来的好东西藏在营地深处的§6漏斗§f里，那儿戒备最严。您得手之后只管撒腿跑，不必跟他们多纠缠。",
-        "§f不过还有桩要紧事——这§e千年灵芝§f娇贵得很，§b喜寒厌热§f。南方这鬼天气跟蒸笼似的，您走两步就得停一停，想法子给它§9降降温§f。而且它离了我这§6土盆§f便撑不了太久，§c三分半§f之内若还没取回来，灵芝便会枯死，药效尽失……",
+        "§f不过还有桩要紧事——这§e千年灵芝§f娇贵得很，§b喜寒厌热§f。刚取出时温度是§e40度§f，停下来可为它降温，但最低只能降到§b30度§f。而且它离了我这§6土盆§f便撑不了太久，§c三分钟§f之内若还没取回来，灵芝便会枯死，药效尽失……",
         "§f大侠，只要您能替我办成这件事，小的这儿有一卷§d失传已久的医术§f，愿拱手奉上，绝不食言！",
         "§f我娘的性命，就全系在大侠您手上了！"
     )
@@ -129,14 +133,14 @@ class WangYuanWaiTrial(
             tick = 0
             countdownBar.addPlayer(player)
             updateCountdownBar()
-            player.sendMessage("§e[医术试炼] §f三分半倒计时已开始，尽快找回§e千年灵芝§f！")
+            player.sendMessage("§e[医术试炼] §f三分钟倒计时已开始，尽快找回§e千年灵芝§f！")
         }
     }
 
     private fun runTimedPhase(action: () -> Unit) {
         trialTicksLeft--
         if (trialTicksLeft <= 0) {
-            player.sendMessage("§c三分半已过，千年灵芝药效尽失……")
+            player.sendMessage("§c三分钟已过，千年灵芝药效尽失……")
             fail()
             return
         }
@@ -178,11 +182,11 @@ class WangYuanWaiTrial(
             phase = Phase.CARRY
             tick = 0
             lastCarryLocation = player.location.clone()
-            temperatureBar = Bukkit.createBossBar("§b灵芝温度：20度", BarColor.GREEN, BarStyle.SOLID).also {
+            temperatureBar = Bukkit.createBossBar("§b灵芝温度：40度", BarColor.GREEN, BarStyle.SOLID).also {
                 it.addPlayer(player)
             }
             player.sendMessage("§a你在漏斗深处找到了千年灵芝！快带回王员外身边右键提交！")
-            player.sendMessage("§c灵芝喜寒厌热，长时间移动会增加灵芝的温度，适当停下来！")
+            player.sendMessage("§c灵芝初始温度为40度，移动会升温；停下可降温，但最低为30度！")
             player.sendMessage("§c不要让他处于80度高温超过3秒，否则灵芝将消失！")
             player.playSound(player.location, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f)
         }
@@ -209,7 +213,7 @@ class WangYuanWaiTrial(
         lingzhiTemperature = if (moved) {
             (lingzhiTemperature + 1.8).coerceAtMost(100.0)
         } else {
-            (lingzhiTemperature - 1.4).coerceAtLeast(0.0)
+            (lingzhiTemperature - 1.4).coerceAtLeast(minimumLingzhiTemperature)
         }
         lastCarryLocation = current
 
@@ -233,7 +237,7 @@ class WangYuanWaiTrial(
     }
 
     private fun updateCountdownBar() {
-        countdownBar.progress = (trialTicksLeft / (210.0 * 20.0)).coerceIn(0.0, 1.0)
+        countdownBar.progress = (trialTicksLeft / (trialDurationSeconds * 20.0)).coerceIn(0.0, 1.0)
         countdownBar.setTitle("§e王员外的医术试炼-倒计时")
     }
 

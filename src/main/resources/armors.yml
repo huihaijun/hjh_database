@@ -671,3 +671,339 @@ armors:
       max_health: 5.0
       armor: 7.0
       speed_percent: 0.04
+
+  # === 战士四阶 ===
+  menghuzhankui:
+    display: "&d猛虎战盔"
+    material: IRON_HELMET
+    rarity: 4
+    lore:
+      - "&6限制职业:[战] 限制等级:&b30"
+      - "&7&o百炼而成,甲纹如猛虎盘踞"
+      - "&7&o披坚执锐之际,周身如有虎啸相随"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +9"
+      - "&f护甲 +17"
+      - "&f抗击退 +5%"
+      - "&f近战强度 +1"
+    req_job: 0
+    req_lv: 30
+    stats:
+      max_health: 9.0
+      armor: 17.0
+      knock_back_res: 0.05
+      attack: 1.0
+
+  menghuzhanjia:
+    display: "&d猛虎战甲"
+    material: IRON_CHESTPLATE
+    rarity: 4
+    lore:
+      - "&6限制职业:[战] 限制等级:&b30"
+      - "&7&o百炼而成,甲纹如猛虎盘踞"
+      - "&7&o披坚执锐之际,周身如有虎啸相随"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +16"
+      - "&f护甲 +26"
+      - "&f抗击退 +10%"
+      - "&f近战强度 +2"
+    req_job: 0
+    req_lv: 30
+    stats:
+      max_health: 16.0
+      armor: 26.0
+      knock_back_res: 0.10
+      attack: 2.0
+
+  menghuhutui:
+    display: "&d猛虎护腿"
+    material: IRON_LEGGINGS
+    rarity: 4
+    lore:
+      - "&6限制职业:[战] 限制等级:&b30"
+      - "&7&o百炼而成,甲纹如猛虎盘踞"
+      - "&7&o披坚执锐之际,周身如有虎啸相随"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +13"
+      - "&f护甲 +20"
+      - "&f抗击退 +5%"
+      - "&f近战强度 +1"
+    req_job: 0
+    req_lv: 30
+    stats:
+      max_health: 13.0
+      armor: 20.0
+      knock_back_res: 0.05
+      attack: 1.0
+
+  menghuzhanxue:
+    display: "&d猛虎战靴"
+    material: IRON_BOOTS
+    rarity: 4
+    lore:
+      - "&6限制职业:[战] 限制等级:&b30"
+      - "&7&o百炼而成,甲纹如猛虎盘踞"
+      - "&7&o披坚执锐之际,周身如有虎啸相随"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +6"
+      - "&f护甲 +15"
+      - "&f抗击退 +5%"
+      - "&f移速 +10%"
+      - "&f近战强度 +1"
+    req_job: 0
+    req_lv: 30
+    stats:
+      max_health: 6.0
+      armor: 15.0
+      knock_back_res: 0.05
+      speed_percent: 0.10
+      attack: 1.0
+
+  # === 弓箭手四阶 ===
+  yushoumao:
+    display: "&d御兽帽"
+    material: GOLDEN_HELMET
+    rarity: 4
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b30"
+      - "&7&o兽影随行,百步之外,箭已封喉"
+      - "&7&o穿林而过,如猎豹般迅,如鹰隼般精准"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +8"
+      - "&f护甲 +14"
+      - "&f抗击退 +10%"
+      - "&f移速 +6%"
+      - "&f箭矢强度 +1"
+    req_job: 1
+    req_lv: 30
+    stats:
+      max_health: 8.0
+      armor: 14.0
+      knock_back_res: 0.10
+      speed_percent: 0.06
+      archer_damage: 1.0
+
+  yushouxiongjia:
+    display: "&d御兽胸甲"
+    material: GOLDEN_CHESTPLATE
+    rarity: 4
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b30"
+      - "&7&o兽影随行,百步之外,箭已封喉"
+      - "&7&o穿林而过,如猎豹般迅,如鹰隼般精准"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +13"
+      - "&f护甲 +23"
+      - "&f箭矢强度 +3"
+    req_job: 1
+    req_lv: 30
+    stats:
+      max_health: 13.0
+      armor: 23.0
+      archer_damage: 3.0
+
+  yushouhutui:
+    display: "&d御兽护腿"
+    material: GOLDEN_LEGGINGS
+    rarity: 4
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b30"
+      - "&7&o兽影随行,百步之外,箭已封喉"
+      - "&7&o穿林而过,如猎豹般迅,如鹰隼般精准"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +11"
+      - "&f护甲 +20"
+      - "&f箭矢强度 +2"
+    req_job: 1
+    req_lv: 30
+    stats:
+      max_health: 11.0
+      armor: 20.0
+      archer_damage: 2.0
+
+  yushouxie:
+    display: "&d御兽鞋"
+    material: GOLDEN_BOOTS
+    rarity: 4
+    lore:
+      - "&6限制职业:[弓] 限制等级:&b30"
+      - "&7&o兽影随行,百步之外,箭已封喉"
+      - "&7&o穿林而过,如猎豹般迅,如鹰隼般精准"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +8"
+      - "&f护甲 +11"
+      - "&f移速 +14%"
+      - "&f箭矢强度 +2"
+    req_job: 1
+    req_lv: 30
+    stats:
+      max_health: 8.0
+      armor: 11.0
+      speed_percent: 0.14
+      archer_damage: 2.0
+
+  # === 术士四阶 ===
+  chenxingmao:
+    display: "&d辰星帽"
+    material: CHAINMAIL_HELMET
+    rarity: 4
+    lore:
+      - "&6限制职业:[术] 限制等级:&b30"
+      - "&7&o袍袖轻拂间,星辰之力于指尖流转"
+      - "&7&o以辰星为引,唤天地灵力为己用"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +7"
+      - "&f护甲 +13"
+      - "&f抗击退 +5%"
+      - "&f阵法强度 +1"
+    req_job: 2
+    req_lv: 30
+    stats:
+      max_health: 7.0
+      armor: 13.0
+      knock_back_res: 0.05
+      zf_str: 1.0
+
+  chenxingpao:
+    display: "&d辰星袍"
+    material: CHAINMAIL_CHESTPLATE
+    rarity: 4
+    lore:
+      - "&6限制职业:[术] 限制等级:&b30"
+      - "&7&o袍袖轻拂间,星辰之力于指尖流转"
+      - "&7&o以辰星为引,唤天地灵力为己用"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +12"
+      - "&f护甲 +21"
+      - "&f阵法强度 +1"
+    req_job: 2
+    req_lv: 30
+    stats:
+      max_health: 12.0
+      armor: 21.0
+      zf_str: 1.0
+
+  chenxingku:
+    display: "&d辰星裤"
+    material: CHAINMAIL_LEGGINGS
+    rarity: 4
+    lore:
+      - "&6限制职业:[术] 限制等级:&b30"
+      - "&7&o袍袖轻拂间,星辰之力于指尖流转"
+      - "&7&o以辰星为引,唤天地灵力为己用"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +9"
+      - "&f护甲 +18"
+      - "&f阵法强度 +1"
+    req_job: 2
+    req_lv: 30
+    stats:
+      max_health: 9.0
+      armor: 18.0
+      zf_str: 1.0
+
+  chenxinglv:
+    display: "&d辰星履"
+    material: CHAINMAIL_BOOTS
+    rarity: 4
+    lore:
+      - "&6限制职业:[术] 限制等级:&b30"
+      - "&7&o袍袖轻拂间,星辰之力于指尖流转"
+      - "&7&o以辰星为引,唤天地灵力为己用"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +6"
+      - "&f护甲 +10"
+      - "&f移速 +8%"
+      - "&f阵法强度 +1"
+    req_job: 2
+    req_lv: 30
+    stats:
+      max_health: 6.0
+      armor: 10.0
+      speed_percent: 0.08
+      zf_str: 1.0
+
+  # === 医师四阶 ===
+  pingshanguan:
+    display: "&d平山冠"
+    material: CHAINMAIL_HELMET
+    rarity: 4
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b30"
+      - "&7&o衣袂轻拂,乱石崩云亦能平复如初"
+      - "&7&o纵有千钧压顶,亦可平山填海"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +8"
+      - "&f护甲 +12"
+      - "&f抗击退 +5%"
+      - "&f阵法强度 +1"
+    req_job: 3
+    req_lv: 30
+    stats:
+      max_health: 8.0
+      armor: 12.0
+      knock_back_res: 0.05
+      zf_str: 1.0
+
+  pingshanpao:
+    display: "&d平山袍"
+    material: CHAINMAIL_CHESTPLATE
+    rarity: 4
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b30"
+      - "&7&o衣袂轻拂,乱石崩云亦能平复如初"
+      - "&7&o纵有千钧压顶,亦可平山填海"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +13"
+      - "&f护甲 +21"
+      - "&f阵法强度 +2"
+    req_job: 3
+    req_lv: 30
+    stats:
+      max_health: 13.0
+      armor: 21.0
+      zf_str: 2.0
+
+  pingshanku:
+    display: "&d平山裤"
+    material: CHAINMAIL_LEGGINGS
+    rarity: 4
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b30"
+      - "&7&o衣袂轻拂,乱石崩云亦能平复如初"
+      - "&7&o纵有千钧压顶,亦可平山填海"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +10"
+      - "&f护甲 +17"
+      - "&f阵法强度 +2"
+    req_job: 3
+    req_lv: 30
+    stats:
+      max_health: 10.0
+      armor: 17.0
+      zf_str: 2.0
+
+  pingshanlv:
+    display: "&d平山履"
+    material: CHAINMAIL_BOOTS
+    rarity: 4
+    model_id: "yishi_1"
+    lore:
+      - "&6限制职业:[医] 限制等级:&b30"
+      - "&7&o衣袂轻拂,乱石崩云亦能平复如初"
+      - "&7&o纵有千钧压顶,亦可平山填海"
+      - "&8===========&2&n&l防具属性&8============"
+      - "&f最大生命 +7"
+      - "&f护甲 +10"
+      - "&f移速 +10%"
+      - "&f阵法强度 +1"
+    req_job: 3
+    req_lv: 30
+    stats:
+      max_health: 7.0
+      armor: 10.0
+      speed_percent: 0.10
+      zf_str: 1.0

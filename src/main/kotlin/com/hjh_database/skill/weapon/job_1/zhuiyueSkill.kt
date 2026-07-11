@@ -226,18 +226,19 @@ class zhuiyueSkill : WeaponSkill, Listener {
     private fun setSpeedBuff(player: Player, expireAt: Long) {
         speedBuffs[player.uniqueId] = expireAt
         val data = plugin.playerManager.getData(player.uniqueId) ?: return
-        if (data.tempBonuses["zhuiyue_speed"] != 0.20) {
-            data.tempBonuses["zhuiyue_speed"] = 0.20
+        if (data.tempBonuses[SPEED_BUFF_KEY] != 0.20) {
+            data.tempBonuses[SPEED_BUFF_KEY] = 0.20
             plugin.playerManager.updateStats(player)
         }
     }
 
     private fun removeSpeedBuff(player: Player) {
         val data = plugin.playerManager.getData(player.uniqueId) ?: return
-        if (data.tempBonuses.remove("zhuiyue_speed") != null) {
+        if (data.tempBonuses.remove(SPEED_BUFF_KEY) != null) {
             plugin.playerManager.updateStats(player)
         }
     }
+
 
     private fun fireMoonBeam(player: Player) {
         val data = plugin.playerManager.getData(player.uniqueId) ?: return
@@ -478,6 +479,7 @@ class zhuiyueSkill : WeaponSkill, Listener {
     }
 
     companion object {
+        private const val SPEED_BUFF_KEY = "zhuiyue::speed_percent"
         private const val SPEED_BUFF_MILLIS = 5000L
         private const val CHARGE_EXPIRE_MILLIS = 15000L
         private const val PASSIVE_DISTANCE_UNIT = 5.0

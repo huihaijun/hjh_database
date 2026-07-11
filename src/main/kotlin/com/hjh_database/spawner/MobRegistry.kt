@@ -884,22 +884,6 @@ object MobRegistry {
 
         // ================ 西方区域怪物 ===================
         register(MobDefinition(
-            id = "baihudong_ceshi_zombie",
-            name = "&c附满虎瘴的 测试僵尸",
-            type = EntityType.ZOMBIE,
-            health = 100.0,
-            damage = 18.0,
-            armor = 0.0,
-            speed = 0.1,
-            exp= 0,
-            maxNearby = 2,
-            drops = listOf(
-                ),
-            affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
-            helmet = Material.IRON_HELMET, // 纯装饰
-            mainHand = Material.DIAMOND_PICKAXE  // 纯装饰
-        ))
-        register(MobDefinition(
             id = "baihudong_zombie",
             name = "&c附满虎瘴的 矿洞僵尸",
             type = EntityType.ZOMBIE,
@@ -1047,8 +1031,8 @@ object MobRegistry {
             mainHand = Material.IRON_AXE  // 纯装饰
         ))
         register(MobDefinition(
-            id = "lveduoshouju_nushou",
-            name = "&c掠夺商人的 洞穴弩手",
+            id = "lveduoshouju_gongshou",
+            name = "&c掠夺商人的 洞穴弓手",
             type = EntityType.BOGGED,
             health = 80.0,
             damage = 25.0,
@@ -1074,7 +1058,7 @@ object MobRegistry {
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             helmet = Material.IRON_HELMET, // 纯装饰
-            mainHand = Material.CROSSBOW  // 纯装饰
+            mainHand = Material.BOW  // 纯装饰
         ))
         register(MobDefinition(
             id = "jiaoguzhanshi",
@@ -1132,6 +1116,84 @@ object MobRegistry {
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             mainHand = Material.IRON_PICKAXE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "chendafu_zombie",
+            name = "&c携带草药的 矿洞僵尸",
+            type = EntityType.ZOMBIE,
+            health = 85.0,
+            damage = 15.0,
+            armor = 24.0,
+            speed = 0.22,
+            exp= 80,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.3),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落草药束
+                MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
+            ),
+            affixes = listOf(), // 西方词条
+            helmet = Material.LEATHER_HELMET, // 纯装饰
+            mainHand = Material.STONE_HOE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "chendafu_kulou",
+            name = "&c携带草药的 骷髅射手",
+            type = EntityType.SKELETON,
+            health = 60.0,
+            damage = 14.0,
+            armor = 21.0,
+            speed = 0.22,
+            exp= 80,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落瘴气玄铁
+                MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
+            ),
+            affixes = listOf(), // 西方词条
+            helmet = Material.LEATHER_HELMET, // 纯装饰
+            mainHand = Material.BOW  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "chendafu_zhizhu",
+            name = "&c携带草药的 剧毒蜘蛛",
+            type = EntityType.CAVE_SPIDER,
+            health = 50.0,
+            damage = 18.0,
+            armor = 14.0,
+            speed = 0.25,
+            exp= 80,
+            maxNearby = 2,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("metal", 1, 2, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 1, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 3, 0.3),
+                // 15掉落瘴气玄铁
+                MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
+            ),
+            affixes = listOf(),
         ))
     }
 }

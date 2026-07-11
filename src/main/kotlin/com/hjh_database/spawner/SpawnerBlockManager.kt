@@ -5,6 +5,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.Particle
 import org.bukkit.block.CreatureSpawner
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
@@ -21,6 +22,7 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
     private val keyTarget = NamespacedKey(plugin, "hjh_spawner_target_block")
     private val keyNextSpawn = NamespacedKey(plugin, "hjh_spawner_next_spawn")
     private val keyDelayTicks = NamespacedKey(plugin, "hjh_spawner_delay_ticks")
+    private val keyInitialDelayApplied = NamespacedKey(plugin, "hjh_spawner_initial_delay_applied")
 
     private val activationRange = 16.0
     private val activationRangeSquared = activationRange * activationRange
@@ -45,14 +47,20 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
         spawner.maxNearbyEntities = 0
 
         val def = MobRegistry.get(mobId)
-        spawner.persistentDataContainer.set(keyDelayTicks, PersistentDataType.INTEGER, randomDelayTicks(def))
+        spawner.persistentDataContainer.set(keyDelayTicks, PersistentDataType.INTEGER, initialDelayTicks(def))
+        spawner.persistentDataContainer.set(keyInitialDelayApplied, PersistentDataType.BYTE, 1.toByte())
         spawner.persistentDataContainer.remove(keyNextSpawn)
         spawner.update()
+    }
+
+    fun getMobId(spawner: CreatureSpawner): String? {
+        return spawner.persistentDataContainer.get(keyMobId, PersistentDataType.STRING)
     }
 
     private fun startSpawnerTask() {
         object : BukkitRunnable() {
             override fun run() {
+                showSpawnerParticles()
                 val activeSpawners = collectActiveSpawners()
                 for (spawner in activeSpawners) {
                     attemptSpawn(spawner)
@@ -103,6 +111,35 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
             player.gameMode != org.bukkit.GameMode.SPECTATOR
     }
 
+    // These are client-only particles, so custom spawners remain discoverable without enabling vanilla spawning.
+    private fun showSpawnerParticles() {
+        for (player in Bukkit.getOnlinePlayers()) {
+            if (player.isDead || player.gameMode == org.bukkit.GameMode.SPECTATOR) continue
+
+            val playerLoc = player.location
+            val chunk = playerLoc.chunk
+            val world = player.world
+            for (chunkXOffset in -1..1) {
+                for (chunkZOffset in -1..1) {
+                    val chunkX = chunk.x + chunkXOffset
+                    val chunkZ = chunk.z + chunkZOffset
+                    if (!world.isChunkLoaded(chunkX, chunkZ)) continue
+
+                    for (tile in world.getChunkAt(chunkX, chunkZ).tileEntities) {
+                        val spawner = tile as? CreatureSpawner ?: continue
+                        if (getMobId(spawner) == null) continue
+
+                        val center = spawner.location.clone().add(0.5, 0.5, 0.5)
+                        if (playerLoc.distanceSquared(center) > PARTICLE_RANGE_SQUARED) continue
+
+                        player.spawnParticle(Particle.FLAME, center, 3, 0.28, 0.35, 0.28, 0.01)
+                        player.spawnParticle(Particle.SMOKE, center, 2, 0.28, 0.35, 0.28, 0.01)
+                    }
+                }
+            }
+        }
+    }
+
     private fun attemptSpawn(spawner: CreatureSpawner) {
         val pdc = spawner.persistentDataContainer
         val mobId = pdc.get(keyMobId, PersistentDataType.STRING) ?: return
@@ -122,15 +159,26 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
             return
         }
 
-        val nearby = spawnLoc.world!!.getNearbyEntities(spawnLoc, maxNearbyRange, maxNearbyRange, maxNearbyRange)
-            .count {
-                it.location.distanceSquared(spawnLoc) <= maxNearbyRangeSquared &&
-                    it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId
-            }
+        val nearbyEntities = spawnLoc.world!!.getNearbyEntities(spawnLoc, maxNearbyRange, maxNearbyRange, maxNearbyRange)
+            .filter { it.location.distanceSquared(spawnLoc) <= maxNearbyRangeSquared }
+
+        val nearby = nearbyEntities.count {
+            it.persistentDataContainer.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING) == mobId
+        }
 
         if (nearby >= def.maxNearby) {
             resetDelay(spawner, def)
             return
+        }
+
+        if (def.maxNearby != 1) {
+            val regionalMonsterCount = nearbyEntities.count {
+                it.scoreboardTags.contains("panling") && it.scoreboardTags.contains("monster")
+            }
+            if (regionalMonsterCount > REGIONAL_MONSTER_LIMIT) {
+                resetDelay(spawner, def)
+                return
+            }
         }
 
         MobFactory.spawnMob(plugin, spawnLoc, mobId, removeWhenFarAway = true)
@@ -139,15 +187,26 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
 
     private fun readDelayTicks(spawner: CreatureSpawner, def: MobDefinition): Int {
         val pdc = spawner.persistentDataContainer
-        pdc.get(keyDelayTicks, PersistentDataType.INTEGER)?.let { return it.coerceAtLeast(0) }
+        pdc.get(keyDelayTicks, PersistentDataType.INTEGER)?.let { storedTicks ->
+            if (pdc.has(keyInitialDelayApplied, PersistentDataType.BYTE)) {
+                return storedTicks.coerceAtLeast(0)
+            }
+
+            val initialTicks = shortenInitialDelay(storedTicks)
+            pdc.set(keyInitialDelayApplied, PersistentDataType.BYTE, 1.toByte())
+            setDelayTicks(spawner, initialTicks)
+            return initialTicks
+        }
 
         val convertedTicks = pdc.get(keyNextSpawn, PersistentDataType.LONG)?.let { oldNextSpawn ->
             val remainingMillis = (oldNextSpawn - System.currentTimeMillis()).coerceAtLeast(0L)
             ((remainingMillis + 49L) / 50L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         } ?: randomDelayTicks(def)
 
-        setDelayTicks(spawner, convertedTicks)
-        return convertedTicks
+        val initialTicks = shortenInitialDelay(convertedTicks)
+        pdc.set(keyInitialDelayApplied, PersistentDataType.BYTE, 1.toByte())
+        setDelayTicks(spawner, initialTicks)
+        return initialTicks
     }
 
     private fun resetDelay(spawner: CreatureSpawner, def: MobDefinition) {
@@ -169,6 +228,14 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
             ThreadLocalRandom.current().nextInt(minDelay, maxDelay + 1)
         }
         return seconds.coerceAtLeast(1) * 20
+    }
+
+    private fun initialDelayTicks(def: MobDefinition?): Int {
+        return shortenInitialDelay(randomDelayTicks(def))
+    }
+
+    private fun shortenInitialDelay(ticks: Int): Int {
+        return (ticks * INITIAL_DELAY_FACTOR).toInt().coerceAtLeast(1)
     }
 
     private fun findNearbySpawnLocation(baseLoc: Location, type: EntityType): Location? {
@@ -272,6 +339,10 @@ class SpawnerBlockManager(private val plugin: Hjh_database) {
 
     private companion object {
         private const val TASK_PERIOD_TICKS = 20L
+        private const val REGIONAL_MONSTER_LIMIT = 9
+        private const val INITIAL_DELAY_FACTOR = 0.30
+        private const val PARTICLE_RANGE = 20.0
+        private const val PARTICLE_RANGE_SQUARED = PARTICLE_RANGE * PARTICLE_RANGE
         private const val EPSILON = 1.0E-6
         private val BLOCKED_SPAWN_MATERIALS = setOf(
             Material.WATER,

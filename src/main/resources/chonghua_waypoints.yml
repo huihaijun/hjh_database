@@ -171,7 +171,7 @@ waypoints:
     location:
       world: world
       x: -177.5
-      y: 63.5
+      y: 64.5
       z: -180.5
       yaw: 90.0
       pitch: 0.0
@@ -219,3 +219,55 @@ waypoints:
       z: 62.5
       yaw: 180.47
       pitch: 7.05
+  huangchengzhongxin_longlinzhisen:
+    region: HUANGCHENGZHONGXIN
+    name: 龙鳞之森-重华晶
+    material: FIRE_CHARGE
+    default_unlocked: true
+    cooldown_seconds: 120
+    location:
+      world: world
+      x: 399.29
+      y: 47.00
+      z: 14.68
+      yaw: 9629.82
+      pitch: -10.95
+  huangchengzhongxin_yanshadamo:
+    region: HUANGCHENGZHONGXIN
+    name: 焱砂大漠-重华晶
+    material: FIRE_CHARGE
+    default_unlocked: true
+    cooldown_seconds: 120
+    location:
+      world: world
+      x: -111.94
+      y: 61.00
+      z: 365.39
+      yaw: 9812.66
+      pitch: -3.30
+  huangchengzhongxin_huzhaoshanmai:
+    region: HUANGCHENGZHONGXIN
+    name: 虎爪山脉-重华晶
+    material: FIRE_CHARGE
+    default_unlocked: true
+    cooldown_seconds: 120
+    location:
+      world: world
+      x: -89.23
+      y: 67.00
+      z: -10.66
+      yaw: 9753.85
+      pitch: -1.05
+  huangchengzhongxin_xuanshuihupo:
+    region: HUANGCHENGZHONGXIN
+    name: 玄水湖泊-重华晶
+    material: FIRE_CHARGE
+    default_unlocked: true
+    cooldown_seconds: 120
+    location:
+      world: world
+      x: -79.32
+      y: 64.00
+      z: -16.73
+      yaw: 9900.39
+      pitch: -1.20

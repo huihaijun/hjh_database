@@ -16,7 +16,7 @@ class Zhizhunvwang(private val plugin: Hjh_database, private val boss: LivingEnt
     }
 
     private fun startSkillTask() {
-        // 主技能循环：每 30 秒 (600 ticks) 触发一次
+        // 登场 5 秒后首次尝试释放，之后每 15 秒尝试一次。
         object : BukkitRunnable() {
             override fun run() {
                 // 如果 Boss 死了或者被移除了，停止定时任务
@@ -57,7 +57,7 @@ class Zhizhunvwang(private val plugin: Hjh_database, private val boss: LivingEnt
                     }.runTaskLater(plugin, 60L) // 延迟 60 ticks (3秒) 执行
                 }
             }
-        }.runTaskTimer(plugin, 600L, 600L)
+        }.runTaskTimer(plugin, 5L * 20L, 15L * 20L)
     }
 
     private fun castWeb(target: Player) {

@@ -8,6 +8,7 @@ import com.hjh_database.baihu_dz.BaihuDzManager
 import com.hjh_database.baihu_dz.BaihuDzStationListener
 import com.hjh_database.baihu_dz.BaihuEquipmentDamageMarkerListener
 import com.hjh_database.baihu_dz.BaihuWeaponSkillListener
+import com.hjh_database.baihu_dz.skill.impl.HuzhizhanqiSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.chonghua.ChonghuaManager
 import com.hjh_database.command.AdminCommand
@@ -217,6 +218,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(BaihuDzStationListener(this), this)
         pm.registerEvents(BaihuEquipmentDamageMarkerListener(this), this)
         pm.registerEvents(BaihuWeaponSkillListener(this), this)
+        pm.registerEvents(HuzhizhanqiSkill(this), this)
         pm.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(this.baihuMiasmaManager, this)

@@ -237,9 +237,9 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
 
     private fun getUpgradeRequirement(currentLevel: Int): UpgradeRequirement {
         return when (currentLevel) {
-            1 -> UpgradeRequirement(5, 5, "hjh_tongqian", 10)
-            2 -> UpgradeRequirement(10, 32, "hjh_tongqian", 32)
-            3 -> UpgradeRequirement(20, 64, "jinyuanbao", 10)
+            1 -> UpgradeRequirement(5, 32, "hjh_tongqian", 30)
+            2 -> UpgradeRequirement(10, 64, "jinyuanbao", 5)
+            3 -> UpgradeRequirement(20, 128, "yinpiao", 2)
             4 -> UpgradeRequirement(30, 256, "yinpiao", 5)
             else -> UpgradeRequirement(999, 999, "none", 999)
         }

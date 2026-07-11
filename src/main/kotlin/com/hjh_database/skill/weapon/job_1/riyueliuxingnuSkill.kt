@@ -34,6 +34,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
 
     // 记录玩家身旁的流星 (UUID -> 包含流星过期时间的列表，最多5个)
     private val activeMeteors = ConcurrentHashMap<UUID, MutableList<Long>>()
+    private val appliedSpeedStacks = ConcurrentHashMap<UUID, Int>()
 
     // 记录玩家留下的星域
     private data class StarField(val loc: Location, val expireTime: Long)
@@ -89,12 +90,8 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
                         }
                     }
 
-                    // 动态更新移速 (每颗流星 +10%)
-                    val baseSpeed = pData.speed
-                    val targetWalkSpeed = (baseSpeed * (1.0 + validMeteorsCount * 0.10)).toFloat().coerceIn(0.1f, 1.0f)
-                    if (player.walkSpeed != targetWalkSpeed) {
-                        player.walkSpeed = targetWalkSpeed
-                    }
+                    // 每颗流星 +10% 移速，作为独立来源参与统一属性结算。
+                    updateMeteorSpeedBuff(player, pData, validMeteorsCount)
 
                     // ==========================================
                     // 2. 处理地上的星域与拾取判定
@@ -166,6 +163,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
 
         // 清空自身流星
         activeMeteors.remove(player.uniqueId)
+        updateMeteorSpeedBuff(player, data, 0)
 
         // 寻找 15 格内目标
         val targets = player.getNearbyEntities(15.0, 15.0, 15.0).filterIsInstance<LivingEntity>().filter {
@@ -199,11 +197,8 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
         val hadMeteors = activeMeteors.remove(player.uniqueId) != null
         activeStarFields.remove(player.uniqueId)
 
-        // 2. 瞬间重置移速为基础速度 (清空加成)
-        val baseSpeed = pData.speed.toFloat()
-        if (player.walkSpeed != baseSpeed) {
-            player.walkSpeed = baseSpeed
-        }
+        // 2. 只清除本技能自己的移速加成
+        updateMeteorSpeedBuff(player, pData, 0)
 
         // 3. 提示音效与文本（仅在身上真的有流星消散时提示，避免切物品时频繁刷屏）
         if (hadMeteors) {
@@ -248,6 +243,22 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
             meteors.removeAt(0)
             meteors.add(System.currentTimeMillis() + 20000L)
         }
+    }
+
+    private fun updateMeteorSpeedBuff(player: Player, data: PlayerData, stacks: Int) {
+        val clampedStacks = stacks.coerceIn(0, 5)
+        if ((appliedSpeedStacks[player.uniqueId] ?: 0) == clampedStacks) return
+
+        if (clampedStacks > 0) {
+            data.tempBonuses[METEOR_SPEED_KEY] = clampedStacks * 0.10
+            appliedSpeedStacks[player.uniqueId] = clampedStacks
+        } else {
+            data.tempBonuses.remove(METEOR_SPEED_KEY)
+            appliedSpeedStacks.remove(player.uniqueId)
+        }
+
+        val pluginMain = plugin as? com.hjh_database.Hjh_database ?: return
+        pluginMain.playerManager.updateStats(player)
     }
 
     // 追踪流星的子任务
@@ -317,5 +328,9 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
                 cancel()
             }
         }
+    }
+
+    companion object {
+        private const val METEOR_SPEED_KEY = "riyueliuxingnu::speed_percent"
     }
 }

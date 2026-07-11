@@ -50,6 +50,12 @@ tasks {
         // 如果你最终采纳了【方案二】(不再使用 Shadow，使用 libraries)：
         dependsOn(jar)
         from(jar)
+        from("src/main/resources/weapons.yml") {
+            into("hjh_database")
+        }
+        from("src/main/resources/chonghua_waypoints.yml") {
+            into("hjh_database")
+        }
         into(pluginDir)
     }
 

@@ -20,7 +20,11 @@ import java.io.File
 
 // 定义四大区域
 enum class Region(val displayName: String) {
-    EAST("东方森林"), SOUTH("南方沙漠"), WEST("西方山脉"), NORTH("北方湖泊")
+    EAST("东方森林"),
+    SOUTH("南方沙漠"),
+    WEST("西方山脉"),
+    NORTH("北方湖泊"),
+    HUANGCHENGZHONGXIN("皇城中心")
 }
 
 // 静态打卡点数据模型
@@ -29,7 +33,9 @@ data class Waypoint(
     val region: Region,
     val name: String,
     val material: Material,
-    val targetLoc: Location
+    val targetLoc: Location,
+    val defaultUnlocked: Boolean = false,
+    val cooldownSeconds: Long = 300L
 )
 
 class ChonghuaManager(private val plugin: Hjh_database) : Listener {
@@ -111,11 +117,11 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                         if (meta.persistentDataContainer.has(key, PersistentDataType.STRING)) {
                             val wpId = meta.persistentDataContainer.get(key, PersistentDataType.STRING)!!
 
-                            val isDefaultUnlocked = wpId.endsWith("huangcheng")
-                            if (isDefaultUnlocked || chonghuaData.unlockedWaypoints.contains(wpId)) {
+                            val wp = waypoints[wpId] ?: continue
+                            if (isWaypointUnlocked(wp, chonghuaData)) {
                                 val lastTime = chonghuaData.waypointCooldowns[wpId] ?: 0L
                                 val passSeconds = (now - lastTime) / 1000
-                                val remain = 300 - passSeconds
+                                val remain = wp.cooldownSeconds - passSeconds
 
                                 val lore = mutableListOf<String>()
                                 // 【优化 1】这里已经去掉了地点 ID 的显示
@@ -170,9 +176,11 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                 val z = section.getDouble("$key.location.z")
                 val yaw = section.getDouble("$key.location.yaw").toFloat()
                 val pitch = section.getDouble("$key.location.pitch").toFloat()
+                val defaultUnlocked = section.getBoolean("$key.default_unlocked", false)
+                val cooldownSeconds = section.getLong("$key.cooldown_seconds", 300L).coerceAtLeast(0L)
 
                 val loc = Location(world, x, y, z, yaw, pitch)
-                waypoints[key] = Waypoint(key, region, name, material, loc)
+                waypoints[key] = Waypoint(key, region, name, material, loc, defaultUnlocked, cooldownSeconds)
             } catch (e: Exception) {
                 plugin.logger.warning("打卡点 $key 配置有误加载失败: ${e.message}")
             }
@@ -181,7 +189,18 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun generateDefaultWaypoints() {
-        fun add(id: String, r: String, n: String, x: Double, y: Double, z: Double, yaw: Float, pitch: Float) {
+        fun add(
+            id: String,
+            r: String,
+            n: String,
+            x: Double,
+            y: Double,
+            z: Double,
+            yaw: Float,
+            pitch: Float,
+            defaultUnlocked: Boolean = false,
+            cooldownSeconds: Long = 300L
+        ) {
             waypointsConfig.set("waypoints.$id.region", r)
             waypointsConfig.set("waypoints.$id.name", n)
             waypointsConfig.set("waypoints.$id.material", "FIRE_CHARGE")
@@ -191,6 +210,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
             waypointsConfig.set("waypoints.$id.location.z", z)
             waypointsConfig.set("waypoints.$id.location.yaw", yaw)
             waypointsConfig.set("waypoints.$id.location.pitch", pitch)
+            waypointsConfig.set("waypoints.$id.default_unlocked", defaultUnlocked)
+            waypointsConfig.set("waypoints.$id.cooldown_seconds", cooldownSeconds)
         }
 
         // --- 东方 ---
@@ -219,6 +240,12 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
 
         // --- 北方 (暂未给坐标，先只放皇城) ---
         add("north_huangcheng", "NORTH", "皇城", 179.5, 42.5, 62.5, 180.47f, 7.05f) // 北区皇城
+
+        // --- 皇城中心：四方重华晶，无需打卡解锁，独立 2 分钟冷却 ---
+        add("huangchengzhongxin_longlinzhisen", "HUANGCHENGZHONGXIN", "龙鳞之森-重华晶", 399.29, 47.00, 14.68, 9629.82f, -10.95f, true, 120L)
+        add("huangchengzhongxin_yanshadamo", "HUANGCHENGZHONGXIN", "焱砂大漠-重华晶", -111.94, 61.00, 365.39, 9812.66f, -3.30f, true, 120L)
+        add("huangchengzhongxin_huzhaoshanmai", "HUANGCHENGZHONGXIN", "虎爪山脉-重华晶", -89.23, 67.00, -10.66, 9753.85f, -1.05f, true, 120L)
+        add("huangchengzhongxin_xuanshuihupo", "HUANGCHENGZHONGXIN", "玄水湖泊-重华晶", -79.32, 64.00, -16.73, 9900.39f, -1.20f, true, 120L)
 
         waypointsConfig.save(waypointsFile)
     }
@@ -331,9 +358,9 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         val inv = Bukkit.createInventory(null, 54, "§0重华晶 - ${region.displayName}")
         val now = System.currentTimeMillis()
 
-        // 【修改点 1】过滤出该区域的打卡点，并强制把 ID 包含 huangcheng 的排在最前面 (0在1前面)
+        // 过滤出该重华晶预设的传送点，并将默认解锁点排在最前面。
         val waypointsInRegion = waypoints.values.filter { it.region == region }
-            .sortedBy { if (it.id.endsWith("huangcheng")) 0 else 1 }
+            .sortedBy { if (isWaypointDefaultUnlocked(it)) 0 else 1 }
 
         var slot = 10
         for (wp in waypointsInRegion) {
@@ -344,9 +371,7 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
             val item = ItemStack(wp.material)
             val meta = item.itemMeta!!
 
-            // 【修改点 2】特判皇城默认解锁
-            val isDefaultUnlocked = wp.id.endsWith("huangcheng")
-            val isUnlocked = isDefaultUnlocked || chonghuaData.unlockedWaypoints.contains(wp.id)
+            val isUnlocked = isWaypointUnlocked(wp, chonghuaData)
 
             if (!isUnlocked) {
                 meta.setDisplayName("§7[未解锁] ${wp.name}")
@@ -355,7 +380,7 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                 meta.setDisplayName("§a${wp.name}")
                 val lastTime = chonghuaData.waypointCooldowns[wp.id] ?: 0L
                 val passSeconds = (now - lastTime) / 1000
-                val remain = 300 - passSeconds
+                val remain = wp.cooldownSeconds - passSeconds
 
                 val lore = mutableListOf<String>()
                 if (remain > 0) {
@@ -390,9 +415,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
             val wp = waypoints[wpId] ?: return
             val chonghuaData = getChonghuaData(player) ?: return
 
-            // 1. 检查是否解锁 (特判皇城)
-            val isDefaultUnlocked = wpId.endsWith("huangcheng")
-            if (!isDefaultUnlocked && !chonghuaData.unlockedWaypoints.contains(wpId)) {
+            // 1. 检查是否解锁
+            if (!isWaypointUnlocked(wp, chonghuaData)) {
                 player.sendMessage("§c传送失败：你尚未解锁此地点！")
                 player.playSound(player.location, org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f)
                 return
@@ -402,8 +426,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
             val now = System.currentTimeMillis()
             val lastTime = chonghuaData.waypointCooldowns[wpId] ?: 0L
             val passSeconds = (now - lastTime) / 1000
-            if (passSeconds < 300) {
-                player.sendMessage("§c传送冷却中，还剩 ${300 - passSeconds} 秒！")
+            if (passSeconds < wp.cooldownSeconds) {
+                player.sendMessage("§c传送冷却中，还剩 ${wp.cooldownSeconds - passSeconds} 秒！")
                 player.playSound(player.location, org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 1.0f)
                 return
             }
@@ -458,6 +482,14 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                 }
             }.runTaskTimer(plugin, 0L, 10L) // 0秒延迟，每 0.5 秒(10 tick) 运行一次
         }
+    }
+
+    private fun isWaypointDefaultUnlocked(waypoint: Waypoint): Boolean {
+        return waypoint.defaultUnlocked || waypoint.id.endsWith("huangcheng")
+    }
+
+    private fun isWaypointUnlocked(waypoint: Waypoint, data: ChonghuaData): Boolean {
+        return isWaypointDefaultUnlocked(waypoint) || data.unlockedWaypoints.contains(waypoint.id)
     }
 
 }

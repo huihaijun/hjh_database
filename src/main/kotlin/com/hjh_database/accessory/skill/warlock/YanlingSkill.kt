@@ -26,7 +26,7 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
         private const val DURATION_TICKS = 200
         private const val TICK_STEP = 5
         private const val SLOW_RANGE = 6.0
-        private const val ZF_BONUS_KEY = "zf_str_percent"
+        private const val ZF_BONUS_KEY = "yanling::zf_str_percent"
         private const val ZF_BONUS = 0.25
     }
 
@@ -93,19 +93,14 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
 
     private fun addZfBonus(player: Player, data: PlayerData) {
         if (!buffedPlayers.add(player.uniqueId)) return
-        data.tempBonuses[ZF_BONUS_KEY] = (data.tempBonuses[ZF_BONUS_KEY] ?: 0.0) + ZF_BONUS
+        data.tempBonuses[ZF_BONUS_KEY] = ZF_BONUS
         plugin.playerManager.updateStats(player)
     }
 
     private fun removeZfBonus(player: Player, data: PlayerData?) {
         if (data == null) return
         if (!buffedPlayers.remove(player.uniqueId)) return
-        val next = (data.tempBonuses[ZF_BONUS_KEY] ?: 0.0) - ZF_BONUS
-        if (next <= 0.0001) {
-            data.tempBonuses.remove(ZF_BONUS_KEY)
-        } else {
-            data.tempBonuses[ZF_BONUS_KEY] = next
-        }
+        data.tempBonuses.remove(ZF_BONUS_KEY)
         plugin.playerManager.updateStats(player)
     }
 

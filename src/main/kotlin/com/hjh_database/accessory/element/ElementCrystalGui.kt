@@ -141,7 +141,7 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         // 节点 — 传入玩家职业与剩余点数用于显示不同精进文本和剩余可分配点数
         val pData = plugin.playerManager.getPlayerData(player)
         val playerJob = pData?.job ?: -1
-        inv.setItem(13, createNodeItem(Material.FLINT, "§e锋锐之金", "进攻属性 +1.5", data.goldPoints, "gold", playerJob, remainingPoints))
+        inv.setItem(13, createNodeItem(Material.FLINT, "§e锋锐之金", "进攻属性 +1", data.goldPoints, "gold", playerJob, remainingPoints))
         inv.setItem(29, createNodeItem(Material.MELON_SEEDS, "§a生机之木", "最大生命 +6", data.woodPoints, "wood", playerJob, remainingPoints))
         inv.setItem(33, createNodeItem(Material.WHEAT_SEEDS, "§9灵动之水", "冷却缩减 +2%", data.waterPoints, "water", playerJob, remainingPoints))
         inv.setItem(48, createNodeItem(Material.CHARCOAL, "§c暴烈之火", "暴击率 +4%", data.firePoints, "fire", playerJob, remainingPoints))

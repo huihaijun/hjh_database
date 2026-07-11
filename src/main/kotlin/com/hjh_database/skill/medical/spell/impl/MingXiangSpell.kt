@@ -36,6 +36,7 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
         // 读取配置参数
         val durationSeconds = config?.getInt("duration", 10) ?: 10
         val regenMultiplier = config?.getDouble("regen_multiplier", 0.2) ?: 0.2
+        val speedReduction = (config?.getDouble("speed_reduction", 0.7) ?: 0.7).coerceIn(0.0, 1.0)
 
         val maxTicks = durationSeconds * 20
         val regenAmount = zfStr * regenMultiplier
@@ -53,11 +54,11 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
             // 先尝试移除可能残留的旧修饰符
             speedAttribute.removeModifier(modifierKey)
 
-            // 添加一个专属的移速修饰符：在总移速基础上减少 80% (-0.8)
+            // 添加一个专属的移速修饰符，数值由医术配置控制。
             // 1.21.3 使用 ADD_MULTIPLIED_TOTAL (相当于以前的 MULTIPLY_SCALAR_1 或 ADD_SCALAR)
             val modifier = org.bukkit.attribute.AttributeModifier(
                 modifierKey,
-                -0.8,
+                -speedReduction,
                 org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1
             )
             speedAttribute.addModifier(modifier)

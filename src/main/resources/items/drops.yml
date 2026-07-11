@@ -192,3 +192,9 @@ huzhenshangrenshouju:
     - "&7&o虎镇商人被怪物偷走的收据"
     - "&7&o收集一些一起还给他吧"
 
+chendafudecaoyaoshu:
+  material: ORANGE_DYE
+  name: "&b陈大夫的草药束"
+  lore:
+    - "&7&o陈大夫被魔物被抢走的草药束"
+    - "&7&o收集一些交给他吧"

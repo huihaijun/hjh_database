@@ -75,13 +75,20 @@ class KaiWuListener(private val plugin: Hjh_database) : Listener {
         if (event.hand != EquipmentSlot.HAND) return
         if (event.clickedBlock == null) return
 
-        // 必须是右键
-        if (event.action != Action.RIGHT_CLICK_BLOCK) return
-
         val player = event.player
         val manager = plugin.kaiWuManager
         // 这里的 !! 是安全的，因为上面检查了 null 并 return
         val locKey = manager.serializeLoc(event.clickedBlock!!.location)
+
+        // 左键查看资源信息；同时取消原版方块破坏行为。
+        if (event.action == Action.LEFT_CLICK_BLOCK && manager.isNode(event.clickedBlock!!.location)) {
+            event.isCancelled = true
+            manager.showNodeInfo(player, event.clickedBlock!!.location)
+            return
+        }
+
+        // 右键负责开采与管理员编辑。
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
 
         // OP 编辑模式 (金锄头)
         if (player.hasPermission("hjh.kaiwu.op") &&

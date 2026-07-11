@@ -56,6 +56,6 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
     }
 
     companion object {
-        private val RIGHT_CLICK_ONLY_SKILLS = setOf("duhuozhu", "huzhizhanqi")
+        private val RIGHT_CLICK_ONLY_SKILLS = setOf("duhuozhu")
     }
 }

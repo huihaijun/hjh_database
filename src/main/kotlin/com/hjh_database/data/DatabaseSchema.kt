@@ -84,6 +84,7 @@ internal class DatabaseSchema(
 
                     // 6. 修复 player_alchemy 冶药法表
                     safeAddColumn(stmt, "player_alchemy", "alchemy_exp", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_alchemy", "juezhang_pill_sickness_end", "BIGINT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "player_name", "VARCHAR(32)")
                     safeAddColumn(stmt, "player_jianghu_xinde", "jianghu_xinde", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_exp_gained", "INT DEFAULT 0")
@@ -230,7 +231,8 @@ internal class DatabaseSchema(
                 player_name VARCHAR(32),
                 alchemy_level INT DEFAULT 1,
                 alchemy_exp INT DEFAULT 0,
-                pill_sickness_end BIGINT DEFAULT 0
+                pill_sickness_end BIGINT DEFAULT 0,
+                juezhang_pill_sickness_end BIGINT DEFAULT 0
             );
         """.trimIndent()
         executeSql(sql)

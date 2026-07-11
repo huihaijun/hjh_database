@@ -247,8 +247,18 @@ class BaihuDzManager(private val plugin: Hjh_database) {
     }
 
     fun getArtifactDataFromItem(item: ItemStack?): BaihuArtifactData? {
-        val id = item?.itemMeta?.persistentDataContainer?.get(artifactKey, PersistentDataType.STRING) ?: return null
-        return artifacts[id]
+        val meta = item?.itemMeta ?: return null
+        val pdc = meta.persistentDataContainer
+        val id = pdc.get(artifactKey, PersistentDataType.STRING)
+        if (id != null) return artifacts[id]
+
+        // 虎志战旗曾作为武器发放；放入饰品栏时将旧物品无损迁移为法宝。
+        val legacyId = pdc.get(weaponKey, PersistentDataType.STRING) ?: return null
+        if (legacyId != "huzhizhanqi" || !artifacts.containsKey(legacyId)) return null
+        pdc.remove(weaponKey)
+        pdc.set(artifactKey, PersistentDataType.STRING, legacyId)
+        item.itemMeta = meta
+        return artifacts[legacyId]
     }
 
     fun buildWeaponItem(id: String): ItemStack? {

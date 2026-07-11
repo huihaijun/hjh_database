@@ -26,7 +26,9 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
         "shanshenmiao",
         "wangyuanwai",
         "wenquankezhan",
-        "zhuanyuanshangxian"
+        "zhuanyuanshangxian",
+        "huzhenshangren",
+        "chendafu"
         // "xinmiao", "other_trial"  <-- 以后直接在这里往下加
     )
 
@@ -50,7 +52,7 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
         if (!item.hasItemMeta()) return
         val resId = getTrialItemId(item) ?: return
 
-        if (resId == "shanshenmiao_test" || resId == "wangyuanwai_test" || resId == "wenquankezhan_test" || resId == "zhuanyuanshangxian_test") {
+        if (resId == "shanshenmiao_test" || resId == "wangyuanwai_test" || resId == "wenquankezhan_test" || resId == "zhuanyuanshangxian_test" || resId == "huzhenshangren_test" || resId == "chendafu_test") {
             event.isCancelled = true
             tryStartTrial(player, item, resId)
         }
@@ -64,6 +66,8 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
             "wangyuanwai_test" -> "wangyuanwai"
             "wenquankezhan_test" -> "wenquankezhan"
             "zhuanyuanshangxian_test" -> "zhuanyuanshangxian"
+            "huzhenshangren_test" -> "huzhenshangren"
+            "chendafu_test" -> "chendafu"
             else -> return
         }
 
@@ -112,6 +116,18 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
                 player.sendMessage("§c你离篆元上仙太远了，离他近点试试吧！")
                 return
             }
+        } else if (resId == "huzhenshangren_test") {
+            val center = org.bukkit.Location(player.world, -396.42, 112.00, 150.72)
+            if (player.location.world != center.world || player.location.distanceSquared(center) > 3 * 3) {
+                player.sendMessage("§c你离虎镇商人太远了，离他近点试试吧！")
+                return
+            }
+        } else if (resId == "chendafu_test") {
+            val center = org.bukkit.Location(player.world, -118.56, 46.00, 139.60)
+            if (player.location.world != center.world || player.location.distanceSquared(center) > 3 * 3) {
+                player.sendMessage("§c你离陈大夫太远了，离他近点试试吧！")
+                return
+            }
         }
 
         // 【修改】全局单人试炼检查：只要 activeTrials 不为空，说明有人在里面
@@ -129,6 +145,8 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
             "wangyuanwai_test" -> com.hjh_database.medical.impl.WangYuanWaiTrial(plugin, player)
             "wenquankezhan_test" -> com.hjh_database.medical.impl.WenQuanKeZhanTrial(plugin, player)
             "zhuanyuanshangxian_test" -> com.hjh_database.medical.impl.ZhuanYuanShangXianTrial(plugin, player)
+            "huzhenshangren_test" -> com.hjh_database.medical.impl.HuZhenShangRenTrial(plugin, player)
+            "chendafu_test" -> com.hjh_database.medical.impl.ChenDaFuTrial(plugin, player)
             // 以后你有新的试炼，比如叫 xinmiao_test，只需在这里加一行：
             // "xinmiao_test" -> com.hjh_database.medical.impl.XinMiaoTrial(plugin, player)
             else -> return
@@ -141,7 +159,7 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
         val meta = item.itemMeta ?: return null
         val key = org.bukkit.NamespacedKey(plugin, "resource_id")
         val resId = meta.persistentDataContainer.get(key, PersistentDataType.STRING)
-        if (resId == "shanshenmiao_test" || resId == "wangyuanwai_test" || resId == "wenquankezhan_test" || resId == "zhuanyuanshangxian_test") return resId
+        if (resId == "shanshenmiao_test" || resId == "wangyuanwai_test" || resId == "wenquankezhan_test" || resId == "zhuanyuanshangxian_test" || resId == "huzhenshangren_test" || resId == "chendafu_test") return resId
 
         val plainName = if (meta.hasDisplayName()) ChatColor.stripColor(meta.displayName) else null
         return when (plainName) {
@@ -149,6 +167,8 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
             "王员外的[医术试炼]" -> "wangyuanwai_test"
             "温泉客栈老板的[医术试炼]" -> "wenquankezhan_test"
             "篆元上仙的[医术试炼]" -> "zhuanyuanshangxian_test"
+            "虎镇商人的[医术试炼]" -> "huzhenshangren_test"
+            "陈大夫的[医术试炼]" -> "chendafu_test"
             else -> null
         }
     }
