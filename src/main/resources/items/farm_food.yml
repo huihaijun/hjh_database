@@ -1,0 +1,103 @@
+# 栖霞镇 · 灵田食物配置
+#
+# 必填字段：material、name、hunger、saturation。
+# hunger 按饥饿条上可见的格数填写，支持 0.5；1 格等于原版内部 2 点饥饿值。
+# 可选字段不填写时：不能满饥饿食用、进食时间 1.6 秒、无药水效果、无清除效果、无冷却。
+# potion_effects 中的每一项独立判定概率，因此可以同时获得多个效果。
+# level 使用玩家看到的药水等级：1 表示 I，2 表示 II。
+
+# 完整可选字段示例（按需复制到具体食物下并取消注释）：
+#  can_always_eat: true
+#  eat_seconds: 1.0
+#  potion_effects:
+#    - type: REGENERATION
+#      chance: 25.0
+#      duration_seconds: 8
+#      level: 1
+#      ambient: false
+#      particles: true
+#      icon: true
+#    - type: SPEED
+#      chance: 10.0
+#      duration_seconds: 15
+#      level: 2
+#  clear_effects:
+#    - POISON
+#    - HUNGER
+#  cooldown_seconds: 5
+
+ganmogupian:
+  material: DRIED_KELP
+  name: "&b干蘑菇片"
+  rarity: 1
+  lore:
+    - "&7&o将蘑菇晒干制成的蘑菇片"
+    - "&7&o携带方便,虽不足以果腹,但食用较快"
+  hunger: 1.5
+  saturation: 1.5
+  eat_seconds: 0.8
+
+cuiyugua:
+  material: WHEAT
+  custom_model_data: 1000
+  name: "&b翠玉瓜"
+  rarity: 2
+  lore:
+    - "&7&o瓜身修长，皮薄肉脆，通体翠绿如翡翠"
+    - "&7&o既可伴肉煸炒，也可生吃解渴"
+  crop_id: cuiyugua
+  hunger: 4
+  saturation: 4
+  eat_seconds: 1.3
+
+qixiatao:
+  material: WHEAT
+  custom_model_data: 1003
+  name: "&b栖霞桃"
+  rarity: 3
+  lore:
+    - "&7&o栖霞镇独有的桃种，果肉饱满，汁水甘甜"
+    - "&7&o食后唇齿留香，疲惫尽消，是镇上的珍品"
+  crop_id: qixiatao
+  hunger: 3
+  saturation: 7
+  eat_seconds: 1.4
+  potion_effects:
+    - type: REGENERATION
+      chance: 20
+      duration_seconds: 10
+      level: 1
+
+wusedou:
+  material: WHEAT
+  custom_model_data: 1004
+  name: "&b五色豆"
+  rarity: 3
+  lore:
+    - "&7&o同一株藤上结出五种颜色的豆粒，煞是好看"
+    - "&7&o豆质微咸，果实饱满，是下酒的好菜"
+  crop_id: wusedou
+  hunger: 2
+  saturation: 4
+  eat_seconds: 0.8
+  clear_effects:
+    - HUNGER
+
+hongshuangjiao:
+  material: WHEAT
+  custom_model_data: 1006
+  name: "&b红霜椒"
+  rarity: 3
+  lore:
+    - "&7&o表皮赤红如火，尖头却覆着一层薄薄的白霜"
+    - "&7&o入口先是一阵清爽，继而辣味层层漫开"
+  crop_id: hongshuangjiao
+  hunger: 1.5
+  saturation: 3.5
+  can_always_eat: true
+  eat_seconds: 1.1
+  potion_effects:
+    - type: SPEED
+      chance: 100
+      duration_seconds: 5
+      level: 2

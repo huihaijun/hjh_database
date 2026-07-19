@@ -219,15 +219,6 @@ class Ren_09 : QuestBase("main_ren_9", "[人族主线]四方圣兽", QuestType.M
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
-        // 自动解锁南方主线第一章
-        if (data != null) {
-            // 将下一个任务设为进行中
-            data.questStatuses["main_south_1"] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
-            data.questProgress["main_south_1"] = 0
-
-            player.sendMessage("")
-            player.sendMessage("§b§l[系统] §f你已解锁新的主线章节：§e[南方区域]绿洲传闻")
-        }
     }
 
     override fun checkComplete(progress: Int): Boolean {

@@ -5,6 +5,7 @@ import com.hjh_database.data.PlayerData
 import com.hjh_database.ui.MenuManager.ElementType
 import com.hjh_database.ui.MenuManager.Companion.PORTABLE_WAREHOUSE_BUTTON_SLOT
 import com.hjh_database.ui.MenuManager.Companion.SUICIDE_BUTTON_SLOT
+import com.hjh_database.ui.MenuManager.Companion.TITLE_SYSTEM_BUTTON_SLOT
 import com.hjh_database.ui.DustbinMenuHolder
 import com.hjh_database.ui.ItemShowcaseMenuHolder
 import com.hjh_database.ui.TianjiUtilityMenus
@@ -118,6 +119,11 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
 
             else if (event.rawSlot == PORTABLE_WAREHOUSE_BUTTON_SLOT) {
                 openPortableWarehouse(player)
+            }
+
+            else if (event.rawSlot == TITLE_SYSTEM_BUTTON_SLOT) {
+                plugin.titleManager.openMainMenu(player)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
 
             else if (event.rawSlot == TianjiUtilityMenus.DUSTBIN_BUTTON_SLOT) {

@@ -228,6 +228,76 @@ enum class StoryNpcs(
         Villager.Profession.NONE,
         Villager.Type.PLAINS,
         -582.5, 109.5, 188.5, 0f
+    ),
+    SHOUJINGDELONGXUZHENJUMIN(
+        "shoujingdelongxuzhenjumin",
+        "§a§l受惊的龙须镇居民",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        390.5, 45.5, -13.5, 0f
+    ),
+    QIXIAZHENZHENZHANG(
+        "qixaizhenzhenzhang",
+        "§b§l栖霞镇镇长-安民",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        648.5, 57.5, -462.5, 0f
+    ),
+    QIXIAZHENFANGSHILAOBAN(
+        "qixiazhenfangshilaoban",
+        "§b§l坊市老板-金大仁",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        696.5, 58.5, -494.5, 0f
+    ),
+    BUTIANJUGUANLIYUAN(
+        "butianjuguanliyuan",
+        "§b§l卜天居管理员-采心",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        689.5, 58.5, -499.5, 0f
+    ),
+    LINGTIANZHANG(
+        "lingtianzhang",
+        "§b§l灵田田长-弦农",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        656.5, 40.5, -529.5, 0f
+    ),
+    SHEN_SHULING(
+    "shen_shuling",
+    "§a§l新手引导员-舒灵",
+    Villager.Profession.NONE,
+    Villager.Type.SNOW,
+    3195.5, 76.5, 374.5, 90f
+    ),
+    SHEN_ZHANGLAO(
+        "shen_zhanglao",
+        "§a§l长老",
+        Villager.Profession.NONE,
+        Villager.Type.SWAMP,
+        3336.5, 158.5, 118.5, 0f
+    ),
+    SHEN_ZIYUANZHONGXINFUZEREN(
+        "shen_ziyuanzhongxinfuzeren",
+        "§a§l资源中心负责人",
+        Villager.Profession.NONE,
+        Villager.Type.SNOW,
+        3284.5, 115.5, 362.5, 0f
+    ),
+    SHEN_DANTAFUZEREN(
+        "shen_dantafuzeren",
+        "§a§l丹塔负责人",
+        Villager.Profession.NONE,
+        Villager.Type.SNOW,
+        3346.5, 120.5, 358.5, 0f
+    ),
+    RENHUANGXUANYUANSHI(
+        "renhuangxuanyuanshi",
+        "§a§l人皇-轩辕氏",
+        Villager.Profession.MASON,
+        Villager.Type.PLAINS,
+        179.5, 68.5, -165.5, 0f
     );
 
 

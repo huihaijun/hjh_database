@@ -1,6 +1,7 @@
 package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.element_zf.FormationDamageEvent
 import org.bukkit.Color
 import org.bukkit.FluidCollisionMode
@@ -34,23 +35,7 @@ internal fun enhancedMagicDamage(plugin: Hjh_database, attacker: Player, target:
 
 /** 统一的阵法伤害入口：标记伤害来源，并彻底取消本次伤害的无敌帧。 */
 internal fun formationMagicDamage(plugin: Hjh_database, attacker: Player, target: LivingEntity, damage: Double) {
-    if (damage <= 0.0 || !target.isValid || target.isDead) return
-    val effectiveHealthBefore = target.health + target.absorptionAmount
-    target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-    val previousMaximum = target.maximumNoDamageTicks
-    target.noDamageTicks = 0
-    target.maximumNoDamageTicks = 0
-    try {
-        target.damage(damage, attacker)
-    } finally {
-        if (target.hasMetadata("HJH_MAGIC_DAMAGE")) {
-            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
-        }
-        target.noDamageTicks = 0
-        target.maximumNoDamageTicks = previousMaximum
-    }
-    val effectiveHealthAfter = if (target.isDead) 0.0 else target.health + target.absorptionAmount
-    val actualDamage = (effectiveHealthBefore - effectiveHealthAfter).coerceIn(0.0, effectiveHealthBefore)
+    val actualDamage = FormationMagicDamage.deal(plugin, attacker, target, damage)
     if (actualDamage > 0.0) {
         plugin.server.pluginManager.callEvent(FormationDamageEvent(attacker, target, damage, actualDamage))
     }

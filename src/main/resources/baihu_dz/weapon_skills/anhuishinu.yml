@@ -1,11 +1,15 @@
 active:
   enable: true
-  cooldown: 5.0
+  cooldown: 8.0
   ignore_cool_reduce: true
-  message: "&b&l武器技【寒骨箭】已发动"
-  damage_multiplier: 2.4
-  range: 15.0
-  half_width: 0.5
-  vertical_tolerance: 1.35
+  message: "&b&l武器技【寒山游猎】已发动"
+  hunting_duration: 5.0
+  stamina_per_second: 4
+  saturation_per_second: 2.0
+  enhanced_shots: 3
+  enhanced_duration: 10.0
+  enhanced_shot_cooldown: 0.5
+  bonus_damage_multiplier: 1.0
+  pierce_level: 127
   slow_seconds: 5.0
   slow_amplifier: 1

@@ -144,7 +144,8 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         inv.setItem(13, createNodeItem(Material.FLINT, "§e锋锐之金", "进攻属性 +1", data.goldPoints, "gold", playerJob, remainingPoints))
         inv.setItem(29, createNodeItem(Material.MELON_SEEDS, "§a生机之木", "最大生命 +6", data.woodPoints, "wood", playerJob, remainingPoints))
         inv.setItem(33, createNodeItem(Material.WHEAT_SEEDS, "§9灵动之水", "冷却缩减 +2%", data.waterPoints, "water", playerJob, remainingPoints))
-        inv.setItem(48, createNodeItem(Material.CHARCOAL, "§c暴烈之火", "暴击率 +4%", data.firePoints, "fire", playerJob, remainingPoints))
+        val fireStat = if (playerJob == 2 || playerJob == 3) "法穿率 +4%" else "暴击率 +4%"
+        inv.setItem(48, createNodeItem(Material.CHARCOAL, "§c暴烈之火", fireStat, data.firePoints, "fire", playerJob, remainingPoints))
         inv.setItem(50, createNodeItem(Material.PUMPKIN_SEEDS, "§6坚韧之土", "护甲 +6", data.earthPoints, "earth", playerJob, remainingPoints))
     }
 

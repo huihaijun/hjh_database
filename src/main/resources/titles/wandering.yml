@@ -1,0 +1,10 @@
+# 云游称号。配置顺序即同解锁状态下的菜单顺序。
+# 示例：
+# titles:
+#   wandering_example:
+#     material: COMPASS
+#     name: "&b云游四海"
+#     lore:
+#       - "&7踏遍山河的证明"
+titles: {}
+

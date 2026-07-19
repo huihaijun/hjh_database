@@ -27,7 +27,54 @@ internal class DatabaseSchema(
         createJianghuXindeTable()
         createElementCrystalTable()
         createFarmingTable()
+        createBusuanTable()
+        createTitleTables()
         updateTables()
+    }
+
+    private fun createBusuanTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS qixiazhen_busuan (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32),
+                request_date VARCHAR(10) NOT NULL,
+                fortune_id VARCHAR(64),
+                updated_at BIGINT DEFAULT 0
+            );
+            """.trimIndent()
+        )
+    }
+
+    private fun createTitleTables() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_title_profiles (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32) NOT NULL,
+                equipped_title_id VARCHAR(128),
+                show_chat INTEGER NOT NULL DEFAULT 1,
+                show_overhead INTEGER NOT NULL DEFAULT 0,
+                show_tab INTEGER NOT NULL DEFAULT 0,
+                updated_at BIGINT NOT NULL DEFAULT 0
+            );
+            """.trimIndent()
+        )
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_titles (
+                player_uuid VARCHAR(36) NOT NULL,
+                title_id VARCHAR(128) NOT NULL,
+                custom_text TEXT,
+                obtained_at BIGINT NOT NULL,
+                obtained_source VARCHAR(128) NOT NULL,
+                PRIMARY KEY (player_uuid, title_id)
+            );
+            """.trimIndent()
+        )
+        executeSql(
+            "CREATE INDEX IF NOT EXISTS idx_player_titles_title_id ON player_titles(title_id);"
+        )
     }
 
     private fun createElementCrystalTable() {
@@ -56,6 +103,7 @@ internal class DatabaseSchema(
                     safeAddColumn(stmt, "player_data", "exp", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_data", "exp_curve_version", "INT DEFAULT 1")
                     safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)")
+                    safeAddColumn(stmt, "player_data", "money", "DOUBLE DEFAULT 0")
                     safeAddColumn(stmt, "player_data", "total_rarity", "INT DEFAULT 0")
 
                     // 2. 修复 player_element_zf_lvl
@@ -145,6 +193,7 @@ internal class DatabaseSchema(
                 zf_str DOUBLE DEFAULT 0, 
                 cool_reduce DOUBLE DEFAULT 0, 
                 lingli DOUBLE DEFAULT 0, 
+                money DOUBLE DEFAULT 0,
                 total_rarity INT DEFAULT 0
             );
         """.trimIndent()
@@ -366,37 +415,23 @@ internal class DatabaseSchema(
     }
 
     private fun createFarmingTable() {
-        executeSql(
-            """
-            CREATE TABLE IF NOT EXISTS player_farming_profile (
-                uuid VARCHAR(36) PRIMARY KEY,
-                player_name VARCHAR(32),
-                max_fields INT DEFAULT 1,
-                total_harvests INT DEFAULT 0,
-                updated_at BIGINT DEFAULT 0
-            );
-            """.trimIndent()
-        )
+        // 旧版灵田是 GUI 九宫格槽位。新版改为世界田位，按需求直接清空旧数据结构。
+        executeSql("DROP TABLE IF EXISTS player_farming_fields;")
+        executeSql("DROP TABLE IF EXISTS player_farming_profile;")
 
         executeSql(
             """
-            CREATE TABLE IF NOT EXISTS player_farming_fields (
-                uuid VARCHAR(36) NOT NULL,
+            CREATE TABLE IF NOT EXISTS farm_player_plots (
+                player_uuid VARCHAR(36) NOT NULL,
                 player_name VARCHAR(32),
-                field_index INT NOT NULL,
-                is_unlocked INT DEFAULT 0,
-                plant_type VARCHAR(64),
+                plot_id BIGINT NOT NULL,
+                crop_id VARCHAR(64),
+                seed_resource_id VARCHAR(128),
                 planted_at BIGINT DEFAULT 0,
                 matures_at BIGINT DEFAULT 0,
-                growth_stage INT DEFAULT 0,
-                accelerator_id VARCHAR(64),
-                booster_id VARCHAR(64),
-                protection_id VARCHAR(64),
-                protection_until BIGINT DEFAULT 0,
-                yield_penalty DOUBLE DEFAULT 0.0,
-                delay_penalty_ms BIGINT DEFAULT 0,
+                yield_multiplier DOUBLE DEFAULT 1.0,
                 updated_at BIGINT DEFAULT 0,
-                PRIMARY KEY (uuid, field_index)
+                PRIMARY KEY (player_uuid, plot_id)
             );
             """.trimIndent()
         )

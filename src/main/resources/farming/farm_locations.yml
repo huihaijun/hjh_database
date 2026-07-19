@@ -1,0 +1,5 @@
+# 灵田设施位置。由插件自动维护，请勿在服务器运行时手动修改。
+next_plot_id: 1
+next_controller_id: 1
+plots: {}
+controllers: {}

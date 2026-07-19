@@ -1,0 +1,113 @@
+# 灵田种子：物品外观和种植参数统一配置。
+farm_seed_xiaomai:
+  material: BEETROOT_SEEDS
+  name: "&b小麦种子"
+  rarity: 1
+  lore:
+    - "&7&o普普通通的小麦种子"
+    - "&7&o去灵田里种植试试吧"
+  crop_id: xiaomai
+  mature_seconds: 60
+  harvest_amount: [3, 5]
+
+moguzhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b蘑菇种子"
+  rarity: 1
+  lore:
+    - "&7&o能种出蘑菇的种子"
+    - "&7&o去灵田种植试试吧"
+  crop_id: mogu
+  mature_seconds: 600
+  harvest_amount: [5, 6]
+
+cuiyuguazhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b翠玉瓜种子"
+  rarity: 2
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f30分钟"
+    - "&a收获数量 &8» &f48~64"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: cuiyugua
+  mature_seconds: 1800
+  harvest_amount: [48, 64]
+
+jinzhanlingzhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b金盏铃种子"
+  rarity: 2
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f45分钟"
+    - "&a收获数量 &8» &f24~48"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: jinzhanling
+  mature_seconds: 2700
+  harvest_amount: [24, 48]
+
+qilingzizhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b杞灵子种子"
+  rarity: 3
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f60分钟"
+    - "&a收获数量 &8» &f32~48"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: qilingzi
+  mature_seconds: 3600
+  harvest_amount: [32, 48]
+
+qixiataozhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b栖霞桃种子"
+  rarity: 3
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f45分钟"
+    - "&a收获数量 &8» &f16~32"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: qixiatao
+  mature_seconds: 2700
+  harvest_amount: [16, 32]
+
+wusedouzhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b五色豆种子"
+  rarity: 3
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f60分钟"
+    - "&a收获数量 &8» &f32~64"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: wusedou
+  mature_seconds: 3600
+  harvest_amount: [32, 64]
+
+yunfuzhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b云茯种子"
+  rarity: 3
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f55分钟"
+    - "&a收获数量 &8» &f16~24"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: yunfu
+  mature_seconds: 3300
+  harvest_amount: [16, 24]
+
+hongshuangjiaozhongzi:
+  material: BEETROOT_SEEDS
+  name: "&b红霜椒种子"
+  rarity: 3
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f45分钟"
+    - "&a收获数量 &8» &f10~15"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: hongshuangjiao
+  mature_seconds: 2700
+  harvest_amount: [10, 15]

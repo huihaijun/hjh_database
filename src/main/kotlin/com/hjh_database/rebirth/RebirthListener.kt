@@ -117,6 +117,7 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
         plugin.elementCrystalManager.resetPlayerData(player)
         plugin.warehouseManager.resetCachedData(player)
         plugin.playerManager.resetCachedData(player)
+        plugin.titleManager.reloadPlayerAfterReset(player)
 
         removeFromTeams(player)
 

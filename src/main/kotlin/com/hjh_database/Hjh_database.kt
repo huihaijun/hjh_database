@@ -16,10 +16,11 @@ import com.hjh_database.command.ResourceReloadCommand
 import com.hjh_database.command.StatsCommand
 import com.hjh_database.data.DatabaseManager
 import com.hjh_database.data.PlayerManager
-import com.hjh_database.farming.listener.FarmingEntranceListener
-import com.hjh_database.farming.listener.FarmingGuiListener
-import com.hjh_database.farming.listener.FarmingPlayerListener
-import com.hjh_database.farming.manager.FarmingManager
+import com.hjh_database.passbook.PassbookListener
+import com.hjh_database.qixiazhen.farming.listener.FarmingListener
+import com.hjh_database.qixiazhen.farming.manager.FarmingManager
+import com.hjh_database.qixiazhen.busuan.BusuanListener
+import com.hjh_database.qixiazhen.busuan.BusuanManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
@@ -34,6 +35,8 @@ import com.hjh_database.listener.CombatListener
 import com.hjh_database.listener.MenuListener
 import com.hjh_database.ui.TianjiUtilityMenus
 import com.hjh_database.listener.PlayerListener
+import com.hjh_database.listener.RaidPreventionListener
+import com.hjh_database.market.GlobalMarketManager
 import com.hjh_database.rebirth.RebirthListener
 import com.hjh_database.resource.ResourceListener
 import com.hjh_database.resource.ResourceManager
@@ -61,6 +64,8 @@ import com.hjh_database.spawner.impl.DesertSouthSkill
 import com.hjh_database.accessory.element.ElementCrystalManager
 import com.hjh_database.accessory.element.ElementCrystalGui
 import com.hjh_database.accessory.element.ElementCrystalInteractListener
+import com.hjh_database.title.TitleListener
+import com.hjh_database.title.TitleManager
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -111,7 +116,9 @@ class Hjh_database : JavaPlugin() {
     lateinit var elementCrystalManager: ElementCrystalManager
     lateinit var elementCrystalGui: ElementCrystalGui
     lateinit var farmingManager: FarmingManager
-
+    lateinit var busuanManager: BusuanManager
+    lateinit var globalMarketManager: GlobalMarketManager
+    lateinit var titleManager: TitleManager
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
     }
@@ -125,7 +132,6 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         this.databaseManager = DatabaseManager(this)
         this.playerManager = PlayerManager(this)
-
         this.weaponManager = WeaponManager(this)
         this.menuManager = MenuManager(this)
         this.elementZfManager = ElementZfManager(this)
@@ -148,6 +154,9 @@ class Hjh_database : JavaPlugin() {
         this.bgmManager = com.hjh_database.bgm.BgmManager(this)
         this.jobTrialManager = JobTrialManager(this)
         this.farmingManager = FarmingManager(this)
+        this.busuanManager = BusuanManager(this)
+        this.globalMarketManager = GlobalMarketManager(this)
+        this.titleManager = TitleManager(this)
 
         // 重华晶系统初始化
         this.chonghuaManager = ChonghuaManager(this)
@@ -223,8 +232,9 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(this.baihuMiasmaManager, this)
         pm.registerEvents(this.baihuTownFireManager, this)
-        pm.registerEvents(com.hjh_database.npc.listener.NpcInteractListener(this), this)
+        pm.registerEvents(PassbookListener(this), this)
         pm.registerEvents(com.hjh_database.listener.TestDummySignListener(this), this)
+        pm.registerEvents(RaidPreventionListener(this), this)
 
         // 2. 技能与战斗相关监听
         pm.registerEvents(com.hjh_database.listener.SpellListener(this), this)
@@ -237,6 +247,8 @@ class Hjh_database : JavaPlugin() {
         // 3. 独立系统与GUI监听
         pm.registerEvents(com.hjh_database.skill.medical.gui.MedicalEtchGui(this), this)
         pm.registerEvents(this.questGui, this)
+        pm.registerEvents(com.hjh_database.quest.impl.main.shen.Shen_07TriggerListener(this), this)
+        pm.registerEvents(com.hjh_database.quest.impl.main.shen.ShenJobTicketListener(this), this)
         pm.registerEvents(AlchemyListener(this), this)
         pm.registerEvents(this.elementZfGui, this)
         pm.registerEvents(this.chonghuaManager, this)
@@ -256,9 +268,10 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseGuiListener(this), this)
         // 【新增】医术试炼监听
         pm.registerEvents(this.medicalTrialManager, this)
-        pm.registerEvents(FarmingEntranceListener(this.farmingManager), this)
-        pm.registerEvents(FarmingGuiListener(this.farmingManager), this)
-        pm.registerEvents(FarmingPlayerListener(this.farmingManager), this)
+        pm.registerEvents(FarmingListener(this.farmingManager), this)
+        pm.registerEvents(BusuanListener(this.busuanManager), this)
+        pm.registerEvents(this.globalMarketManager, this)
+        pm.registerEvents(TitleListener(this.titleManager), this)
 
         this.baihuMiasmaManager.start()
         this.baihuTownFireManager.start()
@@ -300,6 +313,7 @@ class Hjh_database : JavaPlugin() {
                 // 【新增】同时加载玩家的元素结晶数据！
                 elementCrystalManager.loadPlayer(player)
                 farmingManager.loadAndCache(player)
+                titleManager.loadPlayer(player)
             }
         }, 10L)
 
@@ -339,6 +353,14 @@ class Hjh_database : JavaPlugin() {
         // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
         TianjiUtilityMenus.closeOpenMenusForDisable()
 
+        if (::globalMarketManager.isInitialized) {
+            globalMarketManager.shutdown()
+        }
+
+        if (::titleManager.isInitialized) {
+            titleManager.shutdown()
+        }
+
         if (::databaseManager.isInitialized) {
             databaseManager.cancelQueuedPlayerSaves()
         }
@@ -369,6 +391,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::farmingManager.isInitialized) {
             farmingManager.shutdown()
+        }
+
+        if (::busuanManager.isInitialized) {
+            busuanManager.shutdown()
         }
 
         // 【新增】关服时清理所有正在进行的医术试炼，防止 BossBar 残留或刷出幽灵实体

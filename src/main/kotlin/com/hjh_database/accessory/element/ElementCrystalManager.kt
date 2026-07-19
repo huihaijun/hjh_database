@@ -1,6 +1,7 @@
 package com.hjh_database.accessory.element
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.listener.FormationMagicDamage
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -227,13 +228,17 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
                                 cancel()
                                 return
                             }
-                            victim.noDamageTicks = 0
-                            val prevMax = victim.maximumNoDamageTicks
-                            victim.maximumNoDamageTicks = 0
-                            victim.setMetadata("HJH_MAGIC_DAMAGE", org.bukkit.metadata.FixedMetadataValue(plugin, tickDamage))
-                            victim.damage(tickDamage, player)
-                            victim.noDamageTicks = 0
-                            victim.maximumNoDamageTicks = prevMax
+                            if (pData.job == 2 || pData.job == 3) {
+                                FormationMagicDamage.deal(plugin, player, victim, tickDamage)
+                            } else {
+                                victim.noDamageTicks = 0
+                                val prevMax = victim.maximumNoDamageTicks
+                                victim.maximumNoDamageTicks = 0
+                                victim.setMetadata("HJH_MAGIC_DAMAGE", org.bukkit.metadata.FixedMetadataValue(plugin, tickDamage))
+                                victim.damage(tickDamage, player)
+                                victim.noDamageTicks = 0
+                                victim.maximumNoDamageTicks = prevMax
+                            }
                             victim.world.spawnParticle(org.bukkit.Particle.FLAME, victim.location.add(0.0, 0.5, 0.0), 5, 0.2, 0.2, 0.2, 0.05)
                             ticksRun++
                             if (ticksRun >= 3) {

@@ -17,7 +17,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 object BaihuWestSkill : Listener {
     private const val TRIGGER_CHANCE = 0.30
-    private const val PLAYER_COOLDOWN_MS = 3000L
+    private const val PLAYER_COOLDOWN_MS = 10_000L
     private const val MIASMA_INCREASE = 20
     private const val NON_BAIHU_DAMAGE_MULTIPLIER = 0.70
 

@@ -143,6 +143,36 @@ heihuotu:
     - "&7&o乃是炼制丹药的基础辅材"
     - "&e[炼丹用品]"
 
+jinzhanling:
+  material: WHEAT
+  custom_model_data: 1001
+  name: "&b金盏铃"
+  rarity: 2
+  lore:
+    - "&7&o花开双色，初开如银铃，盛放时转为金黄"
+    - "&7&o摘下晒干炼药，消暑解毒，如清风徐来"
+  crop_id: jinzhanling
+
+qilingzi:
+  material: WHEAT
+  custom_model_data: 1002
+  name: "&b杞灵子"
+  rarity: 3
+  lore:
+    - "&7&o粒粒殷红如玛瑙，垂挂于矮枝之上"
+    - "&7&o甘甜微酸，日日服之可明目养神"
+  crop_id: qilingzi
+
+yunfu:
+  material: WHEAT
+  custom_model_data: 1005
+  name: "&b云茯"
+  rarity: 3
+  lore:
+    - "&7&o状如浮云，质轻而酥，偏爱生长于阴湿处"
+    - "&7&o晨间采撷时表面凝一层薄露，入药可涤荡体内浊气"
+  crop_id: yunfu
+
 xianrenzhang:
   material: cactus
   name: "&b仙人掌"

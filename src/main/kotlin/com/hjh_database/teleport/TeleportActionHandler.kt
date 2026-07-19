@@ -2,6 +2,7 @@ package com.hjh_database.teleport
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.quest.core.QuestStatus
 import org.bukkit.Bukkit
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
@@ -99,6 +100,15 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 }
                 return true // 检查通过，允许传送
             }
+            "ENTER_QIXIA_TOWN" -> {
+                if (data.questStatuses["side_strange_tree"] == null ||
+                    data.questStatuses["side_strange_tree"] == QuestStatus.LOCKED
+                ) {
+                    player.sendMessage("§7这树洞到底有啥用，搞不懂，还是离开吧……")
+                    player.sendMessage("§c请先完成前置任务")
+                    return false
+                }
+            }
         }
         return true
     }
@@ -111,7 +121,7 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
     fun handle(player: Player, data: PlayerData, actionStr: String): Boolean {
         when (actionStr) {
             // === 新增：选择种族-前往新手前置 ===
-            "CHOOSE_HUMAN_START", "CHOOSE_YAO_START" -> {
+            "CHOOSE_HUMAN_START", "CHOOSE_YAO_START", "CHOOSE_GOD_START" -> {
                 // 1. 处理队伍 (关闭友伤)
                 val board = Bukkit.getScoreboardManager().mainScoreboard
                 var team = board.getTeam("player")
@@ -126,8 +136,12 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 }
                 // 2. 修改状态 -> 1
                 data.updateStatus(1) // 这会自动更新 description
-                // 3. 修改种族：2=人族，4=妖族
-                data.race = if (actionStr == "CHOOSE_YAO_START") 4 else 2
+                // 3. 修改种族：0=神族，2=人族，4=妖族
+                data.race = when (actionStr) {
+                    "CHOOSE_GOD_START" -> 0
+                    "CHOOSE_YAO_START" -> 4
+                    else -> 2
+                }
                 // 4. 恢复满状态 (瞬间治疗 + 饱和)
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.INSTANT_HEALTH, 1, 255, false, false))
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1, 255, false, false))
@@ -200,12 +214,24 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1, 255, false, false))
                 // ★★★ 新增：根据种族自动接取第一个主线任务 ★★★
                 when (raceId) {
+                    0 -> plugin.questManager.acceptQuest(player, "main_shen_1")
                     2 -> plugin.questManager.acceptQuest(player, "main_ren_1")
                     4 -> plugin.questManager.acceptQuest(player, "main_yao_1")
                 }
                 // 4. 发送提示消息
                 player.sendMessage("§6恭喜正式进入盘古大陆。请与新手引导员进行交流，接取任务吧！")
                 return true // 需要保存数据
+            }
+            "ENTER_QIXIA_TOWN" -> {
+                player.addPotionEffect(PotionEffect(PotionEffectType.NAUSEA, 20 * 7, 0, false, false, true))
+
+                if (data.questStatuses["side_strange_tree"] == QuestStatus.IN_PROGRESS &&
+                    data.questProgress["side_strange_tree"] == 1
+                ) {
+                    plugin.questManager.updateProgress(player, "side_strange_tree", 2)
+                    player.sendMessage("§e你感到一阵头晕，前方好像有光亮和人声，去找人问问情况吧")
+                }
+                return false
             }
             // === 职业体验-战士 ===
             "JOB_TRIAL_WARRIOR" -> {

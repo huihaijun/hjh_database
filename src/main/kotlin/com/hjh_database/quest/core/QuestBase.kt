@@ -16,6 +16,11 @@ abstract class QuestBase(
 ) {
     abstract val description: List<String>
     open val raceLimit: Int? = null // 限制种族ID
+    /**
+     * 用于跨种族或跨区域主线的显式前置任务。
+     * 非空时，任务刷新和自动解锁均以这些任务的完成状态为准。
+     */
+    open val requiredCompletedQuestIds: Set<String> = emptySet()
 
     open fun canAccept(player: Player, data: PlayerData): Boolean {
         return raceLimit == null || raceLimit == data.race

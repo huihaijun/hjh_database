@@ -29,9 +29,9 @@ internal class DatabasePlayerRepository(
             INSERT INTO player_data (
                 uuid, player_name, lv, exp, exp_curve_version, job, race, attack, archer_damage, armor,
                 speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance,
-                zf_str, cool_reduce, lingli, total_rarity
+                zf_str, cool_reduce, lingli, money, total_rarity
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 player_name=excluded.player_name,
                 lv=excluded.lv,
@@ -52,6 +52,7 @@ internal class DatabasePlayerRepository(
                 zf_str=excluded.zf_str,
                 cool_reduce=excluded.cool_reduce,
                 lingli=excluded.lingli,
+                money=excluded.money,
                 total_rarity=excluded.total_rarity
         """.trimIndent()
 
@@ -137,7 +138,8 @@ internal class DatabasePlayerRepository(
                         ps.setDouble(18, data.zfStr)
                         ps.setDouble(19, data.coolReduce)
                         ps.setDouble(20, data.lingli)
-                        ps.setInt(21, data.totalRarity)
+                        ps.setDouble(21, data.money)
+                        ps.setInt(22, data.totalRarity)
                         ps.executeUpdate()
                     }
 
@@ -500,6 +502,9 @@ internal class DatabasePlayerRepository(
                                 data.zfStr = rs.getDouble("zf_str")
                                 data.coolReduce = rs.getDouble("cool_reduce")
                                 data.lingli = rs.getDouble("lingli")
+                                try {
+                                    data.money = rs.getDouble("money")
+                                } catch (e: Exception) {}
                                 try {
                                     data.totalRarity = rs.getInt("total_rarity")
                                 } catch (e: Exception) {}

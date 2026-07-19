@@ -100,7 +100,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         val activeWd = getActiveManaFlag(p) ?: return
 
         // 2. 发送开始提示
-        sendActionBar(p, "§a[医术] §7你已开始凝聚灵力...")
+        sendActionBar(p, "§a[医术] §7你已开始凝聚灵力... ${formatLingliStatus(p)}")
 
         // 2. 开启循环任务
         val taskId = object : BukkitRunnable() {
@@ -135,12 +135,8 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                 data.addLingli(regenEvent.amount.coerceAtLeast(0.0))
 
                 // 2. 获取数值用于显示 (假设 PlayerData 有 getMaxLingli 方法)
-                val currentLingli = data.lingli
-                val maxLingli = data.maxLingli // 使用你 PlayerData 里的方法
-
                 // 3. 发送 ActionBar
-                val barMsg = "§b☯ 当前灵力值：" + String.format("%.1f", currentLingli) + "/" + String.format("%.0f", maxLingli) + " ☯"
-                sendActionBar(p, barMsg)
+                sendActionBar(p, formatLingliStatus(p))
                 p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, remainingTicks + 5, 2, false, false, false))
                 // 特效 (绿色粒子环绕)
                 p.world.spawnParticle(Particle.HAPPY_VILLAGER, p.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.5, 0.3, 0.0)
@@ -155,8 +151,14 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         if (chargingTasks.containsKey(p.uniqueId)) {
             val taskId = chargingTasks.remove(p.uniqueId)!!
             plugin.server.scheduler.cancelTask(taskId)
-            sendActionBar(p, "§a[医术] §c你已停止凝聚灵力...")
+            sendActionBar(p, "§a[医术] §c你已停止凝聚灵力... ${formatLingliStatus(p)}")
         }
+    }
+
+    private fun formatLingliStatus(player: Player): String {
+        val data = plugin.playerManager.getData(player.uniqueId)
+            ?: return "§b☯ 当前灵力值：--/-- ☯"
+        return "§b☯ 当前灵力值：${String.format("%.1f", data.lingli)}/${String.format("%.0f", data.maxLingli)} ☯"
     }
 
     private fun sendActionBar(player: Player, message: String) {

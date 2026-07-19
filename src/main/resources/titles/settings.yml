@@ -1,0 +1,12 @@
+# 称号系统只在插件启动和管理员执行 title reload 时读取这些 YAML。
+# 玩家获得、佩戴、改名、显示开关和获得时间均存储在 SQLite 数据库中。
+custom:
+  max_titles: 3
+  max_name_length: 8
+  costs: [20, 40, 60]
+
+display_defaults:
+  chat: true
+  overhead: false
+  tab: false
+

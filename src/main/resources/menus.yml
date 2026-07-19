@@ -27,9 +27,17 @@ gui:
         - "%main_stat_line%"
         - "&f抗击退: &b%knock_back_res%"
         - "&f冷却缩减: &b%CoolReduce%"
-        - "&f暴击率: &b%crit_chance%"
+        - "&f%crit_stat_name%: &b%crit_chance%"
         - "&f生命: &b%current_health% / %max_health%"
         - "&f护甲: &b%armor%"
         - "&f灵力: &b%lingli%"
         - "&f财产: &b%money%"
         - "&7----------------"
+    title_system:
+      slot: 49
+      material: MAP
+      name: "&6&l称号系统"
+      lore:
+        - "&7查看、装扮与购买称号"
+        - ""
+        - "&b▶ 点击打开"

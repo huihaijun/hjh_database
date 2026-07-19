@@ -1,6 +1,7 @@
 package com.hjh_database.teleport
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.quest.core.QuestStatus
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Sound
@@ -72,6 +73,9 @@ class TeleportManager(private val plugin: Hjh_database) {
             val raceList = getIntegerValues(config, "$path.conditions.race.values")
             val raceMsg = config.getString("$path.conditions.race.message")
 
+            val requiredCompletedQuestId = config.getString("$path.conditions.completed_quest.id")
+            val completedQuestMsg = config.getString("$path.conditions.completed_quest.message")
+
             // --- 动作 (传送成功后执行) ---
             val rewriteStatus = if (config.contains("$path.actions.rewrite_status")) config.getInt("$path.actions.rewrite_status") else null
             val setJob = if (config.contains("$path.actions.set_job")) config.getInt("$path.actions.set_job") else null
@@ -90,6 +94,7 @@ class TeleportManager(private val plugin: Hjh_database) {
                 minLevel = minLv, levelFailMsg = lvMsg,
                 allowedStatus = statusList, statusFailMsg = statusMsg,
                 allowedRaces = raceList, raceFailMsg = raceMsg,
+                requiredCompletedQuestId = requiredCompletedQuestId, completedQuestFailMsg = completedQuestMsg,
                 // Actions
                 rewriteStatus = rewriteStatus,
                 setJob = setJob,
@@ -180,6 +185,12 @@ class TeleportManager(private val plugin: Hjh_database) {
             player.sendMessage(point.raceFailMsg?.replace("&", "§") ?: "§c种族不符。")
             return
         }
+        if (point.requiredCompletedQuestId != null &&
+            data.questStatuses[point.requiredCompletedQuestId] != QuestStatus.COMPLETED
+        ) {
+            player.sendMessage(point.completedQuestFailMsg?.replace("&", "§") ?: "§c请先完成前置任务。")
+            return
+        }
 
         // ★★★ 新增：前置硬编码条件检查，不满足直接 return 拦截传送 ★★★
         if (point.customAction != null) {
@@ -252,6 +263,7 @@ class TeleportManager(private val plugin: Hjh_database) {
         val minLevel: Int, val levelFailMsg: String?,
         val allowedStatus: List<Int>, val statusFailMsg: String?,
         val allowedRaces: List<Int>, val raceFailMsg: String?,
+        val requiredCompletedQuestId: String?, val completedQuestFailMsg: String?,
         // Actions
         val rewriteStatus: Int?,
         val setJob: Int?,

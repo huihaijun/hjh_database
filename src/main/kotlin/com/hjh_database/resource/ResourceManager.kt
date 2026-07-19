@@ -1,12 +1,22 @@
 ﻿package com.hjh_database.resource
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.qixiazhen.busuan.BusuanItemLore
 import io.papermc.paper.datacomponent.DataComponentTypes
+import io.papermc.paper.datacomponent.item.Consumable
+import io.papermc.paper.datacomponent.item.FoodProperties
+import io.papermc.paper.datacomponent.item.UseCooldown
+import io.papermc.paper.datacomponent.item.consumable.ConsumeEffect
+import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation
+import io.papermc.paper.registry.RegistryKey
+import io.papermc.paper.registry.set.RegistrySet
+import net.kyori.adventure.key.Key
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.Registry
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemFlag
@@ -14,10 +24,14 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import java.io.File
 import java.util.ArrayList
 import java.util.HashMap
+import java.util.Locale
 import java.util.logging.Level
+import kotlin.math.roundToInt
 
 class ResourceManager(private val plugin: Hjh_database) {
 
@@ -110,9 +124,11 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (!folder.exists()) {
             folder.mkdirs()
         }
-        val farmingItems = File(plugin.dataFolder, "resources/items/farming.yml")
-        if (!farmingItems.exists()) {
-            saveBundledResource("items/farming.yml", farmingItems)
+        listOf("farm_seeds.yml", "farm_crops.yml", "farm_tools.yml", "farm_food.yml", "busuan.yml").forEach { name ->
+            val target = File(folder, name)
+            if (!target.exists()) {
+                saveBundledResource("items/$name", target)
+            }
         }
 
         // Kotlin Lambda 鍐欐硶
@@ -220,6 +236,11 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (item == null || item.type == Material.AIR || !item.hasItemMeta()) return false
         val meta = item.itemMeta ?: return false
 
+        // 特殊 GUI 会在资源物品的克隆上附加临时名称或 Lore（例如市场售价、购买时间）。
+        // 免刷新标记必须在核心入口统一判断，否则 refreshInventory/全量资源重载会绕过
+        // ResourceListener 的保护，再次用 YAML 模板覆盖整份 ItemMeta。
+        if (meta.persistentDataContainer.has(keyIgnoreRefresh, PersistentDataType.INTEGER)) return false
+
         // 妫€鏌ユ槸鍚︽槸鏈彃浠剁殑鑷畾涔夌墿鍝?
         if (!meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) return false
         val id = meta.persistentDataContainer.get(keyId, PersistentDataType.STRING) ?: return false
@@ -268,6 +289,7 @@ class ResourceManager(private val plugin: Hjh_database) {
                 applyResourceToMeta(newMeta, res)
                 item.itemMeta = newMeta
                 applyResourceCooldownGroup(item, res)
+                applyResourceFoodComponents(item, res)
                 isRefreshed = true
             }
         }
@@ -277,6 +299,10 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (isRefreshed && skillId != null) {
             // 璋冪敤 MedicalManager 鎶婂尰鏈嫭鏈夌殑灞炴€ч噸鏂扳€滄嫾鈥濅笂鍘伙紒
             plugin.medicalManager.rebuildEtchedBanner(item, skillId)
+        }
+        if (isRefreshed) {
+            // Resource 模板会覆盖 lore；卜算签运的获得日期保存在 PDC 中，刷新后必须重新附加。
+            BusuanItemLore.restore(plugin, item, id)
         }
         // ==========================================================================
 
@@ -301,7 +327,91 @@ class ResourceManager(private val plugin: Hjh_database) {
             item.itemMeta = meta
         }
         applyResourceCooldownGroup(item, res)
+        applyResourceFoodComponents(item, res)
         return item
+    }
+
+    private fun applyResourceFoodComponents(item: ItemStack, res: ResourceItem) {
+        val food = res.food
+        if (food == null) {
+            // farm_food 项删除 hunger 后应立即失去食物能力，而不是退回底材的原版食物属性。
+            if (res.id?.startsWith("farm_food_") == true) {
+                item.unsetData(DataComponentTypes.FOOD)
+                item.unsetData(DataComponentTypes.CONSUMABLE)
+                item.unsetData(DataComponentTypes.USE_COOLDOWN)
+            }
+            return
+        }
+
+        item.setData(
+            DataComponentTypes.FOOD,
+            FoodProperties.food()
+                // 配置按玩家可见的饥饿条格数填写；原版 nutrition 以半格为 1 点。
+                .nutrition((food.hunger * 2.0).roundToInt())
+                .saturation(food.saturation)
+                .canAlwaysEat(food.canAlwaysEat)
+                .build()
+        )
+
+        val consumable = Consumable.consumable()
+            .consumeSeconds(food.eatSeconds)
+            .animation(ItemUseAnimation.EAT)
+            .sound(Key.key("minecraft:entity.generic.eat"))
+            .hasConsumeParticles(true)
+
+        val clearTypes = food.clearEffects.mapNotNull { configured ->
+            resolvePotionEffectType(configured).also { resolved ->
+                if (resolved == null) plugin.logger.warning("食物 ${res.id} 配置了无效的清除效果：$configured")
+            }
+        }
+        if (clearTypes.isNotEmpty()) {
+            consumable.addEffect(
+                ConsumeEffect.removeEffects(RegistrySet.keySetFromValues(RegistryKey.MOB_EFFECT, clearTypes))
+            )
+        }
+
+        food.potionEffects.forEach { configured ->
+            val type = resolvePotionEffectType(configured.type)
+            if (type == null) {
+                plugin.logger.warning("食物 ${res.id} 配置了无效的药水效果：${configured.type}")
+                return@forEach
+            }
+            if (configured.chancePercent <= 0.0) return@forEach
+            val effect = PotionEffect(
+                type,
+                (configured.durationSeconds * 20.0).roundToInt().coerceAtLeast(1),
+                configured.level - 1,
+                configured.ambient,
+                configured.particles,
+                configured.icon
+            )
+            consumable.addEffect(
+                ConsumeEffect.applyStatusEffects(listOf(effect), (configured.chancePercent / 100.0).toFloat())
+            )
+        }
+        item.setData(DataComponentTypes.CONSUMABLE, consumable.build())
+
+        val cooldown = food.cooldownSeconds
+        if (cooldown == null) {
+            item.unsetData(DataComponentTypes.USE_COOLDOWN)
+        } else {
+            val group = res.id.orEmpty().lowercase(Locale.ROOT).replace(Regex("[^a-z0-9/._-]"), "_")
+            item.setData(
+                DataComponentTypes.USE_COOLDOWN,
+                UseCooldown.useCooldown(cooldown)
+                    .cooldownGroup(Key.key(plugin.name.lowercase(Locale.ROOT), group))
+                    .build()
+            )
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun resolvePotionEffectType(input: String): PotionEffectType? {
+        val trimmed = input.trim()
+        PotionEffectType.getByName(trimmed.uppercase(Locale.ROOT))?.let { return it }
+        val rawKey = if (':' in trimmed) trimmed.lowercase(Locale.ROOT) else "minecraft:${trimmed.lowercase(Locale.ROOT)}"
+        val key = NamespacedKey.fromString(rawKey) ?: return null
+        return Registry.POTION_EFFECT_TYPE[key]
     }
 
     private fun applyResourceCooldownGroup(item: ItemStack, res: ResourceItem) {

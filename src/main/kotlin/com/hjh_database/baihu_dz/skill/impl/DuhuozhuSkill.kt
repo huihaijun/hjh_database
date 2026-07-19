@@ -6,6 +6,7 @@ import com.hjh_database.baihu_dz.BaihuWeaponData
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillResult
 import com.hjh_database.data.PlayerData
+import com.hjh_database.listener.FormationMagicDamage
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
@@ -212,16 +213,10 @@ class DuhuozhuSkill(
 
     private fun damageTarget(player: Player, target: LivingEntity, amount: Double) {
         BaihuEquipmentDamageTag.markTarget(plugin, target)
-        target.setMetadata("hjh_physical_skill", FixedMetadataValue(plugin, true))
-        target.noDamageTicks = 0
         try {
-            target.damage(amount, player)
+            FormationMagicDamage.deal(plugin, player, target, amount)
         } finally {
-            if (target.hasMetadata("hjh_physical_skill")) {
-                target.removeMetadata("hjh_physical_skill", plugin)
-            }
             BaihuEquipmentDamageTag.clearTarget(plugin, target)
-            target.noDamageTicks = 0
         }
     }
 

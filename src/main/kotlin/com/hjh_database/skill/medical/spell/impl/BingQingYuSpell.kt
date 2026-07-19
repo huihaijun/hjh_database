@@ -3,16 +3,29 @@ package com.hjh_database.skill.medical.spell.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
+import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
+import org.bukkit.potion.PotionEffectTypeCategory
+import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
+    private val vulnerabilityParticleTasks = ConcurrentHashMap<UUID, BukkitTask>()
+
     companion object {
+        const val VULNERABILITY_UNTIL_METADATA = "hjh_bingqingyu_vulnerability_until"
+        const val VULNERABILITY_AMOUNT_METADATA = "hjh_bingqingyu_vulnerability_amount"
+
         // 定义需要驱散的负面药水效果集合 (适配 1.21.3)
         val NEGATIVE_EFFECTS = setOf(
             PotionEffectType.SLOWNESS,          // 缓慢
@@ -33,7 +46,9 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         // 读取配置
         val radius = config?.getDouble("radius", 10.0) ?: 10.0
-        val speedDuration = config?.getInt("speed_duration", 10) ?: 10
+        val speedDuration = config?.getInt("speed_duration", 20) ?: 20
+        val vulnerability = (config?.getDouble("vulnerability", 0.15) ?: 0.15).coerceAtLeast(0.0)
+        val vulnerabilityDuration = (config?.getDouble("vulnerability_duration", 7.0) ?: 7.0).coerceAtLeast(0.0)
         val speedTicks = speedDuration * 20
 
         val center = player.location
@@ -67,7 +82,7 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
             // 1. 遍历并驱散负面效果
             for (effect in target.activePotionEffects) {
-                if (NEGATIVE_EFFECTS.contains(effect.type)) {
+                if (effect.type.category == PotionEffectTypeCategory.HARMFUL || NEGATIVE_EFFECTS.contains(effect.type)) {
                     target.removePotionEffect(effect.type)
                     cleansed = true
                 }
@@ -84,6 +99,58 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             }
         }
 
+        // 冰清域易伤使用独立 metadata。重复施放只刷新该效果的持续时间，
+        // 不会覆盖毒火烛、夺魂丹等其他来源的易伤标记。
+        if (vulnerability > 0.0 && vulnerabilityDuration > 0.0) {
+            val radiusSquared = radius * radius
+            for (entity in nearbyEntities) {
+                val monster = entity as? LivingEntity ?: continue
+                val tags = monster.scoreboardTags
+                if (!tags.contains("panling") || !tags.contains("monster")) continue
+                if (!monster.isValid || monster.isDead || monster.location.distanceSquared(center) > radiusSquared) continue
+                applyVulnerability(monster, vulnerability, vulnerabilityDuration)
+            }
+        }
+
         return true
+    }
+
+    private fun applyVulnerability(target: LivingEntity, amount: Double, durationSeconds: Double) {
+        val until = System.currentTimeMillis() + (durationSeconds * 1000.0).toLong()
+        target.setMetadata(VULNERABILITY_UNTIL_METADATA, FixedMetadataValue(plugin, until))
+        target.setMetadata(VULNERABILITY_AMOUNT_METADATA, FixedMetadataValue(plugin, amount))
+
+        val center = target.location.clone().add(0.0, target.height * 0.55, 0.0)
+        target.world.spawnParticle(Particle.SNOWFLAKE, center, 18, 0.4, 0.55, 0.4, 0.025)
+        target.world.spawnParticle(
+            Particle.DUST, center, 12, 0.35, 0.45, 0.35, 0.0,
+            Particle.DustOptions(Color.fromRGB(120, 220, 255), 1.0f)
+        )
+
+        // 已有同类任务时仅刷新 metadata 中的截止时间，不叠加第二个易伤或粒子任务。
+        if (vulnerabilityParticleTasks.containsKey(target.uniqueId)) return
+
+        val task = object : BukkitRunnable() {
+            override fun run() {
+                val effectUntil = target.getMetadata(VULNERABILITY_UNTIL_METADATA)
+                    .firstOrNull { it.owningPlugin == plugin }
+                    ?.asLong() ?: 0L
+                if (!target.isValid || target.isDead || effectUntil <= System.currentTimeMillis()) {
+                    target.removeMetadata(VULNERABILITY_UNTIL_METADATA, plugin)
+                    target.removeMetadata(VULNERABILITY_AMOUNT_METADATA, plugin)
+                    vulnerabilityParticleTasks.remove(target.uniqueId)
+                    cancel()
+                    return
+                }
+
+                val particleCenter = target.location.clone().add(0.0, target.height * 0.55, 0.0)
+                target.world.spawnParticle(Particle.SNOWFLAKE, particleCenter, 4, 0.36, 0.45, 0.36, 0.012)
+                target.world.spawnParticle(
+                    Particle.DUST, particleCenter, 3, 0.3, 0.38, 0.3, 0.0,
+                    Particle.DustOptions(Color.fromRGB(95, 205, 255), 0.85f)
+                )
+            }
+        }.runTaskTimer(plugin, 0L, 5L)
+        vulnerabilityParticleTasks[target.uniqueId] = task
     }
 }

@@ -64,10 +64,25 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dungeon <trigger|set> - 副本系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medicaltest <玩家名> <view|add|remove> <试炼ID>")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin kw <list|reload|setlevel|setenergy> - 开物术管理")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin farm <get|info|reload|player> - 灵田管理")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin buqian <info|reset> <玩家> - 卜算管理")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin title <list|give|take|display|reload> - 称号管理")
             return true
         }
 
         val subCommand = args[0].lowercase()
+
+        if (subCommand == "farm") {
+            return plugin.farmingManager.handleAdminCommand(sender, args.drop(1))
+        }
+
+        if (subCommand == "buqian") {
+            return plugin.busuanManager.handleAdmin(sender, args.drop(1))
+        }
+
+        if (subCommand == "title" || subCommand == "称号") {
+            return plugin.titleManager.handleAdminCommand(sender, args.drop(1))
+        }
 
         if (subCommand == "baihudz") {
             if (args.size < 2) {
@@ -193,6 +208,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 重载传送点
             plugin.teleportManager.reload()
             plugin.farmingManager.reload()
+            plugin.titleManager.reloadAsync(sender)
             sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶/灵田)已重载！")
             return true
         }
@@ -1094,7 +1110,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest", "kw", "baihudz"
+                "medicaltest", "kw", "baihudz", "farm", "buqian", "title"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1104,6 +1120,26 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === 2. 二级及以上补全 (根据主指令分支) ===
         when (subCmd) {
+            "title", "称号" -> {
+                if (args.size == 2) {
+                    return listOf("list", "give", "take", "display", "reload")
+                        .filter { it.startsWith(args[1].lowercase()) }
+                }
+                if (args.size == 3 && args[1].lowercase() in setOf("list", "give", "take", "display")) {
+                    return null
+                }
+                if (args.size == 4 && args[1].lowercase() in setOf("give", "take")) {
+                    return plugin.titleManager.definitionIds().filter { it.startsWith(args[3].lowercase()) }
+                }
+                if (args.size == 4 && args[1].equals("display", true)) {
+                    return listOf("chat", "overhead", "tab").filter { it.startsWith(args[3].lowercase()) }
+                }
+                if (args.size == 5 && args[1].equals("display", true)) {
+                    return listOf("on", "off").filter { it.startsWith(args[4].lowercase()) }
+                }
+            }
+            "farm" -> return plugin.farmingManager.tabComplete(args.drop(1))
+            "buqian" -> return plugin.busuanManager.tabComplete(args.drop(1))
             "baihudz" -> {
                 if (args.size == 2) return listOf("station", "reload", "give").filter { it.startsWith(args[1].lowercase()) }
                 if (args.size == 3 && args[1].equals("give", true)) {

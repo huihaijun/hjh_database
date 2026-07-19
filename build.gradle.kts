@@ -10,6 +10,11 @@ version = "1.0-SNAPSHOT"
 kotlin {
     // 对应你 pom.xml 中的 Java 21 目标版本
     jvmToolchain(21)
+    // CrystalManager 中存在体量很大的 lore 生成方法，Kotlin 字节码优化器
+    // 在全量构建时会消耗异常多的内存；关闭该阶段不改变运行逻辑。
+    compilerOptions {
+        freeCompilerArgs.add("-Xno-optimize")
+    }
 }
 
 repositories {
@@ -54,6 +59,9 @@ tasks {
             into("hjh_database")
         }
         from("src/main/resources/chonghua_waypoints.yml") {
+            into("hjh_database")
+        }
+        from("src/main/resources/teleports.yml") {
             into("hjh_database")
         }
         into(pluginDir)

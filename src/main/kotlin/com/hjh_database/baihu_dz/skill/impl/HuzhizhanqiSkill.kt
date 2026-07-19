@@ -4,6 +4,7 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.baihu_dz.BaihuArtifactData
 import com.hjh_database.baihu_dz.BaihuEquipmentDamageTag
 import com.hjh_database.data.PlayerData
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.medical.spell.MedicalCastEvent
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -21,7 +22,6 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.inventory.ItemStack
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Transformation
 import org.joml.AxisAngle4f
@@ -233,17 +233,10 @@ class HuzhizhanqiSkill(private val plugin: Hjh_database) : Listener {
 
     private fun magicDamage(player: Player, target: LivingEntity, amount: Double) {
         BaihuEquipmentDamageTag.markTarget(plugin, target)
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, amount))
-        val previousMaximum = target.maximumNoDamageTicks
-        target.noDamageTicks = 0
-        target.maximumNoDamageTicks = 0
         try {
-            target.damage(amount, player)
+            FormationMagicDamage.deal(plugin, player, target, amount)
         } finally {
-            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
             BaihuEquipmentDamageTag.clearTarget(plugin, target)
-            target.noDamageTicks = 0
-            target.maximumNoDamageTicks = previousMaximum
         }
     }
 

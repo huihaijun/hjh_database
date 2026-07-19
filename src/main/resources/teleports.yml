@@ -32,6 +32,16 @@
 #      set_job: 0  # 踩上去就变成战士(id:0)
 #    # set_race: 1  custom_action: "ENTER_BOSS_ROOM"
 points:
+  东门-栖霞镇:
+    world: "world"
+    x: 629.77
+    y: 58.00
+    z: -438.91
+    yaw: 2389.68
+    pitch: 2.10
+    actions:
+      custom_action: "ENTER_QIXIA_TOWN"
+
   选择人族-前往新手前置:
     world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
     x: 1248.05
@@ -54,6 +64,17 @@ points:
     actions:
       custom_action: "CHOOSE_YAO_START"
       message: "&7你选择了[妖族]，正在前往新手前置之地"
+
+  选择神族-前往新手前置:
+    world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40      # 449.40 - 360 = 89.40 (角度归一化，效果一样)
+    pitch: 2.10
+    actions:
+      custom_action: "CHOOSE_GOD_START"
+      message: "&7你选择了[神族]，正在前往新手前置之地"
 
   新手前置回初始点:
     world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
@@ -296,6 +317,26 @@ points:
       status:
         values: [ 3, 4 ]
         message: "&c妖族守卫对你说,请先再多了解一下,再离开叶灵谷吧(请先完成主线剧情)"
+
+  神族-皇城:
+    world: "world"
+    x: 227.5
+    y: 49.0
+    z: 37.5
+    yaw: 0.0
+    pitch: 0.0
+    conditions:
+      completed_quest:
+        id: "main_shen_6"
+        message: "&c神族守卫提示你，请先对这里多熟悉下再离开吧（请先完成前置主线任务）"
+
+  皇城东门-妖族:
+    world: "world"
+    x: 2845.5
+    y: 48.0
+    z: 899.5
+    yaw: 180.0
+    pitch: -20.0
 
   镇妖塔-塔顶:
     world: "world"

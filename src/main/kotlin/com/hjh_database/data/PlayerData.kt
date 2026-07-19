@@ -32,7 +32,8 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var toughness: Double = 0.0
     var knockBackRes: Double = 0.0
     var attackSpeed: Double = 4.0
-    var critChance: Double = 0.0 // 暴击率
+    // 战士/弓箭手为暴击率；术士/医师会将其作为额外法穿率。
+    var critChance: Double = 0.0
 
     // --- 法术与公用战斗属性 ---
     var zfStr: Double = 0.0

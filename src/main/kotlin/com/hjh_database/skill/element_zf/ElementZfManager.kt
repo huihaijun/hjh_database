@@ -65,13 +65,49 @@ class ElementZfManager(private val plugin: Hjh_database) {
         enhancedSkills["EARTH"] = EnhancedEarthSkill(plugin)
     }
 
+    /**
+     * 获取玩家当前真正激活的术士法炉稀有度。
+     *
+     * 这里不直接读取物品上的 rarity NBT，而是复用武器激活检查，确保副手槽位、
+     * 职业和使用等级均满足要求；同时用阵法强度排除其他可能存在的术士副手物品。
+     */
+    fun getActiveFurnaceRarity(player: Player): Int? {
+        val furnace = plugin.playerManager.weaponManager.checkActiveWeapon(
+            player,
+            player.inventory.itemInOffHand,
+            40
+        ) ?: return null
+
+        if (furnace.reqJob != 2 || furnace.stats.getOrDefault("zf_str", 0.0) <= 0.0) {
+            return null
+        }
+        return furnace.rarity.coerceAtLeast(1)
+    }
+
+    /**
+     * 普通元素阵法的实际效果等级不能超过当前激活法炉的稀有度。
+     * 返回 0 表示没有可用的激活法炉，调用方不应继续释放阵法。
+     */
+    fun getEffectiveElementLevel(player: Player, learnedLevel: Int): Int {
+        if (learnedLevel <= 0) return 0
+        val furnaceRarity = getActiveFurnaceRarity(player) ?: return 0
+        return minOf(learnedLevel, furnaceRarity)
+    }
+
     fun castSkill(player: Player, type: String, data: PlayerData) {
         val skill = skills[type] ?: return
 
         // 1. 检查等级
-        val level = data.getElementLevel(type)
-        if (level <= 0) {
+        val learnedLevel = data.getElementLevel(type)
+        if (learnedLevel <= 0) {
             player.sendMessage(ChatColor.RED.toString() + "你尚未领悟 " + type + " 阵法！")
+            return
+        }
+
+        // 阵法升级等级仍完整保留，但本次释放的所有数值由激活法炉稀有度封顶。
+        val level = getEffectiveElementLevel(player, learnedLevel)
+        if (level <= 0) {
+            player.sendMessage(ChatColor.RED.toString() + "请先在副手激活可用的法炉！")
             return
         }
 

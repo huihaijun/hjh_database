@@ -58,8 +58,12 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
     private fun tryUnlockNextMainQuest(player: Player, data: PlayerData, currentQuest: QuestBase) {
         val nextQuest = questMap.values.find {
             it.type == QuestType.MAIN &&
-                it.raceLimit == currentQuest.raceLimit &&
-                it.order == currentQuest.order + 1
+                (
+                    currentQuest.id in it.requiredCompletedQuestIds ||
+                        (it.requiredCompletedQuestIds.isEmpty() &&
+                            it.raceLimit == currentQuest.raceLimit &&
+                            it.order == currentQuest.order + 1)
+                )
         }
 
         if (nextQuest != null) {
@@ -96,6 +100,13 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun hasRequiredPreviousQuest(data: PlayerData, quest: QuestBase, quests: List<QuestBase>): Boolean {
+        if (quest.requiredCompletedQuestIds.isNotEmpty()) {
+            return quest.requiredCompletedQuestIds.any { requiredQuestId ->
+                data.questStatuses[requiredQuestId] == QuestStatus.COMPLETED ||
+                    data.completedQuests.contains(requiredQuestId)
+            }
+        }
+
         if (quest.order <= 1) return true
 
         val prevQuest = quests.find {

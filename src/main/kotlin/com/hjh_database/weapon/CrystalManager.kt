@@ -360,7 +360,10 @@ class CrystalManager(private val plugin: Hjh_database) {
                         if (eData.goldPoints > 0) newLore.add("§f进攻属性 +${eData.goldPoints}")
                         if (eData.woodPoints > 0) newLore.add("§f最大生命 +${eData.woodPoints * 6.0}")
                         if (eData.waterPoints > 0) newLore.add("§f冷却缩减 +${eData.waterPoints * 2}%")
-                        if (eData.firePoints > 0) newLore.add("§f暴击率 +${eData.firePoints * 4}%")
+                        if (eData.firePoints > 0) {
+                            val fireStatName = if (playerData.job == 2 || playerData.job == 3) "法穿率" else "暴击率"
+                            newLore.add("§f$fireStatName +${eData.firePoints * 4}%")
+                        }
                         if (eData.earthPoints > 0) newLore.add("§f护甲 +${eData.earthPoints * 6.0}")
                     } else {
                         newLore.add("§7尚未分配属性点")

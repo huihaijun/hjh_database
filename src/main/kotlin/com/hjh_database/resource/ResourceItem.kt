@@ -21,6 +21,7 @@ class ResourceItem(
     val maxStackSize: Int? = null, // 【新增】可选的最大堆叠数
     val colorHex: String? = null, // 【新增】用于存储药水的 Hex 颜色
     val category: String = "OTHER",
+    val food: ResourceFood? = null,
 
     val onlyDoctor: Boolean = false,
     val reqLevel: Int = 1,
@@ -77,6 +78,7 @@ class ResourceItem(
         // 【新增】从 yml 读取 color 字段
         colorHex = sec.getString("color"),
         category = (sec.getString("category", "OTHER") ?: "OTHER").trim().uppercase(Locale.ROOT),
+        food = ResourceFood.from(sec),
         reqLevel = sec.getInt("req_level", 1),
         onlyDoctor = sec.getBoolean("only_doctor", false),
         baseExp = sec.getInt("base_exp", 5),

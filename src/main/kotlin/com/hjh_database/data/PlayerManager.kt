@@ -186,7 +186,8 @@ class PlayerManager(private val plugin: Hjh_database) {
             "side_archer_quiver_book",
             "side_warlock_backflow_book",
             "side_medical_taolizhi_book",
-            "side_tianjige_rumor"
+            "side_tianjige_rumor",
+            "side_strange_tree"
         )
         for (questId in questIds) {
             val quest = plugin.questManager.getQuest(questId) ?: continue
@@ -260,7 +261,7 @@ class PlayerManager(private val plugin: Hjh_database) {
                 data.forgeExp = dzData.forgeExp
                 data.forgeLicense = dzData.forgeLicense
             }
-            plugin.databaseManager.savePlayer(data)
+            plugin.databaseManager.savePlayerAsync(data)
         }
     }
 
@@ -289,6 +290,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         data.armor = 0.0
         data.knockBackRes = 0.0
         data.speed = 0.2
+        data.attackSpeed = 4.0
         data.critChance = 0.0
         data.coolReduce = 0.0
         data.totalRarity = 0
@@ -387,6 +389,10 @@ class PlayerManager(private val plugin: Hjh_database) {
         }
         data.coolReduce += bonuses.getOrDefault("cool_reduce", 0.0)
 
+        // weapons.yml 中的 attack_speed 表示原版最终攻击速度，而不是在 4.0 上继续累加。
+        // 没有激活武器时保持玩家原版基础值 4.0。
+        data.attackSpeed = bonuses["attack_speed"]?.coerceAtLeast(0.0) ?: 4.0
+
         // === 鐏靛姏璁＄畻閫昏緫 (淇濇寔鍘熸牱) ===
         // 鍏紡锛?0 + (绛夌骇 * 3)
         var baseLingli = 50.0 + (data.lv * 3.0)
@@ -448,6 +454,10 @@ class PlayerManager(private val plugin: Hjh_database) {
             val kb = min(1.0, max(0.0, data.knockBackRes))
             player.getAttribute(Attribute.KNOCKBACK_RESISTANCE)!!.baseValue = kb
         }
+
+        // 将武器配置的 attack_speed 同步到原版攻击冷却系统。
+        // 只设置 baseValue，不清除技能或其他系统附加的 AttributeModifier。
+        player.getAttribute(Attribute.ATTACK_SPEED)?.baseValue = data.attackSpeed
 
         if (player.getAttribute(Attribute.ARMOR) != null) {
             player.getAttribute(Attribute.ARMOR)!!.baseValue = 0.0

@@ -1,0 +1,7 @@
+events:
+  farm_disaster_insects:
+    name: "&c虫害"
+    lore:
+      - "&f银蠓群至，细如尘埃，啃噬{XX作物}，减产两成。"
+    message: "&c[虫害] &f银蠓群至，细如尘埃，啃噬{XX作物}，减产两成。"
+

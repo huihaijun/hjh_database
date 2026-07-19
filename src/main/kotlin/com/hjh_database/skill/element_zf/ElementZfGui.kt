@@ -132,12 +132,18 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
         val inv = Bukkit.createInventory(null, 27, guiTitle)
         val data = plugin.playerManager.getPlayerData(player) ?: return
         val config = plugin.elementZfManager.getConfig() ?: return
+        val furnaceRarity = plugin.elementZfManager.getActiveFurnaceRarity(player)
 
         val slots = listOf(11, 12, 13, 14, 15)
 
         for (i in elements.indices) {
             val el = elements[i]
             val currentLevel = data.elementLevels.getOrDefault(el.type, 1)
+            val effectiveLevel = if (furnaceRarity != null) {
+                minOf(currentLevel, furnaceRarity)
+            } else {
+                currentLevel
+            }
 
             val item = ItemStack(Material.GOLD_NUGGET)
             val meta = item.itemMeta
@@ -145,10 +151,20 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
             meta.setCustomModelData(el.modelData)
 
             val lore = mutableListOf<String>()
-            lore.add("§8当前等级: §e$currentLevel")
+            lore.add("§8阵法升级等级: §e$currentLevel")
+            if (furnaceRarity == null) {
+                lore.add("§c未激活可用法炉，以下仅预览升级等级效果")
+            } else {
+                lore.add("§8当前法炉稀有度: §b${furnaceRarity}阶")
+                lore.add("§8当前生效等级: §a${effectiveLevel}级")
+                if (effectiveLevel < currentLevel) {
+                    lore.add("§c受法炉限制，当前仅生效${effectiveLevel}级阵法效果")
+                }
+            }
             lore.add("")
 
-            val path = "skills.${el.type}.levels.$currentLevel"
+            // 描述与实际释放使用同一有效等级，避免界面显示高阶、释放却是低阶。
+            val path = "skills.${el.type}.levels.$effectiveLevel"
             when (el.type) {
                 "METAL" -> {
                     val range = config.getDouble("$path.range", 0.0)

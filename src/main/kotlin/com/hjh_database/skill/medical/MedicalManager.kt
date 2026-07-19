@@ -164,7 +164,7 @@ class MedicalManager(private val plugin: Hjh_database) {
         val skillId = bookMeta.persistentDataContainer.get(keySkillId, PersistentDataType.STRING) ?: return null
 
         if (isMedicalBanner(banner)) {
-            player.sendMessage("§c[绘制失败] §7这面旗帜上已经有医术了！")
+            player.sendMessage("§c请先将已有医术分离开来，再绘制新的医术")
             return null
         }
 

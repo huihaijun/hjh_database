@@ -9,41 +9,53 @@ import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
 import org.bukkit.event.EventHandler
+import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
-import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 
-/**
- * NPC 管理员编辑器 GUI
- */
+/** NPC 管理员编辑器：每页左右两栏，共 10 个交易项。 */
 @Suppress("DEPRECATION")
 class NpcAdminGui(
     private val plugin: Hjh_database,
     private val player: Player,
     private val templateId: String,
-    private val entityUuid: UUID? // 传入具体的实体UUID，用于删除操作
+    private val entityUuid: UUID?
 ) : InventoryHolder, Listener {
 
-    private val inventory: Inventory
+    private data class TradeSlots(val input1: Int, val input2: Int, val arrow: Int, val result: Int)
 
-    // 【新增】翻页与缓存机制
+    companion object {
+        private const val INVENTORY_SIZE = 54
+        private const val TRADE_AREA_SIZE = 45
+        private const val TRADES_PER_PAGE = 10
+        private const val CYCLE_INTERVAL_NANOS = 150_000_000L
+
+        private val PROFESSIONS by lazy { Registry.VILLAGER_PROFESSION.toList() }
+        private val VILLAGER_TYPES by lazy { Registry.VILLAGER_TYPE.toList() }
+        private val TRADE_SLOTS = buildList {
+            for (row in 0 until 5) {
+                val start = row * 9
+                add(TradeSlots(start, start + 1, start + 2, start + 3))
+                add(TradeSlots(start + 5, start + 6, start + 7, start + 8))
+            }
+        }
+        private val EDITABLE_SLOTS = TRADE_SLOTS
+            .flatMapTo(HashSet()) { listOf(it.input1, it.input2, it.result) }
+    }
+
+    private val inventory: Inventory = Bukkit.createInventory(this, INVENTORY_SIZE, "编辑NPC: $templateId")
+    private val localTrades = ArrayList<CustomTrade?>()
     private var currentPage = 0
-    private var localTrades = ArrayList<CustomTrade?>()
+    private var lastCycleAtNanos = 0L
 
     init {
-        inventory = Bukkit.createInventory(this, 54, "编辑NPC: $templateId")
-
-        // 初始化时，将已有的交易项加载进本地缓存中
-        val template = plugin.npcModule.manager.getTemplate(templateId)
-        if (template != null) {
-            localTrades.addAll(template.trades)
-        }
-
+        plugin.npcModule.manager.getTemplate(templateId)?.trades?.let(localTrades::addAll)
         loadContent()
         Bukkit.getPluginManager().registerEvents(this, plugin)
     }
@@ -51,238 +63,260 @@ class NpcAdminGui(
     override fun getInventory(): Inventory = inventory
 
     fun open() {
+        if (!player.isOp) {
+            player.sendMessage("§c只有管理员能编辑 NPC。")
+            HandlerList.unregisterAll(this)
+            return
+        }
         player.openInventory(inventory)
     }
 
     private fun loadContent() {
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
+        for (slot in 0 until TRADE_AREA_SIZE) inventory.setItem(slot, null)
 
-        // === 1. 加载交易项 ===
-        // 先清空交易区，防止刷新或翻页时残留
-        for (i in 0 until 45) {
-            inventory.setItem(i, null)
-        }
-
-        // 读取当前页的数据
         for (row in 0 until 5) {
-            val index = currentPage * 5 + row
-
-            // 如果缓存中有当前槽位的数据，就显示出来
-            if (index < localTrades.size) {
-                val trade = localTrades[index]
-                if (trade != null) {
-                    val rowStart = row * 9
-                    inventory.setItem(rowStart + 0, trade.ingredient1)
-                    inventory.setItem(rowStart + 1, trade.ingredient2)
-                    inventory.setItem(rowStart + 3, trade.result)
-                }
-            }
-
-            // 统一设置箭头
-            val arrowSlot = row * 9 + 2
-            inventory.setItem(arrowSlot, createItem(Material.ARROW, "§7-->"))
+            inventory.setItem(row * 9 + 4, createItem(Material.GRAY_STAINED_GLASS_PANE, " "))
         }
 
-        // === 2. 加载底部按钮 ===
-        inventory.setItem(45, createItem(Material.NAME_TAG, "§e修改名字", listOf("§7当前: ${template.name}", "§a点击输入新名字")))
-        inventory.setItem(46, createItem(Material.LEATHER_CHESTPLATE, "§e切换职业", listOf("§7当前: ${template.profession.key.key}", "§a点击切换下一个")))
-        inventory.setItem(47, createItem(Material.MAP, "§e切换类型", listOf("§7当前: ${template.type.key.key}", "§a点击切换下一个")))
-        inventory.setItem(48, createItem(Material.EXPERIENCE_BOTTLE, "§b刷新所有实体", listOf("§7修改后点击此项", "§7让全服该ID的NPC变身")))
-
-        // 【新增】翻页按钮 (Slot 49 和 50)
-        if (currentPage > 0) {
-            inventory.setItem(49, createItem(Material.PAPER, "§a⬅ 上一页", listOf("§7当前页: ${currentPage + 1}", "§e点击返回上一页")))
-        } else {
-            inventory.setItem(49, createItem(Material.GRAY_STAINED_GLASS_PANE, " ")) // 第一页不显示上一页
+        TRADE_SLOTS.forEachIndexed { pageIndex, slots ->
+            inventory.setItem(slots.arrow, createItem(Material.ARROW, "§7-->"))
+            val trade = localTrades.getOrNull(currentPage * TRADES_PER_PAGE + pageIndex) ?: return@forEachIndexed
+            inventory.setItem(slots.input1, trade.ingredient1.clone())
+            inventory.setItem(slots.input2, trade.ingredient2?.clone())
+            inventory.setItem(slots.result, trade.result.clone())
         }
-        inventory.setItem(50, createItem(Material.PAPER, "§a下一页 ➡", listOf("§7当前页: ${currentPage + 1}", "§e点击进入下一页")))
 
-        // [新增] 种族打折开关 (Slot 51)
+        updateControlButtons(template)
+    }
+
+    private fun updateControlButtons(template: com.hjh_database.npc.data.NpcTemplate) {
+        inventory.setItem(45, createItem(
+            Material.NAME_TAG,
+            "§e修改名字",
+            listOf("§7当前: ${template.name}", "§a点击后在聊天栏输入")
+        ))
+        inventory.setItem(46, createItem(
+            Material.LEATHER_CHESTPLATE,
+            "§e切换职业",
+            listOf("§7当前: ${template.profession.key.key}", "§a左键: 下一个", "§b右键: 上一个")
+        ))
+        inventory.setItem(47, createItem(
+            Material.MAP,
+            "§e切换类型",
+            listOf("§7当前: ${template.type.key.key}", "§a左键: 下一个", "§b右键: 上一个")
+        ))
+        inventory.setItem(48, createItem(
+            Material.EXPERIENCE_BOTTLE,
+            "§b刷新所有实体",
+            listOf("§7保存修改并刷新同 ID 的已加载 NPC")
+        ))
+        inventory.setItem(
+            49,
+            if (currentPage > 0) createItem(
+                Material.PAPER,
+                "§a⬅ 上一页",
+                listOf("§7当前第 ${currentPage + 1} 页")
+            ) else createItem(Material.GRAY_STAINED_GLASS_PANE, " ")
+        )
+        inventory.setItem(50, createItem(
+            Material.PAPER,
+            "§a下一页 ➡",
+            listOf("§7当前第 ${currentPage + 1} 页", "§7本页第 10 项填写后可进入新页")
+        ))
+
         val discountStatus = if (template.allowRaceDiscount) "§a已开启" else "§c已关闭"
         val switchIcon = if (template.allowRaceDiscount) Material.EMERALD else Material.REDSTONE_BLOCK
-
-        inventory.setItem(51, createItem(switchIcon, "§e种族优惠开关", listOf(
-            "§7当前状态: $discountStatus",
-            "§7",
-            "§e点击切换",
-            "§7开启后，符合条件的人族",
-            "§7玩家将获得价格优惠。"
-        )))
-
-        // [新增] 删除按钮 (Slot 52)
-        inventory.setItem(52, createItem(Material.BARRIER, "§c§l删除此NPC", listOf("§7点击永久删除这个NPC实例", "§7(不会删除模板数据)")))
-
-        // 保存按钮 (Slot 53)
-        inventory.setItem(53, createItem(Material.EMERALD_BLOCK, "§a§l保存配置", listOf("§7点击保存当前交易项")))
+        inventory.setItem(51, createItem(
+            switchIcon,
+            "§e种族优惠开关",
+            listOf("§7当前状态: $discountStatus", "§e点击切换")
+        ))
+        inventory.setItem(52, createItem(
+            Material.BARRIER,
+            "§c§l删除此NPC",
+            listOf("§7点击永久删除这个 NPC 实例", "§7不会删除石锄模板库中的副本")
+        ))
+        inventory.setItem(53, createItem(
+            Material.EMERALD_BLOCK,
+            "§a§l保存配置",
+            listOf("§7保存全部页面的交易项")
+        ))
     }
 
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
-        if (event.inventory.holder != this) return
-
-        // 允许上方点击与拖拽(编辑交易)，但在点击底部功能区时取消事件
-        val clickedSlot = event.rawSlot
-        if (clickedSlot in 45..53) {
+        if (event.view.topInventory.holder !== this) return
+        if (event.whoClicked.uniqueId != player.uniqueId || !player.isOp) {
             event.isCancelled = true
+            return
+        }
 
-            val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
+        val slot = event.rawSlot
+        if (slot < 0) return
+        if (slot < TRADE_AREA_SIZE) {
+            if (slot !in EDITABLE_SLOTS) event.isCancelled = true
+            return
+        }
+        if (slot >= INVENTORY_SIZE) {
+            // 防止 Shift 点击自动把物品塞进箭头或分隔栏。
+            if (event.isShiftClick) event.isCancelled = true
+            return
+        }
 
-            when (clickedSlot) {
-                45 -> { // 修改名字
-                    // 先保存当前的变更，避免数据丢失
-                    saveTradesFromGui()
-                    plugin.npcModule.manager.saveData()
+        event.isCancelled = true
+        val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
+        when (slot) {
+            45 -> {
+                saveTradesFromGui()
+                plugin.npcModule.manager.saveData()
+                plugin.npcModule.getInteractListener().beginNameEdit(player, templateId, entityUuid)
+                player.closeInventory()
+                player.sendMessage("§a请在聊天栏输入新的 NPC 名字（支持颜色代码 &）：")
+            }
 
-                    plugin.npcModule.getInteractListener().editingNameMap[player.uniqueId] = templateId
-                    player.closeInventory()
-                    player.sendMessage("§a请在聊天栏输入新的 NPC 名字（支持颜色代码 &）：")
-                }
-                46 -> { // 切换职业
-                    val allProfs = Registry.VILLAGER_PROFESSION.toList()
-                    val currentIdx = allProfs.indexOf(template.profession)
-                    val nextIdx = (currentIdx + 1) % allProfs.size
-                    template.profession = allProfs[nextIdx]
+            46 -> cycleValue(event.isLeftClick, event.isRightClick) { direction ->
+                template.profession = cycle(PROFESSIONS, template.profession, direction)
+                updateControlButtons(template)
+            }
 
-                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
-                    loadContent() // 刷新图标
-                }
-                47 -> { // 切换类型
-                    val allTypes = Registry.VILLAGER_TYPE.toList()
-                    val currentIdx = allTypes.indexOf(template.type)
-                    val nextIdx = (currentIdx + 1) % allTypes.size
-                    template.type = allTypes[nextIdx]
+            47 -> cycleValue(event.isLeftClick, event.isRightClick) { direction ->
+                template.type = cycle(VILLAGER_TYPES, template.type, direction)
+                updateControlButtons(template)
+            }
 
-                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
-                    loadContent() // 刷新图标
-                }
-                48 -> { // 刷新实体
-                    saveTradesFromGui()
-                    plugin.npcModule.manager.saveData()
+            48 -> {
+                saveTradesFromGui()
+                plugin.npcModule.manager.saveData()
+                val count = plugin.npcModule.manager.refreshTemplateEntities(templateId)
+                player.sendMessage("§a已刷新 $count 个已加载的 NPC 实例。")
+                player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
+            }
 
-                    var count = 0
-                    for (world in Bukkit.getWorlds()) {
-                        for (entity in world.entities) {
-                            if (entity is Villager) {
-                                val id = entity.persistentDataContainer.get(plugin.npcModule.manager.npcKey, PersistentDataType.STRING)
-                                if (id == templateId) {
-                                    entity.customName = template.name
-                                    entity.profession = template.profession
-                                    entity.villagerType = template.type
-                                    // 刷新时再次应用属性，防止因为某些原因属性失效
-                                    plugin.npcModule.manager.applyNpcAttributes(entity)
-                                    count++
-                                }
-                            }
-                        }
-                    }
-                    player.sendMessage("§a已刷新 $count 个 NPC 实例。")
-                    player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f)
-                }
-                49 -> { // 【新增】上一页
-                    if (currentPage > 0) {
-                        saveCurrentPage() // 翻页前保存当前页的数据到缓存
-                        currentPage--
-                        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
-                        loadContent() // 加载新页
-                    }
-                }
-                50 -> { // 【新增】下一页
-                    saveCurrentPage() // 翻页前保存当前页的数据到缓存
+            49 -> if (currentPage > 0) {
+                saveCurrentPage()
+                currentPage--
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.8f, 1f)
+                loadContent()
+            }
+
+            50 -> {
+                saveCurrentPage()
+                if (currentPage < lastEditablePage()) {
                     currentPage++
-                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
-                    loadContent() // 加载新页
-                }
-                51 -> { // 【新增】修改打折
-                    template.allowRaceDiscount = !template.allowRaceDiscount
-                    // 这里不需要立即保存到文件，点击最右侧保存按钮时统一保存，或者你希望立即生效也可以：
-                    // plugin.npcModule.manager.saveData()
-
-                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
-                    loadContent() // 刷新界面以更新图标
-                }
-                52 -> { // 【新增】删除实体
-                    if (entityUuid != null) {
-                        plugin.npcModule.manager.removeNpc(entityUuid)
-                        player.playSound(player.location, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 1.0f)
-                        player.sendMessage("§c已删除该 NPC 实例。")
-                        player.closeInventory()
-                    } else {
-                        player.sendMessage("§c无法获取实体信息（可能是刚改名后重新打开），请重新右键NPC。")
-                        player.closeInventory()
-                    }
-                }
-                53 -> { // 保存
-                    saveTradesFromGui()
-                    plugin.npcModule.manager.saveData()
-                    player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
-                    player.sendMessage("§a配置已保存！")
-                    player.closeInventory()
+                    player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.8f, 1f)
+                    loadContent()
+                } else {
+                    player.sendMessage("§e[NPC] 请先填写本页第 10 个交易项再新增一页。")
+                    player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.7f, 1f)
                 }
             }
+
+            51 -> {
+                template.allowRaceDiscount = !template.allowRaceDiscount
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.8f, 1f)
+                updateControlButtons(template)
+            }
+
+            52 -> {
+                if (entityUuid == null) {
+                    player.sendMessage("§c无法获取实体信息，请重新用木锄右键该 NPC。")
+                    return
+                }
+                plugin.npcModule.manager.removeNpc(entityUuid)
+                player.playSound(player.location, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f)
+                player.sendMessage("§c已删除该 NPC 实例。")
+                player.closeInventory()
+            }
+
+            53 -> {
+                saveTradesFromGui()
+                plugin.npcModule.manager.saveData()
+                player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
+                player.sendMessage("§a配置已保存！")
+                player.closeInventory()
+            }
+        }
+    }
+
+    private fun cycleValue(leftClick: Boolean, rightClick: Boolean, action: (Int) -> Unit) {
+        val direction = when {
+            leftClick -> 1
+            rightClick -> -1
+            else -> return
+        }
+        val now = System.nanoTime()
+        if (now - lastCycleAtNanos < CYCLE_INTERVAL_NANOS) return
+        lastCycleAtNanos = now
+        action(direction)
+        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.7f, if (direction > 0) 1.2f else 0.9f)
+    }
+
+    private fun <T> cycle(values: List<T>, current: T, direction: Int): T {
+        if (values.isEmpty()) return current
+        val currentIndex = values.indexOf(current).coerceAtLeast(0)
+        return values[Math.floorMod(currentIndex + direction, values.size)]
+    }
+
+    @EventHandler
+    fun onDrag(event: InventoryDragEvent) {
+        if (event.view.topInventory.holder !== this) return
+        if (event.rawSlots.any { it < INVENTORY_SIZE && it !in EDITABLE_SLOTS }) {
+            event.isCancelled = true
         }
     }
 
     @EventHandler
     fun onClose(event: InventoryCloseEvent) {
-        if (event.inventory.holder != this) return
-
-        // 关闭时自动保存交易项到内存（不一定保存到文件，取决于是否点击了保存按钮，但通常为了体验会存一下内存）
+        if (event.inventory.holder !== this) return
         saveTradesFromGui()
-
-        InventoryClickEvent.getHandlerList().unregister(this)
-        InventoryCloseEvent.getHandlerList().unregister(this)
+        HandlerList.unregisterAll(this)
     }
 
-    /**
-     * 【新增】保存当前页面的交易项到本地缓存
-     */
     private fun saveCurrentPage() {
-        for (row in 0 until 5) {
-            val index = currentPage * 5 + row
-            val start = row * 9
-            val input1 = inventory.getItem(start + 0)
-            val input2 = inventory.getItem(start + 1)
-            val result = inventory.getItem(start + 3)
+        TRADE_SLOTS.forEachIndexed { pageIndex, slots ->
+            val index = currentPage * TRADES_PER_PAGE + pageIndex
+            while (localTrades.size <= index) localTrades.add(null)
 
-            // 动态扩容缓存列表
-            while (localTrades.size <= index) {
-                localTrades.add(null)
+            val input1 = inventory.getItem(slots.input1)
+            val input2 = inventory.getItem(slots.input2)
+            val result = inventory.getItem(slots.result)
+            if (input1 == null || input1.type.isAir || result == null || result.type.isAir) {
+                localTrades[index] = null
+                return@forEachIndexed
             }
 
-            // 检查是不是有效的配方
-            if (result != null && result.type != Material.AIR &&
-                input1 != null && input1.type != Material.AIR) {
-
-                localTrades[index] = CustomTrade(
-                    result = result.clone(),
-                    ingredient1 = input1.clone(),
-                    ingredient2 = if (input2 != null && input2.type != Material.AIR) input2.clone() else null
-                )
-            } else {
-                localTrades[index] = null // 无效或清空配方则置空
-            }
+            val oldTrade = localTrades[index]
+            localTrades[index] = CustomTrade(
+                result = result.clone(),
+                ingredient1 = input1.clone(),
+                ingredient2 = input2?.takeUnless { it.type.isAir }?.clone(),
+                maxUses = oldTrade?.maxUses ?: 9999,
+                experienceReward = oldTrade?.experienceReward ?: false
+            )
         }
+        trimTrailingEmptyTrades()
     }
 
-    /**
-     * 【修改】汇总缓存并保存到模板
-     */
     private fun saveTradesFromGui() {
-        saveCurrentPage() // 先保存当前眼下界面的内容
-
+        saveCurrentPage()
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
-
-        // 过滤掉缓存里的空数据(未填写的行)，生成交易列表赋给模板
         template.trades = ArrayList(localTrades.filterNotNull())
     }
 
-    private fun createItem(mat: Material, name: String, lore: List<String> = emptyList()): ItemStack {
-        val item = ItemStack(mat)
-        val meta = item.itemMeta
-        if (meta != null) {
-            meta.setDisplayName(name)
-            meta.lore = lore
-            item.itemMeta = meta
+    private fun trimTrailingEmptyTrades() {
+        while (localTrades.isNotEmpty() && localTrades.last() == null) {
+            localTrades.removeAt(localTrades.lastIndex)
+        }
+    }
+
+    private fun lastEditablePage(): Int = localTrades.size / TRADES_PER_PAGE
+
+    private fun createItem(material: Material, name: String, lore: List<String> = emptyList()): ItemStack {
+        val item = ItemStack(material)
+        item.itemMeta = item.itemMeta?.apply {
+            setDisplayName(name)
+            this.lore = lore
         }
         return item
     }

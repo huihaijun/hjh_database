@@ -1,6 +1,7 @@
 package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.medical.spell.impl.BaZhenJueSpell
 import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
 import com.hjh_database.skill.medical.spell.impl.DuSuZhenSpell
@@ -33,7 +34,6 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -192,21 +192,7 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         spellId: String? = null,
         triggersMastery: Boolean = true
     ): Double {
-        if (amount <= 0.0 || !target.isValid || target.isDead) return 0.0
-        val effectiveHealthBefore = target.health + target.absorptionAmount
-        val previousMaximum = target.maximumNoDamageTicks
-        target.noDamageTicks = 0
-        target.maximumNoDamageTicks = 0
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, amount))
-        try {
-            target.damage(amount, caster)
-        } finally {
-            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
-            target.noDamageTicks = 0
-            target.maximumNoDamageTicks = previousMaximum
-        }
-        val effectiveHealthAfter = if (target.isDead) 0.0 else target.health + target.absorptionAmount
-        val actualDamage = (effectiveHealthBefore - effectiveHealthAfter).coerceIn(0.0, effectiveHealthBefore)
+        val actualDamage = FormationMagicDamage.deal(plugin, caster, target, amount)
         if (actualDamage > 0.0) {
             plugin.server.pluginManager.callEvent(
                 MedicalDamageEvent(caster, target, spellId, amount, actualDamage, triggersMastery)

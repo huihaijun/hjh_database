@@ -14,6 +14,11 @@ import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityShootBowEvent
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent
+import io.papermc.paper.event.entity.EntityLoadCrossbowEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.scheduler.BukkitRunnable
 import java.io.File
@@ -135,6 +140,33 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
 
     fun deactivate(player: Player) {
         skillRegistry.values.forEach { it.deactivate(player) }
+    }
+
+    fun onPlayerDamage(event: EntityDamageEvent) {
+        (skillRegistry["ciguheiren"] as? CiguheirenSkill)?.onPlayerDamage(event)
+    }
+
+    fun handleArcherShot(event: EntityShootBowEvent): Boolean {
+        val player = event.entity as? Player ?: return false
+        val bow = event.bow ?: return false
+        val weaponData = plugin.baihuDzManager.getWeaponDataFromItem(bow) ?: return false
+        if (weaponData.skillId != "anhuishinu") return false
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return false
+        return (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.handleShot(event, data) == true
+    }
+
+    fun onProjectileDamage(event: EntityDamageByEntityEvent) {
+        (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.onProjectileDamage(event)
+    }
+
+    fun handleCrossbowLoad(event: EntityLoadCrossbowEvent): Boolean {
+        val weaponData = plugin.baihuDzManager.getWeaponDataFromItem(event.crossbow) ?: return false
+        if (weaponData.skillId != "anhuishinu") return false
+        return (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.onCrossbowLoad(event) == true
+    }
+
+    fun onMobTarget(event: EntityTargetLivingEntityEvent) {
+        (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.onMobTarget(event)
     }
 
     private fun isWeaponActive(player: Player, weaponData: BaihuWeaponData, data: PlayerData): Boolean {

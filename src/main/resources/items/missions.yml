@@ -141,6 +141,10 @@ shangxian_shuazi:
     - "&7&o用来擦去石碑上灰尘的刷子"
     - "&7&o按照上仙的要求去帮帮他"
 
+
+
+
+
 qilingguo:
   material: GLOW_BERRIES
   name: "&b启灵果"
@@ -195,3 +199,52 @@ chendafudekonghuofu:
     - "&7&o陈大夫研究的控温符咒"
     - "&7&o用它砸向红温的晶块吧"
     - "&e[任务物品]"
+
+
+baihuademutou:
+  material: MUSHROOM_STEM
+  name: "&b白化的木头"
+  lore:
+    - "&7&o疑似被虫害侵蚀导致白化了的木头"
+    - "&7&o快让资源中心负责人检查一下吧"
+    - "&e[任务物品]"
+
+shen_job_ticket_warrior:
+  material: PAPER
+  name: "&6神谕传送券·剑道"
+  lore:
+    - "&7&o以神力铭刻的临时传送券"
+    - "&7&o可直达皇城剑道导师门前"
+    - ""
+    - "&e[主手右键] &f消耗传送至剑道导师"
+    - "&c仅限神族使用"
+
+shen_job_ticket_archer:
+  material: PAPER
+  name: "&6神谕传送券·箭术"
+  lore:
+    - "&7&o以神力铭刻的临时传送券"
+    - "&7&o可直达皇城箭术导师门前"
+    - ""
+    - "&e[主手右键] &f消耗传送至箭术导师"
+    - "&c仅限神族使用"
+
+shen_job_ticket_warlock:
+  material: PAPER
+  name: "&6神谕传送券·术法"
+  lore:
+    - "&7&o以神力铭刻的临时传送券"
+    - "&7&o可直达皇城术法导师门前"
+    - ""
+    - "&e[主手右键] &f消耗传送至术法导师"
+    - "&c仅限神族使用"
+
+shen_job_ticket_doctor:
+  material: PAPER
+  name: "&6神谕传送券·医术"
+  lore:
+    - "&7&o以神力铭刻的临时传送券"
+    - "&7&o可直达皇城医术导师门前"
+    - ""
+    - "&e[主手右键] &f消耗传送至医术导师"
+    - "&c仅限神族使用"

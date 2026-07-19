@@ -343,6 +343,25 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         return true
     }
 
+    fun restoreDurability(player: Player, item: ItemStack, data: BaihuEquipmentData, amount: Int): Int {
+        if (amount <= 0) return 0
+        val meta = item.itemMeta ?: return 0
+        val current = getDurability(item, data)
+        val next = (current + amount).coerceAtMost(data.maxDurability)
+        val restored = next - current
+        if (restored <= 0) return 0
+
+        meta.persistentDataContainer.set(durabilityKey, PersistentDataType.INTEGER, next)
+        item.itemMeta = meta
+        if (data is BaihuWeaponData) {
+            updateWeaponLore(item, data, player, findInventorySlot(player, item))
+        } else if (data is BaihuArtifactData) {
+            updateArtifactLore(item, data, player, null)
+        }
+        if (current <= 0) plugin.playerManager.updateStats(player)
+        return restored
+    }
+
     private fun findInventorySlot(player: Player, item: ItemStack): Int {
         for (slot in 0 until player.inventory.size) {
             if (player.inventory.getItem(slot) === item) return slot
@@ -443,16 +462,22 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         } else {
             lore.add("§7需身负虎瘴方可激活")
         }
-        applyCrossbowEnchantments(item, meta, active)
+        applyCrossbowEnchantments(item, meta, active, data)
         meta.lore = lore
         item.itemMeta = meta
     }
 
-    private fun applyCrossbowEnchantments(item: ItemStack, meta: org.bukkit.inventory.meta.ItemMeta, active: Boolean) {
+    private fun applyCrossbowEnchantments(
+        item: ItemStack,
+        meta: org.bukkit.inventory.meta.ItemMeta,
+        active: Boolean,
+        data: BaihuWeaponData
+    ) {
         if (item.type != Material.CROSSBOW) return
         if (active) {
             meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, 2, true)
+            val quickChargeLevel = if (data.id == "anhuishinu") 3 else 2
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
         } else {
             meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
             meta.removeEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE)

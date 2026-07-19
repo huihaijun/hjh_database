@@ -88,3 +88,15 @@ areas:
     volume: 9.0
     pitch: 1.0
     loop-ticks: 2400
+  qixiazhen:
+    sound: "hjh:bgm_qixiazhen"
+    category: "RECORDS"
+    world: "world"
+    center:
+      x: 669.52
+      y: 47.0
+      z: -527.30
+    radius: 128.0
+    volume: 1.0
+    pitch: 1.0
+    loop-ticks: 2860

@@ -172,13 +172,6 @@ class Yao_09 : QuestBase("main_yao_9", "[妖族主线]四方结界", QuestType.M
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
-        if (data != null) {
-            data.questStatuses["main_south_1"] = com.hjh_database.quest.core.QuestStatus.IN_PROGRESS
-            data.questProgress["main_south_1"] = 0
-
-            player.sendMessage("")
-            player.sendMessage("§b§l[系统] §f你已解锁新的主线章节：§e[南方区域]绿洲传闻")
-        }
     }
 
     override fun checkComplete(progress: Int): Boolean {

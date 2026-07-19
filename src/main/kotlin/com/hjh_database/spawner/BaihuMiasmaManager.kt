@@ -78,6 +78,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     private val statuses = ConcurrentHashMap<UUID, MiasmaStatus>()
     private val increaseModifiers = ConcurrentHashMap<UUID, MutableMap<String, IncreaseModifier>>()
+    private val thresholdPenaltyTimes = ConcurrentHashMap<UUID, LongArray>()
     private val bossBars = ConcurrentHashMap<UUID, BossBar>()
     private val ioExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "hjh-baihu-miasma-db").apply { isDaemon = true }
@@ -238,22 +239,45 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     private fun notifyCrossedDebuffThresholds(player: Player, oldValue: Int, newValue: Int) {
         val status = statuses[player.uniqueId]
         if (oldValue < SPEED_THRESHOLD && newValue >= SPEED_THRESHOLD) {
-            dealMagicDamage(player, 10.0)
-            player.sendMessage(color("&c虎瘴骤然侵入经脉，你的步伐变得沉重……"))
+            applyThresholdPenalty(
+                player,
+                SPEED_PENALTY_INDEX,
+                10.0,
+                "&c虎瘴骤然侵入经脉，你的步伐变得沉重……"
+            )
         }
         if (oldValue < ARMOR_THRESHOLD && newValue >= ARMOR_THRESHOLD) {
-            dealMagicDamage(player, 15.0)
-            player.sendMessage(color("&c瘴气侵入了你的甲胄，好像变得更加脆弱了……"))
+            applyThresholdPenalty(
+                player,
+                ARMOR_PENALTY_INDEX,
+                15.0,
+                "&c瘴气侵入了你的甲胄，好像变得更加脆弱了……"
+            )
         }
         if (oldValue < HEALTH_THRESHOLD && newValue >= HEALTH_THRESHOLD) {
-            dealMagicDamage(player, 20.0)
-            player.sendMessage(color("&c瘴气入体，你感受到一股威压，让你经脉受损……"))
+            applyThresholdPenalty(
+                player,
+                HEALTH_PENALTY_INDEX,
+                20.0,
+                "&c瘴气入体，你感受到一股威压，让你经脉受损……"
+            )
         }
         if (oldValue < FULL_THRESHOLD && newValue >= FULL_THRESHOLD) {
             dealMagicDamage(player, 30.0)
             status?.lastFullDamageMs = System.currentTimeMillis()
             player.sendMessage(color("&4虎瘴彻底压入心脉，痛楚开始持续蔓延……"))
         }
+    }
+
+    private fun applyThresholdPenalty(player: Player, index: Int, damage: Double, message: String) {
+        val now = System.currentTimeMillis()
+        val penaltyTimes = thresholdPenaltyTimes.computeIfAbsent(player.uniqueId) { LongArray(THRESHOLD_PENALTY_COUNT) }
+        if (now - penaltyTimes[index] < THRESHOLD_PENALTY_COOLDOWN_MS) return
+
+        // 20%/40%/80% 三个阶段分别计时，避免绝瘴丹造成阈值反复横跳并重复扣血。
+        penaltyTimes[index] = now
+        dealMagicDamage(player, damage)
+        player.sendMessage(color(message))
     }
 
     private fun isInBaihuCave(player: Player): Boolean {
@@ -429,6 +453,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun saveDirtyAsync() {
+        val now = System.currentTimeMillis()
+        thresholdPenaltyTimes.entries.removeIf { entry ->
+            entry.value.all { timestamp -> timestamp <= 0L || now - timestamp >= THRESHOLD_PENALTY_COOLDOWN_MS }
+        }
+
         val dirty = statuses.values
             .filter { it.dirty }
             .map { it.copy() }
@@ -494,6 +523,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         private const val HEALTH_THRESHOLD = 800
         private const val FULL_THRESHOLD = 1000
         private const val FULL_DAMAGE_INTERVAL_MS = 2_000L
+        private const val THRESHOLD_PENALTY_COOLDOWN_MS = 6 * 60 * 1000L
+        private const val SPEED_PENALTY_INDEX = 0
+        private const val ARMOR_PENALTY_INDEX = 1
+        private const val HEALTH_PENALTY_INDEX = 2
+        private const val THRESHOLD_PENALTY_COUNT = 3
         private const val SPEED_DEBUFF_KEY = "baihu_miasma::speed_percent"
         private const val ARMOR_DEBUFF_KEY = "baihu_miasma::armor_percent"
         private const val MAX_HEALTH_DEBUFF_KEY = "baihu_miasma::max_health_percent"

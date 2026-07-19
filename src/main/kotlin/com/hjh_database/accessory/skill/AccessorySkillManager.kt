@@ -22,6 +22,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityPotionEffectEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -198,10 +199,16 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onYanjingFlameDamage(event: EntityDamageEvent) {
         val skillClass = skills["yanjingdunpai"] as? YanjingdunpaiSkill ?: return
         skillClass.onPlayerDamage(event)
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onYanjingFlamePotionEffect(event: EntityPotionEffectEvent) {
+        val skillClass = skills["yanjingdunpai"] as? YanjingdunpaiSkill ?: return
+        skillClass.onPotionEffect(event)
     }
 
     @EventHandler
@@ -243,6 +250,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         (skills["yanling"] as? YanlingSkill)?.cleanup(event.player)
+        (skills["yanjingdunpai"] as? YanjingdunpaiSkill)?.cleanup(event.player)
     }
 
     @EventHandler

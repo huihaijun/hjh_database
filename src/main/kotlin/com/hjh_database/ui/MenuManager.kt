@@ -24,6 +24,7 @@ class MenuManager(private val plugin: Hjh_database) {
         const val TIANJI_TOKEN_RESOURCE_ID = "tianjiling"
         const val SUICIDE_BUTTON_SLOT = 47
         const val PORTABLE_WAREHOUSE_BUTTON_SLOT = 51
+        const val TITLE_SYSTEM_BUTTON_SLOT = 49
     }
 
     private lateinit var file: File
@@ -121,6 +122,8 @@ class MenuManager(private val plugin: Hjh_database) {
         val itemsSec = config.getConfigurationSection("gui.items")
         if (itemsSec != null) {
             for (key in itemsSec.getKeys(false)) {
+                // 称号入口由固定槽位放置，跳过旧 menus.yml 中可能仍为 33 的配置，避免出现两个入口。
+                if (key == "title_system") continue
                 val itemSec = itemsSec.getConfigurationSection(key) ?: continue
                 val slot = itemSec.getInt("slot", 0)
                 inv.setItem(slot, createConfiguredIcon(player, data, itemSec))
@@ -167,6 +170,16 @@ class MenuManager(private val plugin: Hjh_database) {
             "§7§o持令者无论身在何方,皆可随心存取,不受时空所限",
             "§7§o踏入§b§o[秘境]§7§o之中,此力便不可施展"
         )))
+
+        // 空地图是天机令中的称号系统入口。程序化放置可兼容服务器数据目录中的旧 menus.yml。
+        inv.setItem(
+            TITLE_SYSTEM_BUTTON_SLOT,
+            createMenuButton(Material.MAP, "§6§l称号系统", listOf(
+                "§7查看、装扮与购买称号",
+                "",
+                "§b▶ 点击打开"
+            ))
+        )
 
         inv.setItem(
             TianjiUtilityMenus.DUSTBIN_BUTTON_SLOT,
@@ -408,6 +421,10 @@ class MenuManager(private val plugin: Hjh_database) {
         result = result.replace("%archer_damage%", String.format("%.1f", data.archerDamage))
         result = result.replace("%armor%", String.format("%.1f", data.armor))
         result = result.replace("%money%", String.format("%.1f", data.money))
+        val critStatName = if (job == 2 || job == 3) "法穿率" else "暴击率"
+        result = result.replace("%crit_stat_name%", critStatName)
+        // 兼容测试服上尚未更新、仍直接写有“暴击率”的旧 menus.yml。
+        if (job == 2 || job == 3) result = result.replace("暴击率", "法穿率")
         result = result.replace("%crit_chance%", String.format("%.1f%%", (data.critChance ?: 0.0) * 100))
         result = result.replace("%CoolReduce%", String.format("%.1f%%", (data.coolReduce ?: 0.0) * 100))
 

@@ -63,7 +63,7 @@ class Ren_02 : QuestBase("main_ren_2", "[人族主线]坚韧试炼", QuestType.M
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f要是光变得§e暗黄§f，就是“枯竭”啦。这时候也能采，但会费时费力，还可能……什么都采不到。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f要是连黄光都没了，只剩下§7灰蒙蒙§f一片——那就说明它正在休养，暂时不能采了。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f别急，等它休息好了，绿光自然会回来的。",
-        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f对了，每次施展开物术，都会消耗你的§b精力§f。不过精力会随着时间§b慢慢回复§f，而且开物术每提升一级，精力上限都会提高，§b开采速度也会增加10%§f，最多增加§b50%§f。",
+        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f对了，每次施展开物术，都会消耗你的§b精力§f。不过精力会随着时间§b慢慢回复§f，而且开物术每提升一级，精力上限都会提高，§b开采速度也会增加§f",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f……嗯，看来你都听明白了。来，试试看吧！就对着这汪泉水用开物术——山泉恢复得很快，不用担心采坏！"
     )
 

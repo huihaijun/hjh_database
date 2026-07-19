@@ -1,6 +1,7 @@
 package com.hjh_database.alchemy.listener
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.alchemy.data.ActivePill
 import com.hjh_database.alchemy.data.AlchemyRecipe
 import com.hjh_database.alchemy.data.AlchemyTier
@@ -28,7 +29,6 @@ import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
 
@@ -186,17 +186,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     }
 
     private fun applyFengHouDamage(attacker: Player, target: LivingEntity, damage: Double) {
-        val oldMaximum = target.maximumNoDamageTicks
-        target.noDamageTicks = 0
-        target.maximumNoDamageTicks = 0
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-        try {
-            target.damage(damage, attacker)
-        } finally {
-            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
-            target.noDamageTicks = 0
-            target.maximumNoDamageTicks = oldMaximum
-        }
+        FormationMagicDamage.deal(plugin, attacker, target, damage)
     }
 
     @EventHandler

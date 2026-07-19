@@ -11,207 +11,290 @@ import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.Registry
 import org.bukkit.attribute.Attribute
+import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Mob
-import org.bukkit.entity.Player
 import org.bukkit.entity.Villager
-import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.MerchantRecipe
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.UUID
 
 class NpcManager(private val plugin: Hjh_database) {
 
-    val templates = HashMap<String, NpcTemplate>()
-    val instances = HashMap<UUID, NpcInstance>()
+    val templates = LinkedHashMap<String, NpcTemplate>()
+    val instances = LinkedHashMap<UUID, NpcInstance>()
 
     val npcKey = NamespacedKey(plugin, "hjh_npc_id")
 
-    // 文件夹路径
-    private val templatesFolder = File(plugin.dataFolder, "npc/templates")
-    private val instancesFile = File(plugin.dataFolder, "npc/instances.yml")
+    private val npcFolder = File(plugin.dataFolder, "npc")
+    private val npcsFile = File(npcFolder, "npcs.yml")
+    private val libraryFile = File(npcFolder, "templates.yml")
+
+    // 旧版数据源，仅用于首次迁移。迁移成功后保留原文件作为备份。
+    private val legacyTemplatesFolder = File(npcFolder, "templates")
+    private val legacyInstancesFile = File(npcFolder, "instances.yml")
+    private val libraryTemplateIds = LinkedHashSet<String>()
 
     init {
-        // 确保文件夹存在
-        if (!templatesFolder.exists()) templatesFolder.mkdirs()
+        if (!npcFolder.exists()) npcFolder.mkdirs()
         loadData()
     }
 
-    /**
-     * 加载数据 (重载时调用此方法，不会保存)
-     */
+    /** 从双 YAML 存储加载数据；首次运行时自动兼容旧版分散文件。 */
+    @Synchronized
     fun loadData() {
-        // 1. 清空内存
         templates.clear()
         instances.clear()
+        libraryTemplateIds.clear()
 
-        // 2. 加载所有模板文件 (多文件模式)
-        val files = templatesFolder.listFiles { _, name -> name.endsWith(".yml") }
-        if (files != null) {
-            for (file in files) {
-                try {
-                    val config = YamlConfiguration.loadConfiguration(file)
-                    // 假设根节点就是 id (或者是文件名里的id，但为了稳健，我们在文件内部也存了id)
-                    // 现在的结构建议：文件名任意，文件内容根节点是 templateID
-                    for (key in config.getKeys(false)) {
-                        val sec = config.getConfigurationSection(key) ?: continue
+        val migrated = if (npcsFile.exists()) {
+            loadNpcFile(npcsFile)
+            false
+        } else {
+            loadLegacyData()
+            true
+        }
 
-                        val name = sec.getString("name", "NPC")!!.replace("&", "§")
-                        val profStr = sec.getString("profession", "minecraft:none")!!
-                        val typeStr = sec.getString("type", "minecraft:plains")!!
+        // 只有新版 templates.yml 的 templates 根节点才代表石锄模板库。
+        if (!migrated && libraryFile.exists()) {
+            val config = YamlConfiguration.loadConfiguration(libraryFile)
+            val section = config.getConfigurationSection("templates")
+            if (section != null) {
+                readTemplates(section, templates)
+                libraryTemplateIds.addAll(section.getKeys(false))
+            }
+        }
 
-                        val profession = Registry.VILLAGER_PROFESSION.get(parseKey(profStr)) ?: Villager.Profession.NONE
-                        val type = Registry.VILLAGER_TYPE.get(parseKey(typeStr)) ?: Villager.Type.PLAINS
+        plugin.logger.info(
+            "已加载 ${templates.size} 个 NPC 配置、${instances.size} 个 NPC 实例、" +
+                "${libraryTemplateIds.size} 个石锄模板。"
+        )
 
-                        val dialogue = sec.getStringList("dialogue")
+        if (migrated && (templates.isNotEmpty() || instances.isNotEmpty())) {
+            saveData()
+            plugin.logger.info("旧版 NPC 数据已迁移到 npcs.yml；石锄模板库已初始化为空。")
+        }
+    }
 
-                        val tradeList = ArrayList<CustomTrade>()
-                        val tradesSec = sec.getConfigurationSection("trades")
-                        if (tradesSec != null) {
-                            for (i in tradesSec.getKeys(false)) {
-                                val tSec = tradesSec.getConfigurationSection(i) ?: continue
-                                val r = tSec.getItemStack("result") ?: continue
-                                val i1 = tSec.getItemStack("input1") ?: continue
-                                val i2 = tSec.getItemStack("input2")
-                                tradeList.add(CustomTrade(r, i1, i2))
-                            }
-                        }
+    private fun loadNpcFile(file: File) {
+        val config = YamlConfiguration.loadConfiguration(file)
+        config.getConfigurationSection("templates")?.let { readTemplates(it, templates) }
+        config.getConfigurationSection("instances")?.let(::readInstances)
+    }
 
-                        // 【修改点1】读取是否允许打折
-                        val allowDiscount = sec.getBoolean("allow_race_discount", false)
+    private fun loadLegacyData() {
+        // 更旧的单文件 templates.yml 先加载，较新的分散模板文件随后覆盖同 ID。
+        if (libraryFile.exists()) {
+            val legacyConfig = YamlConfiguration.loadConfiguration(libraryFile)
+            readTemplates(legacyConfig, templates)
+        }
 
-                        // 构造 Template
-                        templates[key] = NpcTemplate(key, name, profession, type, dialogue, tradeList, allowDiscount)
-                    }
-                } catch (e: Exception) {
-                    plugin.logger.warning("加载 NPC 模板文件失败: ${file.name}")
-                    e.printStackTrace()
+        legacyTemplatesFolder.listFiles { file ->
+            file.isFile && file.extension.equals("yml", ignoreCase = true)
+        }?.sortedBy(File::getName)?.forEach { file ->
+            try {
+                readTemplates(YamlConfiguration.loadConfiguration(file), templates)
+            } catch (exception: Exception) {
+                plugin.logger.warning("加载旧版 NPC 文件失败: ${file.name} (${exception.message})")
+            }
+        }
+
+        if (legacyInstancesFile.exists()) {
+            readInstances(YamlConfiguration.loadConfiguration(legacyInstancesFile))
+        }
+    }
+
+    private fun readTemplates(section: ConfigurationSection, destination: MutableMap<String, NpcTemplate>) {
+        for (id in section.getKeys(false)) {
+            val data = section.getConfigurationSection(id) ?: continue
+            // 防止把新版的容器节点误当成旧版 NPC。
+            if (!data.contains("name") && !data.contains("profession") && !data.contains("type")) continue
+
+            val name = data.getString("name", "NPC")!!.replace("&", "§")
+            val profession = Registry.VILLAGER_PROFESSION.get(
+                parseKey(data.getString("profession", "minecraft:none")!!)
+            ) ?: Villager.Profession.NONE
+            val type = Registry.VILLAGER_TYPE.get(
+                parseKey(data.getString("type", "minecraft:plains")!!)
+            ) ?: Villager.Type.PLAINS
+
+            val trades = ArrayList<CustomTrade>()
+            data.getConfigurationSection("trades")?.let { tradeSection ->
+                val keys = tradeSection.getKeys(false).sortedWith(
+                    compareBy<String> { it.toIntOrNull() ?: Int.MAX_VALUE }.thenBy { it }
+                )
+                for (key in keys) {
+                    val trade = tradeSection.getConfigurationSection(key) ?: continue
+                    val result = trade.getItemStack("result") ?: continue
+                    val input1 = trade.getItemStack("input1") ?: continue
+                    trades.add(
+                        CustomTrade(
+                            result = result,
+                            ingredient1 = input1,
+                            ingredient2 = trade.getItemStack("input2"),
+                            maxUses = trade.getInt("max_uses", 9999).coerceAtLeast(1),
+                            experienceReward = trade.getBoolean("experience_reward", false)
+                        )
+                    )
                 }
             }
-        }
 
-        // 3. 加载实例
-        if (instancesFile.exists()) {
-            val config = YamlConfiguration.loadConfiguration(instancesFile)
-            for (key in config.getKeys(false)) {
-                val uuid = runCatching { UUID.fromString(key) }.getOrNull() ?: continue
-                val tid = config.getString("$key.template") ?: continue
-                val loc = config.getLocation("$key.location") ?: continue
-                instances[uuid] = NpcInstance(uuid, tid, loc)
-            }
+            destination[id] = NpcTemplate(
+                id = id,
+                name = name,
+                profession = profession,
+                type = type,
+                dialogue = data.getStringList("dialogue"),
+                trades = trades,
+                allowRaceDiscount = data.getBoolean("allow_race_discount", false)
+            )
         }
-        plugin.logger.info("已加载 ${templates.size} 个NPC模板 (来自文件夹) 和 ${instances.size} 个NPC实例。")
     }
 
-    /**
-     * 保存数据 (分散保存到多个文件)
-     * 修复：保存前会自动清理同ID的旧文件名，防止文件堆积
-     */
+    private fun readInstances(section: ConfigurationSection) {
+        for (key in section.getKeys(false)) {
+            val uuid = runCatching { UUID.fromString(key) }.getOrNull() ?: continue
+            val templateId = section.getString("$key.template") ?: continue
+            val location = section.getLocation("$key.location") ?: continue
+            instances[uuid] = NpcInstance(uuid, templateId, location)
+        }
+    }
+
+    /** 原子写入两个 YAML，避免关服或写盘中断留下半份配置。 */
+    @Synchronized
     fun saveData() {
-        // === 1. 保存模板：每个模板一个文件 ===
-        for (t in templates.values) {
-            // A. 计算新的文件名
-            // 去除颜色代码和非法字符，生成干净的文件名
-            val cleanName = t.name.replace("§", "").replace("&", "").replace(Regex("[^a-zA-Z0-9_\\u4e00-\\u9fa5]"), "")
-            // 文件名格式: ID_名字.yml
-            val newFileName = "${t.id}_$cleanName.yml"
-            val newFile = File(templatesFolder, newFileName)
-
-            // B. 【核心修复】清理该ID对应的旧文件
-            // 扫描文件夹，找到所有以 "ID_" 开头，但文件名不是 newFileName 的文件，并删除
-            val oldFiles = templatesFolder.listFiles { _, name ->
-                // 逻辑：匹配前缀(ID_) + 是yml文件 + 不是当前要保存的这个新文件
-                name.startsWith("${t.id}_") && name.endsWith(".yml") && name != newFileName
-            }
-
-            // 执行删除操作
-            oldFiles?.forEach { oldFile ->
-                // 可选：打印日志方便调试
-                // plugin.logger.info("清理旧NPC文件: ${oldFile.name}")
-                oldFile.delete()
-            }
-
-            // C. 写入新数据
-            val tConfig = YamlConfiguration()
-            val path = t.id // 根节点依然使用 ID
-
-            tConfig.set("$path.name", t.name) // 保存带颜色的名字
-            tConfig.set("$path.profession", t.profession.key.toString())
-            tConfig.set("$path.type", t.type.key.toString())
-            tConfig.set("$path.dialogue", t.dialogue)
-
-            // 【修改点2】保存是否允许打折
-            tConfig.set("$path.allow_race_discount", t.allowRaceDiscount)
-
-            for ((index, trade) in t.trades.withIndex()) {
-                tConfig.set("$path.trades.$index.result", trade.result)
-                tConfig.set("$path.trades.$index.input1", trade.ingredient1)
-                tConfig.set("$path.trades.$index.input2", trade.ingredient2)
-            }
-
-            try {
-                tConfig.save(newFile)
-            } catch (e: Exception) {
-                plugin.logger.severe("无法保存 NPC 模板: ${t.id}")
-                e.printStackTrace()
-            }
+        val npcConfig = YamlConfiguration()
+        for (template in templates.values.sortedBy { it.id }) {
+            writeTemplate(npcConfig, "templates.${template.id}", template)
+        }
+        for (instance in instances.values.sortedBy { it.uuid.toString() }) {
+            val path = "instances.${instance.uuid}"
+            npcConfig.set("$path.template", instance.templateId)
+            npcConfig.set("$path.location", instance.location)
         }
 
-        // === 2. 保存实例 (保持单文件) ===
-        val iConfig = YamlConfiguration()
-        for (inst in instances.values) {
-            iConfig.set("${inst.uuid}.template", inst.templateId)
-            iConfig.set("${inst.uuid}.location", inst.location)
+        val libraryConfig = YamlConfiguration()
+        for (id in libraryTemplateIds.sorted()) {
+            val template = templates[id] ?: continue
+            writeTemplate(libraryConfig, "templates.$id", template)
         }
+
         try {
-            iConfig.save(instancesFile)
-        } catch (e: Exception) {
-            e.printStackTrace()
+            saveAtomically(npcConfig, npcsFile)
+            saveAtomically(libraryConfig, libraryFile)
+        } catch (exception: Exception) {
+            plugin.logger.severe("无法保存 NPC 数据: ${exception.message}")
+            exception.printStackTrace()
         }
     }
 
-    // 删除模板及其文件
-    fun deleteTemplate(id: String): Boolean {
-        val template = templates[id] ?: return false
-        templates.remove(id)
-
-        // 尝试删除对应的文件
-        // 由于文件名包含动态名字，我们遍历文件夹查找包含 ID 的文件
-        val files = templatesFolder.listFiles { _, name -> name.startsWith(id) && name.endsWith(".yml") }
-        files?.forEach { it.delete() }
-
-        return true
-    }
-
-    // 为了完整性，请确保保留你之前代码中的 convertVanillaRecipes 等方法
-
-    fun convertVanillaRecipes(recipes: List<MerchantRecipe>): ArrayList<CustomTrade> {
-        val list = ArrayList<CustomTrade>()
-        for (recipe in recipes) {
-            val result = recipe.result
-            val ingredients = recipe.ingredients
-            if (ingredients.isNotEmpty()) {
-                val input1 = ingredients[0]
-                val input2 = if (ingredients.size > 1) ingredients[1] else null
-                list.add(CustomTrade(result, input1, input2))
-            }
+    private fun writeTemplate(config: YamlConfiguration, path: String, template: NpcTemplate) {
+        config.set("$path.name", template.name)
+        config.set("$path.profession", template.profession.key.toString())
+        config.set("$path.type", template.type.key.toString())
+        config.set("$path.dialogue", template.dialogue)
+        config.set("$path.allow_race_discount", template.allowRaceDiscount)
+        for ((index, trade) in template.trades.withIndex()) {
+            val tradePath = "$path.trades.$index"
+            config.set("$tradePath.result", trade.result)
+            config.set("$tradePath.input1", trade.ingredient1)
+            config.set("$tradePath.input2", trade.ingredient2)
+            config.set("$tradePath.max_uses", trade.maxUses)
+            config.set("$tradePath.experience_reward", trade.experienceReward)
         }
-        return list
     }
 
-    private fun parseKey(input: String): NamespacedKey {
-        return if (input.contains(":")) {
-            val split = input.split(":")
-            NamespacedKey(split[0], split[1])
-        } else {
-            NamespacedKey.minecraft(input.lowercase())
+    private fun saveAtomically(config: YamlConfiguration, target: File) {
+        val temporary = File(target.parentFile, "${target.name}.tmp")
+        config.save(temporary)
+        try {
+            Files.move(
+                temporary.toPath(),
+                target.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE
+            )
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } finally {
+            if (temporary.exists()) temporary.delete()
         }
     }
 
     fun getTemplate(id: String): NpcTemplate? = templates[id]
+
+    fun getLibraryTemplates(): List<NpcTemplate> = libraryTemplateIds
+        .mapNotNull(templates::get)
+        .sortedWith(compareBy<NpcTemplate> { stripColors(it.name) }.thenBy { it.id })
+
+    fun saveTemplateToLibrary(id: String): Boolean {
+        if (!templates.containsKey(id)) return false
+        libraryTemplateIds.add(id)
+        saveData()
+        return true
+    }
+
+    fun removeTemplateFromLibrary(id: String): Boolean {
+        if (!libraryTemplateIds.remove(id)) return false
+        if (instances.values.none { it.templateId == id } && isGeneratedTemplate(id)) {
+            templates.remove(id)
+        }
+        saveData()
+        return true
+    }
+
+    fun isLibraryTemplate(id: String): Boolean = id in libraryTemplateIds
+
+    /** 把普通村民或数据缺失的旧 NPC 收编为可编辑 NPC。 */
+    fun adoptVillager(villager: Villager): String {
+        val storedId = villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING)
+        if (storedId != null && templates.containsKey(storedId)) {
+            if (!instances.containsKey(villager.uniqueId)) {
+                instances[villager.uniqueId] = NpcInstance(villager.uniqueId, storedId, villager.location)
+                saveData()
+            }
+            applyNpcAttributes(villager)
+            return storedId
+        }
+
+        val id = "converted_${UUID.randomUUID().toString().take(8)}"
+        val template = NpcTemplate(
+            id = id,
+            name = villager.customName ?: "§e新收编村民",
+            profession = villager.profession,
+            type = villager.villagerType,
+            dialogue = mutableListOf("我被收编了！"),
+            trades = convertVanillaRecipes(villager.recipes)
+        )
+        templates[id] = template
+        villager.persistentDataContainer.set(npcKey, PersistentDataType.STRING, id)
+        instances[villager.uniqueId] = NpcInstance(villager.uniqueId, id, villager.location)
+        applyNpcAttributes(villager)
+        saveData()
+        return id
+    }
+
+    fun convertVanillaRecipes(recipes: List<MerchantRecipe>): ArrayList<CustomTrade> {
+        val trades = ArrayList<CustomTrade>(recipes.size)
+        for (recipe in recipes) {
+            val ingredients = recipe.ingredients
+            if (ingredients.isEmpty()) continue
+            trades.add(
+                CustomTrade(
+                    result = recipe.result.clone(),
+                    ingredient1 = ingredients[0].clone(),
+                    ingredient2 = ingredients.getOrNull(1)?.clone(),
+                    maxUses = recipe.maxUses.coerceAtLeast(1),
+                    experienceReward = recipe.hasExperienceReward()
+                )
+            )
+        }
+        return trades
+    }
 
     fun applyNpcAttributes(villager: Villager) {
         villager.removeWhenFarAway = false
@@ -225,49 +308,54 @@ class NpcManager(private val plugin: Hjh_database) {
         stripAiGoals(villager)
     }
 
-    /**
-     * 【新增】全局刷新方法
-     * 用于在插件重载/启动时，扫描所有已加载区块的实体，恢复 NPC 属性
-     */
     fun refreshGlobalNpcs() {
         var count = 0
-        // 遍历所有世界
         for (world in Bukkit.getWorlds()) {
-            // 遍历该世界所有加载的实体 (性能消耗很小，因为只是检查PDC)
             for (entity in world.entities) {
-                if (entity is Villager) {
-                    // 检查是否包含本插件的 NPC Key
-                    if (entity.persistentDataContainer.has(npcKey, PersistentDataType.STRING)) {
-                        applyNpcAttributes(entity) // 再次强制应用属性
-                        count++
-                    }
-                }
+                val villager = entity as? Villager ?: continue
+                if (!villager.persistentDataContainer.has(npcKey, PersistentDataType.STRING)) continue
+                applyNpcAttributes(villager)
+                count++
             }
         }
         plugin.logger.info("已重新应用属性到 $count 个在线 NPC 实例。")
+    }
+
+    fun refreshTemplateEntities(templateId: String): Int {
+        val template = templates[templateId] ?: return 0
+        var count = 0
+        for (instance in instances.values) {
+            if (instance.templateId != templateId) continue
+            val villager = Bukkit.getEntity(instance.uuid) as? Villager ?: continue
+            villager.customName = template.name
+            villager.isCustomNameVisible = true
+            villager.profession = template.profession
+            villager.villagerType = template.type
+            applyNpcAttributes(villager)
+            count++
+        }
+        return count
     }
 
     fun spawnNpc(location: Location, templateId: String): Villager? {
         val template = templates[templateId] ?: return null
         val world = location.world ?: return null
         if (!location.chunk.isLoaded) location.chunk.load()
-        val villager = world.spawn(location, Villager::class.java) { v ->
-            v.profession = template.profession
-            v.villagerType = template.type
-            v.customName = template.name
-            v.isCustomNameVisible = true
-            v.persistentDataContainer.set(npcKey, PersistentDataType.STRING, templateId)
+        val villager = world.spawn(location, Villager::class.java) { entity ->
+            entity.profession = template.profession
+            entity.villagerType = template.type
+            entity.customName = template.name
+            entity.isCustomNameVisible = true
+            entity.persistentDataContainer.set(npcKey, PersistentDataType.STRING, templateId)
         }
         applyNpcAttributes(villager)
-        instances[villager.uniqueId] = NpcInstance(villager.uniqueId, templateId, location)
+        instances[villager.uniqueId] = NpcInstance(villager.uniqueId, templateId, location.clone())
         saveData()
         return villager
     }
 
     fun removeInstancesByTemplate(templateId: String, targetLocation: Location? = null): Int {
-        val oldInstances = instances.values
-            .filter { it.templateId == templateId }
-            .toList()
+        val oldInstances = instances.values.filter { it.templateId == templateId }.toList()
         val checkedChunks = HashSet<String>()
         val removedUuids = HashSet<UUID>()
         var removedCount = 0
@@ -282,23 +370,33 @@ class NpcManager(private val plugin: Hjh_database) {
             if (chunk != null && checkedChunks.add(chunkKey(chunk))) {
                 removedCount += removeTemplateEntitiesInChunk(chunk, templateId, removedUuids)
             }
-
             instances.remove(instance.uuid)
         }
 
-        val targetChunk = targetLocation?.let { loadChunk(it) }
+        val targetChunk = targetLocation?.let(::loadChunk)
         if (targetChunk != null && checkedChunks.add(chunkKey(targetChunk))) {
             removedCount += removeTemplateEntitiesInChunk(targetChunk, templateId, removedUuids)
         }
 
-        if (oldInstances.isNotEmpty() || removedCount > 0) {
-            saveData()
-        }
+        if (oldInstances.isNotEmpty() || removedCount > 0) saveData()
         return removedCount
     }
 
+    fun removeNpc(uuid: UUID) {
+        val instance = instances.remove(uuid)
+        removeNpcEntity(uuid, instance?.location)
+        if (instance != null) {
+            val id = instance.templateId
+            val stillUsed = instances.values.any { it.templateId == id }
+            if (!stillUsed && id !in libraryTemplateIds && isGeneratedTemplate(id)) {
+                templates.remove(id)
+            }
+        }
+        saveData()
+    }
+
     private fun removeNpcEntity(uuid: UUID, location: Location? = null): Boolean {
-        location?.let { loadChunk(it) }
+        location?.let(::loadChunk)
         val entity = Bukkit.getEntity(uuid) ?: return false
         entity.remove()
         return true
@@ -306,52 +404,44 @@ class NpcManager(private val plugin: Hjh_database) {
 
     private fun loadChunk(location: Location): Chunk? {
         val world = location.world ?: return null
-        val chunk = world.getChunkAt(location)
-        if (!chunk.isLoaded) chunk.load()
-        return chunk
+        return world.getChunkAt(location).also { if (!it.isLoaded) it.load() }
     }
 
-    private fun chunkKey(chunk: Chunk): String {
-        return "${chunk.world.uid}:${chunk.x}:${chunk.z}"
-    }
+    private fun chunkKey(chunk: Chunk): String = "${chunk.world.uid}:${chunk.x}:${chunk.z}"
 
-    private fun removeTemplateEntitiesInChunk(chunk: Chunk, templateId: String, removedUuids: MutableSet<UUID>): Int {
+    private fun removeTemplateEntitiesInChunk(
+        chunk: Chunk,
+        templateId: String,
+        removedUuids: MutableSet<UUID>
+    ): Int {
         var count = 0
         for (entity in chunk.entities) {
-            if (entity !is Villager) continue
-            if (entity.uniqueId in removedUuids) continue
-            val entityTemplateId = entity.persistentDataContainer.get(npcKey, PersistentDataType.STRING) ?: continue
-            if (entityTemplateId != templateId) continue
-
-            entity.remove()
-            if (removedUuids.add(entity.uniqueId)) {
-                count++
-            }
+            val villager = entity as? Villager ?: continue
+            if (villager.uniqueId in removedUuids) continue
+            val id = villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING) ?: continue
+            if (id != templateId) continue
+            villager.remove()
+            if (removedUuids.add(villager.uniqueId)) count++
         }
         return count
     }
 
     private fun stripAiGoals(mob: Mob) {
         val goals = Bukkit.getMobGoals()
-        val allGoals = goals.getAllGoals(mob).toList()
-        for (goal in allGoals) {
-            if (goal.key != VanillaGoal.LOOK_AT_PLAYER &&
-                goal.key != VanillaGoal.RANDOM_LOOK_AROUND) {
+        for (goal in goals.getAllGoals(mob).toList()) {
+            if (goal.key != VanillaGoal.LOOK_AT_PLAYER && goal.key != VanillaGoal.RANDOM_LOOK_AROUND) {
                 goals.removeGoal(mob, goal)
             }
         }
     }
 
-    fun removeNpc(uuid: UUID) {
-        val instance = instances[uuid]
-        instances.remove(uuid)
-        removeNpcEntity(uuid, instance?.location)
-        if (instance != null) {
-            val tid = instance.templateId
-            if (tid.startsWith("npc_") || tid.startsWith("converted_")) {
-                deleteTemplate(tid) // 这一步会删除内存模板 + yml 文件
-            }
-        }
-        saveData()
+    private fun parseKey(input: String): NamespacedKey {
+        val parts = input.split(':', limit = 2)
+        return if (parts.size == 2) NamespacedKey(parts[0], parts[1])
+        else NamespacedKey.minecraft(input.lowercase())
     }
+
+    private fun stripColors(input: String): String = input.replace(Regex("§[0-9A-FK-ORa-fk-or]"), "")
+
+    private fun isGeneratedTemplate(id: String): Boolean = id.startsWith("npc_") || id.startsWith("converted_")
 }

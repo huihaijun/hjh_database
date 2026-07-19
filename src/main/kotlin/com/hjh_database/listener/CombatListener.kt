@@ -8,6 +8,7 @@ import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
 import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
+import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
 import com.hjh_database.skill.weapon.job_0.pokongfuSkill
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -86,8 +87,18 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         var magicBaseDamage = 0.0
         var ignoreArmor = false
         var isArmoredMagic = false
+        var isFormationDamage = false
 
         // 2. 检测法术伤害标记
+        if (entity.hasMetadata(FormationMagicDamage.METADATA)) {
+            isMagicDamage = true
+            isFormationDamage = true
+            entity.getMetadata(FormationMagicDamage.METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.let { magicBaseDamage = it.asDouble() }
+            entity.removeMetadata(FormationMagicDamage.METADATA, plugin)
+        }
+
         if (entity.hasMetadata("HJH_MAGIC_DAMAGE")) {
             isMagicDamage = true
             entity.getMetadata("HJH_MAGIC_DAMAGE").firstOrNull()?.let {
@@ -185,7 +196,8 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                             } else {
                                 min(0.8, data.critChance)
                             }
-                            if ((forceRiftCrit || attacker.attackCooldown > 0.9f) &&
+                            val canCrit = data.job != 2 && data.job != 3
+                            if (canCrit && (forceRiftCrit || attacker.attackCooldown > 0.9f) &&
                                 ThreadLocalRandom.current().nextDouble() < critChance
                             ) {
                                 damage *= 1.5
@@ -235,15 +247,16 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
-        if (entity is LivingEntity) {
-            val source = (event as? EntityDamageByEntityEvent)?.let { damageEvent ->
-                when (val damager = damageEvent.damager) {
-                    is LivingEntity -> damager
-                    is Projectile -> damager.shooter as? LivingEntity
-                    else -> null
-                }
+        val damageSource = (event as? EntityDamageByEntityEvent)?.let { damageEvent ->
+            when (val damager = damageEvent.damager) {
+                is LivingEntity -> damager
+                is Projectile -> damager.shooter as? LivingEntity
+                else -> null
             }
-            val calculationEvent = CombatDamageCalculationEvent(source, entity, damage)
+        }
+
+        if (entity is LivingEntity) {
+            val calculationEvent = CombatDamageCalculationEvent(damageSource, entity, damage)
             plugin.server.pluginManager.callEvent(calculationEvent)
             damage = calculationEvent.damage
             val vulnerableUntil = entity.getMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA)
@@ -254,6 +267,22 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     damage *= DuhuozhuSkill.VULNERABLE_MULTIPLIER
                 } else {
                     entity.removeMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA, plugin)
+                }
+            }
+
+            val bingQingUntil = entity.getMetadata(BingQingYuSpell.VULNERABILITY_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (bingQingUntil != null) {
+                if (bingQingUntil > System.currentTimeMillis()) {
+                    val vulnerability = entity.getMetadata(BingQingYuSpell.VULNERABILITY_AMOUNT_METADATA)
+                        .firstOrNull { it.owningPlugin == plugin }
+                        ?.asDouble()
+                        ?.coerceAtLeast(0.0) ?: 0.0
+                    damage *= 1.0 + vulnerability
+                } else {
+                    entity.removeMetadata(BingQingYuSpell.VULNERABILITY_UNTIL_METADATA, plugin)
+                    entity.removeMetadata(BingQingYuSpell.VULNERABILITY_AMOUNT_METADATA, plugin)
                 }
             }
         }
@@ -273,7 +302,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     armor = entity.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
                 }
 
-                if ((isMagicDamage && !isArmoredMagic) || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
+                if ((isMagicDamage && !isArmoredMagic && !isFormationDamage) || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
                     armor = 0.0
                     if (ignoreArmor && entity is Player) {
                         entity.sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§d§l警告：受到破甲伤害！"))
@@ -283,6 +312,12 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 val armorEvent = ElementCrystalArmorCalculationEvent(entity, armor)
                 plugin.server.pluginManager.callEvent(armorEvent)
                 armor = armorEvent.armor
+
+                if (isFormationDamage) {
+                    val casterData = (damageSource as? Player)?.let(plugin.playerManager::getPlayerData)
+                    val penetration = FormationMagicDamage.armorPenetration(casterData)
+                    armor *= 1.0 - penetration
+                }
 
                 if (armor < 0) armor = 0.0
                 val multiplier = 50.0 / (50.0 + armor)

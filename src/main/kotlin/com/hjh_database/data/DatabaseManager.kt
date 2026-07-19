@@ -27,6 +27,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
     private val subsystems = DatabaseSubsystemRepository(this, plugin)
     private val queuedPlayerSaves = ConcurrentHashMap<UUID, BukkitTask>()
     private val acceptingAsyncWrites = AtomicBoolean(true)
+    private val playerDataWriteLock = Any()
     private val writeExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "hjh-database-writer").apply {
             isDaemon = true
@@ -90,7 +91,37 @@ class DatabaseManager(private val plugin: Hjh_database) {
         dataSource?.close()
     }
 
-    fun savePlayer(data: PlayerData) = players.savePlayer(data)
+    fun savePlayer(data: PlayerData) = withPlayerDataWriteLock { players.savePlayer(data) }
+
+    /**
+     * 让会修改 player_data（尤其是 money）的跨表事务与常规玩家存档互斥，
+     * 防止后台旧存档在市场交易提交后覆盖最新余额。
+     */
+    fun <T> withPlayerDataWriteLock(block: () -> T): T = synchronized(playerDataWriteLock) { block() }
+
+    /**
+     * 将数据库工作排入插件共用的单线程写入队列。调用方只接收 Future，绝不在
+     * Bukkit 主线程回退为同步执行；市场等交互功能用它避免卡住服务器 Tick。
+     */
+    fun <T> submitDatabaseOperation(block: () -> T): CompletableFuture<T> {
+        val future = CompletableFuture<T>()
+        if (!acceptingAsyncWrites.get()) {
+            future.completeExceptionally(RejectedExecutionException("数据库写入队列已关闭"))
+            return future
+        }
+        try {
+            writeExecutor.execute {
+                try {
+                    future.complete(withPlayerDataWriteLock(block))
+                } catch (ex: Throwable) {
+                    future.completeExceptionally(ex)
+                }
+            }
+        } catch (ex: RejectedExecutionException) {
+            future.completeExceptionally(ex)
+        }
+        return future
+    }
 
     fun savePlayerAsync(data: PlayerData) {
         queuedPlayerSaves.remove(data.uuid)?.cancel()
@@ -157,6 +188,15 @@ class DatabaseManager(private val plugin: Hjh_database) {
             conn.autoCommit = false
             try {
                 conn.prepareStatement("DELETE FROM player_quests WHERE uuid = ?").use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.executeUpdate()
+                }
+
+                conn.prepareStatement("DELETE FROM player_titles WHERE player_uuid = ?").use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.executeUpdate()
+                }
+                conn.prepareStatement("DELETE FROM player_title_profiles WHERE player_uuid = ?").use { ps ->
                     ps.setString(1, uuid.toString())
                     ps.executeUpdate()
                 }

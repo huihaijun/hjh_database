@@ -2,6 +2,7 @@ package com.hjh_database.accessory.skill.medical
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.medical.spell.MedicalHealEvent
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.Color
@@ -15,7 +16,6 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Parrot
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
@@ -269,9 +269,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
     }
 
     private fun damageTarget(player: Player, target: LivingEntity, damage: Double) {
-        target.noDamageTicks = 0
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-        target.damage(damage, player)
+        FormationMagicDamage.deal(plugin, player, target, damage)
 
         val knockback = target.location.toVector().subtract(player.location.toVector())
         knockback.y = 0.0

@@ -2,6 +2,7 @@ package com.hjh_database.accessory.element
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.element_zf.FormationDamageEvent
 import org.bukkit.Color
 import org.bukkit.Material
@@ -13,7 +14,6 @@ import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
@@ -299,17 +299,7 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
 
     private fun masteryDamage(attacker: Player, target: LivingEntity, damage: Double) {
         if (damage <= 0.0 || !isMonster(target)) return
-        val oldMaximum = target.maximumNoDamageTicks
-        target.noDamageTicks = 0
-        target.maximumNoDamageTicks = 0
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-        try {
-            target.damage(damage, attacker)
-        } finally {
-            target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
-            target.noDamageTicks = 0
-            target.maximumNoDamageTicks = oldMaximum
-        }
+        FormationMagicDamage.deal(plugin, attacker, target, damage)
     }
 
     private fun isMonster(entity: LivingEntity): Boolean {

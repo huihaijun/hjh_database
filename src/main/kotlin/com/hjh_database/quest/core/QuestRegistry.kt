@@ -9,6 +9,15 @@ import com.hjh_database.quest.impl.main.ren.Ren_06
 import com.hjh_database.quest.impl.main.ren.Ren_07
 import com.hjh_database.quest.impl.main.ren.Ren_08
 import com.hjh_database.quest.impl.main.ren.Ren_09
+import com.hjh_database.quest.impl.main.shen.Shen_01
+import com.hjh_database.quest.impl.main.shen.Shen_02
+import com.hjh_database.quest.impl.main.shen.Shen_03
+import com.hjh_database.quest.impl.main.shen.Shen_04
+import com.hjh_database.quest.impl.main.shen.Shen_05
+import com.hjh_database.quest.impl.main.shen.Shen_06
+import com.hjh_database.quest.impl.main.shen.Shen_07
+import com.hjh_database.quest.impl.main.shen.Shen_08
+import com.hjh_database.quest.impl.main.shen.Shen_09
 import com.hjh_database.quest.impl.main.south.South_01
 import com.hjh_database.quest.impl.main.south.South_02
 import com.hjh_database.quest.impl.main.south.South_03
@@ -29,6 +38,7 @@ import com.hjh_database.quest.impl.main.west.West_03
 import com.hjh_database.quest.impl.main.west.West_04
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
+import com.hjh_database.quest.impl.side.Side_StrangeTree
 import com.hjh_database.quest.impl.side.Side_Tianjige_Rumor
 import com.hjh_database.quest.impl.side.Side_Warrior_ShieldBook
 import com.hjh_database.quest.impl.side.Side_Warlock_BackflowBook
@@ -73,6 +83,17 @@ object QuestRegistry {
         manager.register(Yao_08())
         manager.register(Yao_09())
 
+        // === 神族主线 ===
+        manager.register(Shen_01())
+        manager.register(Shen_02())
+        manager.register(Shen_03())
+        manager.register(Shen_04())
+        manager.register(Shen_05())
+        manager.register(Shen_06())
+        manager.register(Shen_07())
+        manager.register(Shen_08())
+        manager.register(Shen_09())
+
         // === 仙族主线 ===
         // manager.register(Xian_01_Begin())
 
@@ -83,5 +104,6 @@ object QuestRegistry {
         manager.register(Side_Warlock_BackflowBook())
         manager.register(Side_Medical_TaolizhiBook())
         manager.register(Side_Tianjige_Rumor())
+        manager.register(Side_StrangeTree())
     }
 }

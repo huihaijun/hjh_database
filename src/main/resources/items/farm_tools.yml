@@ -1,0 +1,28 @@
+# 系统布点工具（管理员使用）。
+farm_field:
+  material: FARMLAND
+  name: "&6灵田"
+  lore:
+    - "&7管理员放置后注册为公共灵田田位"
+
+farm_controller_bell:
+  material: BELL
+  name: "&6灵田观测钟"
+  lore:
+    - "&7管理员放置后可用于查看附近灵田"
+
+# 玩家购买后，手持并右键一块尚未绑定的灵田。
+farm_plot_deed:
+  material: PAPER
+  name: "&6灵田契"
+  lore:
+    - "&7可将一块指定灵田绑定为自己的田位"
+
+# 示例玩法道具。效果由 FarmGrowthTorchEffect 硬编码。
+farm_growth_torch:
+  material: SOUL_TORCH
+  name: "&b生机火把"
+  lore:
+    - "&7&o神奇的火把"
+    - "&7&o能够加速一块农田30秒的生长时间"
+
