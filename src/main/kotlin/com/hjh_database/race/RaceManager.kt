@@ -3,6 +3,7 @@ package com.hjh_database.race
 import com.hjh_database.Hjh_database
 import com.hjh_database.race.impl.HumanRace
 import com.hjh_database.race.impl.YaoRace
+import com.hjh_database.race.impl.ShenRace
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -14,6 +15,7 @@ class RaceManager(val plugin: Hjh_database) : Listener {
     val keyResourceId = NamespacedKey(plugin, "resource_id")
 
     init {
+        registerRace(0, ShenRace(this))
         registerRace(2, HumanRace(this))
         registerRace(4, YaoRace(this))
         plugin.server.pluginManager.registerEvents(this, plugin)

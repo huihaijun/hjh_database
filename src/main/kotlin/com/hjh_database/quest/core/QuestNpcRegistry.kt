@@ -298,6 +298,27 @@ enum class StoryNpcs(
         Villager.Profession.MASON,
         Villager.Type.PLAINS,
         179.5, 68.5, -165.5, 0f
+    ),
+    SHUIZUCUNZHANG(
+        "shuizucunzhang",
+        "§a§l水族族长-水渊",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -300.5, 19.5, -675.5, 0f
+    ),
+    SHUIZUJISI(
+        "shuizujisi",
+        "§a§l水族祭司-洛禾",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -335.5, 18.5, -686.5, 0f
+    ),
+    GUXIAOHAN(
+        "guxiaohan",
+        "§a§l顾小汉",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -300.5, 23.5, -659.5, 0f
     );
 
 

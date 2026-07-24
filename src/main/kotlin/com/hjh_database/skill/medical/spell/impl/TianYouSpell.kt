@@ -7,124 +7,155 @@ import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
-import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 class TianYouSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     companion object {
-        // 记录身上拥有天佑护盾的玩家和对应的定时清理任务
+        // 记录身上拥有天佑护盾的玩家和对应的定时结算任务。
         val activeTianYouTasks = ConcurrentHashMap<UUID, BukkitTask>()
+
+        // 独立来源前缀确保天佑只刷新/移除自己的加成，不会影响其他技能。
+        private const val ATTACK_PERCENT_KEY = "tianyou::attack_percent"
+        private const val ARCHER_DAMAGE_PERCENT_KEY = "tianyou::archer_damage_percent"
+        private const val ZF_STR_PERCENT_KEY = "tianyou::zf_str_percent"
     }
 
-    override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
-        val zfStr = data.zfStr
+    private data class OffenseBoostState(val token: UUID, val task: BukkitTask)
+    private val activeOffenseBoosts = ConcurrentHashMap<UUID, OffenseBoostState>()
 
-        // 读取配置参数
+    override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         val radius = config?.getDouble("radius", 10.0) ?: 10.0
         val shieldMultiplier = config?.getDouble("shield_multiplier", 3.0) ?: 3.0
-        val explodeMultiplier = config?.getDouble("explode_multiplier", 1.5) ?: 1.5
         val durationSeconds = config?.getInt("duration", 15) ?: 15
-        val explodeRadius = config?.getDouble("explode_radius", 3.0) ?: 3.0
+        val offensePercentPerShield = config?.getDouble("offense_percent_per_shield", 0.01) ?: 0.01
+        val offenseBoostCap = config?.getDouble("offense_boost_cap", 0.3) ?: 0.3
+        val offenseBoostDuration = config?.getInt("offense_boost_duration", 5) ?: 5
 
-        val shieldAmount = zfStr * shieldMultiplier
+        val shieldAmount = data.zfStr * shieldMultiplier
         val durationTicks = durationSeconds * 20L
         val center = player.location
 
-        // 播放施法音效和光效
         player.world.playSound(center, Sound.ITEM_TOTEM_USE, 0.8f, 1.2f)
         player.world.playSound(center, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.5f)
-        player.world.spawnParticle(Particle.END_ROD, center.clone().add(0.0, 1.0, 0.0), 100, radius / 2, 1.0, radius / 2, 0.1)
+        player.world.spawnParticle(
+            Particle.END_ROD,
+            center.clone().add(0.0, 1.0, 0.0),
+            100,
+            radius / 2,
+            1.0,
+            radius / 2,
+            0.1
+        )
 
-        // 寻找范围内的友军 (包含自己)
-        val nearbyEntities = player.world.getNearbyEntities(center, radius, radius, radius)
-        val targets = mutableListOf<Player>()
+        val targets = player.world.getNearbyEntities(center, radius, radius, radius)
+            .asSequence()
+            .filterIsInstance<Player>()
+            .filter { it.location.distanceSquared(center) <= radius * radius }
+            .toMutableSet()
+        targets.add(player)
 
-        for (entity in nearbyEntities) {
-            if (entity is Player && entity.location.distance(center) <= radius) {
-                targets.add(entity)
-            }
-        }
-        if (!targets.contains(player)) {
-            targets.add(player)
-        }
-
-        // 遍历所有友军
         for (target in targets) {
-            if (target.isDead) continue
+            if (target.isDead || target.absorptionAmount >= shieldAmount) continue
 
-            // 【核心逻辑 1】只在当前护盾低于技能护盾时才覆盖
-            if (target.absorptionAmount < shieldAmount) {
-
-                // 动态计算药水等级解锁黄心上限
-                val amp = (shieldAmount / 4.0).toInt()
-                target.addPotionEffect(PotionEffect(
+            val amplifier = (shieldAmount / 4.0).toInt()
+            target.addPotionEffect(
+                PotionEffect(
                     PotionEffectType.ABSORPTION,
                     durationTicks.toInt(),
-                    amp, false, false, true
-                ))
-                target.absorptionAmount = shieldAmount
+                    amplifier,
+                    false,
+                    false,
+                    true
+                )
+            )
+            target.absorptionAmount = shieldAmount
 
-                target.world.spawnParticle(Particle.DUST, target.location.clone().add(0.0, 1.0, 0.0), 30, 0.5, 0.8, 0.5, Particle.DustOptions(Color.YELLOW, 1.5f))
-                target.world.playSound(target.location, Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.5f)
+            target.world.spawnParticle(
+                Particle.DUST,
+                target.location.clone().add(0.0, 1.0, 0.0),
+                30,
+                0.5,
+                0.8,
+                0.5,
+                Particle.DustOptions(Color.YELLOW, 1.5f)
+            )
+            target.world.playSound(target.location, Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.5f)
 
-                // 取消该玩家身上的旧天佑任务
-                activeTianYouTasks[target.uniqueId]?.cancel()
+            activeTianYouTasks[target.uniqueId]?.cancel()
+            val task = object : BukkitRunnable() {
+                override fun run() {
+                    activeTianYouTasks.remove(target.uniqueId)
+                    if (!target.isOnline || target.isDead) return
 
-                // 注册 15 秒后的护盾消失与爆破任务
-                val task = object : BukkitRunnable() {
-                    override fun run() {
-                        activeTianYouTasks.remove(target.uniqueId)
-                        if (!target.isOnline || target.isDead) return
+                    val remainingAbsorption = target.absorptionAmount
 
-                        val remainingAbs = target.absorptionAmount
+                    // 大于最初赋予值时视为其他来源的更强护盾，避免误删该护盾。
+                    if (remainingAbsorption <= 0.0 || remainingAbsorption > shieldAmount) return
 
-                        // 【核心逻辑 2】如果剩余护盾大于赋予的最大值，说明他获得了其他来源的更强护盾，不予消除！
-                        if (remainingAbs > 0 && remainingAbs <= shieldAmount) {
+                    target.absorptionAmount = 0.0
+                    target.removePotionEffect(PotionEffectType.ABSORPTION)
 
-                            // 消除护盾和药水效果
-                            target.absorptionAmount = 0.0
-                            target.removePotionEffect(PotionEffectType.ABSORPTION)
+                    // 每1点剩余护盾转为1%进攻属性，默认最多30%。
+                    val offenseBoost = (remainingAbsorption * offensePercentPerShield)
+                        .coerceIn(0.0, offenseBoostCap)
+                    applyOffenseBoost(target, offenseBoost, offenseBoostDuration)
 
-                            // 基于剩余护盾值造成伤害
-                            val damage = remainingAbs * explodeMultiplier
+                    target.world.playSound(target.location, Sound.BLOCK_GLASS_BREAK, 1.0f, 0.8f)
+                    target.world.playSound(target.location, Sound.BLOCK_BEACON_POWER_SELECT, 0.8f, 1.4f)
+                    target.world.spawnParticle(
+                        Particle.ENCHANT,
+                        target.location.clone().add(0.0, 1.0, 0.0),
+                        45,
+                        0.6,
+                        0.9,
+                        0.6,
+                        0.15
+                    )
+                }
+            }.runTaskLater(plugin, durationTicks)
 
-                            // 寻找周围3格内的怪物
-                            val explodeTargets = target.world.getNearbyEntities(target.location, explodeRadius, explodeRadius, explodeRadius)
-                            var hitCount = 0
-
-                            for (entity in explodeTargets) {
-                                if (entity is LivingEntity && entity.uniqueId != target.uniqueId) {
-                                    val tags = entity.scoreboardTags
-                                    if (tags.contains("panling") && tags.contains("monster")) {
-                                        // 造成魔法伤害，伤害来源归功于技能释放者(player)
-                                        plugin.medicalSpellManager.applyMedicalDamage(player, entity, damage, "tianyou")
-                                        hitCount++
-                                    }
-                                }
-                            }
-
-                            // 播放护盾碎裂及爆炸特效
-                            target.world.playSound(target.location, Sound.BLOCK_GLASS_BREAK, 1.0f, 0.8f)
-                            if (hitCount > 0) {
-                                target.world.playSound(target.location, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f)
-                                target.world.spawnParticle(Particle.EXPLOSION, target.location.clone().add(0.0, 1.0, 0.0), 3, 0.5, 0.5, 0.5, 0.0)
-                            }
-                        }
-                    }
-                }.runTaskLater(plugin, durationTicks)
-
-                activeTianYouTasks[target.uniqueId] = task
-            }
+            activeTianYouTasks[target.uniqueId] = task
         }
 
         return true
+    }
+
+    private fun applyOffenseBoost(target: Player, percent: Double, durationSeconds: Int) {
+        if (percent <= 0.0 || durationSeconds <= 0) return
+
+        val targetData = plugin.playerManager.getData(target.uniqueId) ?: return
+        activeOffenseBoosts.remove(target.uniqueId)?.task?.cancel()
+
+        targetData.tempBonuses[ATTACK_PERCENT_KEY] = percent
+        targetData.tempBonuses[ARCHER_DAMAGE_PERCENT_KEY] = percent
+        targetData.tempBonuses[ZF_STR_PERCENT_KEY] = percent
+        plugin.playerManager.updateStats(target)
+
+        val token = UUID.randomUUID()
+        val task = plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            val current = activeOffenseBoosts[target.uniqueId] ?: return@Runnable
+            if (current.token != token) return@Runnable
+
+            activeOffenseBoosts.remove(target.uniqueId)
+            val currentData = plugin.playerManager.getData(target.uniqueId) ?: return@Runnable
+            currentData.tempBonuses.remove(ATTACK_PERCENT_KEY)
+            currentData.tempBonuses.remove(ARCHER_DAMAGE_PERCENT_KEY)
+            currentData.tempBonuses.remove(ZF_STR_PERCENT_KEY)
+            if (target.isOnline) {
+                plugin.playerManager.updateStats(target)
+            }
+        }, durationSeconds * 20L)
+
+        activeOffenseBoosts[target.uniqueId] = OffenseBoostState(token, task)
+        val displayPercent = (percent * 100.0).roundToInt()
+        target.sendMessage("§e[天佑] §f剩余护盾转化为 §c${displayPercent}% §f进攻属性，持续 §b${durationSeconds} §f秒。")
     }
 }

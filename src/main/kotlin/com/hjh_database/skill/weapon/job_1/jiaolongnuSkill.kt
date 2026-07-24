@@ -35,6 +35,7 @@ class jiaolongnuSkill : WeaponSkill, Listener {
 
     // 记录玩家主动技能的过期时间 (UUID -> 过期时间戳)
     private val activeBuffs = ConcurrentHashMap<UUID, Long>()
+    private val passiveWaterBreathingOwners = ConcurrentHashMap.newKeySet<UUID>()
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -48,20 +49,30 @@ class jiaolongnuSkill : WeaponSkill, Listener {
                 for (player in Bukkit.getOnlinePlayers()) {
                     val pluginMain = plugin as? com.hjh_database.Hjh_database ?: return
                     if (!pluginMain.weaponSkillManager.isWeaponActivated(player, "jiaolongnu")) {
-                        player.removePotionEffect(PotionEffectType.WATER_BREATHING)
+                        clearPassiveWaterBreathing(player)
                         continue
                     }
                     val item = player.inventory.itemInMainHand
-                    if (!item.hasItemMeta()) continue
+                    if (!item.hasItemMeta()) {
+                        clearPassiveWaterBreathing(player)
+                        continue
+                    }
 
-                    val meta = item.itemMeta ?: continue
+                    val meta = item.itemMeta
+                    if (meta == null) {
+                        clearPassiveWaterBreathing(player)
+                        continue
+                    }
                     val weaponId = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
 
                     if (weaponId == "jiaolongnu") {
                         // 赋予 10 秒的水下呼吸。最后的三个 false 代表：隐藏信标图标、隐藏粒子效果、隐藏屏幕右上角图标
-                        player.addPotionEffect(
-                            PotionEffect(PotionEffectType.WATER_BREATHING, 200, 0, false, false, false)
+                        val applied = player.addPotionEffect(
+                            PotionEffect(PotionEffectType.WATER_BREATHING, PASSIVE_WATER_BREATHING_TICKS, 0, false, false, false)
                         )
+                        if (applied) passiveWaterBreathingOwners.add(player.uniqueId)
+                    } else {
+                        clearPassiveWaterBreathing(player)
                     }
                 }
             }
@@ -197,17 +208,31 @@ class jiaolongnuSkill : WeaponSkill, Listener {
         arrow.setMetadata("hjh_jiaolong_arrow", FixedMetadataValue(plugin, 0))
     }
 
+    private fun clearPassiveWaterBreathing(player: Player) {
+        if (!passiveWaterBreathingOwners.remove(player.uniqueId)) return
+
+        val effect = player.getPotionEffect(PotionEffectType.WATER_BREATHING) ?: return
+        val isJiaolongnuEffect = effect.amplifier == 0 &&
+            !effect.hasParticles() &&
+            !effect.hasIcon() &&
+            effect.duration <= PASSIVE_WATER_BREATHING_TICKS
+        if (isJiaolongnuEffect) {
+            player.removePotionEffect(PotionEffectType.WATER_BREATHING)
+        }
+    }
+
     override fun deactivate(player: Player) {
         activeBuffs.remove(player.uniqueId)
+        clearPassiveWaterBreathing(player)
         val pluginMain = plugin as com.hjh_database.Hjh_database
         val data = pluginMain.playerManager.getData(player.uniqueId) ?: return
         if (data.tempBonuses.remove(SPEED_BUFF_KEY) != null) {
             pluginMain.playerManager.updateStats(player)
         }
-        player.removePotionEffect(PotionEffectType.WATER_BREATHING)
     }
 
     companion object {
         private const val SPEED_BUFF_KEY = "jiaolongnu::speed_percent"
+        private const val PASSIVE_WATER_BREATHING_TICKS = 10 * 20
     }
 }

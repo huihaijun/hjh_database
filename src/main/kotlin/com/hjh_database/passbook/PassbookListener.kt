@@ -57,17 +57,23 @@ class PassbookListener(private val plugin: Hjh_database) : Listener {
     private val resourceIdKey = NamespacedKey(plugin, "resource_id")
     private val ignoreRefreshKey = NamespacedKey(plugin, "hjh_ignore_refresh")
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onBankerInteract(event: PlayerInteractEntityEvent) {
         if (event.hand != org.bukkit.inventory.EquipmentSlot.HAND) return
-        // 管理员手持木锄时由 NPC 编辑器接管，不能先打开钱庄界面。
-        if (event.player.isOp && event.player.inventory.itemInMainHand.type == Material.WOODEN_HOE) return
+        // OP 的两种 NPC 管理工具拥有最高业务优先级，钱庄不能抢先打开交易界面。
+        val heldMaterial = event.player.inventory.itemInMainHand.type
+        if (event.player.isOp && (heldMaterial == Material.WOODEN_HOE || heldMaterial == Material.STONE_HOE)) return
         val villager = event.rightClicked as? Villager ?: return
-        val displayName = ChatColor.stripColor(villager.customName ?: return) ?: return
-        if (!displayName.contains(BANKER_NAME)) return
+        if (!isBanker(villager.customName)) return
 
         event.isCancelled = true
         open(event.player)
+    }
+
+    /** 供神识等远程交互入口复用钱庄掌柜的专属 GUI。 */
+    fun isBanker(displayName: String?): Boolean {
+        val plainName = ChatColor.stripColor(displayName ?: return false) ?: return false
+        return plainName.contains(BANKER_NAME)
     }
 
     @EventHandler
@@ -96,7 +102,7 @@ class PassbookListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    private fun open(player: Player) {
+    fun open(player: Player) {
         val holder = PassbookHolder(player.uniqueId)
         val inventory = Bukkit.createInventory(holder, 27, TITLE)
         holder.menu = inventory

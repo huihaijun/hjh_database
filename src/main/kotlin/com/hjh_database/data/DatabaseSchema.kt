@@ -28,6 +28,8 @@ internal class DatabaseSchema(
         createElementCrystalTable()
         createFarmingTable()
         createBusuanTable()
+        createShenConsciousnessTable()
+        createShenTributeTable()
         createTitleTables()
         updateTables()
     }
@@ -41,6 +43,39 @@ internal class DatabaseSchema(
                 request_date VARCHAR(10) NOT NULL,
                 fortune_id VARCHAR(64),
                 updated_at BIGINT DEFAULT 0
+            );
+            """.trimIndent()
+        )
+    }
+
+    private fun createShenConsciousnessTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_shen_consciousness (
+                player_uuid VARCHAR(36) NOT NULL,
+                template_id VARCHAR(128) NOT NULL,
+                display_name TEXT NOT NULL,
+                created_at BIGINT NOT NULL,
+                PRIMARY KEY (player_uuid, template_id)
+            );
+            """.trimIndent()
+        )
+    }
+
+    private fun createShenTributeTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_shen_tribute (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32) NOT NULL,
+                arrival_remaining_seconds INTEGER NOT NULL DEFAULT 7200,
+                tribute_category VARCHAR(16),
+                tribute_tier INTEGER NOT NULL DEFAULT 0,
+                claim_remaining_seconds INTEGER NOT NULL DEFAULT 0,
+                reminder_mask INTEGER NOT NULL DEFAULT 0,
+                claim_window_started_at BIGINT NOT NULL DEFAULT 0,
+                daily_claim_count INTEGER NOT NULL DEFAULT 0,
+                updated_at BIGINT NOT NULL DEFAULT 0
             );
             """.trimIndent()
         )
@@ -137,6 +172,10 @@ internal class DatabaseSchema(
                     safeAddColumn(stmt, "player_jianghu_xinde", "jianghu_xinde", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_exp_gained", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_last_level", "INT DEFAULT 1")
+
+                    // 神族贡品：以首次领取为起点的现实时间 24 小时领取窗口。
+                    safeAddColumn(stmt, "player_shen_tribute", "claim_window_started_at", "BIGINT NOT NULL DEFAULT 0")
+                    safeAddColumn(stmt, "player_shen_tribute", "daily_claim_count", "INTEGER NOT NULL DEFAULT 0")
                 }
             }
         } catch (e: SQLException) {

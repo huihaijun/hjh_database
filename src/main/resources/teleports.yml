@@ -352,3 +352,15 @@ points:
         values: 4
         message: "&7这里的洞口太小了，还是放弃吧……"
 
+  玄武洞-门锁:
+    world: "world"
+    x: -83.46
+    y: 34.50
+    z: -513.72
+    yaw: 3240.65
+    pitch: 16.80
+    conditions:
+      completed_quest:
+        id: "main_north_4"
+        message: "&7这个门锁似乎没有对你的请求回应（请先完成前置任务再来吧）"
+

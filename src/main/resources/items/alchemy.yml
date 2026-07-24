@@ -1,4 +1,37 @@
 #炼丹所用材料
+yy_tongyong0:
+  material: GOLD_NUGGET
+  custom_model_data: 10137
+  name: "&6[药引]通用药引(初级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+
+yy_tongyong1:
+  material: GOLD_NUGGET
+  custom_model_data: 10137
+  name: "&6[药引]通用药引(中级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级:&b中级&7&o"
+
+yy_tongyong2:
+  material: GOLD_NUGGET
+  custom_model_data: 10137
+  name: "&6[药引]通用药引(高级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级:&e高级"
+
 yy_yuhedan:
   material: GOLD_NUGGET
   name: "&b[药引]愈合丹"

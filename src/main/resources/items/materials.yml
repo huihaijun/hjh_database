@@ -5,9 +5,17 @@ yuansuduihuanquan:
   material: PAPER
   name: "&b元素兑换券"
   lore:
-    - "&7&o用来兑换或转化元素的凭证"
+    - "&7&o用来兑换元素的凭证"
     - "&7&o可以找到元素兑换师兑换"
-    -
+
+yuansuzhuanhuaquan:
+  material: PAPER
+  name: "&b元素转化券"
+  lore:
+    - "&7&o用来转化元素的凭证"
+    - "&7&o可以请元素转化师协助转化元素"
+
+
 longlinmu:
   material: OAK_LOG
   name: "&b龙鳞木"

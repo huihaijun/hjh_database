@@ -452,3 +452,20 @@ fengmuhuichun2:
     - "&f瞬间恢复&b24点&f生命"
     - "&f并获得持续持续&b15&f秒的&b生命恢复Ⅱ&f效果"
 
+luoshuidan:
+  material: POTION
+  name: "&b洛水丹[助势][初级]"
+  category: GUIYUAN
+  color: "#1E90FF"
+  only_doctor: false
+  req_level: 3
+  base_exp: 15
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o通透如水,入手微凉,似有清流于掌心流转"
+    - "&7&o服后灵息自生,入水不溺,如游鱼般自在穿行"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f获得持续时间为&b60&f秒的&b水下呼吸&f效果"
+    - "&f同时持续时间内在水下行动更加敏捷"

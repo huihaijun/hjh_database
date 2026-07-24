@@ -67,6 +67,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin farm <get|info|reload|player> - 灵田管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin buqian <info|reset> <玩家> - 卜算管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin title <list|give|take|display|reload> - 称号管理")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin shengong <玩家> <秒数> - 设置神族贡品到达时间")
             return true
         }
 
@@ -82,6 +83,10 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         if (subCommand == "title" || subCommand == "称号") {
             return plugin.titleManager.handleAdminCommand(sender, args.drop(1))
+        }
+
+        if (subCommand == "shengong" || subCommand == "gongpin") {
+            return plugin.shenTributeManager.handleAdminCommand(sender, args.drop(1))
         }
 
         if (subCommand == "baihudz") {
@@ -515,7 +520,13 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 return true
             }
 
-            val progress = if (args.size >= 5) args[4].toIntOrNull() ?: 0 else 0
+            val progress = if (args.size >= 5) {
+                args[4].toIntOrNull() ?: 0
+            } else if (status == QuestStatus.COMPLETED) {
+                9999
+            } else {
+                0
+            }
 
             // 1. 获取数据
             val data = plugin.playerManager.getPlayerData(target)
@@ -523,6 +534,11 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 // 2. 修改内存
                 data.questStatuses[questId] = status
                 data.questProgress[questId] = progress
+                if (status == QuestStatus.COMPLETED) {
+                    data.completedQuests.add(questId)
+                } else {
+                    data.completedQuests.remove(questId)
+                }
 
                 // 3. 强制保存数据库
                 plugin.databaseManager.saveQuestData(target, questId, status, progress)
@@ -1110,7 +1126,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest", "kw", "baihudz", "farm", "buqian", "title"
+                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1120,6 +1136,12 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === 2. 二级及以上补全 (根据主指令分支) ===
         when (subCmd) {
+            "shengong", "gongpin" -> {
+                if (args.size == 2) return null
+                if (args.size == 3) {
+                    return listOf("0", "30", "60", "300", "7200").filter { it.startsWith(args[2]) }
+                }
+            }
             "title", "称号" -> {
                 if (args.size == 2) {
                     return listOf("list", "give", "take", "display", "reload")

@@ -35,6 +35,11 @@ internal class DatabaseSubsystemRepository(
 
                         data.questStatuses[qId] = status
                         data.questProgress[qId] = progress
+                        if (status == QuestStatus.COMPLETED) {
+                            data.completedQuests.add(qId)
+                        } else {
+                            data.completedQuests.remove(qId)
+                        }
                     }
                 }
             }

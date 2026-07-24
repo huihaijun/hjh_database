@@ -3,9 +3,9 @@ package com.hjh_database.skill.medical.spell.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
-import org.bukkit.Location
 import org.bukkit.Particle
 import org.bukkit.Sound
+import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -13,7 +13,6 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageEvent
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
@@ -23,11 +22,13 @@ import java.util.concurrent.ConcurrentHashMap
 class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener {
 
     // 存储被点亮怪物的状态数据：施法者UUID 和 点亮结束的时间戳
-    data class MarkData(val casterId: UUID, val expiryTime: Long)
+    data class MarkData(val casterId: UUID, val expiryTime: Long, val healRadius: Double)
 
     companion object {
         val activeMarks = ConcurrentHashMap<UUID, MarkData>()
         val healCooldowns = ConcurrentHashMap<UUID, Long>() // 记录上次触发治疗的时间戳 (防高频)
+        private const val HEAL_INTERNAL_COOLDOWN_MILLIS = 800L
+        private const val HEAL_AMOUNT = 2.0
     }
 
     init {
@@ -88,7 +89,7 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
         nearestMob.addPotionEffect(PotionEffect(PotionEffectType.GLOWING, durationTicks.toInt(), 0, false, false, true))
 
         val expiry = System.currentTimeMillis() + (durationSeconds * 1000L)
-        activeMarks[nearestMob.uniqueId] = MarkData(player.uniqueId, expiry)
+        activeMarks[nearestMob.uniqueId] = MarkData(player.uniqueId, expiry, healRadius)
 
         // 定时清理任务
         object : BukkitRunnable() {
@@ -112,6 +113,7 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
 
         // 检查怪物是否被标记
         val markData = activeMarks[victim.uniqueId] ?: return
+        if (e.finalDamage <= 0.0) return
 
         // 如果标记已过期（保险机制）
         if (System.currentTimeMillis() > markData.expiryTime) {
@@ -120,10 +122,10 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
             return
         }
 
-        // 内置 0.6 秒 CD 判断 (600毫秒)
+        // 每个被标记怪物独立计算 0.8 秒内置 CD，避免高频伤害重复触发范围治疗。
         val lastHealTime = healCooldowns[victim.uniqueId] ?: 0L
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastHealTime < 600L) {
+        if (currentTime - lastHealTime < HEAL_INTERNAL_COOLDOWN_MILLIS) {
             return // 冷却中，不触发
         }
 
@@ -132,23 +134,30 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
 
         // 触发范围治疗
         val center = victim.location
-        val healRadius = 4.0
+        val healRadius = markData.healRadius
+        val healRadiusSquared = healRadius * healRadius
         val nearbyEntities = victim.world.getNearbyEntities(center, healRadius, healRadius, healRadius)
+        val caster = plugin.server.getPlayer(markData.casterId)
 
         var healedAny = false
 
         for (entity in nearbyEntities) {
-            if (entity is Player && !entity.isDead && entity.location.distance(center) <= healRadius) {
-                // 判断：如果是施法者本人则放大为瞬间治疗 2 级 (1 代表等级2)；否则为 1 级 (0 代表等级1)
-                val isCaster = (entity.uniqueId == markData.casterId)
-                val amp = if (isCaster) 1 else 0
-
-                // 1.21.3 标准 API 中的瞬间治疗是 INSTANT_HEALTH
-                entity.addPotionEffect(PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, amp, false, false, true))
+            if (entity is Player && !entity.isDead && entity.location.distanceSquared(center) <= healRadiusSquared) {
+                val healed = if (caster != null) {
+                    plugin.medicalSpellManager.applyMedicalHeal(caster, entity, HEAL_AMOUNT, "jiangtianguang")
+                } else {
+                    // 施法者在短暂标记期间离线时仍保留基础治疗，但不再触发施法者相关联动。
+                    val maxHealth = entity.getAttribute(Attribute.MAX_HEALTH)?.value ?: entity.health
+                    val oldHealth = entity.health
+                    entity.health = (oldHealth + HEAL_AMOUNT).coerceAtMost(maxHealth)
+                    entity.health - oldHealth
+                }
 
                 // 飘出代表治疗的爱心粒子
-                entity.world.spawnParticle(Particle.HEART, entity.location.clone().add(0.0, 2.0, 0.0), 1, 0.3, 0.3, 0.3, 0.0)
-                healedAny = true
+                if (healed > 0.0) {
+                    entity.world.spawnParticle(Particle.HEART, entity.location.clone().add(0.0, 2.0, 0.0), 1, 0.3, 0.3, 0.3, 0.0)
+                    healedAny = true
+                }
             }
         }
 
@@ -159,4 +168,5 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
             victim.world.spawnParticle(Particle.WAX_ON, center.clone().add(0.0, 1.0, 0.0), 20, 1.0, 1.0, 1.0, 0.1)
         }
     }
+
 }

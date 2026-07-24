@@ -248,3 +248,39 @@ shen_job_ticket_doctor:
     - ""
     - "&e[主手右键] &f消耗传送至医术导师"
     - "&c仅限神族使用"
+
+laoyushuitong:
+  material: WATER_BUCKET
+  max_stack_size: 64
+  name: "&b捞鱼水桶"
+  lore:
+    - "&7&o洄游季用来捞鱼的水桶"
+    - "&7&o对着鲑鱼右键即可把鱼捞上来"
+    - "&e[任务物品]"
+
+guiyushuitong:
+  material: SALMON_BUCKET
+  max_stack_size: 64
+  name: "&b装有鲑鱼的水桶"
+  lore:
+    - "&7&o水桶里装着一条活蹦乱跳的鲑鱼"
+    - "&7&o洄游祭所需的祭典材料"
+    - "&e[任务物品]"
+
+shihuodeshanhu:
+  material: DEAD_TUBE_CORAL
+  max_stack_size: 64
+  name: "&7失活的珊瑚"
+  lore:
+    - "&7&o祭司口中维持着村庄稳定的珊瑚,看起来毫无生机"
+    - "&7&o快带回去让祭司研究一下吧"
+    - "&e[任务物品]"
+
+huanfashengjideshanhu:
+  material: TUBE_CORAL
+  max_stack_size: 64
+  name: "&b焕发生机的珊瑚"
+  lore:
+    - "&7&o被元素之力唤醒生机的珊瑚"
+    - "&7&o放入玄武神庙洞口的锁孔中,就能开启玄武洞口的门锁"
+    - "&e[任务物品]"

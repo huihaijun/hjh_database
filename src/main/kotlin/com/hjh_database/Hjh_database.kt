@@ -25,6 +25,7 @@ import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
+import com.hjh_database.dungeon.xuanwu.trial.XuanwuTrialManager
 import com.hjh_database.dungeon.zhuque.ZhuQueManager
 import com.hjh_database.dz.command.DzCommand
 import com.hjh_database.dz.listener.StationListener
@@ -91,6 +92,8 @@ class Hjh_database : JavaPlugin() {
     lateinit var questGui: QuestGui
     lateinit var alchemyManager: AlchemyManager
     lateinit var raceModule: com.hjh_database.race.RaceManager
+    lateinit var shenConsciousnessManager: com.hjh_database.race.shen.ShenConsciousnessManager
+    lateinit var shenTributeManager: com.hjh_database.race.shen.ShenTributeManager
     lateinit var spawnerBlockManager: SpawnerBlockManager
     lateinit var baihuMiasmaManager: BaihuMiasmaManager
     lateinit var baihuTownFireManager: BaihuTownFireManager
@@ -105,10 +108,12 @@ class Hjh_database : JavaPlugin() {
     lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
     lateinit var zhuQueManager: ZhuQueManager// 朱雀试炼管理器
     lateinit var baihuTrialManager: BaihuTrialManager
+    lateinit var xuanwuTrialManager: XuanwuTrialManager
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
     lateinit var jianghuXindeManager: com.hjh_database.jianghu.JianghuXindeManager
+    lateinit var passbookListener: PassbookListener
     // 新增：箭袋管理器
     lateinit var jiandaiSkill: JiandaiSkill
     val accessorySkillManager = AccessorySkillManager(this)
@@ -144,6 +149,8 @@ class Hjh_database : JavaPlugin() {
         this.medicalManager = com.hjh_database.skill.medical.MedicalManager(this)
         this.medicalSpellManager = MedicalSpellManager(this)
         this.questManager = QuestManager(this)
+        this.shenConsciousnessManager = com.hjh_database.race.shen.ShenConsciousnessManager(this)
+        this.shenTributeManager = com.hjh_database.race.shen.ShenTributeManager(this)
         this.raceModule = com.hjh_database.race.RaceManager(this)
         this.spawnerBlockManager = SpawnerBlockManager(this)
         this.baihuMiasmaManager = BaihuMiasmaManager(this)
@@ -181,6 +188,7 @@ class Hjh_database : JavaPlugin() {
         // 朱雀试炼
         this.zhuQueManager = ZhuQueManager(this)
         this.baihuTrialManager = BaihuTrialManager(this)
+        this.xuanwuTrialManager = XuanwuTrialManager(this)
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
         // 【新增】初始化个人仓库管理器
@@ -232,7 +240,8 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(this.baihuMiasmaManager, this)
         pm.registerEvents(this.baihuTownFireManager, this)
-        pm.registerEvents(PassbookListener(this), this)
+        this.passbookListener = PassbookListener(this)
+        pm.registerEvents(this.passbookListener, this)
         pm.registerEvents(com.hjh_database.listener.TestDummySignListener(this), this)
         pm.registerEvents(RaidPreventionListener(this), this)
 
@@ -260,6 +269,7 @@ class Hjh_database : JavaPlugin() {
         // 朱雀试炼监听
         pm.registerEvents(this.zhuQueManager, this)
         pm.registerEvents(this.baihuTrialManager, this)
+        pm.registerEvents(this.xuanwuTrialManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
         // 【新增】个人仓库系统监听
@@ -361,6 +371,10 @@ class Hjh_database : JavaPlugin() {
             titleManager.shutdown()
         }
 
+        if (::shenTributeManager.isInitialized) {
+            shenTributeManager.shutdown()
+        }
+
         if (::databaseManager.isInitialized) {
             databaseManager.cancelQueuedPlayerSaves()
         }
@@ -379,6 +393,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::baihuTrialManager.isInitialized) {
             baihuTrialManager.shutdown()
+        }
+
+        if (::xuanwuTrialManager.isInitialized) {
+            xuanwuTrialManager.shutdown()
         }
 
         if (::bgmManager.isInitialized) {
