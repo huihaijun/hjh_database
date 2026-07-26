@@ -122,3 +122,21 @@ huzhuayan:
     - "&7&o白虎洞内独特的岩石"
     - "&7&o石上的花纹似有虎爪痕迹"
     - "&7&o寒气逼人,充满攻击性"
+
+xuanjingshi:
+  material: STICK
+  custom_model_data: 7020
+  name: "&e玄晶石"
+  rarity: 5
+  lore:
+    - "&7&o玄水湾沿岸冲刷而出的晶石,经年浪打,棱角尽去而光泽不灭"
+    - "&7&o石质细腻如玉,扣之有声如磬,水蚀不腐,愈淬愈坚"
+
+baigumu:
+  material: STICK
+  custom_model_data: 7015
+  name: "&e白骨木"
+  rarity: 5
+  lore:
+    - "&7&o乱葬岗中破土而出的苍白枯木,形如白骨破土,寒瘆逼人"
+    - "&7&o汲尽地底尸骸怨气而生,纹理间似有幽魂低语,阴气不散"

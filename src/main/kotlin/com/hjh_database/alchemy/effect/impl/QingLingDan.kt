@@ -6,6 +6,7 @@ import com.hjh_database.alchemy.data.AlchemyTier
 import com.hjh_database.alchemy.data.TierConfig
 import com.hjh_database.alchemy.effect.AlchemyEffect
 import com.hjh_database.data.PlayerData
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -29,6 +30,7 @@ class QingLingDan : AlchemyEffect {
     }
 
     override fun onConsume(player: Player, data: PlayerData, tier: AlchemyTier): Long {
+        NorthWetnessSkill.cleanseToOnePercent(player)
         player.activePotionEffects
             .filter { it.type.category == PotionEffectTypeCategory.HARMFUL }
             .forEach { player.removePotionEffect(it.type) }

@@ -18,6 +18,7 @@ import org.bukkit.entity.Item
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageEvent
@@ -74,7 +75,8 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
     private val scriptAwakened = listOf(
         "§e[${StoryNpcs.SHUIZUJISI.displayName}§e] §f对！没错！就是它！这股沉稳而厚重的力量——正是§4§n玄武大人§f的气息！",
         "§e[${StoryNpcs.SHUIZUJISI.displayName}§e] §f快，带着这块珊瑚前往§b玄武洞口§f，将它放入门锁之中。自此之后，这洞门便认了你了。日后想进入神庙，只需用§e右手轻抚洞口的门锁§f，便能通行无阻。",
-        "§e[${StoryNpcs.SHUIZUJISI.displayName}§e] §f§4§n玄武大人§f的试炼想必非同小可。愿你也能如先前一般，顺利通过。我在这里等你的好消息。"
+        "§e[${StoryNpcs.SHUIZUJISI.displayName}§e] §f§4§n玄武大人§f的试炼想必非同小可。愿你也能如先前一般，顺利通过。我在这里等你的好消息。",
+        "§e[${StoryNpcs.SHUIZUJISI.displayName}§e] §f若你通过了§4§n玄武试炼§f，就尽快回来找我。我还有些关于北方湖泊的事要告诉你。"
     )
 
     init {
@@ -126,7 +128,6 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
                 }
 
                 playDialogue(player, scriptAwakened) {
-                    giveQuestItem(player, SILVER_NOTE_ID, 1, Material.GOLD_NUGGET, "§9银票")
                     plugin.questManager.updateProgress(player, id, 4)
                     player.sendMessage("§e[任务提醒] §f必须将焕发生机的珊瑚放入玄武洞口的门锁，才能完成任务。")
                 }
@@ -318,13 +319,15 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     fun onLockFrameInteract(event: PlayerInteractEntityEvent) {
-        if (event.hand != EquipmentSlot.HAND) return
         val frame = event.rightClicked as? ItemFrame ?: return
         if (frame.type != EntityType.GLOW_ITEM_FRAME || !isXuanwuLock(frame.location)) return
 
+        // 门锁展示框不接受原版物品放置或旋转；副手事件也必须拦截，否则物品会卡在框中。
         event.isCancelled = true
+        if (event.hand != EquipmentSlot.HAND) return
+
         val player = event.player
         val data = plugin.playerManager.getPlayerData(player) ?: return
 
@@ -489,12 +492,12 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 850)
+        plugin.playerManager.giveExp(player, 200)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +850")
+        player.sendMessage("  §e[奖励] §f经验 +200")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)
@@ -519,7 +522,6 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
         const val WORLD_NAME = "world"
         const val INACTIVE_CORAL_ID = "shihuodeshanhu"
         const val AWAKENED_CORAL_ID = "huanfashengjideshanhu"
-        const val SILVER_NOTE_ID = "yinpiao"
         const val XUANWU_TELEPORT_POINT = "玄武洞-门锁"
         const val HOPPER_CENTER_SLOT = 2
         const val ALTAR_DROP_RADIUS_SQUARED = 9.0

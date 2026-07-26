@@ -1,10 +1,12 @@
 active:
   enable: true
-  message: "&a&l武器技【剑灵庇佑】发动！"
-  cooldown: 15.0 # 技能总冷却
+  message: "&e&l武器技【诛邪飞剑】发动！"
+  cooldown: 15.0
 
-  # 内部参数说明 (代码逻辑中已写死，此处仅作记录)
-  # 持续时间: 10秒
-  # 剑灵CD: 0.8秒
-  # 伤害: 最大生命 * 60%
-  # 治疗: 8点 (4心)
+  sword_count: 6
+  summon_duration: 10.0
+  attack_duration: 5.0
+  attack_interval_ticks: 10
+  damage_max_health_percent: 0.25
+  retarget_radius: 10.0
+  finish_heal_amount: 8.0

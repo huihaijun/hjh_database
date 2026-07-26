@@ -4,6 +4,7 @@ import com.hjh_database.quest.impl.main.north.North_01
 import com.hjh_database.quest.impl.main.north.North_02
 import com.hjh_database.quest.impl.main.north.North_03
 import com.hjh_database.quest.impl.main.north.North_04
+import com.hjh_database.quest.impl.main.north.North_05
 import com.hjh_database.quest.impl.main.ren.Ren_01
 import com.hjh_database.quest.impl.main.ren.Ren_02
 import com.hjh_database.quest.impl.main.ren.Ren_03
@@ -81,6 +82,7 @@ object QuestRegistry {
         manager.register(North_02())
         manager.register(North_03())
         manager.register(North_04())
+        manager.register(North_05())
 
         // === 妖族主线 ===
         manager.register(Yao_01())

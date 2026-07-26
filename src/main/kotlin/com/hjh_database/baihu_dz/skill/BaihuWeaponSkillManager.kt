@@ -6,6 +6,7 @@ import com.hjh_database.baihu_dz.skill.impl.AnhuishinuSkill
 import com.hjh_database.baihu_dz.skill.impl.CiguheirenSkill
 import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
 import com.hjh_database.data.PlayerData
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
@@ -98,6 +99,13 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
             return
         }
 
+        if (NorthWetnessSkill.tryInterruptSkill(player) {
+                applyCooldown(player, item.type, 5.0)
+            }
+        ) {
+            return
+        }
+
         val result = skill.castActive(player, data, item, weaponData, config, projectile)
         if (!result.success) return
 
@@ -115,6 +123,10 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         val ignoreCoolReduce = config.getBoolean("ignore_cool_reduce", true)
         val reduce = if (ignoreCoolReduce) 0.0 else (data?.coolReduce ?: 0.0).coerceAtMost(0.5)
         val finalSeconds = baseSeconds * (1.0 - reduce)
+        applyCooldown(player, material, finalSeconds)
+    }
+
+    private fun applyCooldown(player: Player, material: Material, finalSeconds: Double) {
         val ticks = (finalSeconds * 20.0).toInt().coerceAtLeast(0)
 
         if (material != Material.BOW && material != Material.CROSSBOW) {

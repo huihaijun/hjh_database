@@ -198,3 +198,43 @@ chendafudecaoyaoshu:
   lore:
     - "&7&o陈大夫被魔物被抢走的草药束"
     - "&7&o收集一些交给他吧"
+
+shanmei:
+  material: ORANGE_DYE
+  name: "&b山魅"
+  lore:
+    - "&7&o被封印的山魅"
+    - "&7&o收集一些交给雨竹吧"
+
+shuizudegongpin:
+  material: ORANGE_DYE
+  name: "&b水族的贡品"
+  lore:
+    - "&7&o水族留给玄武的贡品被抢走了"
+    - "&7&o收集一些交给水族的大祭司吧"
+
+yuanqidejiejing:
+  material: ORANGE_DYE
+  name: "&b怨气的结晶"
+  lore:
+    - "&7&o不甘与怨恨聚集而成的结晶"
+    - "&7&o收集一些给白骨精吧"
+
+shuihunlinpian:
+  material: STICK
+  custom_model_data: 7018
+  name: "&e水魂鳞片"
+  rarity: 5
+  lore:
+    - "&7&o玄水魂身上剥落的鳞甲,通体幽蓝,触之冰凉刺骨"
+    - "&7&o鳞面隐有暗纹流转,似藏着一缕不散的水灵之气"
+
+qianligongtanmu:
+  material: STICK
+  custom_model_data: 7017
+  name: "&e千里弓檀木"
+  rarity: 5
+  lore:
+    - "&7&o千里神射手所遗的良木,纹理细密如丝,韧而不折"
+    - "&7&o历经千箭万矢而不损,寻常兵刃难伤其分毫"
+    - "&7&o以此木制器,可承千钧之力,锋芒更盛"

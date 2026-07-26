@@ -3,6 +3,7 @@ package com.hjh_database.skill.element_zf
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.impl.*
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
@@ -120,6 +121,14 @@ class ElementZfManager(private val plugin: Hjh_database) {
                 ChatMessageType.ACTION_BAR,
                 TextComponent(ChatColor.translateAlternateColorCodes('&', "&c&l$skillName 阵法冷却中，剩余 ${String.format("%.1f", remainingSeconds)} 秒"))
             )
+            return
+        }
+
+        if (NorthWetnessSkill.tryInterruptSkill(player) {
+                setCooldown(player, type, 5.0)
+                setVisualCooldown(player, type, 5.0)
+            }
+        ) {
             return
         }
 
@@ -283,6 +292,14 @@ class ElementZfManager(private val plugin: Hjh_database) {
         val manaCost = 25.0
         if (data.lingli < manaCost) {
             player.sendMessage(ChatColor.RED.toString() + "您的灵力不足，需要 ${manaCost.toInt()} 点灵力")
+            return
+        }
+
+        if (NorthWetnessSkill.tryInterruptSkill(player) {
+                setCooldown(player, type, 5.0)
+                setVisualCooldown(player, type, 5.0)
+            }
+        ) {
             return
         }
 

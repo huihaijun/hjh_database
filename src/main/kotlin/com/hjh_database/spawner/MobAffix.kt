@@ -8,7 +8,8 @@ enum class MobAffix(val id: String, val displayName: String, val description: St
     PIERCING("piercing", "破军的", "攻击无视目标护甲"),
     // === 【新增】 ===
     DESERT_SOUTH("desert_south", "恶土的", "攻击有60%概率附带恶土之炎"),
-    BAIHU_WEST("baihu_west", "西方的", "攻击有30%概率提高目标虎瘴");
+    BAIHU_WEST("baihu_west", "西方的", "攻击有30%概率提高目标虎瘴"),
+    NORTH_WETNESS("north_wetness", "潮湿的", "攻击或接近玩家时会提高其湿气");
 
     companion object {
         private val map = values().associateBy(MobAffix::id)

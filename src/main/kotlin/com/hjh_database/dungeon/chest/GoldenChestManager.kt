@@ -70,6 +70,17 @@ class GoldenChestManager(private val plugin: Hjh_database) {
                 ChestLootItem("xiaofeng", 1, 1, 100.0)
             )
         )
+        // 静态注册 玄武试炼
+        chestRegistry["xuanwu_test"] = GoldenChestConfig(
+            dungeonId = "xuanwu_test",
+            displayName = "玄武试炼",
+            keyResourceId = "mijingyaoshi",
+            keyCost = 1,
+            maxDrops = 1,
+            lootTable = listOf(
+                ChestLootItem("yuyuan", 1, 1, 100.0)
+            )
+        )
     }
 
     // 核心抽卡逻辑

@@ -24,6 +24,7 @@ import com.hjh_database.skill.weapon.job_1.tingchaoSkill
 import com.hjh_database.skill.weapon.job_1.yantiegongSkill
 import com.hjh_database.skill.weapon.job_1.zhongchuigongSkill
 import com.hjh_database.skill.weapon.job_1.zhuiyueSkill
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import com.hjh_database.weapon.WeaponManager
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -45,6 +46,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private val skillConfigCache: MutableMap<String, ConfigurationSection> = HashMap()
     private val skillRegistry: MutableMap<String, WeaponSkill> = HashMap()
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private val cooldownVersions: MutableMap<UUID, Long> = ConcurrentHashMap()
 
     // 记录由技能主动维持的持续状态。Key: 玩家 UUID, Value: 武器/技能 ID。
     private val activeToggles = ConcurrentHashMap<UUID, String>()
@@ -159,6 +161,13 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         val skill = skillRegistry[weaponId] ?: return
         val activeConfig = config.getConfigurationSection("active") ?: return
 
+        if (NorthWetnessSkill.tryInterruptSkill(player) {
+                applyCooldown(player, data, item.type, 5.0, ignoreReduction = true)
+            }
+        ) {
+            return
+        }
+
         if (skill.castActive(player, data, activeConfig, projectile)) {
             val baseCd = activeConfig.getDouble("cooldown", 10.0)
             applyCooldown(player, data, item.type, baseCd)
@@ -192,8 +201,14 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         return true
     }
 
-    private fun applyCooldown(player: Player, data: PlayerData, mat: Material, baseSeconds: Double) {
-        val reduce = data.coolReduce.coerceAtMost(0.5)
+    private fun applyCooldown(
+        player: Player,
+        data: PlayerData,
+        mat: Material,
+        baseSeconds: Double,
+        ignoreReduction: Boolean = false
+    ) {
+        val reduce = if (ignoreReduction) 0.0 else data.coolReduce.coerceAtMost(0.5)
         val finalSeconds = baseSeconds * (1.0 - reduce)
         val ticks = (finalSeconds * 20).toInt()
 
@@ -203,10 +218,14 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         }
 
         globalCooldowns[player.uniqueId] = System.currentTimeMillis() + (finalSeconds * 1000).toLong()
+        val cooldownVersion = cooldownVersions.merge(player.uniqueId, 1L) { current, increment ->
+            current + increment
+        } ?: 1L
 
         object : BukkitRunnable() {
             override fun run() {
                 if (!player.isOnline) return
+                if (cooldownVersions[player.uniqueId] != cooldownVersion) return
                 if (!isOnCooldown(player)) {
                     player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_CHIME, 0.5f, 2.0f)
                     player.spigot().sendMessage(
@@ -320,6 +339,12 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         reduceCooldown(player, seconds, player.inventory.itemInMainHand.type)
     }
 
+    fun resetCooldown(player: Player, material: Material? = null) {
+        globalCooldowns.remove(player.uniqueId)
+        cooldownVersions.merge(player.uniqueId, 1L) { current, increment -> current + increment }
+        material?.let { player.setCooldown(it, 0) }
+    }
+
     fun reduceCooldown(player: Player, seconds: Double, material: Material?) {
         val uuid = player.uniqueId
         val currentEnd = globalCooldowns[uuid] ?: return
@@ -329,6 +354,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         val newEnd = currentEnd - (seconds * 1000.0).toLong()
         if (newEnd <= now) {
             globalCooldowns.remove(uuid)
+            cooldownVersions.merge(uuid, 1L) { current, increment -> current + increment }
             material?.let { player.setCooldown(it, 0) }
         } else {
             globalCooldowns[uuid] = newEnd

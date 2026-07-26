@@ -58,6 +58,8 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
     private fun tryUnlockNextMainQuest(player: Player, data: PlayerData, currentQuest: QuestBase) {
         val nextQuest = questMap.values.find {
             it.type == QuestType.MAIN &&
+                (data.questStatuses[it.id] ?: QuestStatus.LOCKED) == QuestStatus.LOCKED &&
+                it.canAccept(player, data) &&
                 (
                     currentQuest.id in it.requiredCompletedQuestIds ||
                         (it.requiredCompletedQuestIds.isEmpty() &&

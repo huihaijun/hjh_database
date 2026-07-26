@@ -1,6 +1,7 @@
 package com.hjh_database.dungeon.xuanwu.trial
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.quest.core.QuestType
 import com.hjh_database.dungeon.DungeonRecord
 import org.bukkit.Bukkit
 import org.bukkit.Location
@@ -805,6 +806,10 @@ class XuanwuTrialManager(private val plugin: Hjh_database) : Listener {
             plugin.databaseManager.savePlayer(data)
         })
         player.sendMessage("§e[秘境] §a玄武试炼通关记录 +1，金宝箱可开箱次数 +1！")
+
+        if (plugin.questManager.refreshAvailableQuests(player, QuestType.MAIN) > 0) {
+            player.sendMessage("§a[系统] 玄武试炼已经通过，新的主线任务已解锁。")
+        }
     }
 
     private fun updateDbStateAsync(uuid: UUID) {

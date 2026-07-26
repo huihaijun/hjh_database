@@ -3,6 +3,7 @@ package com.hjh_database.skill.medical.spell.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.Sound
@@ -78,7 +79,7 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
         // 结算驱散与增益
         for (target in targets) {
-            var cleansed = false
+            var cleansed = NorthWetnessSkill.cleanseToOnePercent(target)
 
             // 1. 遍历并驱散负面效果
             for (effect in target.activePotionEffects) {

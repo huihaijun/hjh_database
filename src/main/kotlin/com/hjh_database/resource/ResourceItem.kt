@@ -113,7 +113,7 @@ class ResourceItem(
             2 -> "§a" // 绿
             3 -> "§9" // 蓝 (使用 §9)
             4 -> "§d" // 紫
-            5 -> "§6" // 金
+            5 -> "§e" // 黄
             else -> "§c" // 红 (6级及以上)
         }
         val sb = StringBuilder()

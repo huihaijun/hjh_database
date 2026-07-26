@@ -139,6 +139,25 @@ crystals:
           power: 2.0 # 统一的进攻属性
           speed_percent: 0.05 # 5%移速
 
+  yuyuan:
+    display: "&9御渊[饰品]"
+    material: STICK
+    rarity: 3
+    custom_model_data: 6007
+    lore:
+      - "&6限制职业:&b无&6  限制等级:&b30"
+      - "&7&o玄龟甲片所化，沉稳厚重如岳"
+      - "&7&o如立根青山，风雨不动，万钧难摧"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f护甲 +10  抗击退率 +10%"
+    req_lv: 30
+    req_job: -1
+    activation:
+      accessory_4: # 饰品栏第5格
+        stats:
+          armor: 10.0 # 统一的进攻属性
+          knock_back_res: 0.10 # 5%移速
+
 
 
 #================职业饰品================

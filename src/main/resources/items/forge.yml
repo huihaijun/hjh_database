@@ -26,6 +26,15 @@ armor_core_4:
     - "&7&o精美且珍贵的防具核心"
     - "&7&o是用来锻造四阶防具的原材料"
 
+armor_core_5:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 5
+  name: "&b五阶防具核心"
+  lore:
+    - "&7&o极其华丽的防具核心"
+    - "&7&o是用来锻造五阶防具的原材料"
+
 weapon_book_3:
   material: BOOK
   rarity: 3
@@ -66,7 +75,6 @@ armor_book_4:
     - "&7&o写满了锻造防具所需材料和方法的书籍"
     - "&7&o凭借它可以掌握锻造四阶防具的方法"
 
-
 access_book_4:
   material: BOOK
   rarity: 4
@@ -74,6 +82,31 @@ access_book_4:
   lore:
     - "&7&o写满了锻造饰品所需材料和方法的书籍"
     - "&7&o凭借它可以掌握锻造出四阶饰品的方法"
+
+weapon_book_5:
+  material: BOOK
+  rarity: 5
+  name: "&e五阶武器制作书"
+  lore:
+    - "&7&o写满了锻造武器所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造五阶武器的方法"
+
+armor_book_5:
+  material: BOOK
+  rarity: 5
+  name: "&e五阶防具制作书"
+  lore:
+    - "&7&o写满了锻造防具所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造五阶防具的方法"
+
+access_book_5:
+  material: BOOK
+  rarity: 5
+  name: "&e五阶饰品制作书"
+  lore:
+    - "&7&o写满了锻造饰品所需材料和方法的书籍"
+    - "&7&o凭借它可以掌握锻造出五阶饰品的方法"
+
 
 chitongding:
   material: GOLD_NUGGET

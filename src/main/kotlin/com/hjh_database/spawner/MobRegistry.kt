@@ -1119,7 +1119,7 @@ object MobRegistry {
         ))
         register(MobDefinition(
             id = "chendafu_zombie",
-            name = "&c携带草药的 矿洞僵尸",
+            name = "&c携带草药的 僵尸",
             type = EntityType.ZOMBIE,
             health = 85.0,
             damage = 15.0,
@@ -1190,10 +1190,283 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 1, 0.3),
                 // 30%掉落蜘蛛眼
                 MobDrop("zhizhuyan", 1, 3, 0.3),
-                // 15掉落瘴气玄铁
+                //
                 MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
             ),
             affixes = listOf(),
+        ))
+
+//        ============ 雨竹 ===========
+        register(MobDefinition(
+            id = "yuzhu_zombie",
+            name = "&c旱魃",
+            type = EntityType.ZOMBIE,
+            health = 110.0,
+            damage = 18.0,
+            armor = 25.0,
+            speed = 0.2,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.9),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 20%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 掉落山魅
+                MobDrop("shanmei", 1, 2, 0.35),
+                // 掉落高山恶土
+                MobDrop("gaoshanetu", 1, 1, 0.6),
+
+            ),
+            affixes = listOf(), //
+        ))
+        register(MobDefinition(
+            id = "yuzhu_kulou",
+            name = "&c魑魅",
+            type = EntityType.SKELETON,
+            health = 77.0,
+            damage = 20.0,
+            armor = 26.0,
+            speed = 0.22,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.9),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 20%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 掉落山魅
+                MobDrop("shanmei", 1, 2, 0.35),
+                // 掉落高山恶土
+                MobDrop("gaoshanetu", 1, 1, 0.6),
+            ),
+            affixes = listOf(), //
+            mainHand = Material.BOW  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "yuzhu_zhizhu",
+            name = "&c犼",
+            type = EntityType.WITHER_SKELETON,
+            health = 98.0,
+            damage = 26.0,
+            armor = 27.0,
+            speed = 0.25,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.9),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                //煤炭
+                MobDrop("meitan", 1, 2, 0.5),
+                // 20%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.2),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 掉落山魅
+                MobDrop("shanmei", 1, 2, 0.35),
+                // 掉落高山恶土
+                MobDrop("gaoshanetu", 1, 1, 0.6),
+            ),
+            affixes = listOf(),
+            mainHand = Material.IRON_AXE    // 纯装饰
+        ))
+
+
+//       ============== 北方区域怪物 ================
+        register(MobDefinition(
+            id = "wet_zombie",
+            name = "&c潮湿的 腐烂僵尸",
+            type = EntityType.ZOMBIE,
+            health = 150.0,
+            damage = 25.0,
+            armor = 42.0,
+            speed = 0.23,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS), //
+            helmet = Material.TURTLE_HELMET, // 纯装饰
+            mainHand = Material.IRON_SWORD  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "wet_kulou",
+            name = "&c潮湿的 白骨射手",
+            type = EntityType.SKELETON,
+            health = 115.0,
+            damage = 23.0,
+            armor = 34.0,
+            speed = 0.21,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS), //
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.BOW  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "wet_zhizhu",
+            name = "&c潮湿的 毒牙蜘蛛",
+            type = EntityType.CAVE_SPIDER,
+            health = 105.0,
+            damage = 26.0,
+            armor = 28.0,
+            speed = 0.28,
+            exp= 180,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落金元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 3, 0.3),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS),
+        ))
+        register(MobDefinition(
+            id = "shuizugongpin_zombie",
+            name = "&c抢夺贡品的 玄水僵尸",
+            type = EntityType.ZOMBIE,
+            health = 170.0,
+            damage = 28.0,
+            armor = 48.0,
+            speed = 0.23,
+            exp= 220,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 35%掉落贡品
+                MobDrop("shuizudegongpin", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS), //
+            helmet = Material.IRON_HELMET, // 纯装饰
+            mainHand = Material.GOLDEN_AXE  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "shuizugongpin_kulou",
+            name = "&c抢夺贡品的 玄水射手",
+            type = EntityType.SKELETON,
+            health = 125.0,
+            damage = 25.0,
+            armor = 40.0,
+            speed = 0.23,
+            exp= 220,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 35%掉落贡品
+                MobDrop("shuizudegongpin", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS), //
+            helmet = Material.GOLDEN_HELMET, // 纯装饰
+            mainHand = Material.BOW  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "shuizugongpin_zhizhu",
+            name = "&c抢夺贡品的 玄水蜘蛛",
+            type = EntityType.SPIDER,
+            health = 115.0,
+            damage = 30.0,
+            armor = 32.0,
+            speed = 0.28,
+            exp= 200,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 35%掉落贡品
+                MobDrop("shuizudegongpin", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS),
+        ))
+        register(MobDefinition(
+            id = "xuanshuihun",
+            name = "&c玄水魂",
+            type = EntityType.VEX,
+            health = 780.0,
+            damage = 24.0,
+            armor = 45.0,
+            speed = 0.24,
+            exp= 400,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落元素
+                MobDrop("water", 3, 4, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.6),
+                // 50%掉落金元宝
+                MobDrop("jinyuanbao", 1, 2, 0.4),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 85%掉落贡品
+                MobDrop("shuizudegongpin", 3, 4, 0.85),
+                // 35%掉落水魂鳞片
+                MobDrop("shuihunlinpian", 1, 1, 0.35),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS),
+            mainHand = Material.IRON_SWORD  // 纯装饰
         ))
     }
 }

@@ -5,6 +5,7 @@ import com.hjh_database.spawner.impl.Jiaoguzhanshi
 import com.hjh_database.spawner.impl.Kuanggongwanghun
 import com.hjh_database.spawner.impl.Shamofengbao
 import com.hjh_database.spawner.impl.Xiongshentaisui
+import com.hjh_database.spawner.impl.Xuanshuihun
 import org.bukkit.ChatColor
 import org.bukkit.Location
 import org.bukkit.Material
@@ -112,6 +113,7 @@ object MobFactory {
             "xiongshentaisui" -> Xiongshentaisui(plugin, entity)
             "jiaoguzhanshi" -> Jiaoguzhanshi(plugin, entity)
             "kuanggongwanghun" -> Kuanggongwanghun(plugin, entity)
+            "xuanshuihun" -> Xuanshuihun(plugin, entity)
             // 以后如果有新 boss，继续往下加就行：
 //             "shiyanguai" -> Shiyanguai(plugin, entity)
             // "kulouwang" -> Kulouwang(plugin, entity)
@@ -124,8 +126,39 @@ object MobFactory {
             entity.persistentDataContainer.set(KEY_MOB_AFFIXES, PersistentDataType.STRING, affixStr)
 
             def.affixes.forEach { affix ->
-                if (affix == MobAffix.SPEED) {
-                    entity.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, Int.MAX_VALUE, 1))
+                when (affix) {
+                    MobAffix.SPEED -> {
+                        entity.addPotionEffect(
+                            org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.SPEED,
+                                Int.MAX_VALUE,
+                                1
+                            )
+                        )
+                    }
+                    MobAffix.NORTH_WETNESS -> {
+                        entity.addPotionEffect(
+                            org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.WATER_BREATHING,
+                                Int.MAX_VALUE,
+                                0,
+                                true,
+                                false,
+                                false
+                            )
+                        )
+                        entity.addPotionEffect(
+                            org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.DOLPHINS_GRACE,
+                                Int.MAX_VALUE,
+                                0,
+                                true,
+                                false,
+                                false
+                            )
+                        )
+                    }
+                    else -> Unit
                 }
             }
         }

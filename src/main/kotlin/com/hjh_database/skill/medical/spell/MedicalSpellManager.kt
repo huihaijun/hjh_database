@@ -2,6 +2,7 @@ package com.hjh_database.skill.medical.spell
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.listener.FormationMagicDamage
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import com.hjh_database.skill.medical.spell.impl.BaZhenJueSpell
 import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
 import com.hjh_database.skill.medical.spell.impl.DuSuZhenSpell
@@ -129,6 +130,14 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         val manaCost = config?.getDouble("mana_cost", 0.0) ?: 0.0
         if (data.lingli < manaCost) {
             player.sendMessage("§c灵力不足，无法施展 $skillFullName！")
+            return
+        }
+
+        if (!skillId.equals("bingqingyu", ignoreCase = true) && NorthWetnessSkill.tryInterruptSkill(player) {
+                setCooldown(player, skillId, 5_000L)
+                setVisualCooldown(player, skillId, 100)
+            }
+        ) {
             return
         }
 

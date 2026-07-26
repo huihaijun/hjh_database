@@ -122,6 +122,16 @@ yy_fengmuhuichun:
     - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
   custom_model_data: 10137
 
+yy_luoshuidan:
+  material: GOLD_NUGGET
+  name: "&b[药引]洛水丹"
+  lore:
+    - "&f▶ &b洛水丹 &f药引"
+    - "&8  | &7&o通透如水,入手微凉,似有清流于掌心流转"
+    - "&8  | &7&o服后灵息自生,入水不溺,如游鱼般自在穿行"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+  custom_model_data: 10137
 
 dengxincao:
   material: SEA_PICKLE
@@ -214,3 +224,39 @@ xianrenzhang:
     - "&7&o身披尖刺却饱含清冽浆液"
     - "&7&o一可中和燥气,二可化解火毒"
     - "&e[炼丹用品]"
+
+shuiwan:
+  material: VINE
+  name: "&b水蔓"
+  lore:
+    - "&7&o生于湖岸浅水处的细长藤蔓,随波摇曳,沾而不湿"
+    - "&7&o水气充沛,质地柔韧,入药可调和诸味"
+    - "&e[炼丹用品]"
+
+yugukuai:
+  material: STICK
+  custom_model_data: 7019
+  name: "&b鱼骨块"
+  lore:
+    - "&7&o玄水湾死去的鱼儿所遗之骨,森白如霜,散落于湖畔"
+    - "&7&o骨中残留着一缕微弱的灵力,可入药炼丹"
+    - "&e[炼丹用品]"
+
+gaoshanetu:
+  material: STICK
+  custom_model_data: 7016
+  name: "&b高山恶土"
+  lore:
+    - "&7&o高山庙宇墙根下剥落的腐朽残土,山魅啃噬建筑后所遗"
+    - "&7&o饱含朽木碎屑与山魅孽气,可镇惊安神"
+    - "&e[炼丹用品]"
+
+shuilanhua:
+  material: BLUE_ORCHID
+  name: "&b水蓝花"
+  lore:
+    - "&7&o玄水湾畔悄然绽开的蓝瓣小花,沾着晨露,秀丽而清冷"
+    - "&7&o花瓣入药可清心降火,是湖畔渔人常用的退热良方"
+    - "&e[炼丹用品]"
+
+

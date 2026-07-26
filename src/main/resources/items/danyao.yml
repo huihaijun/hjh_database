@@ -454,11 +454,11 @@ fengmuhuichun2:
 
 luoshuidan:
   material: POTION
-  name: "&b洛水丹[助势][初级]"
-  category: GUIYUAN
+  name: "&b洛水丹[助势]"
+  category: ZHUSHI
   color: "#1E90FF"
   only_doctor: false
-  req_level: 3
+  req_level: 5
   base_exp: 15
   sickness_time: 5
   max_stack_size: 64

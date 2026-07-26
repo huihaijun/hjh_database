@@ -62,6 +62,7 @@ import com.hjh_database.medical.MedicalTrialManager // 【新增】引入医术�
 import com.hjh_database.spawner.impl.CustomMagmaCubeListener
 import com.hjh_database.spawner.impl.BaihuWestSkill
 import com.hjh_database.spawner.impl.DesertSouthSkill
+import com.hjh_database.spawner.impl.NorthWetnessSkill
 import com.hjh_database.accessory.element.ElementCrystalManager
 import com.hjh_database.accessory.element.ElementCrystalGui
 import com.hjh_database.accessory.element.ElementCrystalInteractListener
@@ -199,6 +200,7 @@ class Hjh_database : JavaPlugin() {
         // 南方沙漠 着火机制
         DesertSouthSkill.init(this)
         BaihuWestSkill.init(this)
+        NorthWetnessSkill.init(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI
@@ -386,6 +388,7 @@ class Hjh_database : JavaPlugin() {
         if (::baihuMiasmaManager.isInitialized) {
             baihuMiasmaManager.shutdown()
         }
+        NorthWetnessSkill.shutdown()
 
         if (::baihuTownFireManager.isInitialized) {
             baihuTownFireManager.shutdown()
