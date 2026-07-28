@@ -82,7 +82,7 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
 
                             val pData = plugin.playerManager.getPlayerData(player)
                             if (pData != null) {
-                                if (!cData.isActivated(pData)) {
+                                if (!cData.activationSpec.isEligible(pData)) {
                                     player.sendMessage("§c⚠ 该饰品未激活（等级不足或职业不符），无法使用饰品技能！")
                                     event.isCancelled = true
                                     return

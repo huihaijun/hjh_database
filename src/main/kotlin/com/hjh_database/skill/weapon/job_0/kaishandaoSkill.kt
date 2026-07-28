@@ -1,5 +1,6 @@
 package com.hjh_database.skill.weapon.job_0
 
+import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.weapon.WeaponSkill
 import net.md_5.bungee.api.ChatMessageType
@@ -21,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class kaishandaoSkill : WeaponSkill, Listener {
 
-    private val plugin = JavaPlugin.getProvidingPlugin(this::class.java)
+    private val plugin = JavaPlugin.getProvidingPlugin(this::class.java) as Hjh_database
 
     // 存储激活状态的数据类
     private data class BuffData(
@@ -79,6 +80,7 @@ class kaishandaoSkill : WeaponSkill, Listener {
         if (damager is Player) {
             val uuid = damager.uniqueId
             val buff = activeBuffs[uuid] ?: return // 没有 Buff 就跳过
+            if (!plugin.equipmentActivationManager.isHoldingActiveWeapon(damager, "kaishandao")) return
 
             // 检查是否过期
             if (System.currentTimeMillis() > buff.expireTime) {

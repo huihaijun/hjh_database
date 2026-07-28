@@ -1,7 +1,7 @@
 #炼丹所用材料
 yy_tongyong0:
   material: GOLD_NUGGET
-  custom_model_data: 10137
+  custom_model_data: 10032
   name: "&6[药引]通用药引(初级)"
   lore:
     - "&f▶ &6通用 &f药引"
@@ -12,7 +12,7 @@ yy_tongyong0:
 
 yy_tongyong1:
   material: GOLD_NUGGET
-  custom_model_data: 10137
+  custom_model_data: 10032
   name: "&6[药引]通用药引(中级)"
   lore:
     - "&f▶ &6通用 &f药引"
@@ -23,7 +23,7 @@ yy_tongyong1:
 
 yy_tongyong2:
   material: GOLD_NUGGET
-  custom_model_data: 10137
+  custom_model_data: 10032
   name: "&6[药引]通用药引(高级)"
   lore:
     - "&f▶ &6通用 &f药引"

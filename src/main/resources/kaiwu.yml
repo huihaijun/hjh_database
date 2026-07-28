@@ -12,7 +12,7 @@ level_exp_base: 100
 
 # 采集设置
 mining:
-  interrupt_distance: 2.0  # 允许的最大移动距离 (超过则打断)
+  interrupt_distance: 4.0  # 允许的最大移动距离 (超过则打断)
   # 开物术从 2 级起，每级增加 10% 开采速度；累计加成至多 50%
   level_speed_bonus_per_level: 0.10
   max_level_speed_bonus: 0.50

@@ -15,7 +15,7 @@ class HumanRace(manager: RaceManager) : RaceBase(manager) {
 
     private val minFoodLevel = 8
     private val discountPercentage = 0.20 // 20% 折扣
-    private val moneyItemIds = setOf("hjh_tongqian") // 定义哪些物品ID算钱
+    private val moneyItemIds = setOf("hjh_tongqian","jinyuanbao","yinpiao") // 定义哪些物品ID算钱
 
     // 被动技能 1: 饱食度锁定 (保持不变)
     @EventHandler

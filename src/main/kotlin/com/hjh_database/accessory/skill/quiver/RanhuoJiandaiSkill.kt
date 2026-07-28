@@ -100,7 +100,28 @@ class RanhuoJiandaiSkill(plugin: Hjh_database) : BaseQuiverSkill(plugin) {
         val now = System.currentTimeMillis()
         target.setMetadata(ARMOR_REDUCE_META, FixedMetadataValue(plugin, now + 5000L))
         target.setMetadata("HJH_ARMORED_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
-        target.damage(0.01, player)
+
+        /*
+         * 流火矢的技能伤害通常先于箭矢本体碰撞。若保留它新产生的受伤间隔，
+         * 紧随其后的箭矢伤害会被原版无敌帧吞掉。
+         *
+         * 这里只临时绕过并移除“本次技能伤害”产生的帧，同时恢复目标原先的
+         * noDamageTicks/lastDamage，避免意外清除其他攻击已经建立的合法受伤状态。
+         */
+        val previousNoDamageTicks = target.noDamageTicks
+        val previousLastDamage = target.lastDamage
+        target.noDamageTicks = 0
+        try {
+            target.damage(0.01, player)
+        } finally {
+            if (target.hasMetadata("HJH_ARMORED_MAGIC_DAMAGE")) {
+                target.removeMetadata("HJH_ARMORED_MAGIC_DAMAGE", plugin)
+            }
+            if (target.isValid && !target.isDead) {
+                target.noDamageTicks = previousNoDamageTicks.coerceAtMost(target.maximumNoDamageTicks)
+                target.lastDamage = previousLastDamage
+            }
+        }
 
         val loc = target.location.clone().add(0.0, min(target.height, 1.2), 0.0)
         target.world.spawnParticle(Particle.FLAME, loc, 12, 0.35, 0.45, 0.35, 0.035)

@@ -3,6 +3,9 @@ package com.hjh_database.weapon
 import com.google.common.collect.ArrayListMultimap // 【新增】用于清除属性
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.equipment.activation.ActivatableEquipment
+import com.hjh_database.equipment.activation.ActivationFailure
+import com.hjh_database.equipment.activation.ActivationSpec
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -87,21 +90,9 @@ class WeaponManager(private val plugin: Hjh_database) {
 
         val data = plugin.playerManager.getData(player.uniqueId) ?: return null
 
-        // 2. 检查槽位要求
-        // -1 代表任意位置
-        if (wData.activateSlot != -1 && wData.activateSlot != checkSlot) {
-            return null
+        return wData.takeIf {
+            it.activationSpec.isActive(data, inventorySlot = checkSlot, player = player, item = item)
         }
-        // 3. 检查职业
-        if (wData.reqJob != -1) {
-            if (data.job == null || data.job != wData.reqJob) return null
-        }
-        // 4. 检查等级 (修改点：如果 status 为 4，则绕过等级检查)
-        if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) {
-            return null
-        }
-
-        return wData
     }
 
     /**
@@ -136,26 +127,23 @@ class WeaponManager(private val plugin: Hjh_database) {
 
             val wData = loadedWeapons[id] ?: continue // 配置文件里已经删除了这个武器
 
-            // === 判定激活状态逻辑 (保留你原本的逻辑) ===
-            var isActive = true
+            val activation = wData.activationSpec.evaluate(
+                playerData = data,
+                inventorySlot = slot,
+                player = player,
+                item = item
+            )
+            val isActive = activation.active
             val statusLore: MutableList<String> = ArrayList()
 
-            // 1. 检查槽位要求
-            if (wData.activateSlot != -1 && wData.activateSlot != slot) {
-                isActive = false
-                statusLore.add(ChatColor.RED.toString() + "⚠ " + ChatColor.translateAlternateColorCodes('&', wData.activeLoreLine))
-            }
-            // 2. 检查职业
-            if (wData.reqJob != -1) {
-                if (data.job == null || data.job != wData.reqJob) {
-                    isActive = false
+            when (activation.failure) {
+                ActivationFailure.SLOT_MISMATCH ->
+                    statusLore.add(ChatColor.RED.toString() + "⚠ " + ChatColor.translateAlternateColorCodes('&', wData.activeLoreLine))
+                ActivationFailure.JOB_MISMATCH ->
                     statusLore.add(ChatColor.RED.toString() + "⚠ 职业不符")
-                }
-            }
-            // 3. 检查等级 (修改点：status 为 4 时跳过此判定)
-            if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) {
-                isActive = false
-                statusLore.add(ChatColor.RED.toString() + "⚠ 等级不足 (" + data.lv + "/" + wData.reqLv + ")")
+                ActivationFailure.LEVEL_MISMATCH ->
+                    statusLore.add(ChatColor.RED.toString() + "⚠ 等级不足 (" + data.lv + "/" + wData.reqLv + ")")
+                else -> Unit
             }
 
             // === 重新构建 Meta ===
@@ -300,13 +288,7 @@ class WeaponManager(private val plugin: Hjh_database) {
 
             val wData = loadedWeapons[id] ?: continue
 
-            // === 校验激活条件 ===
-            // 1. 槽位不对，跳过
-            if (wData.activateSlot != -1 && wData.activateSlot != slot) continue
-            // 2. 职业不符，跳过
-            if (wData.reqJob != -1 && (data.job == null || data.job != wData.reqJob)) continue
-            // 3. 等级不够 (修改点：如果 status 是 4，即便等级不够也不跳过，继续执行)
-            if (data.status != 4 && (data.lv ?: 0) < wData.reqLv) continue
+            if (!wData.activationSpec.isActive(data, inventorySlot = slot, player = player, item = item)) continue
 
             // === 激活成功 ===
             // ★【新增】这里是激活成功的地方，把稀有度记入 List
@@ -316,6 +298,8 @@ class WeaponManager(private val plugin: Hjh_database) {
 
             // ★ 修改点2：累加所有属性
             for ((key, value) in wData.stats) {
+                // 攻击速度只由当前手持且合法激活的武器提供。
+                if (key == "attack_speed") continue
                 totalStats.merge(key, value) { a: Double, b: Double -> a + b }
             }
         }
@@ -432,7 +416,7 @@ class WeaponManager(private val plugin: Hjh_database) {
     }
 
     // 嵌套类 (默认是 static 的)
-    class WeaponData(var id: String, sec: ConfigurationSection) {
+    class WeaponData(var id: String, sec: ConfigurationSection) : ActivatableEquipment {
         var display: String? = sec.getString("display", "Weapon")
         var material: Material = Material.matchMaterial(sec.getString("material", "STONE")!!) ?: Material.STONE
         var customModelData: Int = sec.getInt("custom_model_data", 0)
@@ -449,6 +433,12 @@ class WeaponManager(private val plugin: Hjh_database) {
         @JvmField var manaRegen: Double = 0.0
 
         @JvmField var stats: MutableMap<String, Double> = HashMap()
+        override val activationSpec: ActivationSpec = ActivationSpec(
+            requiredJob = reqJob,
+            requiredLevel = reqLv,
+            acceptedInventorySlots = if (activateSlot == -1) null else intArrayOf(activateSlot),
+            bypassLevelWhen = { it.status == 4 }
+        )
 
         init {
             val statSec = sec.getConfigurationSection("stats")

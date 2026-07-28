@@ -1,5 +1,6 @@
 package com.hjh_database.skill.weapon.job_0
 
+import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.weapon.WeaponSkill
 import net.md_5.bungee.api.ChatMessageType
@@ -26,7 +27,7 @@ import kotlin.math.min
 
 class chitongjianSkill : WeaponSkill, Listener {
 
-    private val plugin = JavaPlugin.getProvidingPlugin(this::class.java)
+    private val plugin = JavaPlugin.getProvidingPlugin(this::class.java) as Hjh_database
 
     // 记录开启了技能但还没砍出那一刀的玩家
     private val primedPlayers = Collections.newSetFromMap(ConcurrentHashMap<UUID, Boolean>())
@@ -73,27 +74,27 @@ class chitongjianSkill : WeaponSkill, Listener {
     fun onDamage(event: EntityDamageByEntityEvent) {
         val damager = event.damager
         if (damager !is Player) return
+        if (!primedPlayers.contains(damager.uniqueId)) return
+        if (!plugin.equipmentActivationManager.isHoldingActiveWeapon(damager, "chitongjian")) return
 
-        if (primedPlayers.contains(damager.uniqueId)) {
-            val victim = event.entity as? LivingEntity ?: return
+        val victim = event.entity as? LivingEntity ?: return
 
             // 1. 消耗技能状态
-            primedPlayers.remove(damager.uniqueId)
+        primedPlayers.remove(damager.uniqueId)
 
             // 2. 读取配置倍率 (150% = 1.5)
             // 这里为了性能没有每次去读文件，如需热重载可从 configCache 读取，这里硬编码或建议存变量
-            val multiplier = 2.0
+        val multiplier = 2.0
 
             // 3. 应用伤害加成
-            event.damage = event.damage * multiplier
+        event.damage = event.damage * multiplier
 
             // 4. 命中特效
-            victim.world.spawnParticle(Particle.LAVA, victim.location.add(0.0, 1.0, 0.0), 15)
-            victim.world.playSound(victim.location, Sound.ENTITY_BLAZE_HURT, 1f, 1f)
+        victim.world.spawnParticle(Particle.LAVA, victim.location.add(0.0, 1.0, 0.0), 15)
+        victim.world.playSound(victim.location, Sound.ENTITY_BLAZE_HURT, 1f, 1f)
 
             // 5. 施加【凤焰】标记 (DoT)
-            applyPhoenixFlame(victim, damager)
-        }
+        applyPhoenixFlame(victim, damager)
     }
 
     private fun applyPhoenixFlame(victim: LivingEntity, attacker: Player) {

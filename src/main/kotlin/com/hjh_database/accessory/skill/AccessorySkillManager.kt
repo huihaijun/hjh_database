@@ -84,7 +84,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuShield != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuShield, slotKey)
             } else {
-                cData.activations.containsKey(slotKey) && cData.isActivated(pData)
+                plugin.playerManager.crystalManager.isActive(cData, pData, slotKey, player, item)
             }
             if (!active) {
                 player.sendMessage("§c该盾牌未处于激活状态，无法举盾。")
@@ -140,7 +140,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuArtifact != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
             } else {
-                cData.activations.containsKey(slotKey) && cData.isActivated(data)
+                plugin.playerManager.crystalManager.isActive(cData, data, slotKey, player, item)
             }
 
             if (active) {
@@ -181,7 +181,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuArtifact != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, offHandItem, baihuArtifact, "offhand")
             } else {
-                cData.isActivated(pData) && cData.activations.containsKey("offhand")
+                plugin.playerManager.crystalManager.isActive(cData, pData, "offhand", player, offHandItem)
             }
             if (!active) return
             val targetId = cData.skillId ?: cData.id
@@ -233,7 +233,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuArtifact != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
             } else {
-                cData.activations.containsKey(slotKey) && cData.isActivated(data)
+                plugin.playerManager.crystalManager.isActive(cData, data, slotKey, player, item)
             }
             if (!active) continue
 
@@ -272,7 +272,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuArtifact != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
             } else {
-                cData.activations.containsKey(slotKey) && cData.isActivated(data)
+                plugin.playerManager.crystalManager.isActive(cData, data, slotKey, player, item)
             }
             if (!active) return false
 
@@ -347,7 +347,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             val active = if (baihuArtifact != null) {
                 plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
             } else {
-                cData.activations.containsKey(slotKey) && cData.isActivated(pData)
+                plugin.playerManager.crystalManager.isActive(cData, pData, slotKey, player, item)
             }
             if (active) {
                 val targetId = cData.skillId ?: cData.id

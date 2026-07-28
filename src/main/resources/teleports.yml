@@ -330,6 +330,26 @@ points:
         id: "main_shen_6"
         message: "&c神族守卫提示你，请先对这里多熟悉下再离开吧（请先完成前置主线任务）"
 
+  皇城-神族:
+    world: "world"
+    x: 3174.50
+    y: 145.00
+    z: 106.50
+    yaw: -89.70
+    pitch: 0.90
+
+  神族起始-长老大殿:
+    world: "world"
+    x: 3336.50
+    y: 155.00
+    z: 158.50
+    yaw: -179.70
+    pitch: -1.95
+    conditions:
+      completed_quest:
+        id: "main_shen_1"
+        message: "&c你的神力不稳，还是先步行前往大殿吧（请先完成前置任务）"
+
   皇城东门-妖族:
     world: "world"
     x: 2845.5

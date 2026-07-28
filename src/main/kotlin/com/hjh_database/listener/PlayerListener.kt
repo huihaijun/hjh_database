@@ -46,7 +46,9 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
     // 1. 切换快捷栏 (滚轮/数字键)
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onItemHeld(event: PlayerItemHeldEvent) {
-        refreshPlayerStatus(event.player)
+        // 切换选中槽不会改变装备位置，只需同步当前手持武器攻速。
+        // 避免每次滚轮切换都扫描整包并重建所有装备 Lore。
+        plugin.playerManager.syncHeldAttackSpeed(event.player, event.newSlot)
     }
 
     // 2. 交换双手物品 (按F)

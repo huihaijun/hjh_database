@@ -24,7 +24,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
-import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.util.EnumSet
 import java.util.concurrent.ThreadLocalRandom
@@ -34,7 +33,6 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
     // --- 预缓存所有的 NamespacedKey，避免高频事件中重复创建对象 ---
     private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
-    private val weaponKey = NamespacedKey(plugin, "weapon_id")
     private val multishotSideKey = NamespacedKey(plugin, "multishot_side")
     private val isBowKey = NamespacedKey(plugin, "is_bow_shot") // [新增] 用于弓箭2.5倍伤害判断
     private val mobIdKey = MobFactory.KEY_MOB_ID
@@ -43,6 +41,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     private val storedCritKey = NamespacedKey(plugin, "stored_arrow_crit")
     companion object {
         private const val TEST_DUMMY_TAG = "hjh_test_dummy"
+        const val PHYSICAL_ARMOR_PENETRATION_METADATA = "hjh_physical_armor_penetration"
 
         // --- 使用 EnumSet (位图向量) 提升高频事件中的判断速度，替代低效的 when 遍历 ---
         private val IGNORED_DAMAGE_CAUSES = EnumSet.of(
@@ -64,16 +63,6 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         )
     }
 
-    private fun isWeaponSlotValid(player: Player, item: ItemStack?): Boolean {
-        if (item == null || item.type.isAir || !item.hasItemMeta()) return true
-
-        val meta = item.itemMeta ?: return true
-        val weaponId = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING) ?: return true
-
-        val wd = plugin.playerManager.weaponManager.getWeaponData(weaponId) ?: return true
-        return wd.activateSlot == -1 || player.inventory.heldItemSlot == wd.activateSlot
-    }
-
     // === 主伤害处理逻辑 ===
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {
@@ -88,6 +77,8 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         var ignoreArmor = false
         var isArmoredMagic = false
         var isFormationDamage = false
+        var physicalArmorPenetration = 0.0
+        var activeWeaponId: String? = null
 
         // 2. 检测法术伤害标记
         if (entity.hasMetadata(FormationMagicDamage.METADATA)) {
@@ -116,23 +107,15 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             entity.removeMetadata("HJH_ARMORED_MAGIC_DAMAGE", plugin)
         }
 
-        // 3. 横扫检测
-        if (cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK && event is EntityDamageByEntityEvent) {
-            val damager = event.damager
-            if (damager is Player) {
-                val data = plugin.playerManager.getPlayerData(damager)
-                if (data?.job != 0) { // 只有战士(0)才能触发横扫
-                    event.isCancelled = true
-                    return
-                }
-            }
-        }
-
-        // 4. 物理技能标记清理
+        // 3. 物理技能标记清理
         val isPhysicalSkill = entity.hasMetadata("hjh_physical_skill")
         if (isPhysicalSkill) {
             entity.removeMetadata("hjh_physical_skill", plugin)
         }
+        entity.getMetadata(PHYSICAL_ARMOR_PENETRATION_METADATA)
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.let { physicalArmorPenetration = it.asDouble().coerceIn(0.0, 1.0) }
+        entity.removeMetadata(PHYSICAL_ARMOR_PENETRATION_METADATA, plugin)
 
         if (isMagicDamage) damage = magicBaseDamage
 
@@ -165,45 +148,43 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     // --- A. 玩家 ---
                     is Player -> {
                         val hand = attacker.inventory.itemInMainHand
-                        if (!isWeaponSlotValid(attacker, hand)) {
-                            val data = plugin.playerManager.getPlayerData(attacker)
-                            if (data?.job == 3) {
-                                event.isCancelled = true
-                                return
-                            }
+                        val data = plugin.playerManager.getPlayerData(attacker) ?: return
+                        val activeWeapon = plugin.equipmentActivationManager.resolveWeapon(
+                            attacker,
+                            data,
+                            hand,
+                            attacker.inventory.heldItemSlot
+                        )
+
+                        // 空手、普通物品或不满足槽位/职业/等级等条件的武器完全走原版伤害链。
+                        // 不进入 RPG 护甲、暴击、饰品和技能事件，也不取消本次攻击。
+                        if (activeWeapon == null) return
+                        activeWeaponId = activeWeapon.id
+
+                        if (cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK && data.job != 0) {
+                            // 保留合法激活 RPG 武器原有的职业横扫限制。
                             event.isCancelled = true
-                            attacker.sendMessage("§c武器未激活！请将武器移动到正确的槽位使用！")
-                            attacker.playSound(attacker.location, Sound.ENTITY_ITEM_BREAK, 1f, 0.5f)
                             return
                         }
 
-                        plugin.playerManager.getPlayerData(attacker)?.let { data ->
-                            val isRpgWeapon = hand.itemMeta?.persistentDataContainer?.has(weaponKey, PersistentDataType.STRING) == true
+                        if (data.job == 0) {
+                            val typeName = hand.type.name
+                            if (typeName.endsWith("_SWORD") || typeName.endsWith("_AXE")) {
+                                damage = data.attack * attacker.attackCooldown.toDouble()
+                            }
+                        } else {
+                            damage = 1.0
+                        }
 
-                            if (data.job == 0) { // 战士
-                                val typeName = hand.type.name
-                                if (typeName.endsWith("_SWORD") || typeName.endsWith("_AXE")) {
-                                    damage = data.attack * attacker.attackCooldown.toDouble()
-                                }
-                            } else if (isRpgWeapon) {
-                                damage = 1.0
-                            }
-
-                            // 高性能并发安全的随机数替代 Math.random()
-                            val forceRiftCrit = data.tempBonuses.containsKey(pokongfuSkill.CRIT_OVERRIDE_KEY)
-                            val critChance = if (forceRiftCrit) {
-                                1.0
-                            } else {
-                                min(0.8, data.critChance)
-                            }
-                            val canCrit = data.job != 2 && data.job != 3
-                            if (canCrit && (forceRiftCrit || attacker.attackCooldown > 0.9f) &&
-                                ThreadLocalRandom.current().nextDouble() < critChance
-                            ) {
-                                damage *= 1.5
-                                attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
-                                attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
-                            }
+                        val forceRiftCrit = data.tempBonuses.containsKey(pokongfuSkill.CRIT_OVERRIDE_KEY)
+                        val critChance = if (forceRiftCrit) 1.0 else min(0.8, data.critChance)
+                        val canCrit = data.job != 2 && data.job != 3
+                        if (canCrit && (forceRiftCrit || attacker.attackCooldown > 0.9f) &&
+                            ThreadLocalRandom.current().nextDouble() < critChance
+                        ) {
+                            damage *= 1.5
+                            attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
+                            attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
                         }
                     }
 
@@ -212,29 +193,19 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                         val shooter = attacker.shooter
                         if (shooter is Player) {
                             val pdc = attacker.persistentDataContainer
-
-                            // ⭐ 【关键修复】直接从箭矢 PDC 中读取当时存入的伤害和暴击率（如果没读到则默认为0）
-                            val archerDmg = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: 0.0
+                            val archerDmg = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: return
                             val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
-
                             val velocity = attacker.velocity.length()
-
-                            // 原始伤害系数计算 (速度折算)
                             var arrowDamage = archerDmg * (min(3.0, velocity) / 3.0)
 
-                            // 判断武器类型 (弓还是弩) - 弓伤害在拉满时额外 x2.5
                             if (pdc.has(isBowKey, PersistentDataType.BYTE)) {
                                 arrowDamage *= 2.5
                             }
-
-                            // 判断是否为多重射击的侧箭
                             if (pdc.has(multishotSideKey, PersistentDataType.BYTE)) {
-                                arrowDamage *= 0.2 // 侧箭削弱到 20%
+                                arrowDamage *= 0.2
                             }
 
                             damage = arrowDamage
-
-                            // 判断暴击，使用快照里的暴击率
                             val finalCritChance = min(0.8, critChance)
                             if (ThreadLocalRandom.current().nextDouble() < finalCritChance) {
                                 damage *= 1.5
@@ -287,6 +258,9 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         }
 
+        // 受伤测试仪以此值作为进入自定义护甲公式前的原伤害。
+        val damageBeforeArmor = damage
+
         // 6. 受击者逻辑 (护甲计算)
         if (entity is LivingEntity) {
             entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
@@ -313,6 +287,10 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 plugin.server.pluginManager.callEvent(armorEvent)
                 armor = armorEvent.armor
 
+                if (physicalArmorPenetration > 0.0) {
+                    armor *= 1.0 - physicalArmorPenetration
+                }
+
                 if (isFormationDamage) {
                     val casterData = (damageSource as? Player)?.let(plugin.playerManager::getPlayerData)
                     val penetration = FormationMagicDamage.armorPenetration(casterData)
@@ -324,6 +302,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 damage *= multiplier
             }
         }
+        plugin.damageTestManager.recordArmorCalculation(event, damageBeforeArmor, damage)
 
         // === 【元素结晶·启示 触发】 ===
         val attackerPlayer = if (event is EntityDamageByEntityEvent) {
@@ -336,7 +315,11 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
         if (attackerPlayer != null) {
             if (entity is LivingEntity) {
-                val isNormalAttack = !isMagicDamage && (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK || cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)
+                val isNormalAttack = activeWeaponId != null &&
+                    damage > 0.0 &&
+                    !isMagicDamage &&
+                    (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
+                        cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)
                 val damager = (event as? EntityDamageByEntityEvent)?.damager
                 val isArrowHit = damager is AbstractArrow
                 val crystalEvent = ElementCrystalDamageDealtEvent(
@@ -450,17 +433,21 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         val player = event.entity as? Player ?: return
         val bow = event.bow ?: return
 
-        if (!isWeaponSlotValid(player, bow)) {
-            event.isCancelled = true
-            player.sendMessage("§c弓弩未激活！请将武器移动到正确的槽位使用！")
-            player.playSound(player.location, Sound.ENTITY_ITEM_BREAK, 1f, 0.5f)
-            return
-        }
-
         val data = plugin.playerManager.getData(player.uniqueId)
         if (data == null || data.job != 1) { // 必须是弓箭手(1)
             event.isCancelled = true
             player.sendMessage("§c只有 [弓箭手] 才能使用弓弩！")
+            return
+        }
+
+        val activeWeapon = plugin.equipmentActivationManager.resolveWeapon(
+            player,
+            data,
+            bow,
+            player.inventory.heldItemSlot
+        )
+        if (activeWeapon == null) {
+            // 未激活或普通弓弩保留原版射击，不写入 RPG 伤害快照。
             return
         }
 

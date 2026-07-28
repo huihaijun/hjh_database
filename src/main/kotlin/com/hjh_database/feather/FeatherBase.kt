@@ -18,6 +18,11 @@ interface FeatherBase {
     val cooldownSeconds: Int
 
     /**
+     * 效果持续时间（秒），不同品阶羽毛可以独立配置。
+     */
+    val durationSeconds: Int
+
+    /**
      * 检查玩家是否有资格使用
      * 返回 true 表示可以使用的
      * 返回 false 时，请在方法内自行发送提示消息
@@ -30,7 +35,21 @@ interface FeatherBase {
     fun onStart(player: Player)
 
     /**
-     * 效果结束时触发 (时间到或受伤打断)
+     * 玩家实际受到伤害时触发。
+     * 返回 true 表示本次受伤会令羽毛效果结束；false 表示调整后继续生效。
      */
-    fun onEnd(player: Player)
+    fun onDamage(player: Player): Boolean
+
+    /**
+     * 效果结束时触发。
+     */
+    fun onEnd(player: Player, reason: FeatherEndReason)
+}
+
+enum class FeatherEndReason {
+    EXPIRED,
+    DAMAGED,
+    REPLACED,
+    QUIT,
+    DISABLE
 }

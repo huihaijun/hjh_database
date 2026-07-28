@@ -124,7 +124,9 @@ class taijijianSkill : WeaponSkill, Listener {
         val victim = event.entity as? LivingEntity ?: return
         if (!isMonster(victim)) return
 
-        val stacks = empoweredStacks.remove(player.uniqueId) ?: return
+        val stacks = empoweredStacks[player.uniqueId] ?: return
+        if (!plugin.equipmentActivationManager.isHoldingActiveWeapon(player, "taijijian")) return
+        if (!empoweredStacks.remove(player.uniqueId, stacks)) return
         if (stacks <= 0) return
 
         val data = plugin.playerManager.getData(player.uniqueId) ?: return

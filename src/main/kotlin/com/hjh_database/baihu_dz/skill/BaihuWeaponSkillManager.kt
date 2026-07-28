@@ -182,11 +182,12 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
     }
 
     private fun isWeaponActive(player: Player, weaponData: BaihuWeaponData, data: PlayerData): Boolean {
-        val slot = player.inventory.heldItemSlot
-        if (weaponData.activateSlot != -1 && weaponData.activateSlot != slot) return false
-        if (weaponData.reqJob != -1 && data.job != weaponData.reqJob) return false
-        if (data.lv < weaponData.reqLv) return false
-        return true
+        return weaponData.activationSpec.isActive(
+            playerData = data,
+            inventorySlot = player.inventory.heldItemSlot,
+            player = player,
+            item = player.inventory.itemInMainHand
+        )
     }
 
     private fun hasEnoughDurability(player: Player, item: ItemStack, weaponData: BaihuWeaponData): Boolean {

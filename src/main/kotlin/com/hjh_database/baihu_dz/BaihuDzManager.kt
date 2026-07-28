@@ -3,6 +3,9 @@
 import com.google.common.collect.ArrayListMultimap
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.equipment.activation.ActivatableEquipment
+import com.hjh_database.equipment.activation.ActivationFailure
+import com.hjh_database.equipment.activation.ActivationSpec
 import com.hjh_database.dz.data.DzRecipe
 import com.hjh_database.util.ItemUtil
 import com.hjh_database.weapon.CrystalData
@@ -343,6 +346,20 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         return true
     }
 
+    fun isWeaponActive(
+        player: Player,
+        item: ItemStack,
+        data: BaihuWeaponData,
+        playerData: PlayerData,
+        slot: Int,
+        sendMessage: Boolean = false
+    ): Boolean {
+        if (!data.activationSpec.isActive(playerData, inventorySlot = slot, player = player, item = item)) {
+            return false
+        }
+        return canUse(player, item, data, sendMessage)
+    }
+
     fun restoreDurability(player: Player, item: ItemStack, data: BaihuEquipmentData, amount: Int): Int {
         if (amount <= 0) return 0
         val meta = item.itemMeta ?: return 0
@@ -376,12 +393,12 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         for (slot in 0 until player.inventory.size) {
             val item = player.inventory.getItem(slot) ?: continue
             val wd = getWeaponDataFromItem(item) ?: continue
-            if (!canUse(player, item, wd)) continue
-            if (wd.activateSlot != -1 && wd.activateSlot != slot) continue
-            if (!wd.isActivated(data)) continue
+            if (!isWeaponActive(player, item, wd, data, slot)) continue
             data.rarityDetails.add(wd.rarity)
             totalRarity += wd.rarity
-            wd.stats.forEach { (k, v) -> stats.merge(k, v) { a, b -> a + b } }
+            wd.stats.forEach { (k, v) ->
+                if (k != "attack_speed") stats.merge(k, v) { a, b -> a + b }
+            }
         }
 
         if (totalRarity > 0) stats["total_rarity"] = totalRarity
@@ -395,7 +412,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         fun process(item: ItemStack?, slotKey: String) {
             val artifact = getArtifactDataFromItem(item) ?: return
             if (item == null || !canUse(player, item, artifact)) return
-            if (!artifact.isActivated(data) || !artifact.activations.containsKey(slotKey)) return
+            if (!artifact.activationSpec.isActive(data, slotKey = slotKey, player = player, item = item)) return
             data.rarityDetails.add(artifact.rarity)
             totalRarity += artifact.rarity
             artifact.activations[slotKey]?.stats?.forEach { (k, v) ->
@@ -450,10 +467,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         var active = false
         if (player != null) {
             val playerData = plugin.playerManager.getData(player.uniqueId)
-            active = playerData != null &&
-                canUse(player, item, data) &&
-                (data.activateSlot == -1 || data.activateSlot == slot) &&
-                data.isActivated(playerData)
+            active = playerData != null && isWeaponActive(player, item, data, playerData, slot)
             if (active) {
                 lore.add("§a✓ 已借虎瘴激活")
             } else {
@@ -503,8 +517,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
             val playerData = playerDataOverride ?: plugin.playerManager.getData(player.uniqueId)
             val active = playerData != null &&
                 canUse(player, item, data) &&
-                data.activations.containsKey(slotKey) &&
-                data.isActivated(playerData)
+                data.activationSpec.isActive(playerData, slotKey = slotKey, player = player, item = item)
             if (active) {
                 lore.add("§a✓ 已借虎瘴激活")
             } else {
@@ -519,14 +532,35 @@ class BaihuDzManager(private val plugin: Hjh_database) {
 
     private fun appendInactiveLore(lore: MutableList<String>, player: Player, item: ItemStack, data: BaihuEquipmentData, slot: Any) {
         val pData = plugin.playerManager.getData(player.uniqueId)
+        val activationFailure = if (pData == null) {
+            ActivationFailure.PLAYER_DATA_UNAVAILABLE
+        } else {
+            when (data) {
+                is BaihuWeaponData -> data.activationSpec.firstFailure(
+                    pData,
+                    inventorySlot = slot as? Int ?: ActivationSpec.UNSPECIFIED_SLOT,
+                    player = player,
+                    item = item
+                )
+                is BaihuArtifactData -> data.activationSpec.firstFailure(
+                    pData,
+                    slotKey = slot as? String,
+                    player = player,
+                    item = item
+                )
+            }
+        }
         when {
             !hasMiasma(player) -> lore.add("§c⚠ 未身负虎瘴")
             getDurability(item, data) <= 0 -> lore.add("§c⚠ 耐久耗尽")
-            pData == null -> lore.add("§c⚠ 玩家数据未加载")
-            data.reqJob != -1 && pData.job != data.reqJob -> lore.add("§c⚠ 职业不符")
-            pData.lv < data.reqLv -> lore.add("§c⚠ 等级不足 (${pData.lv}/${data.reqLv})")
-            data is BaihuWeaponData && data.activateSlot != -1 && data.activateSlot != slot -> lore.add(color(data.activeLoreLine))
-            data is BaihuArtifactData && slot is String && !data.activations.containsKey(slot) -> lore.add("§7◆ 未放入指定激活栏")
+            activationFailure == ActivationFailure.PLAYER_DATA_UNAVAILABLE -> lore.add("§c⚠ 玩家数据未加载")
+            activationFailure == ActivationFailure.JOB_MISMATCH -> lore.add("§c⚠ 职业不符")
+            activationFailure == ActivationFailure.LEVEL_MISMATCH && pData != null ->
+                lore.add("§c⚠ 等级不足 (${pData.lv}/${data.reqLv})")
+            activationFailure == ActivationFailure.SLOT_MISMATCH && data is BaihuWeaponData ->
+                lore.add(color(data.activeLoreLine))
+            activationFailure == ActivationFailure.SLOT_MISMATCH && data is BaihuArtifactData ->
+                lore.add("§7◆ 未放入指定激活栏")
             else -> lore.add("§7◆ 未激活")
         }
     }
@@ -552,7 +586,8 @@ class BaihuDzManager(private val plugin: Hjh_database) {
 
     fun isArtifactActiveForSkill(player: Player, item: ItemStack, data: BaihuArtifactData, slotKey: String): Boolean {
         val pData = plugin.playerManager.getData(player.uniqueId) ?: return false
-        return canUse(player, item, data, true) && data.isActivated(pData) && data.activations.containsKey(slotKey)
+        return canUse(player, item, data, true) &&
+            data.activationSpec.isActive(pData, slotKey = slotKey, player = player, item = item)
     }
 
     fun readAccessoryContents(player: Player): Array<ItemStack?>? {
@@ -605,7 +640,7 @@ class BaihuDzManager(private val plugin: Hjh_database) {
 sealed class BaihuEquipmentData(
     val id: String,
     sec: ConfigurationSection
-) {
+) : ActivatableEquipment {
     val display: String = sec.getString("display", id)!!
     val material: Material = Material.matchMaterial(sec.getString("material", "STONE")!!) ?: Material.STONE
     val customModelData: Int = sec.getInt("custom_model_data", 0)
@@ -616,10 +651,7 @@ sealed class BaihuEquipmentData(
     val maxDurability: Int = sec.getInt("durability.max", 100).coerceAtLeast(1)
     val durabilityCost: Int = sec.getInt("durability.skill_cost", 1).coerceAtLeast(0)
 
-    fun isActivated(playerData: PlayerData): Boolean {
-        val jobOk = reqJob == -1 || playerData.job == reqJob
-        return jobOk && playerData.lv >= reqLv
-    }
+    fun isActivated(playerData: PlayerData): Boolean = activationSpec.isEligible(playerData)
 }
 
 class BaihuWeaponData(id: String, sec: ConfigurationSection) : BaihuEquipmentData(id, sec) {
@@ -627,6 +659,11 @@ class BaihuWeaponData(id: String, sec: ConfigurationSection) : BaihuEquipmentDat
     val activateSlot: Int = sec.getInt("activate_slot", 0)
     val activeLoreLine: String = sec.getString("active_lore_line", "&c请放入指定激活栏，并身负虎瘴。")!!
     val stats: MutableMap<String, Double> = mutableMapOf()
+    override val activationSpec: ActivationSpec = ActivationSpec(
+        requiredJob = reqJob,
+        requiredLevel = reqLv,
+        acceptedInventorySlots = if (activateSlot == -1) null else intArrayOf(activateSlot)
+    )
 
     init {
         sec.getConfigurationSection("stats")?.getKeys(false)?.forEach { key ->
@@ -644,6 +681,8 @@ class BaihuArtifactData(id: String, sec: ConfigurationSection) : BaihuEquipmentD
     val medicalOverflowMaxStorage: Double = sec.getDouble("taolizhi_data.max_storage", 100.0)
     val medicalOverflowTriggerStorage: Double = sec.getDouble("taolizhi_data.trigger_storage", 20.0)
     val crystalData: CrystalData = CrystalData(id, sec)
+    override lateinit var activationSpec: ActivationSpec
+        private set
 
     init {
         val actSec = sec.getConfigurationSection("activation")
@@ -656,6 +695,11 @@ class BaihuArtifactData(id: String, sec: ConfigurationSection) : BaihuEquipmentD
                 activations[slotKey] = BaihuActivationConfig(stats)
             }
         }
+        activationSpec = ActivationSpec(
+            requiredJob = reqJob,
+            requiredLevel = reqLv,
+            acceptedSlotKeys = activations.keys
+        )
     }
 }
 

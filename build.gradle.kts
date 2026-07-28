@@ -64,6 +64,9 @@ tasks {
         from("src/main/resources/teleports.yml") {
             into("hjh_database")
         }
+        from("src/main/resources/items/interact.yml") {
+            into("hjh_database/resources/items")
+        }
         into(pluginDir)
     }
 

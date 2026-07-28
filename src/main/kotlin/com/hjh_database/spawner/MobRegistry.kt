@@ -1442,6 +1442,87 @@ object MobRegistry {
             affixes = listOf(MobAffix.NORTH_WETNESS),
         ))
         register(MobDefinition(
+            id = "yuanqi_zombie",
+            name = "&c积满怨气的 僵尸",
+            type = EntityType.ZOMBIE,
+            health = 180.0,
+            damage = 28.0,
+            armor = 45.0,
+            speed = 0.23,
+            exp= 220,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 35%掉落贡品
+                MobDrop("yuanqidejiejing", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.RESENTMENT), //
+            helmet = Material.LEATHER_HELMET, // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "yuanqi_kulou",
+            name = "&c积满怨气的 骷髅",
+            type = EntityType.STRAY,
+            health = 102.0,
+            damage = 30.0,
+            armor = 35.0,
+            speed = 0.23,
+            exp= 220,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落水元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 3, 0.6),
+                // 30%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 2, 0.35),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.4),
+                // 35%掉落贡品
+                MobDrop("yuanqidejiejing", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.RESENTMENT), //
+            helmet = Material.LEATHER_HELMET, // 纯装饰
+            mainHand = Material.BOW  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "yuanqi_zhizhu",
+            name = "&c积满怨气的 蜘蛛",
+            type = EntityType.SPIDER,
+            health = 115.0,
+            damage = 28.0,
+            armor = 34.0,
+            speed = 0.23,
+            exp= 200,
+            maxNearby = 3,
+            drops = listOf(
+                // 掉落元素
+                MobDrop("water", 2, 3, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.6),
+                // 50%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 30%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 35%掉落贡品
+                MobDrop("yuanqidejiejing", 1, 2, 0.35),
+            ),
+            affixes = listOf(MobAffix.RESENTMENT),
+        ))
+        register(MobDefinition(
             id = "xuanshuihun",
             name = "&c玄水魂",
             type = EntityType.VEX,
@@ -1467,6 +1548,35 @@ object MobRegistry {
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS),
             mainHand = Material.IRON_SWORD  // 纯装饰
+        ))
+        register(MobDefinition(
+            id = "qianlishensheshou",
+            name = "&c千里神射手",
+            type = EntityType.SKELETON,
+            health = 700.0,
+            damage = 26.0,
+            armor = 30.0,
+            speed = 0.22,
+            exp= 400,
+            maxNearby = 1,
+            drops = listOf(
+                // 掉落元素
+                MobDrop("water", 3, 4, 0.8),
+                // 掉落土元素
+                MobDrop("earth", 2, 2, 0.6),
+                // 50%掉落金元宝
+                MobDrop("jinyuanbao", 1, 2, 0.4),
+                // 30%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.3),
+                // 85%掉落贡品
+                MobDrop("shuizudegongpin", 3, 4, 0.85),
+                // 35%掉落千里木
+                MobDrop("qianligongtanmu", 1, 1, 0.45),
+            ),
+            affixes = listOf(MobAffix.NORTH_WETNESS),
+            helmet = Material.DIAMOND_HELMET,
+            boots = Material.DIAMOND_BOOTS,
+            mainHand = Material.BOW  // 纯装饰
         ))
     }
 }

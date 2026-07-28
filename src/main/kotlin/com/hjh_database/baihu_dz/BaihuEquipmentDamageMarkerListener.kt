@@ -48,8 +48,12 @@ class BaihuEquipmentDamageMarkerListener(private val plugin: Hjh_database) : Lis
         val weapon = plugin.baihuDzManager.getWeaponDataFromItem(item) ?: return false
         val data = plugin.playerManager.getData(player.uniqueId) ?: return false
         if (data.job != 0 && data.job != 1) return false
-        if (!weapon.isActivated(data)) return false
-        if (weapon.activateSlot != -1 && player.inventory.heldItemSlot != weapon.activateSlot) return false
-        return plugin.baihuDzManager.canUse(player, item, weapon, false)
+        return plugin.baihuDzManager.isWeaponActive(
+            player,
+            item,
+            weapon,
+            data,
+            player.inventory.heldItemSlot
+        )
     }
 }

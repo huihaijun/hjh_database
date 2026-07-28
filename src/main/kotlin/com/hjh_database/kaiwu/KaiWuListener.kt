@@ -8,7 +8,6 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.AsyncPlayerChatEvent
@@ -41,18 +40,7 @@ class KaiWuListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // 2. 受伤打断开采
-    @EventHandler
-    fun onDamage(event: EntityDamageEvent) {
-        if (event.entity is Player) {
-            val p = event.entity as Player
-            if (plugin.kaiWuManager.isMining(p)) {
-                plugin.kaiWuManager.cancelMining(p, true)
-            }
-        }
-    }
-
-    // 3. 破坏方块 (触发删除确认)
+    // 2. 破坏方块 (触发删除确认)
     @EventHandler
     fun onBlockBreak(event: BlockBreakEvent) {
         val manager = plugin.kaiWuManager
@@ -69,7 +57,7 @@ class KaiWuListener(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    // 4. 交互 (开采 & 编辑)
+    // 3. 交互 (开采 & 编辑)
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
         if (event.hand != EquipmentSlot.HAND) return

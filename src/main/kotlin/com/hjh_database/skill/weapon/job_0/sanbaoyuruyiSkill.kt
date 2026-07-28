@@ -151,6 +151,7 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         if (victim.hasMetadata(INTERNAL_DAMAGE_METADATA)) return
 
         val state = getActiveMark(attacker.uniqueId, victim.uniqueId) ?: return
+        if (!mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(attacker, "sanbaoyuruyi")) return
         if (state.damageMultiplier <= 0.0) return
         victim.setMetadata(ARMOR_PIERCE_METADATA, FixedMetadataValue(plugin, true))
     }
@@ -161,11 +162,12 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         val victim = event.entity as? LivingEntity ?: return
         if (victim.hasMetadata(INTERNAL_DAMAGE_METADATA)) return
 
-        val state = getActiveMark(attacker.uniqueId, victim.uniqueId)
         if (victim.hasMetadata(ARMOR_PIERCE_METADATA)) {
             victim.removeMetadata(ARMOR_PIERCE_METADATA, plugin)
         }
+        val state = getActiveMark(attacker.uniqueId, victim.uniqueId)
         if (state == null || event.isCancelled || event.damage <= 0.0) return
+        if (!mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(attacker, "sanbaoyuruyi")) return
 
         event.damage *= state.damageMultiplier
 

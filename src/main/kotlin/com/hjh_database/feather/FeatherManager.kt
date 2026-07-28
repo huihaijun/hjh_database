@@ -2,11 +2,14 @@ package com.hjh_database.feather
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.feather.impl.HumanSpeedFeather
+import com.hjh_database.feather.impl.JifengSpeedFeather
+import com.hjh_database.feather.impl.QingyingSpeedFeather
+import com.hjh_database.feather.impl.SpeedFeather
 import org.bukkit.Bukkit
-import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -15,20 +18,19 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitTask
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 
 class FeatherManager(private val plugin: Hjh_database) : Listener {
 
     private val feathers = HashMap<String, FeatherBase>()
 
-    // 记录正在生效的羽毛效果: <玩家UUID, <羽毛ID, 任务>>
-    // 这里简化设计：假设一个玩家同一时间只能激活一种羽毛状态，方便受伤时打断
-    // 如果需要多羽毛共存，可以改为 Pair<FeatherBase, BukkitTask>
-    private val activeEffects = ConcurrentHashMap<UUID, ActiveEffectInfo>()
+    // 每名玩家只允许一个羽毛状态，从管理层和共享属性标签两层阻止不同羽毛叠加。
+    private val activeEffects = HashMap<UUID, ActiveEffectInfo>()
+    private var nextActivationId = 0L
 
     data class ActiveEffectInfo(
         val feather: FeatherBase,
-        val task: BukkitTask
+        val task: BukkitTask,
+        val activationId: Long
     )
 
     // 读取 ResourceID 的 Key
@@ -37,6 +39,11 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
     init {
         // === 在这里注册所有的羽毛 ===
         register(HumanSpeedFeather())
+        register(QingyingSpeedFeather())
+        register(JifengSpeedFeather())
+
+        // 兼容热重载及旧版可能遗留的持久修饰器。
+        Bukkit.getOnlinePlayers().forEach(SpeedFeather::removeSharedModifier)
 
         // 注册监听器
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -83,8 +90,8 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         }
 
         if (feather.canUse(player, data)) {
-            // 5. 顶替旧效果 (如果存在)
-            stopEffect(player)
+            // 5. 静默顶替旧效果；同种羽毛重复释放也会恢复完整初始加成。
+            stopEffect(player, FeatherEndReason.REPLACED)
 
             // 6. 激活新效果
             feather.onStart(player)
@@ -92,38 +99,41 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
             // 7. 设置冷却 (Ticks)
             player.setCooldown(item.type, feather.cooldownSeconds * 20)
 
-            // 8. 启动定时器 (10分钟后自动结束)
+            // 8. 按各羽毛自己的持续时间启动一次性结束任务。
+            val activationId = ++nextActivationId
             val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-                stopEffect(player)
-            }, 10L * 60L * 20L) // 10分钟 * 60秒 * 20Tick
+                val current = activeEffects[player.uniqueId]
+                if (current?.activationId == activationId) {
+                    stopEffect(player, FeatherEndReason.EXPIRED)
+                }
+            }, feather.durationSeconds * 20L)
 
-            activeEffects[player.uniqueId] = ActiveEffectInfo(feather, task)
+            activeEffects[player.uniqueId] = ActiveEffectInfo(feather, task, activationId)
         }
     }
 
-    // === 2. 受伤打断逻辑 ===
-    @EventHandler
+    // === 2. 受伤衰减/打断逻辑 ===
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {
-        val entity = event.entity
-        if (entity is Player) {
-            // 只要受伤，如果有正在进行的效果，立即打断
-            if (activeEffects.containsKey(entity.uniqueId)) {
-                entity.sendMessage("§c[羽毛] 你受到了伤害，加速效果被打断了！")
-                stopEffect(entity)
-            }
+        val player = event.entity as? Player ?: return
+        if (event.finalDamage <= 0.0) return
+
+        val info = activeEffects[player.uniqueId] ?: return
+        if (info.feather.onDamage(player)) {
+            stopEffect(player, FeatherEndReason.DAMAGED)
         }
     }
 
     // === 3. 退服清理逻辑 ===
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
-        stopEffect(event.player)
+        stopEffect(event.player, FeatherEndReason.QUIT)
     }
 
     /**
      * 停止并移除玩家当前的羽毛效果
      */
-    fun stopEffect(player: Player) {
+    private fun stopEffect(player: Player, reason: FeatherEndReason) {
         val info = activeEffects.remove(player.uniqueId) ?: return
 
         // 取消定时任务
@@ -132,6 +142,17 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         } catch (e: Exception) {}
 
         // 执行结束逻辑 (移除属性修饰符等)
-        info.feather.onEnd(player)
+        info.feather.onEnd(player, reason)
+    }
+
+    fun shutdown() {
+        for (player in Bukkit.getOnlinePlayers()) {
+            if (activeEffects.containsKey(player.uniqueId)) {
+                stopEffect(player, FeatherEndReason.DISABLE)
+            } else {
+                SpeedFeather.removeSharedModifier(player)
+            }
+        }
+        activeEffects.clear()
     }
 }

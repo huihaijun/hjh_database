@@ -2,6 +2,9 @@ package com.hjh_database.weapon
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.equipment.activation.ActivatableEquipment
+import com.hjh_database.equipment.activation.ActivationFailure
+import com.hjh_database.equipment.activation.ActivationSpec
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.BannerPatternLayers
 import org.bukkit.ChatColor
@@ -26,7 +29,7 @@ class ActivationConfig(val stats: Map<String, Double>)
 data class ShieldPatternLayerConfig(val pattern: String, val color: DyeColor)
 data class ShieldPatternConfig(val baseColor: DyeColor, val layers: List<ShieldPatternLayerConfig>)
 
-class CrystalData(val id: String, sec: ConfigurationSection) {
+class CrystalData(val id: String, sec: ConfigurationSection) : ActivatableEquipment {
 
     val display: String = sec.getString("display", "&f未知结晶")!!
     val material: Material = Material.valueOf(sec.getString("material", "SHULKER_SHELL")!!)
@@ -51,6 +54,7 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
 
     // 【核心改动】支持多槽位与多属性映射表
     val activations = mutableMapOf<String, ActivationConfig>()
+    override val activationSpec: ActivationSpec
 
     init {
         val actSec = sec.getConfigurationSection("activation")
@@ -78,6 +82,11 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
             }
             activations["accessory_$oldSlot"] = ActivationConfig(map)
         }
+        activationSpec = ActivationSpec(
+            requiredJob = reqJob,
+            requiredLevel = reqLv,
+            acceptedSlotKeys = activations.keys
+        )
     }
 
     private fun readShieldPattern(sec: ConfigurationSection): ShieldPatternConfig? {
@@ -97,8 +106,7 @@ class CrystalData(val id: String, sec: ConfigurationSection) {
     }
 
     fun isActivated(playerData: PlayerData): Boolean {
-        val jobMatch = this.reqJob == -1 || playerData.job == this.reqJob
-        return playerData.lv >= this.reqLv && jobMatch
+        return activationSpec.isEligible(playerData)
     }
 }
 
@@ -111,6 +119,19 @@ class CrystalManager(private val plugin: Hjh_database) {
     init { reload() }
 
     val allIds: List<String> get() = ArrayList(loadedCrystals.keys)
+
+    fun isActive(
+        crystalData: CrystalData,
+        playerData: PlayerData,
+        slotKey: String,
+        player: Player? = null,
+        item: ItemStack? = null
+    ): Boolean = crystalData.activationSpec.isActive(
+        playerData = playerData,
+        slotKey = slotKey,
+        player = player,
+        item = item
+    )
 
     fun reload() {
         loadedCrystals.clear()
@@ -280,8 +301,8 @@ class CrystalManager(private val plugin: Hjh_database) {
     fun updateCrystalLore(item: ItemStack, crystalData: CrystalData, playerData: PlayerData, currentSlotKey: String) {
         val meta = item.itemMeta ?: return
 
-        // 1. 首先判断当前槽位是否在配置的激活范围内
-        var isActive = crystalData.activations.containsKey(currentSlotKey)
+        val activation = crystalData.activationSpec.evaluate(playerData, slotKey = currentSlotKey, item = item)
+        val isActive = activation.active
         val statusLore = mutableListOf<String>()
 
         if (crystalData.customModelData != 0) {
@@ -290,20 +311,15 @@ class CrystalManager(private val plugin: Hjh_database) {
             meta.setCustomModelData(null)
         }
 
-        // 2. 【核心修复点】正确处理无职业限制 (-1) 的情况
-        if (isActive) {
-            // 如果要求职业不是-1（有特定职业要求），并且玩家职业不符合
-            if (crystalData.reqJob != -1 && playerData.job != crystalData.reqJob) {
-                isActive = false
+        when (activation.failure) {
+            ActivationFailure.JOB_MISMATCH ->
                 statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 职业不符")
-            } else if (playerData.lv < crystalData.reqLv) {
-                isActive = false
+            ActivationFailure.LEVEL_MISMATCH ->
                 statusLore.add(org.bukkit.ChatColor.RED.toString() + "⚠ 等级不足 (${playerData.lv}/${crystalData.reqLv})")
-            }
+            else -> Unit
         }
 
-        // 3. 如果槽位也不对（且不是因为职业等级报错），生成位置提示
-        if (!isActive && statusLore.isEmpty()) {
+        if (activation.failure == ActivationFailure.SLOT_MISMATCH) {
             val reqs = crystalData.activations.keys.joinToString(", ") { key ->
                 when {
                     key.startsWith("accessory_") -> "饰品栏[${key.removePrefix("accessory_").toInt() + 1}]"
@@ -610,7 +626,9 @@ class CrystalManager(private val plugin: Hjh_database) {
 
 // 【核心修复点】直接调用已经封装好的 isActivated 方法，彻底杜绝硬编码遗漏
                 // 【元素结晶特殊处理】元素结晶不依赖 activation 配置，只要放在饰品栏第1格就生效
-                if (crystalId.startsWith("yuansujiejing") && slotKey == "accessory_0") {
+                if (crystalId.startsWith("yuansujiejing") &&
+                    isActive(crystalData, data, slotKey, player, item)
+                ) {
                     data.rarityDetails.add(crystalData.rarity)
                     totalRarity += crystalData.rarity.toDouble()
 
@@ -636,13 +654,13 @@ class CrystalManager(private val plugin: Hjh_database) {
                 }
 
                 // 校验：等级足够、职业匹配，且该槽位在配置文件的激活列表里
-                if (crystalData.isActivated(data) && crystalData.activations.containsKey(slotKey)) {
+                if (isActive(crystalData, data, slotKey, player, item)) {
 
                     data.rarityDetails.add(crystalData.rarity)
                     totalRarity += crystalData.rarity.toDouble()
 
                     // 读取该特定槽位赋予的属性
-                    val slotStats = crystalData.activations[slotKey]?.stats?.toMutableMap() ?: mutableMapOf()
+                    val slotStats = crystalData.activations[slotKey]?.stats ?: emptyMap()
 
                     slotStats.forEach { (k, v) ->
                         val actualKey = if (k == "power") {

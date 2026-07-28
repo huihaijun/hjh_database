@@ -194,11 +194,12 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         weaponData: WeaponManager.WeaponData,
         data: PlayerData
     ): Boolean {
-        val slot = player.inventory.heldItemSlot
-        if (weaponData.activateSlot != -1 && weaponData.activateSlot != slot) return false
-        if (data.job != weaponData.reqJob) return false
-        if (data.lv < weaponData.reqLv) return false
-        return true
+        return weaponData.activationSpec.isActive(
+            playerData = data,
+            inventorySlot = player.inventory.heldItemSlot,
+            player = player,
+            item = player.inventory.itemInMainHand
+        )
     }
 
     private fun applyCooldown(
@@ -285,13 +286,9 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
             val id = getWeaponIdFromItem(item) ?: continue
             if (plugin.baihuDzManager.isBaihuWeaponSkillId(id)) continue
 
-            val weapon = plugin.weaponManager.loadedWeapons[id] ?: continue
-            val slotMatches = if (weapon.activateSlot == -1) {
-                player.inventory.heldItemSlot == slot
-            } else {
-                weapon.activateSlot == slot
-            }
-            if (slotMatches && data.job == weapon.reqJob && data.lv >= weapon.reqLv) return id
+            val weapon = plugin.playerManager.weaponManager.loadedWeapons[id] ?: continue
+            if (weapon.activateSlot == -1 && player.inventory.heldItemSlot != slot) continue
+            if (weapon.activationSpec.isActive(data, inventorySlot = slot, player = player, item = item)) return id
         }
         return null
     }

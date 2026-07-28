@@ -68,10 +68,18 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin buqian <info|reset> <玩家> - 卜算管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin title <list|give|take|display|reload> - 称号管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin shengong <玩家> <秒数> - 设置神族贡品到达时间")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin damagetest - 获取受伤测试仪")
             return true
         }
 
         val subCommand = args[0].lowercase()
+
+        if (subCommand == "damagetest" || subCommand == "getdamagetest" || subCommand == "受伤测试仪") {
+            if (sender !is Player) return error(sender, "只有玩家管理员可以获取受伤测试仪。")
+            sender.inventory.addItem(plugin.damageTestManager.createItem())
+            sender.sendMessage("§a已获得管理员道具：§c受伤测试仪§a。")
+            return true
+        }
 
         if (subCommand == "farm") {
             return plugin.farmingManager.handleAdminCommand(sender, args.drop(1))
@@ -616,7 +624,11 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 val item = org.bukkit.inventory.ItemStack(org.bukkit.Material.STICK)
                 val meta = item.itemMeta ?: return true
                 meta.setDisplayName("§6§l洞察木棍")
-                meta.lore = listOf("§7右键查看 20 格内的自定义刷怪笼", "§7右键刷怪笼查看怪物名称与 ID")
+                meta.lore = listOf(
+                    "§7右键查看 20 格内的自定义刷怪笼",
+                    "§7右键刷怪笼查看怪物名称与 ID",
+                    "§7下蹲右键显示 20 秒 F3+B 判定箱"
+                )
                 meta.persistentDataContainer.set(
                     org.bukkit.NamespacedKey(plugin, "hjh_spawner_insight_stick"),
                     org.bukkit.persistence.PersistentDataType.BYTE,
@@ -1126,7 +1138,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong"
+                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong", "damagetest"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }

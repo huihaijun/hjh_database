@@ -19,7 +19,6 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.inventory.ItemStack
 import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
@@ -34,7 +33,6 @@ import kotlin.math.sin
 class baihuajianSkill : WeaponSkill, Listener {
 
     private val plugin = JavaPlugin.getProvidingPlugin(this::class.java) as Hjh_database
-    private val weaponKey = NamespacedKey(plugin, "weapon_id")
     private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
 
     private data class FlowerMark(
@@ -397,13 +395,7 @@ class baihuajianSkill : WeaponSkill, Listener {
     }
 
     private fun isBaihuaActive(player: Player): Boolean {
-        val item: ItemStack = player.inventory.itemInMainHand
-        if (!item.hasItemMeta()) return false
-        val weaponId = item.itemMeta?.persistentDataContainer?.get(weaponKey, PersistentDataType.STRING)
-        if (!weaponId.equals("baihuajian", ignoreCase = true)) return false
-
-        val activeWeapon = plugin.playerManager.weaponManager.checkActiveWeapon(player, item, player.inventory.heldItemSlot)
-        return activeWeapon?.id.equals("baihuajian", ignoreCase = true)
+        return plugin.equipmentActivationManager.isHoldingActiveWeapon(player, "baihuajian")
     }
 
     private fun isPanlingMonster(entity: LivingEntity): Boolean {

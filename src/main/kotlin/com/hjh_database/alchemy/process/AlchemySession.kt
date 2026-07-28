@@ -3,6 +3,7 @@ package com.hjh_database.alchemy.process
 import com.hjh_database.Hjh_database
 import com.hjh_database.alchemy.data.AlchemyRecipe
 import com.hjh_database.alchemy.data.AlchemyTier
+import org.bukkit.ChatColor
 import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
@@ -33,8 +34,10 @@ class AlchemySession(
     )
 
     private val trackers = ArrayList<RequirementTracker>()
+    private val consumedItems = ArrayList<ItemStack>()
     private var displayEntity: TextDisplay? = null
     private var task: BukkitRunnable? = null
+    private val resourceIdKey = NamespacedKey(plugin, "resource_id")
 
     val config = recipe.tierData[tier]!!
     val resultItem = config.result
@@ -153,8 +156,7 @@ class AlchemySession(
                     // 如果这个需求已经满了，跳过
                     if (tracker.current >= tracker.totalNeeded) continue
 
-                    // 核心判定：使用 isSimilar 严格对比 (材质、NBT、Lore等)
-                    if (droppedItem.isSimilar(tracker.template)) {
+                    if (matchesRequirement(droppedItem, tracker.template)) {
                         matched = true
 
                         // 计算还需要多少
@@ -163,6 +165,10 @@ class AlchemySession(
                         val take = min(droppedItem.amount, needed)
 
                         if (take > 0) {
+                            val consumedItem = droppedItem.clone()
+                            consumedItem.amount = take
+                            consumedItems.add(consumedItem)
+
                             // 扣除掉落物数量
                             droppedItem.amount -= take
                             // 增加进度
@@ -209,26 +215,47 @@ class AlchemySession(
         }
     }
 
+    private fun matchesRequirement(input: ItemStack, template: ItemStack): Boolean {
+        if (input.isSimilar(template)) return true
+
+        val inputId = getResourceId(input) ?: return false
+        if (!inputId.equals(genericPrimerId(tier), ignoreCase = true)) return false
+
+        return isPillPrimer(template)
+    }
+
+    private fun isPillPrimer(item: ItemStack): Boolean {
+        val resourceId = getResourceId(item)?.lowercase() ?: return false
+        if (resourceId in GENERIC_PRIMER_IDS) return false
+        if (resourceId.startsWith("yy_")) return true
+
+        val plainName = ChatColor.stripColor(item.itemMeta?.displayName)
+        return plainName?.startsWith("[药引]") == true
+    }
+
+    private fun getResourceId(item: ItemStack): String? {
+        return item.itemMeta?.persistentDataContainer?.get(resourceIdKey, PersistentDataType.STRING)
+    }
+
+    private fun genericPrimerId(tier: AlchemyTier): String = when (tier) {
+        AlchemyTier.LOW -> "yy_tongyong0"
+        AlchemyTier.MID -> "yy_tongyong1"
+        AlchemyTier.HIGH -> "yy_tongyong2"
+    }
+
     fun cancel() {
         task?.cancel()
         displayEntity?.remove() // 移除悬浮字
         displayEntity = null
 
-        // === 修改点 4：按进度返还材料 ===
-        var refunded = false
-        for (t in trackers) {
-            if (t.current > 0) {
-                val refundItem = t.template.clone()
-                refundItem.amount = t.current // 把已经吃进去的数量吐出来
-
-                val left = player.inventory.addItem(refundItem)
-                // 背包满则丢地上
-                if (left.isNotEmpty()) {
-                    left.values.forEach { player.world.dropItem(player.location, it) }
-                }
-                refunded = true
+        val refunded = consumedItems.isNotEmpty()
+        for (consumedItem in consumedItems) {
+            val left = player.inventory.addItem(consumedItem)
+            if (left.isNotEmpty()) {
+                left.values.forEach { player.world.dropItem(player.location, it) }
             }
         }
+        consumedItems.clear()
 
         if (refunded) {
             player.sendMessage("§c已中断炼制，并返还了投入的材料。")
@@ -299,5 +326,9 @@ class AlchemySession(
         )
 
         plugin.alchemyManager.activeSessions.remove(player.uniqueId)
+    }
+
+    private companion object {
+        private val GENERIC_PRIMER_IDS = setOf("yy_tongyong0", "yy_tongyong1", "yy_tongyong2")
     }
 }

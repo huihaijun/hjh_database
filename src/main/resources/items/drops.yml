@@ -25,6 +25,46 @@ earth:
   name: "&f土元素"
   custom_model_data: 10008
 
+jl_metal:
+  material: GOLD_NUGGET
+  name: "&b精炼金元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的金元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10004
+
+jl_wood:
+  material: GOLD_NUGGET
+  name: "&b精炼木元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的木元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10005
+
+jl_water:
+  material: GOLD_NUGGET
+  name: "&b精炼水元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的水元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10006
+
+jl_fire:
+  material: GOLD_NUGGET
+  name: "&b精炼火元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的火元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10007
+
+jl_earth:
+  material: GOLD_NUGGET
+  name: "&b精炼土元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的土元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10008
+
 relive_stone:
   material: GOLD_NUGGET
   name: "&9重生石"

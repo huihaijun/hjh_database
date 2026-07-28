@@ -33,6 +33,7 @@ import com.hjh_database.dz.manager.DzLevelManager
 import com.hjh_database.dz.manager.RecipeManager
 import com.hjh_database.jobtrial.JobTrialManager
 import com.hjh_database.listener.CombatListener
+import com.hjh_database.listener.DamageTestManager
 import com.hjh_database.listener.MenuListener
 import com.hjh_database.ui.TianjiUtilityMenus
 import com.hjh_database.listener.PlayerListener
@@ -63,7 +64,9 @@ import com.hjh_database.spawner.impl.CustomMagmaCubeListener
 import com.hjh_database.spawner.impl.BaihuWestSkill
 import com.hjh_database.spawner.impl.DesertSouthSkill
 import com.hjh_database.spawner.impl.NorthWetnessSkill
+import com.hjh_database.spawner.impl.ResentmentAffixSkill
 import com.hjh_database.accessory.element.ElementCrystalManager
+import com.hjh_database.equipment.activation.EquipmentActivationManager
 import com.hjh_database.accessory.element.ElementCrystalGui
 import com.hjh_database.accessory.element.ElementCrystalInteractListener
 import com.hjh_database.title.TitleListener
@@ -125,6 +128,9 @@ class Hjh_database : JavaPlugin() {
     lateinit var busuanManager: BusuanManager
     lateinit var globalMarketManager: GlobalMarketManager
     lateinit var titleManager: TitleManager
+    lateinit var damageTestManager: DamageTestManager
+    lateinit var featherManager: com.hjh_database.feather.FeatherManager
+    lateinit var equipmentActivationManager: EquipmentActivationManager
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
     }
@@ -138,7 +144,8 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         this.databaseManager = DatabaseManager(this)
         this.playerManager = PlayerManager(this)
-        this.weaponManager = WeaponManager(this)
+        // PlayerManager 持有唯一的普通武器管理器，避免重复加载配置和热重载数据分叉。
+        this.weaponManager = this.playerManager.weaponManager
         this.menuManager = MenuManager(this)
         this.elementZfManager = ElementZfManager(this)
         this.resourceManager = ResourceManager(this)
@@ -158,6 +165,7 @@ class Hjh_database : JavaPlugin() {
         this.baihuTownFireManager = BaihuTownFireManager(this)
         this.baihuDzManager = BaihuDzManager(this)
         this.baihuWeaponSkillManager = BaihuWeaponSkillManager(this)
+        this.equipmentActivationManager = EquipmentActivationManager(this)
         this.teleportManager = com.hjh_database.teleport.TeleportManager(this)
         this.bgmManager = com.hjh_database.bgm.BgmManager(this)
         this.jobTrialManager = JobTrialManager(this)
@@ -165,6 +173,7 @@ class Hjh_database : JavaPlugin() {
         this.busuanManager = BusuanManager(this)
         this.globalMarketManager = GlobalMarketManager(this)
         this.titleManager = TitleManager(this)
+        this.damageTestManager = DamageTestManager(this)
 
         // 重华晶系统初始化
         this.chonghuaManager = ChonghuaManager(this)
@@ -178,8 +187,8 @@ class Hjh_database : JavaPlugin() {
         this.npcModule = NpcModule(this)
         this.npcModule.enable()
 
-        // 羽毛系统（无需保存变量的直接初始化）
-        com.hjh_database.feather.FeatherManager(this)
+        // 羽毛系统
+        this.featherManager = com.hjh_database.feather.FeatherManager(this)
         // 饰品栏
         this.accessoryManager = AccessoryManager(this)
         jiandaiSkill = JiandaiSkill(this)
@@ -201,6 +210,7 @@ class Hjh_database : JavaPlugin() {
         DesertSouthSkill.init(this)
         BaihuWestSkill.init(this)
         NorthWetnessSkill.init(this)
+        ResentmentAffixSkill.init(this)
 
         // ==========================================
         // 第二阶段：初始化 GUI
@@ -228,6 +238,8 @@ class Hjh_database : JavaPlugin() {
         rebirthListener.initAltar()
 
         // 1. 基础系统监听
+        // 必须早于其他伤害监听器注册，以便测试仪在LOWEST阶段拿到未经插件修改的事件。
+        pm.registerEvents(this.damageTestManager, this)
         pm.registerEvents(PlayerListener(this), this)
         pm.registerEvents(rebirthListener, this)
         pm.registerEvents(CombatListener(this), this)
@@ -373,6 +385,10 @@ class Hjh_database : JavaPlugin() {
             titleManager.shutdown()
         }
 
+        if (::featherManager.isInitialized) {
+            featherManager.shutdown()
+        }
+
         if (::shenTributeManager.isInitialized) {
             shenTributeManager.shutdown()
         }
@@ -389,6 +405,7 @@ class Hjh_database : JavaPlugin() {
             baihuMiasmaManager.shutdown()
         }
         NorthWetnessSkill.shutdown()
+        ResentmentAffixSkill.shutdown()
 
         if (::baihuTownFireManager.isInitialized) {
             baihuTownFireManager.shutdown()

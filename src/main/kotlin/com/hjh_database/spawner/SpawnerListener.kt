@@ -11,9 +11,14 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.entity.Interaction
+import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.scheduler.BukkitTask
+import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
 class SpawnerListener(private val plugin: Hjh_database) : Listener {
@@ -32,6 +37,8 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
     // 【新增】用于快速铺怪笼的 NBT Key
     private val keyFastItem = NamespacedKey(plugin, "hjh_spawner_fast")
     private val keyInsightStick = NamespacedKey(plugin, "hjh_spawner_insight_stick")
+    private val insightHitboxes = HashMap<UUID, List<Interaction>>()
+    private val insightHitboxTasks = HashMap<UUID, BukkitTask>()
 
     // 放置刷怪笼逻辑 (保持不变)
     @EventHandler
@@ -171,6 +178,12 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
             return
         }
 
+        if (player.isSneaking) {
+            event.isCancelled = true
+            showSpawnerHitboxes(player)
+            return
+        }
+
         val clickedSpawner = event.clickedBlock
             ?.takeIf { it.type == Material.SPAWNER }
             ?.state as? CreatureSpawner
@@ -185,16 +198,63 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
         showNearbySpawners(player)
     }
 
-    private fun showNearbySpawners(player: org.bukkit.entity.Player) {
+    private fun showNearbySpawners(player: Player) {
+        val center = player.location
+        val spawners = findNearbyCustomSpawners(player)
+
+        if (spawners.isEmpty()) {
+            player.sendMessage("§7[洞察] 20 格内未发现自定义刷怪笼。")
+            return
+        }
+
+        player.sendMessage("§6[洞察] 20 格内发现 ${spawners.size} 个自定义刷怪笼：")
+        spawners.sortedBy { it.location.distanceSquared(center) }.forEach { spawner ->
+            val location = spawner.location
+            player.sendMessage("§7- §f${location.blockX}, ${location.blockY}, ${location.blockZ} §8| ${describeSpawner(spawner)}")
+        }
+    }
+
+    private fun showSpawnerHitboxes(player: Player) {
+        clearSpawnerHitboxes(player.uniqueId)
+        val spawners = findNearbyCustomSpawners(player)
+        if (spawners.isEmpty()) {
+            player.sendMessage("§7[洞察] 20 格内未发现自定义刷怪笼。")
+            return
+        }
+
+        val hitboxes = spawners.map { spawner ->
+            val markerLocation = spawner.location.clone().add(0.5, 0.0, 0.5)
+            spawner.world.spawn(markerLocation, Interaction::class.java) { marker ->
+                marker.interactionWidth = 1.0f
+                marker.interactionHeight = 1.0f
+                marker.isResponsive = false
+                marker.isPersistent = false
+                marker.addScoreboardTag(INSIGHT_HITBOX_TAG)
+            }
+        }
+        insightHitboxes[player.uniqueId] = hitboxes
+        insightHitboxTasks[player.uniqueId] = plugin.server.scheduler.runTaskLater(
+            plugin,
+            Runnable {
+                insightHitboxTasks.remove(player.uniqueId)
+                removeSpawnerHitboxes(player.uniqueId)
+            },
+            INSIGHT_HITBOX_DURATION_TICKS
+        )
+
+        player.sendMessage("§a[洞察] 已显示 ${hitboxes.size} 个刷怪笼的 F3+B 判定箱，持续 20 秒。")
+    }
+
+    private fun findNearbyCustomSpawners(player: Player): List<CreatureSpawner> {
         val center = player.location
         val world = player.world
         val radiusSquared = INSIGHT_RADIUS * INSIGHT_RADIUS
         val spawners = ArrayList<CreatureSpawner>()
         val seen = HashSet<String>()
-        val minChunkX = Math.floorDiv((center.x - INSIGHT_RADIUS).toInt(), 16)
-        val maxChunkX = Math.floorDiv((center.x + INSIGHT_RADIUS).toInt(), 16)
-        val minChunkZ = Math.floorDiv((center.z - INSIGHT_RADIUS).toInt(), 16)
-        val maxChunkZ = Math.floorDiv((center.z + INSIGHT_RADIUS).toInt(), 16)
+        val minChunkX = Math.floorDiv(kotlin.math.floor(center.x - INSIGHT_RADIUS).toInt(), 16)
+        val maxChunkX = Math.floorDiv(kotlin.math.floor(center.x + INSIGHT_RADIUS).toInt(), 16)
+        val minChunkZ = Math.floorDiv(kotlin.math.floor(center.z - INSIGHT_RADIUS).toInt(), 16)
+        val maxChunkZ = Math.floorDiv(kotlin.math.floor(center.z + INSIGHT_RADIUS).toInt(), 16)
 
         for (chunkX in minChunkX..maxChunkX) {
             for (chunkZ in minChunkZ..maxChunkZ) {
@@ -211,17 +271,23 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+        return spawners
+    }
 
-        if (spawners.isEmpty()) {
-            player.sendMessage("§7[洞察] 20 格内未发现自定义刷怪笼。")
-            return
-        }
+    private fun clearSpawnerHitboxes(playerId: UUID) {
+        insightHitboxTasks.remove(playerId)?.cancel()
+        removeSpawnerHitboxes(playerId)
+    }
 
-        player.sendMessage("§6[洞察] 20 格内发现 ${spawners.size} 个自定义刷怪笼：")
-        spawners.sortedBy { it.location.distanceSquared(center) }.forEach { spawner ->
-            val location = spawner.location
-            player.sendMessage("§7- §f${location.blockX}, ${location.blockY}, ${location.blockZ} §8| ${describeSpawner(spawner)}")
+    private fun removeSpawnerHitboxes(playerId: UUID) {
+        insightHitboxes.remove(playerId)?.forEach { marker ->
+            if (marker.isValid) marker.remove()
         }
+    }
+
+    @EventHandler
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        clearSpawnerHitboxes(event.player.uniqueId)
     }
 
     private fun describeSpawner(spawner: CreatureSpawner): String? {
@@ -236,6 +302,8 @@ class SpawnerListener(private val plugin: Hjh_database) : Listener {
 
     private companion object {
         private const val INSIGHT_RADIUS = 20.0
+        private const val INSIGHT_HITBOX_DURATION_TICKS = 20L * 20L
+        private const val INSIGHT_HITBOX_TAG = "hjh_spawner_insight_hitbox"
     }
 
     @EventHandler

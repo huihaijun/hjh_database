@@ -101,6 +101,7 @@ class pokongfuSkill : WeaponSkill, Listener {
         if (!isNormalMelee(event) || !isMonster(victim)) return
 
         val state = activeStates[player.uniqueId] ?: return
+        if (!plugin.equipmentActivationManager.isHoldingActiveWeapon(player, "pokongfu")) return
         if (System.currentTimeMillis() >= state.endAt) {
             finishRift(player, state)
             return
@@ -137,6 +138,7 @@ class pokongfuSkill : WeaponSkill, Listener {
 
         val killer = mob.killer ?: return
         val state = activeStates[killer.uniqueId] ?: return
+        if (!plugin.equipmentActivationManager.isHoldingActiveWeapon(killer, "pokongfu")) return
         if (System.currentTimeMillis() >= state.endAt) return
 
         val remainingExtension = MAX_EXTENSION_MS - state.extendedMillis

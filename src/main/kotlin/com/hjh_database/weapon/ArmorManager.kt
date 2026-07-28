@@ -2,6 +2,9 @@ package com.hjh_database.weapon
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.equipment.activation.ActivatableEquipment
+import com.hjh_database.equipment.activation.ActivationFailure
+import com.hjh_database.equipment.activation.ActivationSpec
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -78,21 +81,16 @@ class ArmorManager(private val plugin: Hjh_database) {
 
             val aData = loadedArmors[id] ?: continue
 
-            // === 逻辑判断区域 (完全保持原样) ===
-            var isActive = true
+            val activation = aData.activationSpec.evaluate(data, player = player, item = item)
+            val isActive = activation.active
             val statusLore: MutableList<String> = ArrayList()
 
-            // 1. 检查职业
-            if (aData.reqJob != -1) {
-                if (data.job == null || data.job != aData.reqJob) {
-                    isActive = false
+            when (activation.failure) {
+                ActivationFailure.JOB_MISMATCH ->
                     statusLore.add(ChatColor.RED.toString() + "⚠ 职业不符")
-                }
-            }
-            // 2. 检查等级
-            if ((data.lv ?: 0) < aData.reqLv) {
-                isActive = false
-                statusLore.add(ChatColor.RED.toString() + "⚠ 等级不足 (" + data.lv + "/" + aData.reqLv + ")")
+                ActivationFailure.LEVEL_MISMATCH ->
+                    statusLore.add(ChatColor.RED.toString() + "⚠ 等级不足 (" + data.lv + "/" + aData.reqLv + ")")
+                else -> Unit
             }
 
             // === Lore 构建区域 (仅在此处修改) ===
@@ -212,11 +210,7 @@ class ArmorManager(private val plugin: Hjh_database) {
 
             val aData = loadedArmors[id] ?: continue
 
-            // === 校验激活条件 ===
-            // 1. 等级不够，跳过
-            if ((data.lv ?: 0) < aData.reqLv) continue
-            // 2. 职业不符，跳过
-            if (aData.reqJob != -1 && (data.job == null || data.job != aData.reqJob)) continue
+            if (!aData.activationSpec.isActive(data, player = player, item = item)) continue
 
             // ★【新增】这里是激活成功的地方，把稀有度记入 List
             data.rarityDetails.add(aData.rarity)
@@ -308,11 +302,7 @@ class ArmorManager(private val plugin: Hjh_database) {
     }
 
     private fun checkRequirements(player: Player, data: PlayerData, armor: ArmorData): Boolean {
-        if (armor.reqJob != -1) {
-            if (data.job == null || data.job != armor.reqJob) return false
-        }
-        if ((data.lv ?: 0) < armor.reqLv) return false
-        return true
+        return armor.activationSpec.isActive(data, player = player)
     }
 
     val allIds: Set<String>
@@ -327,7 +317,7 @@ class ArmorManager(private val plugin: Hjh_database) {
         }
     }
 
-    class ArmorData(var id: String, sec: ConfigurationSection) {
+    class ArmorData(var id: String, sec: ConfigurationSection) : ActivatableEquipment {
         var display: String? = sec.getString("display", "Armor")
         var material: Material = Material.matchMaterial(sec.getString("material", "LEATHER_CHESTPLATE")!!) ?: Material.LEATHER_CHESTPLATE
         var customModelData: Int = sec.getInt("custom_model_data", 0)
@@ -340,6 +330,10 @@ class ArmorManager(private val plugin: Hjh_database) {
         @JvmField var activeLoreLine: String = sec.getString("active_lore_line", "条件不符")!!
         @JvmField var rarity: Int = sec.getInt("rarity", 1) // <--- 【1】新增字段, 【2】读取配置，默认为1
         @JvmField var stats: MutableMap<String, Double> = HashMap()
+        override val activationSpec: ActivationSpec = ActivationSpec(
+            requiredJob = reqJob,
+            requiredLevel = reqLv
+        )
 
         // 【新增】护甲颜色字段
         var color: org.bukkit.Color? = null

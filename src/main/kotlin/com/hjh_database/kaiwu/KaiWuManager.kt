@@ -33,7 +33,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
     private val miningTasks: MutableMap<UUID, Int> = ConcurrentHashMap()
     private val miningBars: MutableMap<UUID, BossBar> = ConcurrentHashMap()
     private val miningStartLoc: MutableMap<UUID, Location> = ConcurrentHashMap()
-    private val inspectionTasks: MutableMap<UUID, Int> = ConcurrentHashMap()
     val deleteConfirmations: MutableMap<UUID, String> = ConcurrentHashMap()
 
     // 状态后缀
@@ -168,35 +167,11 @@ class KaiWuManager(private val plugin: Hjh_database) {
     //           开采逻辑
     // ==========================================
 
-    /**
-     * 左键查看资源点信息。信息会短暂保持并刷新，因此枯竭/恢复倒计时能够实时变化。
-     * 再次查看资源点时会替换玩家之前的查看任务，避免重复调度。
-     */
+    /** 左键查看一次资源点信息，由客户端按普通 ActionBar 行为自然淡出。 */
     fun showNodeInfo(player: Player, loc: Location) {
         val locKey = serializeLoc(loc)
         if (!nodeCache.containsKey(locKey)) return
-
-        cancelInspection(player.uniqueId)
         sendNodeInfoActionBar(player, locKey)
-
-        val refreshTicks = 5L
-        val displayTicks = 100L
-        val task = object : BukkitRunnable() {
-            var elapsedTicks = 0L
-
-            override fun run() {
-                if (!player.isOnline || !nodeCache.containsKey(locKey) || elapsedTicks >= displayTicks) {
-                    cancelInspection(player.uniqueId)
-                    return
-                }
-
-                sendNodeInfoActionBar(player, locKey)
-                elapsedTicks += refreshTicks
-            }
-        }
-
-        task.runTaskTimer(plugin, refreshTicks, refreshTicks)
-        inspectionTasks[player.uniqueId] = task.taskId
     }
 
     private fun sendNodeInfoActionBar(player: Player, locKey: String) {
@@ -269,11 +244,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
         val remainingMillis = (deadlineMillis - System.currentTimeMillis()).coerceAtLeast(0L)
         val remainingSeconds = (remainingMillis + 999L) / 1000L
         return "${remainingSeconds}秒"
-    }
-
-    private fun cancelInspection(uuid: UUID) {
-        val taskId = inspectionTasks.remove(uuid) ?: return
-        Bukkit.getScheduler().cancelTask(taskId)
     }
 
     fun startMining(player: Player, loc: Location) {
@@ -375,15 +345,15 @@ class KaiWuManager(private val plugin: Hjh_database) {
 
             override fun run() {
                 if (!player.isOnline || player.isDead) {
-                    cancelMining(player, false)
+                    cancelMining(player)
                     return
                 }
 
-                val maxDist = config.getDouble("mining.interrupt_distance", 5.0)
+                val maxDist = config.getDouble("mining.interrupt_distance", 4.0)
                 val start = miningStartLoc[player.uniqueId]
                 if (start != null && player.location.distance(start) > maxDist) {
                     player.sendMessage(getMsg("messages.mining_interrupted_move"))
-                    cancelMining(player, false)
+                    cancelMining(player)
                     return
                 }
 
@@ -393,7 +363,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
 
                 if (progress >= 1.0) {
                     finishMining(player, data, node, locKey, finalIsDepleted, costEnergy, finalYield)
-                    cancelMining(player, false)
+                    cancelMining(player)
                 }
             }
         }
@@ -719,7 +689,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
         loadNodes()
     }
 
-    fun cancelMining(player: Player, isDamage: Boolean) {
+    fun cancelMining(player: Player) {
         val uuid = player.uniqueId
         if (miningTasks.containsKey(uuid)) {
             Bukkit.getScheduler().cancelTask(miningTasks.remove(uuid)!!)
@@ -727,7 +697,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
                 miningBars.remove(uuid)!!.removeAll()
             }
             miningStartLoc.remove(uuid)
-            if (isDamage) player.sendMessage(getMsg("messages.mining_interrupted_damage"))
         }
     }
 

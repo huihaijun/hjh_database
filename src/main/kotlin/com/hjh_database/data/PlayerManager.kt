@@ -24,6 +24,7 @@ class PlayerManager(private val plugin: Hjh_database) {
     companion object {
         const val CURRENT_EXP_CURVE_VERSION = 2
         private const val MAX_LEVEL_FOR_EXP_MIGRATION = 100
+        private const val LEGACY_ATTACK_DAMAGE_MODIFIER = "lanyue:attack_damage_remove"
     }
 
     // 淇濇寔鍘熸湁鍙橀噺鍚嶇殑璁块棶鎬?
@@ -389,9 +390,8 @@ class PlayerManager(private val plugin: Hjh_database) {
         }
         data.coolReduce += bonuses.getOrDefault("cool_reduce", 0.0)
 
-        // weapons.yml 中的 attack_speed 表示原版最终攻击速度，而不是在 4.0 上继续累加。
-        // 没有激活武器时保持玩家原版基础值 4.0。
-        data.attackSpeed = bonuses["attack_speed"]?.coerceAtLeast(0.0) ?: 4.0
+        // 攻击速度是“当前手持武器”属性，不参与背包常驻属性汇总。
+        data.attackSpeed = plugin.equipmentActivationManager.heldAttackSpeed(player, data)
 
         // === 鐏靛姏璁＄畻閫昏緫 (淇濇寔鍘熸牱) ===
         // 鍏紡锛?0 + (绛夌骇 * 3)
@@ -439,7 +439,27 @@ class PlayerManager(private val plugin: Hjh_database) {
         syncToVanilla(player, data)
     }
 
+    /**
+     * 快捷栏切换只影响手持攻速，无需重新扫描整包装备和刷新全部 Lore。
+     * newSlot 可在 PlayerItemHeldEvent 尚未完成槽位切换时提供精确的新槽位。
+     */
+    fun syncHeldAttackSpeed(player: Player, newSlot: Int = player.inventory.heldItemSlot) {
+        val data = dataCache[player.uniqueId] ?: return
+        val attackSpeed = plugin.equipmentActivationManager.heldAttackSpeed(player, data, newSlot)
+        data.attackSpeed = attackSpeed
+        player.getAttribute(Attribute.ATTACK_SPEED)?.baseValue = attackSpeed
+    }
+
     private fun syncToVanilla(player: Player, data: PlayerData) {
+        // 旧版 lanyue 数据包把这个永久修饰器写进了玩家 NBT。即使数据包已卸载，
+        // add_multiplied_total(-1) 仍会把原版近战攻击力压成 0，必须定向清理。
+        player.getAttribute(Attribute.ATTACK_DAMAGE)?.let { attackDamage ->
+            for (modifier in attackDamage.modifiers) {
+                if (modifier.key.toString() == LEGACY_ATTACK_DAMAGE_MODIFIER) {
+                    attackDamage.removeModifier(modifier)
+                }
+            }
+        }
         // (淇濇寔鍘熸湁鐨勫睘鎬у悓姝?
         // 1.21.3 閫傞厤锛欰ttribute 鏋氫妇鍘婚櫎浜?GENERIC_ 鍓嶇紑
         val maxHp = max(1.0, data.maxHealth)

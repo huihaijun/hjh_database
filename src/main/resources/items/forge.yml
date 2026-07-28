@@ -396,6 +396,67 @@ xuantianqi_chuxing:
     - "&7&o就能锻造出医师武器——&d玄天旗"
     - "&e注意:&f锻造前,请先将医术从医旗上剥离"
 
+sanbaoyuruyi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e三宝玉如意雏形[破军]"
+  lore:
+    - "&7&o用来制作战士武器——&e三宝玉如意&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&e三宝玉如意"
+
+kunlunfeixianjian_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e昆仑飞仙剑雏形[金钟]"
+  lore:
+    - "&7&o用来制作战士武器——&e昆仑飞仙剑&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士武器——&e昆仑飞仙剑"
+
+riyueliuxingnu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e日月流星弩雏形[游侠]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&e日月流星弩&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&e日月流星弩"
+
+beidoumieshengong_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e北斗灭神弓雏形[狙击]"
+  lore:
+    - "&7&o用来制作弓箭手武器——&e北斗灭神弓&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手武器——&e北斗灭神弓"
+
+qishading_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e七煞鼎雏形"
+  lore:
+    - "&7&o用来制作术士武器——&e七煞鼎&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士武器——&e七煞鼎"
+
+chichengqi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e赤橙旗雏形"
+  lore:
+    - "&7&o用来制作医师武器——&e赤橙旗&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师武器——&e赤橙旗"
+    - "&e注意:&f锻造前,请先将医术从医旗上剥离"
+
 yanjingdunpai_chuxing:
   material: GOLD_NUGGET
   custom_model_data: 10081

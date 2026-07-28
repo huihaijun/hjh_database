@@ -158,6 +158,7 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         if (!isMonster(target) || target.hasMetadata(INTERNAL_DAMAGE_METADATA)) return
 
         val state = reserveStates[player.uniqueId] ?: return
+        if (!mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(player, "kunlunfeixianjian")) return
         if (schedulerTick >= state.expiresAtTick) {
             finishReserveState(player.uniqueId, state, player, true)
             return

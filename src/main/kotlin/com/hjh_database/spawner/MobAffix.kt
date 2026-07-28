@@ -9,7 +9,8 @@ enum class MobAffix(val id: String, val displayName: String, val description: St
     // === 【新增】 ===
     DESERT_SOUTH("desert_south", "恶土的", "攻击有60%概率附带恶土之炎"),
     BAIHU_WEST("baihu_west", "西方的", "攻击有30%概率提高目标虎瘴"),
-    NORTH_WETNESS("north_wetness", "潮湿的", "攻击或接近玩家时会提高其湿气");
+    NORTH_WETNESS("north_wetness", "潮湿的", "攻击或接近玩家时会提高其湿气"),
+    RESENTMENT("resentment", "积怨的", "同类死亡时吸收怨念并强化自身");
 
     companion object {
         private val map = values().associateBy(MobAffix::id)
