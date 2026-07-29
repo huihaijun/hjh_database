@@ -110,12 +110,12 @@ class Shen_05 : QuestBase("main_shen_5", "[神族主线]丹塔问药", QuestType
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 200)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +200")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

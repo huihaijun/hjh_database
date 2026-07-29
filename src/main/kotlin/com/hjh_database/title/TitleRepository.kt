@@ -143,30 +143,6 @@ internal class TitleRepository(private val plugin: Hjh_database) {
         readProfile(conn, uuid, playerName)
     }
 
-    fun setDisplay(
-        target: ResolvedTitleTarget,
-        channel: TitleDisplayChannel,
-        enabled: Boolean,
-        settings: TitleSettings
-    ): PlayerTitleProfile = connection { conn ->
-        ensureProfile(conn, target.uuid, target.playerName, settings)
-        val column = when (channel) {
-            TitleDisplayChannel.CHAT -> "show_chat"
-            TitleDisplayChannel.OVERHEAD -> "show_overhead"
-            TitleDisplayChannel.TAB -> "show_tab"
-        }
-        conn.prepareStatement(
-            "UPDATE player_title_profiles SET $column = ?, player_name = ?, updated_at = ? WHERE player_uuid = ?"
-        ).use { ps ->
-            ps.setInt(1, if (enabled) 1 else 0)
-            ps.setString(2, target.playerName)
-            ps.setLong(3, System.currentTimeMillis())
-            ps.setString(4, target.uuid.toString())
-            ps.executeUpdate()
-        }
-        readProfile(conn, target.uuid, target.playerName)
-    }
-
     fun purchaseCustomTitle(
         uuid: UUID,
         playerName: String,
@@ -244,9 +220,10 @@ internal class TitleRepository(private val plugin: Hjh_database) {
         ).use { ps ->
             ps.setString(1, uuid.toString())
             ps.setString(2, playerName)
-            ps.setInt(3, if (settings.defaultShowChat) 1 else 0)
-            ps.setInt(4, if (settings.defaultShowOverhead) 1 else 0)
-            ps.setInt(5, if (settings.defaultShowTab) 1 else 0)
+            // 兼容旧表结构：显示位置现为全服配置，这三列只保留新档案的初始化值。
+            ps.setInt(3, if (settings.showChat) 1 else 0)
+            ps.setInt(4, if (settings.showOverhead) 1 else 0)
+            ps.setInt(5, if (settings.showTab) 1 else 0)
             ps.setLong(6, System.currentTimeMillis())
             ps.executeUpdate()
         }

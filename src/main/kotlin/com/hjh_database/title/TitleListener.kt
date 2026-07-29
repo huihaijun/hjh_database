@@ -84,7 +84,7 @@ class TitleListener(private val manager: TitleManager) : Listener {
             return
         }
         val profile = manager.getProfile(event.player.uniqueId) ?: return
-        if (!profile.showChat) return
+        if (!manager.isDisplayEnabled(TitleDisplayChannel.CHAT)) return
         val title = manager.equippedComponent(profile) ?: return
         val original = event.renderer()
         event.renderer(

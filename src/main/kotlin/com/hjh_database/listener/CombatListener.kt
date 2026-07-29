@@ -24,6 +24,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
+import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.persistence.PersistentDataType
 import java.util.EnumSet
 import java.util.concurrent.ThreadLocalRandom
@@ -39,6 +40,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     // [新增] 用于存储箭矢射出瞬间的属性快照
     private val storedDamageKey = NamespacedKey(plugin, "stored_arrow_damage")
     private val storedCritKey = NamespacedKey(plugin, "stored_arrow_crit")
+    private val rpgCrossbowArrowKey = NamespacedKey(plugin, "rpg_crossbow_arrow")
     companion object {
         private const val TEST_DUMMY_TAG = "hjh_test_dummy"
         const val PHYSICAL_ARMOR_PENETRATION_METADATA = "hjh_physical_armor_penetration"
@@ -461,14 +463,42 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             if (bow.type == Material.BOW) {
                 // 打上专属标记，用于在伤害判定时实现 250% 缩放
                 proj.persistentDataContainer.set(isBowKey, PersistentDataType.BYTE, 1)
-            } else if (bow.type == Material.CROSSBOW && bow.containsEnchantment(Enchantment.MULTISHOT)) {
-                // 原有多重射击逻辑
-                val dir = player.eyeLocation.direction.normalize()
-                val projDir = proj.velocity.normalize()
-                if (dir.dot(projDir) < 0.99) {
-                    proj.persistentDataContainer.set(multishotSideKey, PersistentDataType.BYTE, 1)
+            } else if (bow.type == Material.CROSSBOW) {
+                // 标记整组RPG弩箭，供贴脸散射命中时在碰撞前清除怪物的原版受伤间隔。
+                pdc.set(rpgCrossbowArrowKey, PersistentDataType.BYTE, 1)
+
+                // 配置值表示整支箭最多命中的实体总数，而非原版附魔等级。
+                // 原版 pierceLevel=N 最多命中 N+1 个实体，因此这里需要减1。
+                val piercingEntities = activeWeapon.standardData?.piercingEntities
+                    ?: activeWeapon.baihuData?.piercingEntities
+                    ?: 1
+                val vanillaPierceLevel = (piercingEntities - 1).coerceIn(0, 127)
+                proj.pierceLevel = maxOf(proj.pierceLevel, vanillaPierceLevel)
+
+                if (bow.containsEnchantment(Enchantment.MULTISHOT)) {
+                    // 原有多重射击副箭倍率标记。
+                    val dir = player.eyeLocation.direction.normalize()
+                    val projDir = proj.velocity.normalize()
+                    if (dir.dot(projDir) < 0.99) {
+                        proj.persistentDataContainer.set(multishotSideKey, PersistentDataType.BYTE, 1)
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * 原版受伤间隔会拒绝同一散射齐射中稍晚碰撞的副箭，并让箭矢反弹。
+     * ProjectileHitEvent 发生在箭矢实际伤害结算前；只对本插件激活弩射出的箭及合法怪物
+     * 清除当前无敌帧，使三支箭在贴脸时仍按主箭100%、副箭各20%的既有倍率正常结算。
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onRpgCrossbowProjectileHit(event: ProjectileHitEvent) {
+        val arrow = event.entity as? AbstractArrow ?: return
+        if (!arrow.persistentDataContainer.has(rpgCrossbowArrowKey, PersistentDataType.BYTE)) return
+
+        val target = event.hitEntity as? LivingEntity ?: return
+        if (!target.scoreboardTags.contains("panling") || !target.scoreboardTags.contains("monster")) return
+        target.noDamageTicks = 0
     }
 }

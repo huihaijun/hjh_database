@@ -73,7 +73,19 @@ class WaterMasteryArcher(private val plugin: Hjh_database) {
         cd[uuid] = System.currentTimeMillis() + CD_MS
         player.sendMessage("§9[弓] [水·精进] [水月] §f已触发")
 
-        val startLoc = victim.location.add(0.0, victim.height * 0.5, 0.0)
+        // 复制箭从玩家主手弓弩附近射出，不再从受击怪物体内生成。
+        val eyeLoc = player.eyeLocation
+        val forward = eyeLoc.direction.clone().normalize()
+        val handSide = org.bukkit.util.Vector(-forward.z, 0.0, forward.x)
+        if (handSide.lengthSquared() > 1.0E-6) {
+            handSide.normalize()
+        } else {
+            handSide.setX(1.0)
+        }
+        val startLoc = eyeLoc.clone()
+            .add(forward.clone().multiply(0.45))
+            .add(handSide.multiply(0.32))
+            .subtract(0.0, 0.28, 0.0)
         world.playSound(startLoc, Sound.ENTITY_GENERIC_SPLASH, 1.0f, 1.2f)
 
         // 生成 ItemDisplay 蓝水晶作为飞行的水箭

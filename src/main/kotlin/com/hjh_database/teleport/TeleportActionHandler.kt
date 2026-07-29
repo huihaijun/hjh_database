@@ -3,6 +3,8 @@ package com.hjh_database.teleport
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.quest.core.QuestStatus
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
@@ -432,7 +434,7 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
 
                 // 2. 设置状态为 3
                 data.updateStatus(3)
-                restoreFullStatus(player)
+                restoreFullStatus(player, data)
 
                 // 第一种情况的传送已经由 tryTeleport 通过 yml 中的 179.58 坐标自动完成了，无需在代码写传送
                 return true
@@ -458,7 +460,7 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 }
                 // 执行传送
                 player.teleport(targetLoc)
-                restoreFullStatus(player)
+                restoreFullStatus(player, data)
                 return true
             }
 
@@ -494,7 +496,11 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
         return false
     }
 
-    private fun restoreFullStatus(player: Player) {
+    /**
+     * 仅供消耗重生石成功重生的流程调用。
+     * 除生命、饥饿等状态外，同时回满当前动态灵力上限并向全服广播。
+     */
+    private fun restoreFullStatus(player: Player, data: PlayerData) {
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
         player.health = maxHealth.coerceAtLeast(1.0)
         player.foodLevel = 20
@@ -504,6 +510,11 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
         player.remainingAir = player.maximumAir
         player.addPotionEffect(PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 255, false, false))
         player.addPotionEffect(PotionEffect(PotionEffectType.SATURATION, 200, 255, false, false))
+        data.lingli = data.maxLingli
+        Bukkit.broadcast(
+            Component.text(player.name, NamedTextColor.YELLOW)
+                .append(Component.text("重生了", NamedTextColor.GREEN))
+        )
     }
 
 }

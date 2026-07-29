@@ -148,7 +148,7 @@ class Ren_05 : QuestBase("main_ren_5", "[人族主线]人族证明", QuestType.M
     override fun giveReward(player: Player) {
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +200")
         player.sendMessage("")
         player.sendMessage("  §e[提示] §f请前往皇城寻找李公公")
         player.sendMessage("§8§m========================================")
@@ -156,7 +156,7 @@ class Ren_05 : QuestBase("main_ren_5", "[人族主线]人族证明", QuestType.M
         // 经验奖励
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 10)
+            Hjh_database.instance.playerManager.giveExp(player, 200)
             data.status = 3
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }

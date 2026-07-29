@@ -86,14 +86,14 @@ class Ren_07 : QuestBase("main_ren_7", "[人族主线]森林危机", QuestType.M
     override fun giveReward(player: Player) {
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +20")
+        player.sendMessage("  §e[奖励] §f经验 +280")
         player.sendMessage("  §e[奖励] §f包子 x10")
         player.sendMessage("§8§m========================================")
 
         // 1. 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 20)
+            Hjh_database.instance.playerManager.giveExp(player, 280)
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 

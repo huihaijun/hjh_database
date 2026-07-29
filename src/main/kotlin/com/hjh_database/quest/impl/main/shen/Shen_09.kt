@@ -139,12 +139,12 @@ class Shen_09 : QuestBase("main_shen_9", "[神族主线]职业启程", QuestType
             player.sendMessage("§c[提示] 背包空间不足，部分奖励已掉落在脚下！")
         }
 
-        plugin.playerManager.giveExp(player, 100)
+        plugin.playerManager.giveExp(player, 360)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +100")
+        player.sendMessage("  §e[奖励] §f经验 +360")
         player.sendMessage("  §e[奖励] §f金元宝 x2")
         player.sendMessage("  §e[奖励] §f元素兑换券 x8")
         player.sendMessage("  §e[奖励] §f初级愈合丹 x10")

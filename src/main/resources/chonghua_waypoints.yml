@@ -219,6 +219,72 @@ waypoints:
       z: 62.5
       yaw: 180.47
       pitch: 7.05
+  north_yuzhupomiao:
+    region: NORTH
+    name: 雨竹破庙
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -308.07
+      y: 115.00
+      z: -423.97
+      yaw: 90.63
+      pitch: 4.95
+  north_shuizucunzhuang:
+    region: NORTH
+    name: 水族村庄
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -296.80
+      y: 20.00
+      z: -671.81
+      yaw: 178.07
+      pitch: 2.70
+  north_kushenghuixiangzhedeshangu:
+    region: NORTH
+    name: 哭声回荡着的山谷
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -675.48
+      y: 108.00
+      z: -636.89
+      yaw: 90.61
+      pitch: 2.85
+  north_xuanwudongkou_xuanshuiwan:
+    region: NORTH
+    name: "玄武洞口 & 玄水湾"
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -80.71
+      y: 35.00
+      z: -529.11
+      yaw: -91.05
+      pitch: 3.30
+  north_luanzanggang:
+    region: NORTH
+    name: 乱葬岗
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: 105.34
+      y: 49.00
+      z: -513.91
+      yaw: -90.74
+      pitch: 1.95
+  north_penglaidukou:
+    region: NORTH
+    name: 蓬莱渡口
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: 346.81
+      y: 34.00
+      z: -523.68
+      yaw: 179.82
+      pitch: 1.20
   huangchengzhongxin_longlinzhisen:
     region: HUANGCHENGZHONGXIN
     name: 龙鳞之森-重华晶

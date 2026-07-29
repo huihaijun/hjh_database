@@ -57,12 +57,12 @@ class Yao_06 : QuestBase("main_yao_6", "[妖族主线]镇妖塔探秘", QuestTyp
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +240")
         player.sendMessage("§8§m========================================")
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 10)
+            Hjh_database.instance.playerManager.giveExp(player, 240)
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 

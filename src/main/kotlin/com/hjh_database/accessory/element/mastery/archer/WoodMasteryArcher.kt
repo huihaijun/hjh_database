@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class WoodMasteryArcher(private val plugin: Hjh_database) {
     companion object {
-        const val CD_MS = 12000L // 12秒冷却
+        const val CD_MS = 5000L // 5秒冷却
     }
 
     private val cd = ConcurrentHashMap<UUID, Long>()

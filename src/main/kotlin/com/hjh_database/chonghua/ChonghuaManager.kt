@@ -238,8 +238,14 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         add("west_hujinzhen", "WEST", "虎金镇", -400.5, 111.0, 145.5, 90.0f, 1.0f)
         add("west_baihujitan", "WEST", "白虎祭坛", 2206.5, 85.0, -895.5, 0.0f, -8.0f)
 
-        // --- 北方 (暂未给坐标，先只放皇城) ---
+        // --- 北方 ---
         add("north_huangcheng", "NORTH", "皇城", 179.5, 42.5, 62.5, 180.47f, 7.05f) // 北区皇城
+        add("north_yuzhupomiao", "NORTH", "雨竹破庙", -308.07, 115.00, -423.97, 90.63f, 4.95f)
+        add("north_shuizucunzhuang", "NORTH", "水族村庄", -296.80, 20.00, -671.81, 178.07f, 2.70f)
+        add("north_kushenghuixiangzhedeshangu", "NORTH", "哭声回荡着的山谷", -675.48, 108.00, -636.89, 90.61f, 2.85f)
+        add("north_xuanwudongkou_xuanshuiwan", "NORTH", "玄武洞口 & 玄水湾", -80.71, 35.00, -529.11, -91.05f, 3.30f)
+        add("north_luanzanggang", "NORTH", "乱葬岗", 105.34, 49.00, -513.91, -90.74f, 1.95f)
+        add("north_penglaidukou", "NORTH", "蓬莱渡口", 346.81, 34.00, -523.68, 179.82f, 1.20f)
 
         // --- 皇城中心：四方重华晶，无需打卡解锁，独立 2 分钟冷却 ---
         add("huangchengzhongxin_longlinzhisen", "HUANGCHENGZHONGXIN", "龙鳞之森-重华晶", 399.29, 47.00, 14.68, 9629.82f, -10.95f, true, 120L)

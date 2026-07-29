@@ -18,7 +18,7 @@ import kotlin.math.abs
 
 class GoldMasteryWarrior(private val plugin: Hjh_database) {
     companion object {
-        const val CD_MS = 15000L
+        const val CD_MS = 12000L
     }
 
     private val cd = ConcurrentHashMap<UUID, Long>()
@@ -34,7 +34,7 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
         if (!isValidTarget(victim)) return
 
         val count = (hitCount[uuid] ?: 0) + 1
-        if (count >= 4) {
+        if (count >= 3) {
             hitCount[uuid] = 0
             cd[uuid] = System.currentTimeMillis() + CD_MS
             trigger(player, pData)
@@ -67,7 +67,7 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
     }
 
     private fun trigger(player: Player, pData: PlayerData) {
-        val damage = pData.attack * 3.0
+        val damage = pData.attack * 2.0
         val dir = player.location.direction.clone()
         dir.y = 0.0
         if (dir.length() < 0.001) return
@@ -84,12 +84,12 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
         val hitMonsters = HashSet<UUID>()
 
         object : BukkitRunnable() {
-            var step = 0
-            val maxSteps = 10 // 10 ticks = 0.5s
-            val speedPerStep = 1.2 // 1.2 * 10 = 12 blocks
+            var step = 1
+            val maxSteps = 8
+            val speedPerStep = 1.0
 
             override fun run() {
-                if (!player.isOnline || step >= maxSteps) {
+                if (!player.isOnline || step > maxSteps) {
                     cancel()
                     return
                 }

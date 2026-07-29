@@ -45,9 +45,9 @@ data class TitleSettings(
     val maxCustomTitles: Int,
     val maxCustomNameLength: Int,
     val customCosts: List<Int>,
-    val defaultShowChat: Boolean,
-    val defaultShowOverhead: Boolean,
-    val defaultShowTab: Boolean
+    val showChat: Boolean,
+    val showOverhead: Boolean,
+    val showTab: Boolean
 )
 
 data class TitleConfigSnapshot(

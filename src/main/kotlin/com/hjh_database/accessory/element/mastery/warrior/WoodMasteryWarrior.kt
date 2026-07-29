@@ -22,9 +22,20 @@ import kotlin.math.sin
 class WoodMasteryWarrior(private val plugin: Hjh_database) {
     companion object {
         const val CD_MS = 15000L
+        const val GROWTH_DURATION_TICKS = 160
+        const val ROOT_TRAIL_LIFETIME_TICKS = 40
+        const val UPDATE_INTERVAL_TICKS = 20
+        const val HEAL_INTERVAL_TICKS = 20
     }
 
     private val cd = ConcurrentHashMap<UUID, Long>()
+    // 以受治疗玩家为维度限制根脉回血；多个战士或多个旧/新根脉重合时不会重复治疗。
+    private val lastRootHealTick = ConcurrentHashMap<UUID, Int>()
+
+    private data class RootPatch(
+        var center: Location,
+        var refreshedAtTicks: Int
+    )
 
     fun onDamageTaken(player: Player, event: org.bukkit.event.entity.EntityDamageEvent, eData: ElementCrystalData, pData: PlayerData) {
         if (eData.woodPoints < 4) return
@@ -58,45 +69,84 @@ class WoodMasteryWarrior(private val plugin: Hjh_database) {
     }
 
     private fun trigger(player: Player) {
-        val rootCenter = player.location.clone()
+        val triggerLocation = player.location.clone()
         val world = player.world
 
         player.sendMessage("§a[木·精进] [生根] §f已触发")
-        world.playSound(rootCenter, Sound.BLOCK_GRASS_BREAK, 1.2f, 0.6f)
-        world.playSound(rootCenter, Sound.BLOCK_AZALEA_LEAVES_PLACE, 1.0f, 1.0f)
+        world.playSound(triggerLocation, Sound.BLOCK_GRASS_BREAK, 1.2f, 0.6f)
+        world.playSound(triggerLocation, Sound.BLOCK_AZALEA_LEAVES_PLACE, 1.0f, 1.0f)
+
+        val triggerTick = org.bukkit.Bukkit.getCurrentTick()
+        lastRootHealTick.entries.removeIf { triggerTick - it.value > 200 }
 
         object : BukkitRunnable() {
-            var ticks = 0
+            var elapsedTicks = 0
+            val rootPatches = ArrayDeque<RootPatch>()
 
             override fun run() {
-                if (ticks >= 8 || !player.isOnline) {
+                val isGrowing = elapsedTicks < GROWTH_DURATION_TICKS
+                if (!player.isOnline && isGrowing) {
                     cancel()
                     return
                 }
 
-                // 绘制盘根错节的根脉粒子
-                drawRootParticles(rootCenter)
-
-                // 获取并过滤十字方向（宽度 1.5 格，长度 8 格）范围内的实体
-                val nearby = world.getNearbyEntities(rootCenter, 9.5, 3.0, 9.5)
-                for (entity in nearby) {
-                    if (entity !is LivingEntity) continue
-                    if (!isInRootPath(entity.location, rootCenter)) continue
-
-                    if (entity is Player) {
-                        // 治疗队友或自己：每秒 4 HP
-                        val maxHp = entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
-                        entity.health = min(maxHp, entity.health + 4.0)
-                        entity.world.spawnParticle(Particle.HEART, entity.location.add(0.0, 1.5, 0.0), 2, 0.15, 0.15, 0.15, 0.0)
-                    } else if (isValidTarget(entity)) {
-                        // 减速怪物
-                        entity.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 30, 1, false, false, true))
+                if (isGrowing) {
+                    val currentCenter = player.location.clone()
+                    val latest = rootPatches.lastOrNull()
+                    if (latest != null &&
+                        latest.center.world == currentCenter.world &&
+                        latest.center.distanceSquared(currentCenter) <= 0.25
+                    ) {
+                        // 玩家基本未移动时只刷新当前根脉，避免在同一点重复创建。
+                        latest.center = currentCenter
+                        latest.refreshedAtTicks = elapsedTicks
+                    } else {
+                        rootPatches.addLast(RootPatch(currentCenter, elapsedTicks))
                     }
                 }
 
-                ticks++
+                // 玩家离开后，旧中心及其十字根脉保留2秒，形成随玩家移动的生长轨迹。
+                rootPatches.removeIf {
+                    elapsedTicks - it.refreshedAtTicks >= ROOT_TRAIL_LIFETIME_TICKS
+                }
+                if (rootPatches.isEmpty() && !isGrowing) {
+                    cancel()
+                    return
+                }
+
+                val playersToHeal = HashMap<UUID, Player>()
+                val monstersToSlow = HashMap<UUID, LivingEntity>()
+                for (patch in rootPatches) {
+                    drawRootParticles(patch.center)
+                    val patchWorld = patch.center.world ?: continue
+                    val nearby = patchWorld.getNearbyEntities(patch.center, 9.5, 3.0, 9.5)
+                    for (entity in nearby) {
+                        if (entity !is LivingEntity || !isInRootPath(entity.location, patch.center)) continue
+                        if (entity is Player) {
+                            playersToHeal.putIfAbsent(entity.uniqueId, entity)
+                        } else if (isValidTarget(entity)) {
+                            monstersToSlow.putIfAbsent(entity.uniqueId, entity)
+                        }
+                    }
+                }
+
+                monstersToSlow.values.forEach { monster ->
+                    monster.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 30, 1, false, false, true))
+                }
+
+                val healTick = org.bukkit.Bukkit.getCurrentTick()
+                playersToHeal.values.forEach { target ->
+                    val previousHeal = lastRootHealTick[target.uniqueId]
+                    if (previousHeal != null && healTick - previousHeal < HEAL_INTERVAL_TICKS) return@forEach
+                    lastRootHealTick[target.uniqueId] = healTick
+                    val maxHp = target.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+                    target.health = min(maxHp, target.health + 4.0)
+                    target.world.spawnParticle(Particle.HEART, target.location.add(0.0, 1.5, 0.0), 2, 0.15, 0.15, 0.15, 0.0)
+                }
+
+                elapsedTicks += UPDATE_INTERVAL_TICKS
             }
-        }.runTaskTimer(plugin, 0L, 20L)
+        }.runTaskTimer(plugin, 0L, UPDATE_INTERVAL_TICKS.toLong())
     }
 
     private fun isInRootPath(entityLoc: Location, rootCenter: Location): Boolean {

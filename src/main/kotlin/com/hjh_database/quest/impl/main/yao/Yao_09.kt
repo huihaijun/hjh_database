@@ -132,7 +132,7 @@ class Yao_09 : QuestBase("main_yao_9", "[妖族主线]四方结界", QuestType.M
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +100")
+        player.sendMessage("  §e[奖励] §f经验 +360")
         player.sendMessage("  §e[奖励] §f金元宝 x2")
         player.sendMessage("  §e[奖励] §f元素兑换券 x8")
         player.sendMessage("  §e[奖励] §f愈合丹 x10")
@@ -144,7 +144,7 @@ class Yao_09 : QuestBase("main_yao_9", "[妖族主线]四方结界", QuestType.M
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 100)
+            Hjh_database.instance.playerManager.giveExp(player, 360)
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 

@@ -91,13 +91,13 @@ class Ren_08 : QuestBase("main_ren_8", "[人族主线]青龙神庙", QuestType.M
     override fun giveReward(player: Player) {
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +20")
+        player.sendMessage("  §e[奖励] §f经验 +320")
         player.sendMessage("§8§m========================================")
 
         // 发放经验
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 20)
+            Hjh_database.instance.playerManager.giveExp(player, 320)
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 

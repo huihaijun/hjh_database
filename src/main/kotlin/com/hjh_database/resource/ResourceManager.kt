@@ -1,6 +1,7 @@
 ﻿package com.hjh_database.resource
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.alchemy.data.PillSicknessChannel
 import com.hjh_database.qixiazhen.busuan.BusuanItemLore
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.Consumable
@@ -417,7 +418,7 @@ class ResourceManager(private val plugin: Hjh_database) {
     private fun applyResourceCooldownGroup(item: ItemStack, res: ResourceItem) {
         val groupId = when {
             listOf("metal", "wood", "water", "fire", "earth").contains(res.id) -> "${res.id}_group"
-            res.hasSicknessTime -> "alchemy_pill_sickness"
+            res.hasSicknessTime -> PillSicknessChannel.fromEffectId(res.id).cooldownGroup
             else -> return
         }
 

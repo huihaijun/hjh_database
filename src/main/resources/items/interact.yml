@@ -163,6 +163,18 @@ zhuanyuanshangxian_test:
     - "&f试炼开始后,无法放弃试炼"
     - "&f中途&c死亡&f或&c离开&f会被判定&c试炼失败"
 
+jianghuxinde_dalu:
+  material: PAPER
+  jianghu_xinde_value: 80
+  name: "&b江湖心得[大陆]"
+  lore:
+    - "&7&o游历于大陆所获的历练心得"
+    - "&7&o使用后可吸纳其中经验，提升修为"
+    - "&8==============================="
+    - "&e[主手持有+右键] &f消耗一卷"
+    - "&f获得&b80&f点江湖心得"
+    - "&f可于皇城&b天机阁&f处提升自身"
+
 jianghuxinde_longlinzhisen:
   material: PAPER
   jianghu_xinde_value: 20

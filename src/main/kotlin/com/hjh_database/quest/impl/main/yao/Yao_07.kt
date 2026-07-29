@@ -94,7 +94,7 @@ class Yao_07 : QuestBase("main_yao_7", "[妖族主线]皇城潜行", QuestType.M
     override fun giveReward(player: Player) {
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +280")
         player.sendMessage("")
         player.sendMessage("  §e[提示] §f请阅读笔记，寻找职业导师")
         player.sendMessage("  §e[提示] §f[选择职业]不记入主线流程")
@@ -103,7 +103,7 @@ class Yao_07 : QuestBase("main_yao_7", "[妖族主线]皇城潜行", QuestType.M
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 10)
+            Hjh_database.instance.playerManager.giveExp(player, 280)
 
             if (data.questStatuses["side_ren_1"] != QuestStatus.COMPLETED) {
                 data.questStatuses["side_ren_1"] = QuestStatus.IN_PROGRESS

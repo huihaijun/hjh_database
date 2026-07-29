@@ -435,11 +435,13 @@ class MenuManager(private val plugin: Hjh_database) {
         if (result.contains("%main_stat_line%")) {
             var replacement = "&f主属性: &7暂无职业"
             if (job != null) {
+                // 金·启示在最终伤害阶段独立结算，这里仅将锋芒倍率同步到天机令显示。
+                val displayedOffenseMultiplier = plugin.elementCrystalManager.getFengMangOffenseMultiplier(player)
                 replacement = when (job) {
-                    0 -> "&f近战强度: &b" + String.format("%.1f", data.attack)
-                    1 -> "&f箭矢强度: &b" + String.format("%.1f", data.archerDamage)
-                    2 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr)
-                    3 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr)
+                    0 -> "&f近战强度: &b" + String.format("%.1f", data.attack * displayedOffenseMultiplier)
+                    1 -> "&f箭矢强度: &b" + String.format("%.1f", data.archerDamage * displayedOffenseMultiplier)
+                    2 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr * displayedOffenseMultiplier)
+                    3 -> "&f阵法强度: &b" + String.format("%.1f", data.zfStr * displayedOffenseMultiplier)
                     else -> "&f主属性: &7未知"
                 }
             }

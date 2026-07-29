@@ -86,14 +86,14 @@ class Ren_02 : QuestBase("main_ren_2", "[人族主线]坚韧试炼", QuestType.M
         // 经验奖励
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
-            plugin.playerManager.giveExp(player, 10)
+            plugin.playerManager.giveExp(player, 60)
             plugin.databaseManager.savePlayerAsync(data)
         }
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
 
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

@@ -168,9 +168,9 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
         when (element) {
             "gold" -> {
                 lore.add("§e[金·启示] §f冷却:§c无冷却")
-                lore.add("§f直接造成伤害时获得§b1§f层§b锋芒§f")
-                lore.add("§b[锋芒]§f:每层增加§b5%§f进攻属性,最多§b3§f层")
-                lore.add("§f叠满后将不再叠层和刷新持续时间,§b5§f秒后层数消失")
+                lore.add("§f造成伤害时获得§b1§f层§b锋芒§f")
+                lore.add("§b[锋芒]§f:每层增加§b5%§f进攻属性,最多§b4§f层")
+                lore.add("§f叠满后将不再叠层和刷新持续时间,§b10§f秒后层数消失")
             }
             "wood" -> {
                 lore.add("§a[木·启示] §f冷却:§b30§f秒")
@@ -182,8 +182,8 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
             }
             "fire" -> {
                 lore.add("§c[火·启示] §f冷却:§b6§f秒")
-                lore.add("§f直接伤害命中时附加§b余烬§f")
-                lore.add("§b余烬§f：在§b3§f秒内造成共计§b150%§f进攻属性伤害")
+                lore.add("§f直接伤害命中时附加§b[余烬]§f")
+                lore.add("§b[余烬]§f:在§b3§f秒内造成共计§b150%§f进攻属性伤害")
             }
             "earth" -> {
                 lore.add("§6[土·启示] §f冷却:§b12§f秒")
@@ -195,26 +195,28 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
             0 -> { // 战士
                 when (element) {
                     "gold" -> {
-                        lore.add("§6[战] §e[金·精进] [金戈] §f冷却:§b15§f秒")
-                        lore.add("§f普通攻击命中第§b4§f次怪物时,向前方§b12§f格距离")
-                        lore.add("§f斩出一道伤害为§b300%§f近战强度的剑气,贯穿路径上的怪物")
+                        lore.add("§6[战] §e[金·精进] [金戈] §f冷却:§b12§f秒")
+                        lore.add("§f普通攻击命中第§b3§f次怪物时,向前方§b8§f格距离")
+                        lore.add("§f斩出一道伤害为§b200%§f近战强度的剑气,贯穿路径上的怪物")
                     }
                     "wood" -> {
                         lore.add("§6[战] §a[木·精进] [生根] §f冷却:§b15§f秒")
-                        lore.add("§f受到伤害后,向十字方向生长距离为§b8§f格的§b根脉§f持续§b8§f秒")
-                        lore.add("§b[根脉]§f:持续减速路径范围的怪物,并每秒回复路径上队友§b4§f点生命")
+                        lore.add("§f受到伤害后生成§b根脉§f持续生长§b8§f秒,生长中心会跟随自身移动")
+                        lore.add("§f旧中心的十字根脉会在§b2§f秒后消失,并持续减速路径内怪物")
+                        lore.add("§f每秒回复路径上队友§b4§f点生命,不同根脉的恢复不会叠加")
                     }
                     "water" -> {
                         lore.add("§6[战] §9[水·精进] [潮返] §f冷却:§b12§f秒")
                         lore.add("§f攻击/受到伤害后,在§b2§f秒内依次向周围§b10§f格扩散三道水波")
-                        lore.add("§f前两道水波:造成§b80%最大生命§f的伤害,对怪物造成轻微减速§b3§f秒")
-                        lore.add("§f第三道水波:造成§b100%最大生命§f的伤害,并小幅击飞怪物")
+                        lore.add("§f前两道水波:造成§b50%最大生命§f的伤害,对怪物造成轻微减速§b3§f秒")
+                        lore.add("§f第三道水波:造成§b75%最大生命§f的伤害,并小幅击飞怪物")
                     }
                     "fire" -> {
                         lore.add("§6[战] §c[火·精进] [炎斩] §f冷却:§b15§f秒")
                         lore.add("§f普通攻击造成伤害后,对目标叠加一层§b[炎斩]§f持续§b5§f秒")
-                        lore.add("§f叠满三层时,移去所有标记并对其造成§b250%近战强度§f的§b穿甲§f伤害")
-                        lore.add("§f并附带其§b最大生命8%§f的斩杀伤害,然后进入冷却")
+                        lore.add("§f叠满三层时,移去所有标记并造成必定§b暴击§f的§b穿甲§f伤害")
+                        lore.add("§f基础为§b250%近战强度§f并附带§b最大生命8%§f斩杀伤害")
+                        lore.add("§f斩杀伤害最高§b150§f点,然后进入冷却")
                     }
                     "earth" -> {
                         lore.add("§6[战] §6[土·精进] [崩山] §f冷却:§b15§f秒")
@@ -232,13 +234,14 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
                         lore.add("§f则对其追加一段§b200%箭矢强度§f的伤害")
                     }
                     "wood" -> {
-                        lore.add("§6[弓] §a[木·精进] [藤矢] §f冷却:§b12§f秒")
+                        lore.add("§6[弓] §a[木·精进] [藤矢] §f冷却:§b5§f秒")
                         lore.add("§f箭矢命中目标后,对目标附带§b[藤蔓]§f标记持续§b8§f秒")
                         lore.add("§b[藤蔓]§f:减速50%,命中带有此标记的目标后,会为自己恢复§b2§f点生命")
                     }
                     "water" -> {
                         lore.add("§6[弓] §9[水·精进] [水月] §f冷却:§b8§f秒")
-                        lore.add("§f箭矢命中目标后,复制一根§b水箭§f,对其附近§b5§f格的最近一名怪物造成同等伤害")
+                        lore.add("§f箭矢命中目标后,复制一根§b水箭§f")
+                        lore.add("§f对其附近§b5§f格的最近一名怪物造成同等伤害")
                         lore.add("§b水箭§f命中后,令自己移速增加§b30%§f持续§b3§f秒")
                         lore.add("§f若其身旁没有怪物,则§b水箭§f会攻击原目标")
                     }
@@ -250,7 +253,7 @@ class ElementCrystalGui(private val plugin: Hjh_database) : Listener {
                     "earth" -> {
                         lore.add("§6[弓] §6[土·精进] [岩钉] §f冷却:§b15§f秒")
                         lore.add("§f箭矢命中目标后,对目标施加§b[定身]§f持续§b1.5§f秒")
-                        lore.add("§b[定身]§f结束时岩钉会爆裂,削弱目标§b30%§f护甲持续§b5§f秒")
+                        lore.add("§b[定身]§f结束时岩钉会爆裂,削弱目标§b50%§f护甲持续§b5§f秒")
                     }
                 }
             }

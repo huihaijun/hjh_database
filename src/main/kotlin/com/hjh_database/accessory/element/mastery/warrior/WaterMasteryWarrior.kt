@@ -72,21 +72,21 @@ class WaterMasteryWarrior(private val plugin: Hjh_database) {
         // 第一波 (2 tick 后)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline) {
-                runExpandingWave(player, pData.maxHealth * 0.8, isThird = false)
+                runExpandingWave(player, pData.maxHealth * 0.5, isThird = false)
             }
         }, 2L)
 
         // 第二波 (18 tick 后)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline) {
-                runExpandingWave(player, pData.maxHealth * 0.8, isThird = false)
+                runExpandingWave(player, pData.maxHealth * 0.5, isThird = false)
             }
         }, 18L)
 
         // 第三波 (34 tick 后)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline) {
-                runExpandingWave(player, pData.maxHealth * 1.0, isThird = true)
+                runExpandingWave(player, pData.maxHealth * 0.75, isThird = true)
             }
         }, 34L)
     }

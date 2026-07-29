@@ -157,10 +157,11 @@ object MobRegistry {
             id = "jy_senlinjiangshi",
             name = "&c精英-森林僵尸",
             type = EntityType.ZOMBIE,
-            health = 35.0,
+            health = 32.0,
             damage = 5.5,
-            armor = 6.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            armor = 12.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
+            exp = 30,
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
@@ -188,6 +189,7 @@ object MobRegistry {
             damage = 6.0,
             armor = 0.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
+            exp = 30,
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
@@ -213,6 +215,7 @@ object MobRegistry {
             damage = 7.0,
             armor = 6.5, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.3,
+            exp = 30,
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
@@ -238,6 +241,7 @@ object MobRegistry {
             damage = 4.0,
             armor = 2.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.25,
+            exp = 30,
             maxNearby = 2,
             drops = listOf(
                 // 掉落木元素
@@ -255,10 +259,11 @@ object MobRegistry {
             id = "gongpinjiangshi",
             name = "&c携带贡品的僵尸",
             type = EntityType.ZOMBIE,
-            health = 24.0,
+            health = 28.0,
             damage = 4.5,
-            armor = 5.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
+            armor = 8.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
+            exp = 30,
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
@@ -279,6 +284,7 @@ object MobRegistry {
             damage = 5.5,
             armor = 4.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.3,
+            exp = 30,
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
@@ -298,7 +304,7 @@ object MobRegistry {
             type = EntityType.SPIDER,
             health = 250.0,
             damage = 11.5,
-            exp = 50,       // 经验值
+            exp = 100,       // 经验值
             armor = 11.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.4,
             maxNearby = 1,
@@ -408,8 +414,8 @@ object MobRegistry {
             name = "&c&l朱雀侍卫",
             type = EntityType.PHANTOM,
             health = 30000.0,
-            damage = 10.0,   // 伤害你可以自己按需调整
-            armor = 100.0,   // 20点自定义护甲
+            damage = 1.0,   // 伤害你可以自己按需调整
+            armor = 999.0,   // 20点自定义护甲
             speed = 0.2,   // 移速按需调整
             maxNearby = 1,
             exp = 500,       // 经验值
@@ -421,7 +427,7 @@ object MobRegistry {
             name = "&6朱雀炎兵-僵尸",
             type = EntityType.ZOMBIE,
             health = 16.0,
-            damage = 8.0,
+            damage = 6.0,
             armor = 12.0,
             exp=10,
             speed = 0.2,
@@ -436,7 +442,7 @@ object MobRegistry {
             name = "&6朱雀炎兵-骷髅",
             type = EntityType.SKELETON,
             health = 12.0,
-            damage = 5.0,
+            damage = 4.0,
             armor = 4.0,
             exp=10,
             speed = 0.25,
@@ -509,7 +515,7 @@ object MobRegistry {
             type = EntityType.HUSK,
             health = 45.0,
             damage = 8.0,
-            armor = 14.0,
+            armor = 20.0,
             speed = 0.2,
             exp=35,
             maxNearby = 2,
@@ -538,10 +544,10 @@ object MobRegistry {
             name = "&c燃烧的 黑骨战士",
             type = EntityType.WITHER_SKELETON,
             health = 30.0,
-            damage = 11.0,
+            damage = 12.5,
             armor = 8.0,
-            speed = 0.23,
-            exp=40,
+            speed = 0.25,
+            exp=45,
             maxNearby = 2,
             drops = listOf(
                 // 掉落火元素
@@ -570,9 +576,9 @@ object MobRegistry {
             name = "&c燃烧的 马贼团士兵",
             type = EntityType.ZOMBIE,
             health = 40.0,
-            damage = 8.0,
-            armor = 12.0,
-            speed = 0.2,
+            damage = 9.0,
+            armor = 18.0,
+            speed = 0.23,
             exp=45,
             maxNearby = 2,
             drops = listOf(
@@ -633,11 +639,11 @@ object MobRegistry {
             id = "mazeituantuanzhang",
             name = "&6燃烧千斤的 马贼团团长",
             type = EntityType.HUSK,
-            health = 540.0,
+            health = 600.0,
             damage = 16.0,
-            armor = 23.0,
+            armor = 35.0,
             speed = 0.3,
-            exp=80,
+            exp=200,
             maxNearby = 1,
             drops = listOf(
                 // 掉落火元素
@@ -751,7 +757,7 @@ object MobRegistry {
             id = "wenquan_huoyanmo",
             name = "&c骚扰客栈的 火焰魔",
             type = EntityType.BLAZE,
-            health = 30.0,
+            health = 32.0,
             damage = 9.0,
             armor = 11.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
@@ -779,7 +785,7 @@ object MobRegistry {
             id = "wenquan_etuhun",
             name = "&c骚扰客栈的 恶土魂",
             type = EntityType.MAGMA_CUBE,
-            health = 30.0,
+            health = 28.0,
             damage = 6.0,
             armor = 9.0, // 这里的 20 会被写入 NBT 供 CombatListener 计算减伤
             speed = 0.2,
@@ -805,7 +811,7 @@ object MobRegistry {
             id = "wenquan_huangshatubing",
             name = "&c骚扰客栈的 黄沙土兵",
             type = EntityType.HUSK,
-            health = 50.0,
+            health = 60.0,
             damage = 8.0,
             armor = 16.0,
             speed = 0.2,
@@ -836,8 +842,8 @@ object MobRegistry {
             health = 560.0,
             damage = 19.0,
             armor = 26.0,
-            speed = 0.15,
-            exp=80,
+            speed = 0.2,
+            exp=200,
             maxNearby = 1,
             drops = listOf(
                 // 掉落土元素
@@ -863,7 +869,7 @@ object MobRegistry {
             damage = 20.0,
             armor = 35.0,
             speed = 0.22,
-            exp=100,
+            exp=200,
             maxNearby = 1,
             drops = listOf(
                 // 掉落土元素
@@ -891,7 +897,7 @@ object MobRegistry {
             damage = 18.0,
             armor = 30.0,
             speed = 0.24,
-            exp= 120,
+            exp= 100,
             maxNearby = 2,
             drops = listOf(
                 // 掉落金元素
@@ -919,7 +925,7 @@ object MobRegistry {
             damage = 16.0,
             armor = 25.0,
             speed = 0.22,
-            exp= 120,
+            exp= 100,
             maxNearby = 2,
             drops = listOf(
                 // 掉落金元素
@@ -947,7 +953,7 @@ object MobRegistry {
             damage = 22.0,
             armor = 21.0,
             speed = 0.25,
-            exp= 120,
+            exp= 100,
             maxNearby = 2,
             drops = listOf(
                 // 掉落金元素
@@ -977,7 +983,7 @@ object MobRegistry {
             damage = 19.0,
             armor = 35.0,
             speed = 0.24,
-            exp= 160,
+            exp= 120,
             maxNearby = 2,
             drops = listOf(
                 // 掉落金元素
@@ -1008,7 +1014,7 @@ object MobRegistry {
             damage = 25.0,
             armor = 25.0,
             speed = 0.25,
-            exp= 160,
+            exp= 120,
             maxNearby = 1,
             drops = listOf(
                 // 掉落金元素
@@ -1038,8 +1044,8 @@ object MobRegistry {
             damage = 25.0,
             armor = 28.0,
             speed = 0.18,
-            exp= 160,
-            maxNearby = 2,
+            exp= 120,
+            maxNearby = 1,
             drops = listOf(
                 // 掉落金元素
                 MobDrop("metal", 1, 2, 0.8),
@@ -1068,7 +1074,7 @@ object MobRegistry {
             damage = 30.0,
             armor = 45.0,
             speed = 0.28,
-            exp= 240,
+            exp= 400,
             maxNearby = 1,
             drops = listOf(
                 // 掉落金元素
@@ -1096,7 +1102,7 @@ object MobRegistry {
             damage = 25.0,
             armor = 60.0,
             speed = 0.25,
-            exp= 240,
+            exp= 400,
             maxNearby = 1,
             drops = listOf(
                 // 掉落金元素

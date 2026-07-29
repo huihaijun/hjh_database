@@ -25,7 +25,9 @@ import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
+import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -228,7 +230,11 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
         isCasting = true
         // 【修复2】移除了这里的减速控制，让 Boss 正常滑行
 
-        val nearby = boss.getNearbyEntities(10.0, 10.0, 10.0).filterIsInstance<Player>()
+        val nearby = boss.getNearbyEntities(
+            GRAVITY_FIELD_RADIUS,
+            GRAVITY_FIELD_RADIUS,
+            GRAVITY_FIELD_RADIUS
+        ).filterIsInstance<Player>()
         nearby.forEach { it.sendMessage("§6沙漠风暴即将生成风暴力场，会将周围所有玩家卷入，请尽快离开他！") }
         boss.world.playSound(boss.location, Sound.ENTITY_BREEZE_INHALE, 1f, 0.5f)
 
@@ -243,7 +249,7 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                 ticks += 5
 
                 // 【修复2】预警圈在整个技能(7秒)期间持续显示
-                drawCircle(boss.location, 6.0, Particle.FLAME)
+                drawCircle(boss.location, GRAVITY_FIELD_RADIUS, Particle.FLAME)
 
                 if (ticks <= 80) {
                     // 前 4 秒吟唱，仅显示预警粒子
@@ -251,18 +257,28 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                 else if (ticks <= 140) {
                     // 后 3 秒引力生效
                     if (ticks == 85) {
-                        boss.getNearbyEntities(10.0, 10.0, 10.0).filterIsInstance<Player>().forEach {
+                        boss.getNearbyEntities(
+                            GRAVITY_FIELD_RADIUS,
+                            GRAVITY_FIELD_RADIUS,
+                            GRAVITY_FIELD_RADIUS
+                        ).filterIsInstance<Player>().forEach {
                             it.sendMessage("§c快跑！离开力场，不然你会被甩飞的！")
                         }
                     }
 
-                    drawCircle(boss.location, 6.0, Particle.CAMPFIRE_COSY_SMOKE)
+                    drawCircle(boss.location, GRAVITY_FIELD_RADIUS, Particle.CAMPFIRE_COSY_SMOKE)
                     boss.world.playSound(boss.location, Sound.ITEM_ELYTRA_FLYING, 0.5f, 1.5f)
 
-                    boss.getNearbyEntities(6.0, 6.0, 6.0).filterIsInstance<Player>().forEach { p ->
+                    boss.getNearbyEntities(
+                        GRAVITY_FIELD_RADIUS,
+                        GRAVITY_FIELD_RADIUS,
+                        GRAVITY_FIELD_RADIUS
+                    ).filterIsInstance<Player>().forEach { p ->
                         if (!p.isDead && p.gameMode != GameMode.SPECTATOR && p.gameMode != GameMode.CREATIVE) {
-                            val pullDir = boss.location.toVector().subtract(p.location.toVector()).normalize()
-                            p.velocity = pullDir.multiply(0.12)
+                            val pullDir = boss.location.toVector().subtract(p.location.toVector())
+                            if (pullDir.lengthSquared() > 0.0) {
+                                p.velocity = pullDir.normalize().multiply(0.12)
+                            }
                         }
                     }
                 }
@@ -271,11 +287,19 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                     boss.world.spawnParticle(Particle.EXPLOSION_EMITTER, boss.location, 1)
                     boss.world.playSound(boss.location, Sound.ENTITY_BREEZE_WIND_BURST, 2f, 0.5f)
 
-                    boss.getNearbyEntities(6.0, 6.0, 6.0).filterIsInstance<Player>().forEach { p ->
+                    boss.getNearbyEntities(
+                        GRAVITY_FIELD_RADIUS,
+                        GRAVITY_FIELD_RADIUS,
+                        GRAVITY_FIELD_RADIUS
+                    ).filterIsInstance<Player>().forEach { p ->
                         if (!p.isDead && p.gameMode != GameMode.SPECTATOR && p.gameMode != GameMode.CREATIVE) {
                             p.damage(10.0, boss)
-                            val pushDir = p.location.toVector().subtract(boss.location.toVector()).normalize().setY(0)
-                            p.velocity = pushDir.multiply(0.5).setY(1.3)
+                            val pushDir = p.location.toVector().subtract(boss.location.toVector()).setY(0)
+                            p.velocity = if (pushDir.lengthSquared() > 0.0) {
+                                pushDir.normalize().multiply(0.5).setY(1.3)
+                            } else {
+                                Vector(0.0, 1.3, 0.0)
+                            }
                         }
                     }
 
@@ -348,7 +372,7 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
             // 【修复2】移速从 0.16 提升至 0.35，压迫感增强
             val speed = 0.35
             val currentLoc = startLoc.clone()
-            val hitPlayers = mutableSetOf<Player>()
+            val hitPlayers = mutableSetOf<UUID>()
 
             override fun run() {
                 if (boss.isDead || ticks >= 80) { // 飞 4 秒自动消散
@@ -357,6 +381,7 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                 }
 
                 ticks++
+                val previousLoc = currentLoc.clone()
                 currentLoc.add(direction.clone().multiply(speed))
 
                 currentLoc.world.spawnParticle(Particle.CLOUD, currentLoc, 10, 0.8, 1.5, 0.8, 0.0)
@@ -366,29 +391,48 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                     currentLoc.world.playSound(currentLoc, Sound.ENTITY_BREEZE_IDLE_GROUND, 0.5f, 1f)
                 }
 
-                val nearby = currentLoc.world.getNearbyEntities(currentLoc, 1.2, 2.0, 1.2)
-                    .filterIsInstance<Player>()
-                    .filter { !it.isDead && it.gameMode != GameMode.SPECTATOR && it.gameMode != GameMode.CREATIVE }
-
-                for (p in nearby) {
-                    if (!hitPlayers.contains(p)) {
-                        hitPlayers.add(p)
-                        p.damage(6.0, boss)
-                        p.velocity = Vector(0.0, 1.2, 0.0)
-                        p.world.playSound(p.location, Sound.ENTITY_BREEZE_WIND_BURST, 1f, 1f)
-                    }
-                }
+                damagePlayersAlongTornadoPath(previousLoc, currentLoc, hitPlayers)
             }
         }.runTaskTimer(plugin, 0L, 1L)
     }
 
+    /**
+     * 龙卷刃不与方块碰撞。分段扫描同时避免高速轨迹从玩家身上跨过去。
+     */
+    private fun damagePlayersAlongTornadoPath(
+        from: Location,
+        to: Location,
+        hitPlayers: MutableSet<UUID>
+    ) {
+        val movement = to.toVector().subtract(from.toVector())
+        val samples = ceil(movement.length() / TORNADO_HIT_SAMPLE_SPACING).toInt().coerceAtLeast(1)
+
+        for (index in 1..samples) {
+            val sampleLoc = from.clone().add(movement.clone().multiply(index.toDouble() / samples))
+            sampleLoc.world.getNearbyEntities(sampleLoc, 1.2, 2.0, 1.2)
+                .filterIsInstance<Player>()
+                .filter { !it.isDead && it.gameMode != GameMode.SPECTATOR && it.gameMode != GameMode.CREATIVE }
+                .filter { hitPlayers.add(it.uniqueId) }
+                .forEach { player ->
+                    player.damage(6.0, boss)
+                    player.velocity = Vector(0.0, 1.2, 0.0)
+                    player.world.playSound(player.location, Sound.ENTITY_BREEZE_WIND_BURST, 1f, 1f)
+                }
+        }
+    }
+
     private fun drawCircle(center: Location, radius: Double, particle: Particle) {
-        val points = 40
+        val points = (radius * 6.0).toInt().coerceAtLeast(40)
         for (i in 0 until points) {
             val angle = 2 * Math.PI * i / points
             val x = cos(angle) * radius
             val z = sin(angle) * radius
             center.world.spawnParticle(particle, center.clone().add(x, 0.2, z), 1, 0.0, 0.0, 0.0, 0.0)
         }
+    }
+
+    private companion object {
+        private const val GRAVITY_FIELD_RADIUS = 12.0
+        private const val TORNADO_HIT_SAMPLE_SPACING = 0.25
     }
 }

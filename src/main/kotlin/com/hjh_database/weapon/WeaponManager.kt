@@ -429,6 +429,12 @@ class WeaponManager(private val plugin: Hjh_database) {
         // 稀有度
         @JvmField var rarity: Int = sec.getInt("rarity", 1)
 
+        /**
+         * 自定义穿透实体总数，不等同于原版 Piercing 附魔等级。
+         * 例如 piercing: 2 表示箭最多命中2个实体，发射时会转换为原版 pierceLevel=1。
+         */
+        @JvmField var piercingEntities: Int = sec.getInt("piercing", 1).coerceIn(1, 128)
+
         // 【新增】灵力回复数值 (默认 0.0 代表不回蓝)
         @JvmField var manaRegen: Double = 0.0
 

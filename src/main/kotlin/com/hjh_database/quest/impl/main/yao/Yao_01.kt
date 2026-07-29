@@ -59,7 +59,7 @@ class Yao_01 : QuestBase("main_yao_1", "[妖族主线]初入叶灵谷", QuestTyp
         }
 
         plugin.playerManager.getPlayerData(player)?.let { data ->
-            plugin.playerManager.giveExp(player, 10)
+            plugin.playerManager.giveExp(player, 60)
             plugin.databaseManager.savePlayerAsync(data)
         }
 
@@ -67,7 +67,7 @@ class Yao_01 : QuestBase("main_yao_1", "[妖族主线]初入叶灵谷", QuestTyp
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
         player.sendMessage("  §e[奖励] §f小花的推荐函 x1")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

@@ -109,6 +109,18 @@ object NorthWetnessSkill : Listener {
         return true
     }
 
+    fun reduceWetness(player: Player, amount: Int): Int {
+        if (amount <= 0) return 0
+        val status = statuses[player.uniqueId] ?: return 0
+        val previousValue = status.value
+        status.value = (status.value - amount).coerceAtLeast(0)
+        updateDisplay(player, status.value)
+        if (status.value == 0) {
+            statuses.remove(player.uniqueId)
+        }
+        return previousValue - status.value
+    }
+
     /**
      * 特殊技能可以传入 bypassRateLimit=true，绕过普通词条共享的1.5秒叠加锁。
      */

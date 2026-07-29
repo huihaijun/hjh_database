@@ -67,6 +67,9 @@ tasks {
         from("src/main/resources/items/interact.yml") {
             into("hjh_database/resources/items")
         }
+        from("src/main/resources/baihu_dz/equipment/weapons.yml") {
+            into("hjh_database/baihu_dz/equipment")
+        }
         into(pluginDir)
     }
 

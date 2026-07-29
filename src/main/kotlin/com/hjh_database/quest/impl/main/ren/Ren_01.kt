@@ -58,11 +58,11 @@ class Ren_01 : QuestBase("main_ren_1", "[人族主线]初出茅庐", QuestType.M
             }
         }
 
-        // 2. 经验奖励：+10 EXP
+        // 2. 经验奖励：+60 EXP
         // 根据你的架构，获取 PlayerData 并直接修改 exp 字段
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
-            plugin.playerManager.giveExp(player, 10)
+            plugin.playerManager.giveExp(player, 60)
             // 保存数据，确保经验不丢失
             // 如果你的 PlayerManager 有 checkLevelUp(player) 方法，建议在这里调用一下
             plugin.databaseManager.savePlayerAsync(data)
@@ -73,7 +73,7 @@ class Ren_01 : QuestBase("main_ren_1", "[人族主线]初出茅庐", QuestType.M
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
         player.sendMessage("  §e[奖励] §f小仁的引荐信 x1")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
 
         // 播放升级或完成音效

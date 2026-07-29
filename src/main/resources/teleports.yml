@@ -347,7 +347,7 @@ points:
     pitch: -1.95
     conditions:
       completed_quest:
-        id: "main_shen_1"
+        id: "main_shen_2"
         message: "&c你的神力不稳，还是先步行前往大殿吧（请先完成前置任务）"
 
   皇城东门-妖族:

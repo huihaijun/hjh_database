@@ -18,8 +18,10 @@ import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Event
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
@@ -37,7 +39,7 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
     private val showcaseLastDisplays = mutableMapOf<java.util.UUID, Long>()
 
     // 1. 监听玩家右键 (打开菜单)
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onInteract(event: PlayerInteractEvent) {
         if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
 
@@ -45,6 +47,8 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
         if (event.hand == EquipmentSlot.OFF_HAND) {
             if (plugin.menuManager.isTianjiToken(player.inventory.itemInMainHand)) {
                 cancelTokenUse(event)
+                // 主手天机令拥有本次右键的最高优先级，立刻终止副手弓弩的使用状态。
+                player.clearActiveItem()
             }
             return
         }
@@ -54,8 +58,22 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
         val item = player.inventory.itemInMainHand
         if (plugin.menuManager.isTianjiToken(item)) {
             cancelTokenUse(event)
+            player.clearActiveItem()
             plugin.menuManager.openMainMenu(player)
         }
+    }
+
+    /**
+     * PlayerInteractEvent取消只能阻止正常物品使用；已装填弩或其他监听器仍可能走到
+     * EntityShootBowEvent。这里在箭矢进入世界前做最后兜底，且只检查主手天机令。
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    fun onTianjiTokenOffhandShoot(event: EntityShootBowEvent) {
+        val player = event.entity as? Player ?: return
+        if (!plugin.menuManager.isTianjiToken(player.inventory.itemInMainHand)) return
+
+        event.isCancelled = true
+        player.clearActiveItem()
     }
 
     private fun cancelTokenUse(event: PlayerInteractEvent) {

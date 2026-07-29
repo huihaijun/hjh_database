@@ -20,6 +20,8 @@ import kotlin.math.sin
 class FireMasteryWarrior(private val plugin: Hjh_database) {
     companion object {
         const val CD_MS = 15000L
+        const val CRITICAL_MULTIPLIER = 1.5
+        const val EXECUTE_DAMAGE_CAP = 150.0
     }
 
     private val cd = ConcurrentHashMap<UUID, Long>()
@@ -92,7 +94,10 @@ class FireMasteryWarrior(private val plugin: Hjh_database) {
     private fun trigger(player: Player, victim: LivingEntity, pData: PlayerData) {
         player.sendMessage("§c[火·精进] [炎斩] §f已触发")
         val targetMaxHealth = victim.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
-        val damage = pData.attack * 2.5 + targetMaxHealth * 0.08
+        // 炎斩触发伤害必定暴击；8%最大生命的斩杀段在暴击后仍最多贡献150点。
+        val criticalAttackDamage = pData.attack * 2.5 * CRITICAL_MULTIPLIER
+        val criticalExecuteDamage = (targetMaxHealth * 0.08 * CRITICAL_MULTIPLIER).coerceAtMost(EXECUTE_DAMAGE_CAP)
+        val damage = criticalAttackDamage + criticalExecuteDamage
         val world = victim.world
 
         // 从天而降的火柱动画 (4 ticks 递降)
@@ -108,6 +113,8 @@ class FireMasteryWarrior(private val plugin: Hjh_database) {
                 if (currentHeight <= 0.0) {
                     // 砸到地面，触发伤害与范围粒子
                     magicDamage(player, victim, damage)
+                    world.spawnParticle(Particle.CRIT, victim.location.add(0.0, victim.height * 0.55, 0.0), 24, 0.35, 0.45, 0.35, 0.12)
+                    world.playSound(victim.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1.2f, 0.75f)
                     world.playSound(victim.location, Sound.ITEM_FIRECHARGE_USE, 1.5f, 0.8f)
                     world.playSound(victim.location, Sound.ENTITY_BLAZE_SHOOT, 1.2f, 1.2f)
 

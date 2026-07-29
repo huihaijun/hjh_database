@@ -76,11 +76,11 @@ class Shen_06 : QuestBase("main_shen_6", "[神族主线]圣山异动", QuestType
 
     override fun giveReward(player: Player) {
         giveFeather(player)
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 240)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +240")
         player.sendMessage("  §e[奖励] §f新芽之羽 x1")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

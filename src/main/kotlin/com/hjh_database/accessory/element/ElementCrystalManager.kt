@@ -140,6 +140,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
     // 金属性：锋芒状态 (UUID -> 层数) & (UUID -> 结束时间)
     private val goldStacks = ConcurrentHashMap<UUID, Int>()
     private val goldEndTime = ConcurrentHashMap<UUID, Long>()
+    private val goldMaxStacks = 4
+    private val goldDurationMillis = 10_000L
+    private val goldOffenseBonusPerStack = 0.05
 
     fun getFengMangStacks(player: Player): Int {
         val end = goldEndTime[player.uniqueId] ?: 0L
@@ -149,6 +152,14 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
             return 0
         }
         return goldStacks.getOrDefault(player.uniqueId, 0)
+    }
+
+    /**
+     * 金·启示仍在最终伤害阶段独立结算；天机令使用此倍率同步展示锋芒带来的进攻属性。
+     * 不向 tempBonuses 重复写入，避免实际伤害被计算两次。
+     */
+    fun getFengMangOffenseMultiplier(player: Player): Double {
+        return 1.0 + getFengMangStacks(player) * goldOffenseBonusPerStack
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -189,12 +200,12 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
             if (now > end) {
                 // 开启新一轮叠层
                 goldStacks[player.uniqueId] = 1
-                goldEndTime[player.uniqueId] = now + 5000L
+                goldEndTime[player.uniqueId] = now + goldDurationMillis
                 player.sendMessage("§e[金·启示]已触发")
                 player.world.spawnParticle(org.bukkit.Particle.CRIT, player.location.add(0.0, 1.0, 0.0), 10, 0.2, 0.2, 0.2, 0.1)
             } else {
                 val current = goldStacks.getOrDefault(player.uniqueId, 0)
-                if (current < 3) {
+                if (current < goldMaxStacks) {
                     goldStacks[player.uniqueId] = current + 1
                     player.world.spawnParticle(org.bukkit.Particle.CRIT, player.location.add(0.0, 1.0, 0.0), 5, 0.2, 0.2, 0.2, 0.1)
                 }

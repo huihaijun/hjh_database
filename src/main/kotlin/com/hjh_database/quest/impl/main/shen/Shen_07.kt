@@ -120,12 +120,12 @@ class Shen_07 : QuestBase("main_shen_7", "[神族主线]圣山受阻", QuestType
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 280)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +280")
         player.sendMessage("  §b[同步] §f重华晶的奥秘已完成")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

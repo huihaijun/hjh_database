@@ -62,12 +62,12 @@ class Yao_04 : QuestBase("main_yao_4", "[妖族主线]初识冶药", QuestType.M
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +80")
         player.sendMessage("§8§m========================================")
 
         val data = Hjh_database.instance.playerManager.getPlayerData(player)
         if (data != null) {
-            Hjh_database.instance.playerManager.giveExp(player, 10)
+            Hjh_database.instance.playerManager.giveExp(player, 80)
             Hjh_database.instance.databaseManager.savePlayerAsync(data)
         }
 

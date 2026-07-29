@@ -69,14 +69,14 @@ class Yao_02 : QuestBase("main_yao_2", "[妖族主线]启灵之果", QuestType.M
 
     override fun giveReward(player: Player) {
         plugin.playerManager.getPlayerData(player)?.let { data ->
-            plugin.playerManager.giveExp(player, 10)
+            plugin.playerManager.giveExp(player, 60)
             plugin.databaseManager.savePlayerAsync(data)
         }
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

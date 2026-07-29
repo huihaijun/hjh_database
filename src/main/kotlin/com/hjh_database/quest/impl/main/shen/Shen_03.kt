@@ -26,7 +26,9 @@ class Shen_03 : QuestBase("main_shen_3", "[神族主线]白木样本", QuestType
 
     private val introductionScript = listOf(
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f来了啊。我是这儿的负责人，老早就感应到你要到了。",
-        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f长老那脾气你也见识了，别往心里去。他方才传了信，让我带你熟悉一下这里。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f你说什么是§e感应§f？我们神族的血脉皆源自创世神§4§n盘古大人§f，族人之间自可凭此§e血脉共鸣§f彼此感应。你刚降世不久，对这些还不熟悉，日后自会体会。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f你说方才没感应到长老的血脉，没提前问好才被他凶了……可能是长老神力深不可测，以你现在的能力，感应不到也并非不可能。别往心里去。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f他方才传了信，让我带你熟悉一下这里。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f正好，旁边那棵树的树干不知怎么发白了，我疑心是虫害。你去替我取一块下来看看。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f斧头？用不着。瞧见那白木头上冒的§a绿光§f了么——这便是天地灵气汇聚的征兆，可以用§e开物术§f来取。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f把目光聚在你想要的东西上，右手轻轻一碰，便能引动周遭灵气帮你把它“请”出来。不过施展时须专注，别乱动，分心中断了白白浪费时间。",
@@ -80,13 +82,13 @@ class Shen_03 : QuestBase("main_shen_3", "[神族主线]白木样本", QuestType
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 80)
         giveResource(player, "hjh_tongqian", 10, "铜钱")
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +80")
         player.sendMessage("  §e[奖励] §f铜钱 x10")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

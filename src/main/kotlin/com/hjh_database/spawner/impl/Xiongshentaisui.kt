@@ -27,11 +27,13 @@ import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.util.Vector
 import java.util.EnumSet
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -42,6 +44,10 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         const val BOSS_BUFF_METADATA = "hjh_xiongshentaisui_quicksand_boss"
         private const val QUICKSAND_DAMAGE_METADATA = "hjh_xiongshentaisui_quicksand_damage"
         private const val QUICKSAND_SPEED_KEY = "xiongshentaisui_quicksand::speed_percent"
+        private const val QUICKSAND_RADIUS = 7.0
+        private const val QUICKSAND_COUNT = 3
+        private const val SAFE_CENTER_SEARCH_RADIUS = 8
+        private const val CACTUS_CLEARANCE = 2
 
         private val MAGIC_CAUSES = EnumSet.of(
             EntityDamageEvent.DamageCause.MAGIC,
@@ -139,6 +145,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
                 elapsed += 5
 
                 if (elapsed >= channelTicks) {
+                    teleportToQuicksand(circles)
                     activateQuicksand(circles)
                     cancel()
                 }
@@ -176,15 +183,15 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
 
     private fun chooseQuicksandCircles(players: List<Player>): List<QuicksandCircle> {
         val origin = boss.location
-        val circles = ArrayList<QuicksandCircle>(3)
+        val circles = ArrayList<QuicksandCircle>(QUICKSAND_COUNT)
         val shuffledPlayers = players.shuffled()
 
-        shuffledPlayers.take(3).forEach { player ->
-            circles += QuicksandCircle(circleCenterAtFieldHeight(player.location), 7.0)
+        shuffledPlayers.take(QUICKSAND_COUNT).forEach { player ->
+            circles += QuicksandCircle(findSafeCircleCenter(player.location), QUICKSAND_RADIUS)
         }
 
-        while (circles.size < 3) {
-            circles += QuicksandCircle(randomOffsetLocation(origin, 15.0), 7.0)
+        while (circles.size < QUICKSAND_COUNT) {
+            circles += QuicksandCircle(findSafeCircleCenter(randomOffsetLocation(origin, 15.0)), QUICKSAND_RADIUS)
         }
 
         return circles
@@ -194,7 +201,94 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         val random = ThreadLocalRandom.current()
         val angle = random.nextDouble(Math.PI * 2.0)
         val distance = sqrt(random.nextDouble()) * maxRadius
-        return circleCenterAtFieldHeight(origin.clone().add(cos(angle) * distance, 0.0, sin(angle) * distance))
+        return origin.clone().add(cos(angle) * distance, 0.0, sin(angle) * distance)
+    }
+
+    private fun findSafeCircleCenter(origin: Location): Location {
+        val world = origin.world ?: return circleCenterAtFieldHeight(origin)
+
+        for (radius in 0..SAFE_CENTER_SEARCH_RADIUS) {
+            for (dx in -radius..radius) {
+                for (dz in -radius..radius) {
+                    if (radius > 0 && max(abs(dx), abs(dz)) != radius) continue
+
+                    val probe = Location(
+                        world,
+                        origin.blockX + dx + 0.5,
+                        origin.y,
+                        origin.blockZ + dz + 0.5
+                    )
+                    val candidate = circleCenterAtFieldHeight(probe)
+                    if (isSafeQuicksandCenter(candidate)) {
+                        return candidate
+                    }
+                }
+            }
+        }
+
+        return circleCenterAtFieldHeight(origin)
+    }
+
+    private fun isSafeQuicksandCenter(location: Location): Boolean {
+        val world = location.world ?: return false
+        val feetY = location.blockY
+        if (feetY <= world.minHeight || feetY + 5 >= world.maxHeight) return false
+
+        val ground = world.getBlockAt(location.blockX, feetY - 1, location.blockZ)
+        if (!ground.type.isSolid || ground.type == Material.CACTUS) return false
+
+        for (y in feetY..feetY + 5) {
+            val block = world.getBlockAt(location.blockX, y, location.blockZ)
+            if (!block.isPassable || block.isLiquid) return false
+        }
+
+        for (dx in -CACTUS_CLEARANCE..CACTUS_CLEARANCE) {
+            for (dz in -CACTUS_CLEARANCE..CACTUS_CLEARANCE) {
+                for (y in feetY - 1..feetY + 4) {
+                    if (world.getBlockAt(location.blockX + dx, y, location.blockZ + dz).type == Material.CACTUS) {
+                        return false
+                    }
+                }
+            }
+        }
+
+        return true
+    }
+
+    private fun teleportToQuicksand(circles: List<QuicksandCircle>) {
+        val safeCircles = circles.filter { isSafeQuicksandCenter(it.center) }
+        if (safeCircles.isEmpty()) return
+
+        val nearestPlayer = findNearbyPlayers(20.0).firstOrNull()
+        val preferred = nearestPlayer?.let { player ->
+            safeCircles.minByOrNull { circle -> circle.center.distanceSquared(player.location) }
+        }
+        val weightedChoices = buildList {
+            if (preferred != null) {
+                repeat(5) { add(preferred) }
+            }
+            addAll(safeCircles.filterNot { it === preferred })
+        }
+        val selected = weightedChoices.random()
+        val destination = selected.center.clone().apply {
+            x = blockX + 0.5
+            z = blockZ + 0.5
+        }
+
+        boss.world.spawnParticle(Particle.REVERSE_PORTAL, boss.location.clone().add(0.0, 1.0, 0.0), 45, 0.8, 1.0, 0.8, 0.08)
+        boss.world.playSound(boss.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.2f, 0.65f)
+
+        if (!boss.teleport(destination)) return
+
+        boss.velocity = Vector(0.0, 0.0, 0.0)
+        boss.fallDistance = 0.0f
+        boss.world.spawnParticle(
+            Particle.BLOCK,
+            destination.clone().add(0.0, 0.4, 0.0),
+            70, 1.8, 0.5, 1.8, 0.08,
+            Material.SAND.createBlockData()
+        )
+        boss.world.playSound(destination, Sound.BLOCK_SAND_BREAK, 1.8f, 0.5f)
     }
 
     private fun circleCenterAtFieldHeight(location: Location): Location {

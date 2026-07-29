@@ -658,6 +658,8 @@ class BaihuWeaponData(id: String, sec: ConfigurationSection) : BaihuEquipmentDat
     val skillId: String = sec.getString("skill_id", id)!!.lowercase(Locale.getDefault())
     val activateSlot: Int = sec.getInt("activate_slot", 0)
     val activeLoreLine: String = sec.getString("active_lore_line", "&c请放入指定激活栏，并身负虎瘴。")!!
+    /** 自定义穿透实体总数；piercing: 2 表示整支箭最多命中2个实体。 */
+    val piercingEntities: Int = sec.getInt("piercing", 1).coerceIn(1, 128)
     val stats: MutableMap<String, Double> = mutableMapOf()
     override val activationSpec: ActivationSpec = ActivationSpec(
         requiredJob = reqJob,

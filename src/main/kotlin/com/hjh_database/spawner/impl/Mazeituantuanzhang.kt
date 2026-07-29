@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.spawner.MobFactory
 import org.bukkit.Color
 import org.bukkit.GameMode
 import org.bukkit.Particle
@@ -13,6 +14,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
@@ -22,6 +24,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
 
     private var isChanneling = false
     private var isDashing = false
+    private var armorBreakGeneration = 0
     private val skillCooldown = 13 * 20L // 13秒 CD
     private val initialDelay = 5 * 20L   // 出生后 5秒 首发
 
@@ -173,25 +176,28 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
         var distanceTraveled = 0.0
         val maxDistance = 15.0
         val speed = 1.3 // 每 Tick 1.3 格，极快的冲刺
-        var previousLoc = boss.location.clone()
 
         object : BukkitRunnable() {
             override fun run() {
-                if (boss.isDead || !boss.isValid || distanceTraveled >= maxDistance) {
-                    // 冲锋结束（未撞到玩家也未撞到墙），直接进入常规 CD
+                if (boss.isDead || !boss.isValid) {
                     isDashing = false
-                    scheduleNextSkill(skillCooldown)
+                    cancel()
+                    return
+                }
+                if (distanceTraveled >= maxDistance) {
+                    finishDash()
                     cancel()
                     return
                 }
 
-                // 给 Boss 赋予极速动力；腾空时保留竖直速度，避免下一 Tick 的水平冲锋把跳跃抹掉。
-                val dashVelocity = direction.clone().multiply(speed)
+                // 最后一 Tick 只移动剩余距离，避免越过冲锋终点。
+                val stepDistance = minOf(speed, maxDistance - distanceTraveled)
+                val dashVelocity = direction.clone().multiply(stepDistance)
                 if (!boss.isOnGround) {
                     dashVelocity.y = boss.velocity.y
                 }
                 boss.velocity = dashVelocity
-                distanceTraveled += speed
+                distanceTraveled += stepDistance
 
                 // 冲锋沿途的烟雾粒子特效
                 boss.world.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, boss.location.add(0.0, 0.5, 0.0), 5, 0.5, 0.5, 0.5, 0.0)
@@ -224,7 +230,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                     }
 
                     // 撞到人提前停止，进入常规 CD
-                    scheduleNextSkill(skillCooldown)
+                    finishDash()
                     cancel()
                     return
                 }
@@ -232,7 +238,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                 // 2. 【碰撞障碍物检测 (精准射线法)】
                 // 从头部 (Y+1.8) 和脚底 (Y+0.2) 向冲锋方向发出射线。
                 // 头部射线高于 1.5 格台阶：台阶只触发起跳，真正的两格高墙才会触发撞墙眩晕。
-                val rayDist = speed + 0.5
+                val rayDist = stepDistance + 0.5
 
                 // 探测头部：判断是不是 2 格高的死胡同
                 val eyeLoc = currentLoc.clone().add(0.0, 1.8, 0.0)
@@ -259,39 +265,89 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                     }
                 }
 
-                previousLoc = currentLoc.clone()
             }
         }.runTaskTimer(plugin, 0L, 1L)
     }
 
+    private fun finishDash() {
+        isDashing = false
+        boss.velocity = Vector(0.0, 0.0, 0.0)
+        scheduleNextSkill(skillCooldown)
+    }
+
     // ==========================================
-    // 阶段三：撞墙眩晕惩罚 (2秒)
+    // 阶段三：撞墙眩晕与破甲惩罚
     // ==========================================
     private fun applyStun() {
+        boss.velocity = Vector(0.0, 0.0, 0.0)
         boss.world.playSound(boss.location, Sound.BLOCK_ANVIL_LAND, 1f, 0.5f)
         boss.world.playSound(boss.location, Sound.ENTITY_PLAYER_HURT_SWEET_BERRY_BUSH, 1f, 0.5f)
 
-        // 头顶冒金星特效
         boss.world.spawnParticle(Particle.CRIT, boss.location.add(0.0, 2.2, 0.0), 30, 0.5, 0.2, 0.5, 0.1)
-        // 新增：撞墙扣除 15 点体力 (生命值)
-        boss.damage(15.0)
-        // 提示附近 5 格玩家
+        boss.world.spawnParticle(
+            Particle.BLOCK,
+            boss.location.clone().add(0.0, 1.0, 0.0),
+            35,
+            0.65,
+            0.8,
+            0.65,
+            0.05,
+            org.bukkit.Material.IRON_BLOCK.createBlockData()
+        )
+
+        applyTemporaryArmorBreak()
+
         val nearby = boss.getNearbyEntities(10.0, 10.0, 10.0).filterIsInstance<Player>()
         nearby.forEach {
-            it.sendMessage("§a团长暂时撞晕了！尽快输出他！")
+            it.sendMessage("§a团长暂时撞晕了，他的护甲大幅度受损！")
         }
 
-        // 施加 2 秒眩晕 (无法移动，同时施加虚弱以防期间普攻)
-        boss.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 40, 255, false, false))
-        boss.addPotionEffect(PotionEffect(PotionEffectType.WEAKNESS, 40, 255, false, false))
+        boss.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, STUN_TICKS, 255, false, false))
+        boss.addPotionEffect(PotionEffect(PotionEffectType.WEAKNESS, STUN_TICKS, 255, false, false))
 
-        // 眩晕 2 秒结束后，才开始计算技能的 13 秒 CD
         object : BukkitRunnable() {
             override fun run() {
-                if (!boss.isDead) {
+                if (!boss.isDead && boss.isValid) {
                     scheduleNextSkill(skillCooldown)
                 }
             }
-        }.runTaskLater(plugin, 40L)
+        }.runTaskLater(plugin, STUN_TICKS.toLong())
+    }
+
+    private fun applyTemporaryArmorBreak() {
+        val pdc = boss.persistentDataContainer
+        val originalArmor = pdc.get(MobFactory.KEY_CUSTOM_ARMOR, PersistentDataType.DOUBLE) ?: 0.0
+        val generation = ++armorBreakGeneration
+        pdc.set(
+            MobFactory.KEY_CUSTOM_ARMOR,
+            PersistentDataType.DOUBLE,
+            originalArmor * ARMOR_REMAINING_MULTIPLIER
+        )
+
+        object : BukkitRunnable() {
+            override fun run() {
+                if (generation != armorBreakGeneration || boss.isDead || !boss.isValid) return
+                boss.persistentDataContainer.set(
+                    MobFactory.KEY_CUSTOM_ARMOR,
+                    PersistentDataType.DOUBLE,
+                    originalArmor
+                )
+                boss.world.spawnParticle(
+                    Particle.ENCHANT,
+                    boss.location.clone().add(0.0, 1.0, 0.0),
+                    16,
+                    0.5,
+                    0.7,
+                    0.5,
+                    0.0
+                )
+            }
+        }.runTaskLater(plugin, ARMOR_BREAK_TICKS)
+    }
+
+    private companion object {
+        private const val STUN_TICKS = 50
+        private const val ARMOR_BREAK_TICKS = 8L * 20L
+        private const val ARMOR_REMAINING_MULTIPLIER = 0.2
     }
 }

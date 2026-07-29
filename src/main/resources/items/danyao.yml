@@ -406,13 +406,13 @@ fengmuhuichun0:
   only_doctor: false
   req_level: 2
   base_exp: 10
-  sickness_time: 10
+  sickness_time: 7
   max_stack_size: 64
   lore:
     - "&7&o丹色青翠,草木气息隐约流转"
     - "&7&o入口清润,一缕温和生机徐徐浸润经脉"
     - "&8===========&2&l丹药效果&8============"
-    - "&e[右键] &f药毒时间：&b10&f秒"
+    - "&e[右键] &f药毒时间：&b7&f秒"
     - "&f瞬间恢复&b8点&f生命"
     - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅰ&f效果"
 
@@ -424,13 +424,13 @@ fengmuhuichun1:
   only_doctor: false
   req_level: 3
   base_exp: 20
-  sickness_time: 15
+  sickness_time: 9
   max_stack_size: 64
   lore:
     - "&7&o通透如碧玉,萦绕着淡淡的甘润之气"
     - "&7&o暖意如春日溪流,绵绵不绝地滋养周身"
     - "&8===========&2&l丹药效果&8============"
-    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&e[右键] &f药毒时间：&b9&f秒"
     - "&f瞬间恢复&b16点&f生命"
     - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅱ&f效果"
 
@@ -442,13 +442,13 @@ fengmuhuichun2:
   only_doctor: false
   req_level: 4
   base_exp: 30
-  sickness_time: 20
+  sickness_time: 12
   max_stack_size: 64
   lore:
     - "&7&o翠色欲滴,丹纹如新叶脉络般细密繁复"
     - "&7&o仿若枯木逢雨,生机自内而外层层涌出"
     - "&8===========&2&l丹药效果&8============"
-    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&e[右键] &f药毒时间：&b12&f秒"
     - "&f瞬间恢复&b24点&f生命"
     - "&f并获得持续持续&b15&f秒的&b生命恢复Ⅱ&f效果"
 
@@ -469,3 +469,133 @@ luoshuidan:
     - "&e[右键] &f药毒时间：&b5&f秒"
     - "&f获得持续时间为&b60&f秒的&b水下呼吸&f效果"
     - "&f同时持续时间内在水下行动更加敏捷"
+
+qushidan:
+  material: POTION
+  name: "&b祛湿丹[助势]"
+  category: ZHUSHI
+  color: "#3445D6"
+  only_doctor: false
+  req_level: 1
+  base_exp: 1
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o水族村民常用的祛湿丹药"
+    - "&7&o可以驱散身上的部分湿气"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f立即清除自身&b25%&f的湿气"
+    - "&c此丹药不与其他丹药共享药毒时间"
+
+shuangshengdan0:
+  material: POTION
+  name: "&b双生丹[归元][初级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 10
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b10&f秒"
+    - "&f在接下来的&b8&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b5&f点"
+
+shuangshengdan1:
+  material: POTION
+  name: "&b双生丹[归元][中级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 5
+  base_exp: 40
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f在接下来的&b8&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b7&f点"
+
+shuangshengdan2:
+  material: POTION
+  name: "&b双生丹[归元][高级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 7
+  base_exp: 60
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f在接下来的&b10&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b8&f点"
+
+jieduwan0:
+  material: POTION
+  name: "&b解毒丸[归元][初级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 60
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b60&f秒"
+    - "&f立即减少其他丹药&b50%&f的药毒时间"
+    - "&f同时在&b45&f秒内免疫&c中毒&f效果"
+
+jieduwan1:
+  material: POTION
+  name: "&b解毒丸[归元][中级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 5
+  base_exp: 40
+  sickness_time: 80
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b80&f秒"
+    - "&f立即减少其他丹药&b80%&f的药毒时间"
+    - "&f同时在&b120&f秒内免疫&c中毒&f效果"
+
+jieduwan2:
+  material: POTION
+  name: "&b解毒丸[归元][高级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 7
+  base_exp: 60
+  sickness_time: 120
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b120&f秒"
+    - "&f立即减少其他丹药&b100%&f的药毒时间"
+    - "&f同时在&b180&f秒内免疫&c中毒&f效果"
+    - "&c此丹药不与其他丹药共享药毒时间"

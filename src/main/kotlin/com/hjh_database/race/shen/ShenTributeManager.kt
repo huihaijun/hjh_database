@@ -313,6 +313,14 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
         }
         state.dailyClaimCount++
         player.sendMessage("§a§l[神威浩荡] §f成功领取 §e${category.displayName}${state.tier}阶贡品§f！")
+        player.sendMessage("§6你本次获得的贡品清单：")
+        preparedItems.forEach { item ->
+            player.sendMessage(
+                Component.text("  ", NamedTextColor.WHITE)
+                    .append(item.displayName())
+                    .append(Component.text(" × ${item.amount}", NamedTextColor.YELLOW))
+            )
+        }
         if (state.dailyClaimCount >= MAX_DAILY_CLAIMS) {
             player.sendMessage("§6§l[神威浩荡] §e今日贡品次数已全部领取完毕！")
             player.sendMessage("§7今日已领取：§e${state.dailyClaimCount}/$MAX_DAILY_CLAIMS 次 §8| §7将于 §b${formatResetTime(state)} §7重置")
@@ -329,27 +337,27 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
 
     private fun rewardsFor(category: TributeCategory, tier: Int): List<Reward> = when (category) {
         TributeCategory.HUMAN -> when (tier) {
-            1 -> listOf(vanilla(Material.COOKED_BEEF, 32))
-            2 -> listOf(vanilla(Material.COOKED_BEEF, 32), resource("yuansuduihuanquan", 5))
-            3 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 5))
-            4 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 10))
-            else -> listOf(resource("mijingyaoshi", 1))
+            1 -> listOf(vanilla(Material.COOKED_BEEF, 16), resource("yuansuduihuanquan", 5))
+            2 -> listOf(vanilla(Material.COOKED_BEEF, 32), resource("yuansuduihuanquan", 10))
+            3 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 10), resource("jinyuanbao", 5))
+            4 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 20), resource("jinyuanbao", 8))
+            else -> listOf(vanilla(Material.COOKED_BEEF, 64), resource("yuansuduihuanquan", 30), resource("yinpiao", 1))
         }
 
         TributeCategory.IMMORTAL -> when (tier) {
-            1 -> listOf(resource("jinyuanbao", 1))
-            2 -> listOf(resource("jinyuanbao", 3))
-            3 -> listOf(resource("jinyuanbao", 5), resource("yuansuduihuanquan", 20))
-            4 -> listOf(resource("yinpiao", 1), resource("yuansuduihuanquan", 20))
-            else -> listOf(resource("yinpiao", 2), resource("yuansuduihuanquan", 30))
+            1 -> listOf(resource("yuansuzhuanhuaquan", 5), resource("jianghuxinde_dalu", 5))
+            2 -> listOf(resource("jinyuanbao", 1), resource("yuansuzhuanhuaquan", 5), resource("yuansuduihuanquan", 5), resource("jianghuxinde_dalu", 8))
+            3 -> listOf(resource("jinyuanbao", 3), resource("yuansuzhuanhuaquan", 5), resource("yuansuduihuanquan", 5), resource("jianghuxinde_dalu", 8))
+            4 -> listOf(resource("jinyuanbao", 5), resource("yuansuzhuanhuaquan", 15), resource("yuansuduihuanquan", 15), resource("jianghuxinde_dalu", 15))
+            else -> listOf(resource("jinyuanbao", 8), resource("yuansuzhuanhuaquan", 20), resource("yuansuduihuanquan", 20), resource("jianghuxinde_dalu", 20))
         }
 
         TributeCategory.YAO -> when (tier) {
-            1 -> listOf(resource("yuhedan0", 10))
-            2 -> listOf(resource("yuhedan1", 15))
-            3 -> listOf(resource("yuhedan1", 15), resource("yy_tongyong0", 15))
-            4 -> listOf(resource("yuhedan2", 20), resource("yy_tongyong1", 15))
-            else -> listOf(resource("yuhedan2", 32), resource("yy_tongyong2", 20))
+            1 -> listOf(resource("yuhedan0", 20))
+            2 -> listOf(resource("yuhedan1", 20))
+            3 -> listOf(resource("yuhedan1", 20), resource("yy_tongyong0", 10))
+            4 -> listOf(resource("yuhedan2", 20), resource("yy_tongyong1", 10))
+            else -> listOf(resource("yuhedan2", 20), resource("yy_tongyong2", 15))
         }
     }
 

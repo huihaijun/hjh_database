@@ -21,7 +21,7 @@ class Shen_02 : QuestBase("main_shen_2", "[神族主线]长老的安排", QuestT
     private val talkProgress = HashMap<UUID, Int>()
 
     private val introductionScript = listOf(
-        "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f往哪看呢。",
+        "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f往哪看呢？",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f见了面连声问好都没有……你感应不到我来了么？",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f（长老微微眯起眼，审视了你片刻，随后轻轻一拂袖）",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f也罢。新降世的小神，这次便不追究了。",
@@ -75,12 +75,12 @@ class Shen_02 : QuestBase("main_shen_2", "[神族主线]长老的安排", QuestT
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 60)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

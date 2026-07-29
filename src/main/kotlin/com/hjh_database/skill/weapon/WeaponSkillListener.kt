@@ -41,7 +41,7 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
     }
 
     // 弓箭手触发
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onArcherTrigger(event: EntityShootBowEvent) {
         // 模拟 Java 的 instanceof 模式匹配
         val entity = event.entity

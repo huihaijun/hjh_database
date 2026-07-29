@@ -36,6 +36,7 @@ class TitleManager(private val plugin: Hjh_database) {
     private val pendingPurchases = ConcurrentHashMap.newKeySet<UUID>()
     private val pendingRenames = ConcurrentHashMap<UUID, String>()
     private val originalTeams = ConcurrentHashMap<UUID, OriginalTeamState>()
+    private val chatTeams = ConcurrentHashMap<UUID, OriginalTeamState>()
     private val originalTabNames = mutableMapOf<UUID, OriginalTabName>()
     private val resourceIdKey = NamespacedKey(plugin, "resource_id")
     val menus = TitleMenus(plugin, this)
@@ -49,6 +50,12 @@ class TitleManager(private val plugin: Hjh_database) {
     }
 
     fun settings(): TitleSettings = snapshot.settings
+
+    fun isDisplayEnabled(channel: TitleDisplayChannel): Boolean = when (channel) {
+        TitleDisplayChannel.CHAT -> settings().showChat
+        TitleDisplayChannel.OVERHEAD -> settings().showOverhead
+        TitleDisplayChannel.TAB -> settings().showTab
+    }
 
     fun definitions(category: TitleCategory): List<TitleDefinition> =
         snapshot.byCategory[category].orEmpty()
@@ -132,6 +139,7 @@ class TitleManager(private val plugin: Hjh_database) {
         pendingWrites.clear()
         pendingPurchases.clear()
         originalTeams.clear()
+        chatTeams.clear()
         originalTabNames.clear()
     }
 
@@ -366,7 +374,10 @@ class TitleManager(private val plugin: Hjh_database) {
                             .append(TitleTextFormatter.component(name))
                             .append(Component.text(" §8(${owned.titleId}, ${formatObtainedAt(owned.obtainedAt)})")))
                     }
-                    sender.sendMessage("§7显示：聊天=${profile.showChat} 头顶=${profile.showOverhead} TAB=${profile.showTab}")
+                    val display = settings()
+                    sender.sendMessage(
+                        "§7全服显示：聊天=${display.showChat} 头顶=${display.showOverhead} TAB=${display.showTab}"
+                    )
                 }
             }
             "give", "grant", "给予" -> {
@@ -405,23 +416,12 @@ class TitleManager(private val plugin: Hjh_database) {
                 }
             }
             "display", "显示" -> {
-                if (args.size < 4) return adminError(sender, "用法: /hjhadmin title display <玩家> <chat|overhead|tab> <on|off>")
-                val channel = TitleDisplayChannel.parse(args[2])
+                if (args.size < 3) return adminError(sender, "用法: /hjhadmin title display <chat|overhead|tab> <on|off>")
+                val channel = TitleDisplayChannel.parse(args[1])
                     ?: return adminError(sender, "显示位置只能是 chat、overhead 或 tab。")
-                val enabled = parseSwitch(args[3])
+                val enabled = parseSwitch(args[2])
                     ?: return adminError(sender, "开关只能是 on/off、true/false 或 开/关。")
-                mutateResolved(args[1]) { target ->
-                    repository.setDisplay(target, channel, enabled, settings())
-                }.whenComplete { profile, throwable ->
-                    runSync {
-                        if (throwable != null || profile == null) {
-                            sender.sendMessage("§c[称号] 设置失败：${rootMessage(throwable)}")
-                            return@runSync
-                        }
-                        updateCachedProfile(profile)
-                        sender.sendMessage("§a[称号] 已将 ${profile.playerName} 的 ${channel.name.lowercase()} 显示设为 $enabled。")
-                    }
-                }
+                setGlobalDisplay(sender, channel, enabled)
             }
             else -> sendAdminHelp(sender)
         }
@@ -440,8 +440,9 @@ class TitleManager(private val plugin: Hjh_database) {
     private fun applyVisualDisplay(player: Player, profile: PlayerTitleProfile) {
         val title = equippedComponent(profile, hover = false)
         val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
-        val overheadActive = profile.showOverhead && title != null
-        val tabActive = profile.showTab && title != null
+        val display = settings()
+        val overheadActive = display.showOverhead && title != null
+        val tabActive = display.showTab && title != null
         val needsTabOverride = overheadActive || tabActive
 
         // 在第一次改写 TAB 名称前保存精确原值；null 代表让客户端继续使用原版队伍格式。
@@ -456,6 +457,8 @@ class TitleManager(private val plugin: Hjh_database) {
         } else {
             restoreOriginalTeam(player, scoreboard)
         }
+        chatTeams[player.uniqueId] =
+            originalTeam ?: snapshotTeam(scoreboard.getEntryTeam(player.name))
 
         if (needsTabOverride) {
             val originalName = originalTab?.component
@@ -469,6 +472,7 @@ class TitleManager(private val plugin: Hjh_database) {
     private fun clearVisualDisplay(player: Player) {
         val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         restoreOriginalTeam(player, scoreboard)
+        chatTeams.remove(player.uniqueId)
         originalTabNames.remove(player.uniqueId)?.let { player.playerListName(it.component) }
     }
 
@@ -555,8 +559,9 @@ class TitleManager(private val plugin: Hjh_database) {
      * 避免 Paper 的计分板姓名着色读取到临时队伍后改变玩家名颜色。
      */
     fun originalChatDisplayName(player: Player, fallback: Component): Component {
-        val originalTeam = originalTeams[player.uniqueId] ?: return fallback
-        return buildTeamFormattedName(player.name, originalTeam)
+        // AsyncChatEvent 不可安全读取 Bukkit scoreboard；主线程每次刷新外观时已缓存真实队伍。
+        val team = chatTeams[player.uniqueId] ?: return fallback
+        return if (team.teamName == null) fallback else buildTeamFormattedName(player.name, team)
     }
 
     private fun prependIsolated(title: Component, following: Component): Component {
@@ -655,9 +660,9 @@ class TitleManager(private val plugin: Hjh_database) {
             maxCustomTitles = settingsConfig.getInt("custom.max_titles", 3).coerceIn(1, 3),
             maxCustomNameLength = settingsConfig.getInt("custom.max_name_length", 8).coerceIn(1, 64),
             customCosts = costs,
-            defaultShowChat = settingsConfig.getBoolean("display_defaults.chat", true),
-            defaultShowOverhead = settingsConfig.getBoolean("display_defaults.overhead", false),
-            defaultShowTab = settingsConfig.getBoolean("display_defaults.tab", false)
+            showChat = readDisplaySetting(settingsConfig, "chat", true),
+            showOverhead = readDisplaySetting(settingsConfig, "overhead", false),
+            showTab = readDisplaySetting(settingsConfig, "tab", false)
         )
 
         val all = linkedMapOf<String, TitleDefinition>()
@@ -709,12 +714,59 @@ class TitleManager(private val plugin: Hjh_database) {
         else -> null
     }
 
+    private fun setGlobalDisplay(
+        sender: CommandSender,
+        channel: TitleDisplayChannel,
+        enabled: Boolean
+    ) {
+        val current = settings()
+        val updated = when (channel) {
+            TitleDisplayChannel.CHAT -> current.copy(showChat = enabled)
+            TitleDisplayChannel.OVERHEAD -> current.copy(showOverhead = enabled)
+            TitleDisplayChannel.TAB -> current.copy(showTab = enabled)
+        }
+        val settingsFile = File(File(plugin.dataFolder, TITLE_DIRECTORY), "settings.yml")
+        val config = YamlConfiguration.loadConfiguration(settingsFile)
+        config.set("display.chat", updated.showChat)
+        config.set("display.overhead", updated.showOverhead)
+        config.set("display.tab", updated.showTab)
+        config.set("display_defaults", null)
+        try {
+            config.save(settingsFile)
+        } catch (ex: Exception) {
+            sender.sendMessage("§c[称号] 保存全服显示配置失败：${rootMessage(ex)}")
+            return
+        }
+
+        snapshot = snapshot.copy(settings = updated)
+        for (player in Bukkit.getOnlinePlayers()) {
+            profiles[player.uniqueId]?.let { applyVisualDisplay(player, it) }
+        }
+        sender.sendMessage(
+            "§a[称号] 已将全服 ${channel.name.lowercase()} 显示设为 $enabled，并刷新所有在线玩家。"
+        )
+    }
+
+    private fun readDisplaySetting(
+        config: YamlConfiguration,
+        key: String,
+        defaultValue: Boolean
+    ): Boolean {
+        val globalPath = "display.$key"
+        return if (config.contains(globalPath)) {
+            config.getBoolean(globalPath)
+        } else {
+            // 自动兼容旧版 display_defaults 配置。
+            config.getBoolean("display_defaults.$key", defaultValue)
+        }
+    }
+
     private fun sendAdminHelp(sender: CommandSender) {
         sender.sendMessage("§6=== 称号管理 ===")
         sender.sendMessage("§e/hjhadmin title list <玩家> §7- 查看已获得称号")
         sender.sendMessage("§e/hjhadmin title give <玩家> <称号ID> §7- 给予称号")
         sender.sendMessage("§e/hjhadmin title take <玩家> <称号ID> §7- 撤销称号")
-        sender.sendMessage("§e/hjhadmin title display <玩家> <chat|overhead|tab> <on|off>")
+        sender.sendMessage("§e/hjhadmin title display <chat|overhead|tab> <on|off> §7- 设置全服显示位置")
         sender.sendMessage("§e/hjhadmin title reload §7- 异步重载称号 YAML")
     }
 

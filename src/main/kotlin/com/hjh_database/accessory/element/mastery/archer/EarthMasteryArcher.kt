@@ -72,7 +72,7 @@ class EarthMasteryArcher(private val plugin: Hjh_database) {
                     display.remove()
                     if (tick >= 30 && victim.isValid && !victim.isDead) {
                         // 1.5秒定身结束：爆开
-                        victim.setMetadata(META_ARMOR_REDUCE, FixedMetadataValue(plugin, System.currentTimeMillis() + 5000L)) // 5秒减防 30%
+                        victim.setMetadata(META_ARMOR_REDUCE, FixedMetadataValue(plugin, System.currentTimeMillis() + 5000L)) // 5秒减防 50%
                         
                         // 岩钉爆裂特效 (无 EXPLODE)
                         victim.world.playSound(victim.location, Sound.BLOCK_STONE_BREAK, 1.2f, 0.8f)

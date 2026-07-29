@@ -57,7 +57,7 @@ class PassbookListener(private val plugin: Hjh_database) : Listener {
     private val resourceIdKey = NamespacedKey(plugin, "resource_id")
     private val ignoreRefreshKey = NamespacedKey(plugin, "hjh_ignore_refresh")
 
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onBankerInteract(event: PlayerInteractEntityEvent) {
         if (event.hand != org.bukkit.inventory.EquipmentSlot.HAND) return
         // OP 的两种 NPC 管理工具拥有最高业务优先级，钱庄不能抢先打开交易界面。

@@ -21,12 +21,12 @@ class Shen_01 : QuestBase("main_shen_1", "[神族主线]初临神域", QuestType
     private val talkProgress = HashMap<UUID, Int>()
 
     private val script = listOf(
-        "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f新生的族人，欢迎回来。我是舒灵，负责接引你的引导员。",
+        "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f新生的族人，欢迎。我是舒灵，负责接引你的引导员。",
         "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f这封§b推荐函§f收好了，到了大殿交给§e长老§f便是。",
         "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f路线的话——穿过山洞往上走，经过§e商业区§f后方的大桥，直行就能望见§e长老大殿§f了。路程不算短，不过正好趁这个机会熟悉一下我族的生活环境，沿途也有§e指路告示牌§f，迷路了随时看一眼。",
         "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f对了，有件事得提前嘱咐你——§e长老§f脾气不大好，见到他一定要§e早早问好§f，礼数周全些。他老人家若是觉得你怠慢了，嘴上不说，脸色可够你受的。",
         "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f旁边这座传送法阵本可直达大殿，只是你刚降世不久，血脉尚不稳定，暂且还无法使用。日后成熟了，它自会为你开启。这一点还望见谅。",
-        "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f走了这么远也该饿了，这几个§6包子§f你拿着路上垫一垫。去吧，莫让长老久等。"
+        "§e[${StoryNpcs.SHEN_SHULING.displayName}§e] §f这离大殿还是挺远的，这几个§6包子§f你拿着路上垫一垫。去吧，莫让长老久等。"
     )
 
     override fun getProgressText(progress: Int): List<String> = if (progress >= 1) {
@@ -73,14 +73,14 @@ class Shen_01 : QuestBase("main_shen_1", "[神族主线]初临神域", QuestType
 
         giveItem(player, letter, "舒灵的推荐函")
         giveItem(player, baozi, "包子")
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 60)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
         player.sendMessage("  §e[奖励] §f舒灵的推荐函 x1")
         player.sendMessage("  §e[奖励] §f包子 x10")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +60")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

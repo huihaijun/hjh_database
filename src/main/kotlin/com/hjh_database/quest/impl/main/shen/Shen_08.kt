@@ -28,7 +28,7 @@ class Shen_08 : QuestBase("main_shen_8", "[神族主线]圣兽祝福", QuestType
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f这样，你去各地搜集§e圣兽祝福§f。有了祝福之力，应当就能进入圣山一探究竟。",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f祝福之力分列四方，务必按顺序逐一前往——先去§a东边森林的青龙祭坛§f，再往§c南边沙漠的朱雀祭坛§f，然后是§e西边山中的白虎祭坛§f，最后到§b北边湖中的玄武祭坛§f。一处比一处凶险，莫乱了次序。",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f你此行表现尚可。这枚§6神族证明§f，现在正式授予你。",
-        "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f我族乃世间秩序的维护者，其余种族为感念此恩，每隔一段时日便会前来进贡。贡品集中放在§e皇宫西侧§f那座§e冒黄光的楼§f前，每两时辰一次。届时那边的负责人自会传音告知你。你虽是新入族的，理应也有一份。但记住——§c半个时辰内§f便会被分光，晚了便没有留给你的份。",
+        "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f我族乃世间秩序的维护者，其余种族为感念此恩，每隔一段时日便会前来进贡。贡品集中放在§e皇宫西侧§f那座§e冒黄光的楼§f前，每两时一次。届时那边的负责人自会传音告知你。你虽是新入族的，理应也有一份。但记住——§c半个小时内§f便会被分光，晚了便没有留给你的份。",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f此外，凭此证明可与一些商贩建立§e神识§f，无需当面交易便可直接完成买卖。不过你目前火候尚浅，最多建立§e三道神识§f，日后多加历练便是。",
         "§e[${StoryNpcs.SHEN_ZHANGLAO.displayName}§e] §f我已安排人族的皇接待你，去找他，让他给你安排一门§e职业§f。日后我很忙，修行之事，便看你自己的了。"
     )
@@ -77,12 +77,12 @@ class Shen_08 : QuestBase("main_shen_8", "[神族主线]圣兽祝福", QuestType
     }
 
     override fun giveReward(player: Player) {
-        plugin.playerManager.giveExp(player, 10)
+        plugin.playerManager.giveExp(player, 320)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
 
         player.sendMessage("§8§m========================================")
         player.sendMessage("   §a§l[任务完成] §f$title")
-        player.sendMessage("  §e[奖励] §f经验 +10")
+        player.sendMessage("  §e[奖励] §f经验 +320")
         player.sendMessage("  §e[提示] §f前往人族皇城，寻找人皇-轩辕氏安排职业。")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

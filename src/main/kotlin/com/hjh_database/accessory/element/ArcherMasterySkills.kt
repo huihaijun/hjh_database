@@ -46,7 +46,7 @@ class ArcherMasterySkills(private val plugin: Hjh_database) : Listener {
         if (event.armor <= 0.0 || !victim.hasMetadata(EarthMasteryArcher.META_ARMOR_REDUCE)) return
         val until = victim.getMetadata(EarthMasteryArcher.META_ARMOR_REDUCE).firstOrNull()?.asLong() ?: 0L
         if (System.currentTimeMillis() < until) {
-            event.armor *= 0.7
+            event.armor *= 0.5
         } else {
             victim.removeMetadata(EarthMasteryArcher.META_ARMOR_REDUCE, plugin)
         }

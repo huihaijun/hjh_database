@@ -121,7 +121,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         return list
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onShoot(event: EntityShootBowEvent) {
         val player = event.entity as? Player ?: return
         val data = plugin.playerManager.getPlayerData(player) ?: return

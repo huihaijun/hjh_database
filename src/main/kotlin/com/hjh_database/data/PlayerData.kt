@@ -179,6 +179,10 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // 绝瘴丹使用独立药毒，不与常规丹药互相阻断。
     var juezhangPillSicknessEnd: Long = 0
 
+    // 祛湿丹与解毒丸各自使用独立药毒。
+    var qushiPillSicknessEnd: Long = 0
+    var jieduPillSicknessEnd: Long = 0
+
     val alchemyMaxExp: Int
         get() = alchemyLevel * 50
 
@@ -196,6 +200,23 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     fun isSick(): Boolean = System.currentTimeMillis() < pillSicknessEnd
 
     fun isJuezhangSick(): Boolean = System.currentTimeMillis() < juezhangPillSicknessEnd
+
+    fun isQushiSick(): Boolean = System.currentTimeMillis() < qushiPillSicknessEnd
+
+    fun isJieduSick(): Boolean = System.currentTimeMillis() < jieduPillSicknessEnd
+
+    fun reduceOtherPillSickness(percent: Double) {
+        val now = System.currentTimeMillis()
+        val remainingMultiplier = (1.0 - percent.coerceIn(0.0, 100.0) / 100.0)
+        pillSicknessEnd = reducedSicknessEnd(pillSicknessEnd, now, remainingMultiplier)
+        juezhangPillSicknessEnd = reducedSicknessEnd(juezhangPillSicknessEnd, now, remainingMultiplier)
+        qushiPillSicknessEnd = reducedSicknessEnd(qushiPillSicknessEnd, now, remainingMultiplier)
+    }
+
+    private fun reducedSicknessEnd(end: Long, now: Long, remainingMultiplier: Double): Long {
+        val remaining = (end - now).coerceAtLeast(0L)
+        return now + (remaining * remainingMultiplier).toLong()
+    }
 
     // ----------------- 医术试炼 -----------------
     var completedMedicalTrials: MutableSet<String> = HashSet()

@@ -133,6 +133,28 @@ yy_luoshuidan:
     - "&f▶ &f可炼制等级: &f初级&7&o"
   custom_model_data: 10137
 
+yy_shuangshengdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]双生丹"
+  lore:
+    - "&f▶ &b双生丹 &f药引"
+    - "&8  | &7&o采用极其诡异的材料炼制而成"
+    - "&8  | &7&o拥有着双重生长的力量"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_jieduwan:
+  material: GOLD_NUGGET
+  name: "&b[药引]解毒丸"
+  lore:
+    - "&f▶ &b解毒丸 &f药引"
+    - "&8  | &7&o青翠欲滴,可解世间毒素"
+    - "&8  | &7&o也能够驱散药物的毒力"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
 dengxincao:
   material: SEA_PICKLE
   name: "&b灯心草"

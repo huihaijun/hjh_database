@@ -1,12 +1,12 @@
-# 称号系统只在插件启动和管理员执行 title reload 时读取这些 YAML。
-# 玩家获得、佩戴、改名、显示开关和获得时间均存储在 SQLite 数据库中。
+# 称号定义只在插件启动和管理员执行 title reload 时读取。
+# 玩家获得、佩戴、改名和获得时间存储在 SQLite；显示位置是下方的全服配置。
 custom:
   max_titles: 3
   max_name_length: 8
   costs: [20, 40, 60]
 
-display_defaults:
+# 可通过 /hjhadmin title display <chat|overhead|tab> <on|off> 修改并立即应用。
+display:
   chat: true
   overhead: false
   tab: false
-
