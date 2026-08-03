@@ -12,7 +12,8 @@ enum class TitleCategory(
     WANDERING("wandering.yml", "云游称号", Material.LIGHT_BLUE_WOOL),
     ENCOUNTER("encounter.yml", "奇遇称号", Material.LIME_WOOL),
     BOUNTY("bounty.yml", "赏金称号", Material.ORANGE_WOOL),
-    DUNGEON("dungeon.yml", "秘境称号", Material.PURPLE_WOOL)
+    DUNGEON("dungeon.yml", "秘境称号", Material.PURPLE_WOOL),
+    SPECIAL("special.yml", "特殊称号", Material.NETHER_STAR)
 }
 
 data class TitleDefinition(

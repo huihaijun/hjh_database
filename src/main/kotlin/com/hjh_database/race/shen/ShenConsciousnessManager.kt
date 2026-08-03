@@ -243,6 +243,12 @@ class ShenConsciousnessManager(private val plugin: Hjh_database) : Listener {
         unload(event.player.uniqueId)
     }
 
+    fun resetPlayerData(playerId: UUID) {
+        unload(playerId)
+        linksByPlayer[playerId] = LinkedHashMap()
+        loadedPlayers.add(playerId)
+    }
+
     private fun ensureLoaded(player: Player): Boolean {
         if (loadedPlayers.contains(player.uniqueId)) return true
         if (pendingLoads.putIfAbsent(player.uniqueId, true) == null) {

@@ -273,9 +273,9 @@ class TitleMenus(
     private fun obtainedAt(timestamp: Long): String =
         if (timestamp <= 0L) "未知" else OBTAINED_FORMAT.format(Instant.ofEpochMilli(timestamp))
 
-    private fun withoutItalics(component: Component): Component {
-        return component
-            .children(component.children().map(::withoutItalics))
-            .decoration(TextDecoration.ITALIC, false)
-    }
+    /**
+     * 只关闭物品文本默认的斜体继承；子组件显式设置的 &o 仍应保留。
+     */
+    private fun withoutItalics(component: Component): Component =
+        component.decoration(TextDecoration.ITALIC, false)
 }

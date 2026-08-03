@@ -67,8 +67,20 @@ tasks {
         from("src/main/resources/items/interact.yml") {
             into("hjh_database/resources/items")
         }
+        from("src/main/resources/items/dungeon.yml") {
+            into("hjh_database/resources/items")
+        }
+        from("src/main/resources/dungeon/qixi.yml") {
+            into("hjh_database/dungeon")
+        }
+        from("src/main/resources/admin_money.yml") {
+            into("hjh_database")
+        }
         from("src/main/resources/baihu_dz/equipment/weapons.yml") {
             into("hjh_database/baihu_dz/equipment")
+        }
+        from("src/main/resources/baihu_dz/weapon_skills/anhuishinu.yml") {
+            into("hjh_database/baihu_dz/weapon_skills")
         }
         into(pluginDir)
     }

@@ -10,6 +10,7 @@ object TitleTextFormatter {
     private val gradientPattern = Regex(
         "(?is)<gradient:(#[0-9a-fA-F]{6}):(#[0-9a-fA-F]{6})>(.*?)</gradient>"
     )
+    private val expandedAmpersandHexPattern = Regex("(?i)&x(?:&[0-9a-f]){6}")
     private val ampersandHexPattern = Regex("&#([0-9a-fA-F]{6})")
     private val legacyCodePattern = Regex("&([0-9a-fk-or])", RegexOption.IGNORE_CASE)
     private val trailingFormatPattern = Regex("(?i)(?:&[0-9a-fk-or]|&#[0-9a-f]{6})$")
@@ -74,15 +75,24 @@ object TitleTextFormatter {
     }
 
     private fun legacyComponent(input: String): Component {
-        val withSectionHex = ampersandHexPattern.replace(input) { match ->
-            buildString {
-                append('§').append('x')
-                for (char in match.groupValues[1]) append('§').append(char)
-            }
+        val withExpandedHex = expandedAmpersandHexPattern.replace(input) { match ->
+            val hex = match.value.drop(2).replace("&", "")
+            buildSectionHex(hex)
+        }
+        val withSectionHex = ampersandHexPattern.replace(withExpandedHex) { match ->
+            buildSectionHex(match.groupValues[1])
         }
         val withLegacyCodes = legacyCodePattern.replace(withSectionHex) { "§${it.groupValues[1]}" }
         return legacy.deserialize(withLegacyCodes)
     }
+
+    private fun buildSectionHex(hex: String): String =
+        buildString {
+            append('§').append('x')
+            for (char in hex) {
+                append('§').append(char)
+            }
+        }
 
     private fun gradientComponent(rawText: String, startHex: String, endHex: String): Component {
         val text = plain.serialize(legacyComponent(rawText))

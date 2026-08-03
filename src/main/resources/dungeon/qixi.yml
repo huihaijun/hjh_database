@@ -1,0 +1,20 @@
+name: "鹊桥星愿"
+world: world
+
+entry:
+  min-level: 40
+  min-total-rarity: 40
+  max-players: 5
+
+phase-one:
+  initial-guards: 40
+  guards-per-player: 8
+  replenish-seconds: 10
+  timeout-seconds: 600
+
+phase-two:
+  escort-seconds: 180
+  elite-guards-per-player: 6
+  replenish-seconds: 10
+  star-lock-min-seconds: 20
+  star-lock-max-seconds: 30

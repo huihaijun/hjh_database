@@ -62,7 +62,7 @@ class ActivationSpec(
     val requiredLevel: Int = 1,
     acceptedInventorySlots: IntArray? = null,
     acceptedSlotKeys: Set<String>? = null,
-    private val bypassLevelWhen: ((PlayerData) -> Boolean)? = null,
+    private val bypassEligibilityWhen: ((PlayerData) -> Boolean)? = null,
     private val additionalRequirements: List<ActivationRequirement> = emptyList()
 ) {
     private val inventorySlots: IntArray? = acceptedInventorySlots?.copyOf()
@@ -72,10 +72,13 @@ class ActivationSpec(
         eligibilityFailure(playerData) == null
 
     fun eligibilityFailure(playerData: PlayerData): ActivationFailure? {
+        if (bypassEligibilityWhen?.invoke(playerData) == true) {
+            return null
+        }
         if (requiredJob != ANY_JOB && playerData.job != requiredJob) {
             return ActivationFailure.JOB_MISMATCH
         }
-        if (playerData.lv < requiredLevel && bypassLevelWhen?.invoke(playerData) != true) {
+        if (playerData.lv < requiredLevel) {
             return ActivationFailure.LEVEL_MISMATCH
         }
         return null

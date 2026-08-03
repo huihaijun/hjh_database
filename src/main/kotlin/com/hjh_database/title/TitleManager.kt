@@ -222,6 +222,43 @@ class TitleManager(private val plugin: Hjh_database) {
         }
     }
 
+    fun grantQuestCompletionTitle(player: Player, titleId: String, questId: String): CompletableFuture<Boolean> {
+        val completion = CompletableFuture<Boolean>()
+        val definition = definition(titleId)
+        if (definition == null) {
+            plugin.logger.warning("任务 $questId 完成时无法发放称号：称号 ID $titleId 未配置或未启用。")
+            completion.complete(false)
+            return completion
+        }
+        val target = ResolvedTitleTarget(player.uniqueId, player.name)
+        plugin.databaseManager.submitDatabaseOperation {
+            repository.giveTitle(target, titleId, "quest:$questId", settings())
+        }.whenComplete { result, throwable ->
+            runSync {
+                if (throwable != null || result == null) {
+                    plugin.logger.severe(
+                        "发放任务称号 $titleId 给 ${player.name} 失败：${rootMessage(throwable)}"
+                    )
+                    if (player.isOnline) player.sendMessage("§c[称号] 任务称号发放失败，请联系管理员。")
+                    completion.complete(false)
+                    return@runSync
+                }
+
+                val (changed, profile) = result
+                updateCachedProfile(profile)
+                if (changed && player.isOnline) {
+                    val owned = profile.ownedTitles[titleId]
+                    player.sendMessage(
+                        Component.text("[称号] 获得云游称号：", NamedTextColor.GREEN)
+                            .append(TitleTextFormatter.component(displayText(definition, owned)))
+                    )
+                }
+                completion.complete(changed)
+            }
+        }
+        return completion
+    }
+
     fun purchaseCustom(player: Player, requestedIndex: Int) {
         val profile = profiles[player.uniqueId] ?: return
         val settings = settings()

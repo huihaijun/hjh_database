@@ -28,14 +28,6 @@ commands:
     usage: /hjh <subcommand>
     permission:
       hjh.admin
-  # === 【新增】锻造系统指令 ===
-  hjhdz:
-    description: 锻造系统核心指令
-    usage: /hjhdz <station|player|edit|reload>
-    permission: hjh.admin
-    permission-message: §c你没有权限执行此操作。
-
-  # ... (上面是你原来的 commands 等配置)
 libraries:
   - org.jetbrains.kotlin:kotlin-stdlib:2.0.21
   - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0

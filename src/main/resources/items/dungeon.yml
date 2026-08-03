@@ -1,0 +1,24 @@
+#炼丹所用材料
+queqiaojinghe:
+  material: AMETHYST_SHARD
+#  custom_model_data: 10032
+  name: "&b鹊桥晶核"
+  lore:
+    - "&7&o能够唤醒鹊桥神力的晶核"
+    - "&7&o把他扔到亭子中央来唤醒鹊桥吧"
+    - ""
+    - "&e[副本道具]"
+
+queyu:
+  material: AMETHYST_SHARD
+  #  custom_model_data: 10032
+  name: "&b鹊羽"
+  lore:
+    - "&7&o鹊灵身上掉落的羽毛"
+    - "&7&o貌似能带来奇妙的祝福"
+    - ""
+    - "&e[右键使用] &f消耗&b1&f根"
+    - "&f带来以下一个随机效果："
+    - "&f①加速牛郎和织女的行进速度"
+    - "&f②回复附近的牛郎或织女10点生命"
+    - "&f③为&b10&f格玩家叠加&b50&f点护盾&b20&f秒"

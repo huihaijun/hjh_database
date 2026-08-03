@@ -30,6 +30,7 @@ import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
@@ -43,6 +44,8 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class WeaponSkillManager(private val plugin: Hjh_database) {
+    private val weaponKey = NamespacedKey(plugin, "weapon_id")
+    private val resourceKey = NamespacedKey(plugin, "resource_id")
     private val skillConfigCache: MutableMap<String, ConfigurationSection> = HashMap()
     private val skillRegistry: MutableMap<String, WeaponSkill> = HashMap()
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
@@ -324,8 +327,11 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 
     private fun getWeaponIdFromItem(item: ItemStack?): String? {
         if (item == null || !item.hasItemMeta()) return null
-        val key = org.bukkit.NamespacedKey(plugin, "weapon_id")
-        return item.itemMeta!!.persistentDataContainer.get(key, PersistentDataType.STRING)?.lowercase()
+        val pdc = item.itemMeta!!.persistentDataContainer
+        return (
+            pdc.get(weaponKey, PersistentDataType.STRING)
+                ?: pdc.get(resourceKey, PersistentDataType.STRING)
+            )?.lowercase()
     }
 
     fun getPlugin(): Hjh_database {

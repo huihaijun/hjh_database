@@ -125,7 +125,7 @@ class ResourceManager(private val plugin: Hjh_database) {
         if (!folder.exists()) {
             folder.mkdirs()
         }
-        listOf("farm_seeds.yml", "farm_crops.yml", "farm_tools.yml", "farm_food.yml", "busuan.yml").forEach { name ->
+        listOf("farm_seeds.yml", "farm_crops.yml", "farm_tools.yml", "farm_food.yml", "busuan.yml", "dungeon.yml").forEach { name ->
             val target = File(folder, name)
             if (!target.exists()) {
                 saveBundledResource("items/$name", target)

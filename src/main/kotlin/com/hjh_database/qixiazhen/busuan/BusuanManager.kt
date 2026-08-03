@@ -639,6 +639,23 @@ class BusuanManager(private val plugin: Hjh_database) {
         interpretingPlayer = null
     }
 
+    fun resetPlayerData(playerId: UUID) {
+        if (seekingPlayer == playerId) {
+            seekTask?.cancel()
+            seekTask = null
+            seekDisplay?.remove()
+            seekDisplay = null
+            lowerSeekingTable()
+            seekingPlayer = null
+            plugin.server.scheduler.runTaskLater(plugin, Runnable(::normalizeSeekingStation), 2L)
+        }
+        if (interpretingPlayer == playerId) {
+            potTask?.cancel()
+            potTask = null
+            interpretingPlayer = null
+        }
+    }
+
     private fun adminError(sender: CommandSender, message: String): Boolean {
         sender.sendMessage("§c$message")
         return true

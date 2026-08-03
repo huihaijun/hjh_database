@@ -142,7 +142,7 @@ object MobFactory {
                         entity.addPotionEffect(
                             org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.WATER_BREATHING,
-                                Int.MAX_VALUE,
+                                org.bukkit.potion.PotionEffect.INFINITE_DURATION,
                                 0,
                                 true,
                                 false,
@@ -152,7 +152,7 @@ object MobFactory {
                         entity.addPotionEffect(
                             org.bukkit.potion.PotionEffect(
                                 org.bukkit.potion.PotionEffectType.DOLPHINS_GRACE,
-                                Int.MAX_VALUE,
+                                org.bukkit.potion.PotionEffect.INFINITE_DURATION,
                                 0,
                                 true,
                                 false,

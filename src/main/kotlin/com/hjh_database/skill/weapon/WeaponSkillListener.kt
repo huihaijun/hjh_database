@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType
 
 class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
     private val weaponKey: NamespacedKey = NamespacedKey(plugin, "weapon_id")
+    private val resourceKey: NamespacedKey = NamespacedKey(plugin, "resource_id")
     private val baihuWeaponKey: NamespacedKey = NamespacedKey(plugin, "baihu_weapon_id")
 
     // 战士触发
@@ -96,9 +97,11 @@ class WeaponSkillListener(private val plugin: Hjh_database) : Listener {
     }
 
     private fun getWeaponId(item: ItemStack): String? {
-        val meta = item.itemMeta
-        if (meta == null) return null
-        return meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
+        val meta = item.itemMeta ?: return null
+        val pdc = meta.persistentDataContainer
+        // 与 WeaponManager 的激活识别保持一致，兼容职业体验区发放的旧式 resource_id 武器。
+        return pdc.get(weaponKey, PersistentDataType.STRING)
+            ?: pdc.get(resourceKey, PersistentDataType.STRING)
     }
 
     private fun isBaihuWeapon(item: ItemStack): Boolean {

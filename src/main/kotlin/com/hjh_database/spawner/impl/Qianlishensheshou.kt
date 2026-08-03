@@ -68,7 +68,7 @@ class Qianlishensheshou(
         freezeBoss(true)
         nearbyPlayers(WARNING_RANGE).forEach { player ->
             player.sendMessage("§c千里神射手正在瞄准最近的目标！此箭难以用寻常方式躲避！")
-            player.sendMessage("§c但箭矢穿过的障碍越多，此箭伤害越低！")
+            player.sendMessage("§c箭矢穿过的障碍越多，此箭伤害越低！但湿气会加重箭矢的伤害！")
             player.sendMessage("§c或许躲入水下也能减免部分伤害……")
             player.playSound(player.location, Sound.BLOCK_BEACON_ACTIVATE, 0.75f, 0.65f)
         }

@@ -118,6 +118,11 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
         plugin.warehouseManager.resetCachedData(player)
         plugin.playerManager.resetCachedData(player)
         plugin.titleManager.reloadPlayerAfterReset(player)
+        plugin.shenConsciousnessManager.resetPlayerData(player.uniqueId)
+        plugin.shenTributeManager.resetPlayerData(player)
+        plugin.farmingManager.resetPlayerData(player)
+        plugin.busuanManager.resetPlayerData(player.uniqueId)
+        plugin.baihuMiasmaManager.resetPlayerData(player)
 
         removeFromTeams(player)
 

@@ -22,6 +22,8 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.hanging.HangingBreakEvent
 import org.bukkit.event.inventory.InventoryMoveItemEvent
 import org.bukkit.event.inventory.InventoryPickupItemEvent
 import org.bukkit.event.player.PlayerDropItemEvent
@@ -29,6 +31,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.server.PluginDisableEvent
+import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
@@ -81,6 +84,7 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
+        Bukkit.getScheduler().runTask(plugin, Runnable { secureLoadedXuanwuLock() })
     }
 
     override fun getProgressText(progress: Int): List<String> = when (progress) {
@@ -324,6 +328,7 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
         val frame = event.rightClicked as? ItemFrame ?: return
         if (frame.type != EntityType.GLOW_ITEM_FRAME || !isXuanwuLock(frame.location)) return
 
+        secureLockFrame(frame)
         // 门锁展示框不接受原版物品放置或旋转；副手事件也必须拦截，否则物品会卡在框中。
         event.isCancelled = true
         if (event.hand != EquipmentSlot.HAND) return
@@ -362,12 +367,55 @@ class North_04 : QuestBase("main_north_4", "[主线]唤醒玄武珊瑚", QuestTy
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onLockFrameDamage(event: EntityDamageEvent) {
         val frame = event.entity as? ItemFrame ?: return
         if (frame.type == EntityType.GLOW_ITEM_FRAME && isXuanwuLock(frame.location)) {
             event.isCancelled = true
+            secureLockFrame(frame)
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onLockFrameBreak(event: HangingBreakEvent) {
+        val frame = event.entity as? ItemFrame ?: return
+        if (frame.type != EntityType.GLOW_ITEM_FRAME || !isXuanwuLock(frame.location)) return
+
+        event.isCancelled = true
+        secureLockFrame(frame)
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onLockFrameProjectileHit(event: ProjectileHitEvent) {
+        val frame = event.hitEntity as? ItemFrame ?: return
+        if (frame.type != EntityType.GLOW_ITEM_FRAME || !isXuanwuLock(frame.location)) return
+
+        event.isCancelled = true
+        event.entity.remove()
+        secureLockFrame(frame)
+    }
+
+    @EventHandler
+    fun onLockChunkLoad(event: ChunkLoadEvent) {
+        event.chunk.entities
+            .filterIsInstance<ItemFrame>()
+            .filter { it.type == EntityType.GLOW_ITEM_FRAME && isXuanwuLock(it.location) }
+            .forEach(::secureLockFrame)
+    }
+
+    private fun secureLoadedXuanwuLock() {
+        val world = Bukkit.getWorld(WORLD_NAME) ?: return
+        val target = Location(world, -83.50, 37.50, -519.03)
+        world.getNearbyEntities(target, 1.0, 1.0, 1.0)
+            .filterIsInstance<ItemFrame>()
+            .filter { it.type == EntityType.GLOW_ITEM_FRAME && isXuanwuLock(it.location) }
+            .forEach(::secureLockFrame)
+    }
+
+    private fun secureLockFrame(frame: ItemFrame) {
+        frame.isFixed = true
+        frame.isInvulnerable = true
+        frame.isPersistent = true
     }
 
     private fun playLockAwakening(location: Location) {

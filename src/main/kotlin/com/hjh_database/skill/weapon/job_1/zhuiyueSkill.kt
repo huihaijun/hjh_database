@@ -211,7 +211,7 @@ class zhuiyueSkill : WeaponSkill, Listener {
             val player = Bukkit.getPlayer(entry.key)
             if (player == null || !player.isOnline || entry.value.expireAt <= now) {
                 if (player != null) {
-                    setZhuiyueQuickCharge(player, 3)
+                    restoreConfiguredQuickCharge(player)
                     plugin.weaponSkillManager?.unregisterToggle(player)
                 }
                 activeIter.remove()
@@ -351,6 +351,11 @@ class zhuiyueSkill : WeaponSkill, Listener {
         item.itemMeta = meta
     }
 
+    private fun restoreConfiguredQuickCharge(player: Player) {
+        val configuredLevel = plugin.weaponManager.getWeaponData("zhuiyue")?.quickChargeLevel ?: 2
+        setZhuiyueQuickCharge(player, configuredLevel)
+    }
+
     private fun playChargeStartEffect(player: Player) {
         val center = player.location.add(0.0, 1.05, 0.0)
         player.world.spawnParticle(Particle.END_ROD, center, 12, 0.35, 0.25, 0.35, 0.02)
@@ -475,7 +480,7 @@ class zhuiyueSkill : WeaponSkill, Listener {
         speedBuffs.remove(uuid)
         activeStates.remove(uuid)
         removeSpeedBuff(player)
-        setZhuiyueQuickCharge(player, 3)
+        restoreConfiguredQuickCharge(player)
     }
 
     companion object {

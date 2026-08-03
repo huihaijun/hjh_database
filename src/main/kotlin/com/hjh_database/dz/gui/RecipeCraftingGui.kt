@@ -7,16 +7,21 @@ import com.hjh_database.util.ItemUtil
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
+import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
 import java.util.ArrayList
 
 class RecipeCraftingGui(
@@ -30,9 +35,10 @@ class RecipeCraftingGui(
 
     private val INPUT_SLOTS = intArrayOf(11, 12, 13, 14, 15)
     private val MATERIAL_INFO_SLOT = 0
-    private val PREVIEW_SLOT = 24
+    private val OUTPUT_SLOT = 24
     private val BACK_BUTTON_SLOT = 45
     private val BUTTON_SLOT = 49
+    private val outputPlaceholderKey = NamespacedKey(plugin, "forge_output_placeholder")
 
     init {
         if (recipe == null) {
@@ -60,10 +66,9 @@ class RecipeCraftingGui(
             if (!isInputSlot(i)) inventory.setItem(i, bg)
         }
 
-        // 显示成品预览
-        // recipe 在 setupGui 被调用时一定不为 null (见 init)
+        // 红色玻璃占住输出槽，让原版Shift自动寻槽只能落入材料槽。
         inventory.setItem(MATERIAL_INFO_SLOT, createMaterialInfoButton())
-        inventory.setItem(PREVIEW_SLOT, recipe!!.result)
+        inventory.setItem(OUTPUT_SLOT, createOutputPlaceholder())
         inventory.setItem(BACK_BUTTON_SLOT, createBackButton())
 
         updateButtonState()
@@ -85,6 +90,11 @@ class RecipeCraftingGui(
 
         // 确保 recipe 不为空，虽然调用此方法时理论上已检查，但为了安全
         if (recipe == null) return errors
+
+        val currentOutput = inv?.getItem(OUTPUT_SLOT)
+        if (currentOutput != null && currentOutput.type != Material.AIR && !isOutputPlaceholder(currentOutput)) {
+            errors.add("§c请先取出上一件锻造成品")
+        }
 
         // 1. 获取玩家数据
         val rpgData = plugin.playerManager.getData(player.uniqueId)
@@ -194,6 +204,7 @@ class RecipeCraftingGui(
 
     private fun updateButtonState() {
         val inventory = inv ?: return
+        ensureOutputPlaceholder(inventory)
         val errors = checkRequirements()
         val btn: ItemStack
 
@@ -241,8 +252,15 @@ class RecipeCraftingGui(
             for (slot in INPUT_SLOTS) {
                 val item = inv!!.getItem(slot)
                 if (item != null && item.type != Material.AIR) {
-                    player.inventory.addItem(item)
+                    inv!!.setItem(slot, null)
+                    giveOrDrop(item)
                 }
+            }
+            // 玩家没有主动取出成品时，关闭界面也必须安全发放，不能留在即将销毁的GUI中。
+            val output = inv!!.getItem(OUTPUT_SLOT)
+            if (output != null && output.type != Material.AIR && !isOutputPlaceholder(output)) {
+                inv!!.setItem(OUTPUT_SLOT, null)
+                giveOrDrop(output)
             }
             HandlerList.unregisterAll(this)
         }
@@ -250,15 +268,42 @@ class RecipeCraftingGui(
 
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
-        if (event.inventory != inv) return
+        val inventory = inv ?: return
+        if (event.view.topInventory != inventory) return
+
+        // DOUBLE_CLICK/COLLECT_TO_CURSOR 会从整个 InventoryView 收集同类物品，
+        // 即使双击发生在玩家背包，也必须在锻造界面统一拦截。
+        if (event.click == ClickType.DOUBLE_CLICK || event.action == InventoryAction.COLLECT_TO_CURSOR) {
+            event.isCancelled = true
+            return
+        }
+
         val slot = event.rawSlot
+
+        if (slot == OUTPUT_SLOT) {
+            val output = inventory.getItem(OUTPUT_SLOT)
+            if (output != null && !isOutputPlaceholder(output) && isOutputTakeAction(event.action)) {
+                plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
+            } else {
+                event.isCancelled = true
+            }
+            return
+        }
 
         // 允许操作输入槽
         if (isInputSlot(slot)) {
             plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
             return
-        } else if (slot < 54) {
+        } else if (slot < inventory.size) {
             event.isCancelled = true
+        } else if (event.action == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            val output = inventory.getItem(OUTPUT_SLOT)
+            if (output != null && !isOutputPlaceholder(output)) {
+                // 有成品时，原版会把Shift的同类物品合并进输出堆；领取成品前暂时禁止。
+                event.isCancelled = true
+            } else {
+                plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
+            }
         }
 
         if (slot == BACK_BUTTON_SLOT) {
@@ -280,6 +325,21 @@ class RecipeCraftingGui(
         }
     }
 
+    @EventHandler
+    fun onDrag(event: InventoryDragEvent) {
+        val inventory = inv ?: return
+        if (event.view.topInventory != inventory) return
+
+        val topSlots = event.rawSlots.filter { it < inventory.size }
+        if (topSlots.any { !isInputSlot(it) }) {
+            event.isCancelled = true
+            return
+        }
+        if (topSlots.isNotEmpty()) {
+            plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
+        }
+    }
+
     private fun doCraft() {
         val inventory = inv ?: return
         val safeRecipe = recipe ?: return
@@ -298,8 +358,8 @@ class RecipeCraftingGui(
             }
         }
 
-        // 2. 给予成品
-        player.inventory.addItem(safeRecipe.result.clone())
+        // 2. 成品进入受保护的输出槽，由玩家取走；关闭界面时会自动发放。
+        inventory.setItem(OUTPUT_SLOT, safeRecipe.result.clone())
 
         // 3. 增加经验 (修复为奖励)
         val forgeData = plugin.playerManager.getDzData(player.uniqueId)
@@ -312,5 +372,42 @@ class RecipeCraftingGui(
 
         player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
         updateButtonState()
+    }
+
+    private fun isOutputTakeAction(action: InventoryAction): Boolean {
+        return action == InventoryAction.PICKUP_ALL ||
+            action == InventoryAction.PICKUP_HALF ||
+            action == InventoryAction.PICKUP_ONE ||
+            action == InventoryAction.PICKUP_SOME ||
+            action == InventoryAction.MOVE_TO_OTHER_INVENTORY ||
+            action == InventoryAction.DROP_ALL_SLOT ||
+            action == InventoryAction.DROP_ONE_SLOT
+    }
+
+    private fun giveOrDrop(item: ItemStack) {
+        val leftovers = player.inventory.addItem(item.clone())
+        leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
+    }
+
+    private fun createOutputPlaceholder(): ItemStack {
+        val item = ItemStack(Material.RED_STAINED_GLASS_PANE)
+        item.itemMeta = item.itemMeta?.apply {
+            setDisplayName("§c§l成品位置")
+            lore = listOf("§7锻造完成后，成品会出现在这里", "§c此槽位禁止放入物品")
+            persistentDataContainer.set(outputPlaceholderKey, PersistentDataType.BYTE, 1)
+        }
+        return item
+    }
+
+    private fun isOutputPlaceholder(item: ItemStack): Boolean {
+        return item.itemMeta?.persistentDataContainer
+            ?.has(outputPlaceholderKey, PersistentDataType.BYTE) == true
+    }
+
+    private fun ensureOutputPlaceholder(inventory: Inventory) {
+        val output = inventory.getItem(OUTPUT_SLOT)
+        if (output == null || output.type == Material.AIR) {
+            inventory.setItem(OUTPUT_SLOT, createOutputPlaceholder())
+        }
     }
 }

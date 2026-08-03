@@ -44,9 +44,7 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         private const val PANLING_TAG = "panling"
         private const val INTERNAL_DAMAGE_METADATA = "kunlun_flying_sword_internal"
         private const val ARMORED_EXACT_DAMAGE_METADATA = "HJH_ARMORED_MAGIC_DAMAGE"
-        private const val MAX_DAMAGE_REDUCTION = 0.30
-        private const val DAMAGE_REDUCTION_PER_SWORD = 0.05
-        private const val MAX_REDUCTION_SWORDS = 6
+        private const val MAX_SWORDS = 6
     }
 
     private data class ReserveState(
@@ -57,7 +55,8 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         val attackIntervalTicks: Long,
         val attackHits: Int,
         val retargetRadius: Double,
-        val finishHealAmount: Double
+        val finishHealPerSword: Double,
+        val finishHealCap: Double
     )
 
     private data class AttackSwordState(
@@ -77,7 +76,6 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
     private val mainPlugin = plugin as Hjh_database
     private val reserveStates = ConcurrentHashMap<UUID, ReserveState>()
     private val attackSwords = ConcurrentHashMap<UUID, AttackSwordState>()
-    private val backSwordCounts = ConcurrentHashMap<UUID, Int>()
     private var schedulerTick = 0L
 
     init {
@@ -104,10 +102,10 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
     ): Boolean {
         if (player == null || config == null) return false
 
-        // 再次释放时，旧技能尚未出鞘的飞剑消失并结算8点治疗；已出鞘飞剑继续剩余攻击。
+        // 再次释放时，旧技能尚未出鞘的飞剑按每把8点、至多24点结算治疗；已出鞘飞剑继续攻击。
         reserveStates[player.uniqueId]?.let { finishReserveState(player.uniqueId, it, player, true) }
 
-        val swordCount = config.getInt("sword_count", 6).coerceIn(1, MAX_REDUCTION_SWORDS)
+        val swordCount = config.getInt("sword_count", 6).coerceIn(1, MAX_SWORDS)
         val displays = ArrayList<ItemDisplay>(swordCount)
         repeat(swordCount) {
             spawnSwordDisplay(player)?.let(displays::add)
@@ -131,10 +129,10 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
             attackIntervalTicks = attackIntervalTicks,
             attackHits = attackHits,
             retargetRadius = config.getDouble("retarget_radius", 10.0).coerceAtLeast(1.0),
-            finishHealAmount = config.getDouble("finish_heal_amount", 8.0).coerceAtLeast(0.0)
+            finishHealPerSword = config.getDouble("finish_heal_amount", 8.0).coerceAtLeast(0.0),
+            finishHealCap = config.getDouble("finish_heal_cap", 24.0).coerceAtLeast(0.0)
         )
         reserveStates[player.uniqueId] = state
-        changeBackSwordCount(player.uniqueId, displays.size)
         updateReserveDisplays(player, state)
 
         val center = player.location.clone().add(0.0, 1.15, 0.0)
@@ -166,12 +164,7 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         if (countAttackSwords(player.uniqueId, target.uniqueId) >= 2) return
 
         val display = if (state.swords.isEmpty()) null else state.swords.removeAt(state.swords.lastIndex)
-        if (display == null || !display.isValid) {
-            if (display != null) changeBackSwordCount(player.uniqueId, -1)
-            return
-        }
-        // 飞剑离开玩家背后时立即失去对应的5%免伤。
-        changeBackSwordCount(player.uniqueId, -1)
+        if (display == null || !display.isValid) return
 
         val attackState = AttackSwordState(
             ownerId = player.uniqueId,
@@ -199,20 +192,6 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         )
     }
 
-    /**
-     * 只有仍在玩家背后的飞剑提供5%全类型免伤，最多按6把计算，即30%。
-     * 采用乘法修改，能够与其他来源的免伤效果独立共存。
-     */
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    fun onOwnerDamaged(event: EntityDamageEvent) {
-        val player = event.entity as? Player ?: return
-        val count = (backSwordCounts[player.uniqueId] ?: return).coerceIn(0, MAX_REDUCTION_SWORDS)
-        if (count <= 0 || event.damage <= 0.0) return
-
-        val reduction = min(MAX_DAMAGE_REDUCTION, count * DAMAGE_REDUCTION_PER_SWORD)
-        event.damage *= 1.0 - reduction
-    }
-
     private fun processReserveSwords() {
         if (reserveStates.isEmpty()) return
 
@@ -232,7 +211,6 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
             val invalidCount = state.swords.count { !it.isValid }
             if (invalidCount > 0) {
                 state.swords.removeIf { !it.isValid }
-                changeBackSwordCount(ownerId, -invalidCount)
             }
             updateReserveDisplays(player, state)
         }
@@ -406,13 +384,13 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
     ) {
         if (!reserveStates.remove(ownerId, state)) return
 
-        val remaining = state.swords.size
+        val remaining = state.swords.count { it.isValid }
         state.swords.forEach { if (it.isValid) it.remove() }
         state.swords.clear()
-        changeBackSwordCount(ownerId, -remaining)
 
         if (healOwner && player != null && player.isOnline && !player.isDead) {
-            healPlayer(player, state.finishHealAmount)
+            val healAmount = min(state.finishHealCap, remaining * state.finishHealPerSword)
+            healPlayer(player, healAmount)
         }
     }
 
@@ -431,14 +409,6 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
 
     private fun countAttackSwords(ownerId: UUID, targetId: UUID): Int {
         return attackSwords.values.count { it.ownerId == ownerId && it.targetId == targetId }
-    }
-
-    private fun changeBackSwordCount(ownerId: UUID, delta: Int) {
-        if (delta == 0) return
-        backSwordCounts.compute(ownerId) { _, current ->
-            val updated = (current ?: 0) + delta
-            if (updated > 0) updated else null
-        }
     }
 
     private fun healPlayer(player: Player, amount: Double) {
@@ -463,6 +433,5 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
             finishReserveState(player.uniqueId, it, player, false)
         }
         cleanupAttackSwords(player.uniqueId)
-        backSwordCounts.remove(player.uniqueId)
     }
 }

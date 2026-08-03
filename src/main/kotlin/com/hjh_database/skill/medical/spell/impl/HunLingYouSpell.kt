@@ -18,6 +18,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityTargetEvent
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 import org.bukkit.metadata.FixedMetadataValue
@@ -203,6 +204,15 @@ class HunLingYouSpell(private val plugin: Hjh_database) : MedicalSpell, Listener
     }
 
     // ==================== 肉体承伤逻辑 ====================
+    // 肉身只作为怪物仇恨与承伤锚点，禁止玩家交换其手持物或盔甲。
+    // 不能改成 Marker 或无敌盔甲架，否则会影响怪物命中及伤害转移逻辑。
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBodyManipulate(e: PlayerArmorStandManipulateEvent) {
+        if (activeSouls.containsValue(e.rightClicked)) {
+            e.isCancelled = true
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGH)
     fun onBodyDamage(e: EntityDamageByEntityEvent) {
         val entity = e.entity

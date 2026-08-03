@@ -1,6 +1,8 @@
 package com.hjh_database.dz.command
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.dz.admin.ForgeAdminGui
+import com.hjh_database.dz.admin.ForgeSort
 import com.hjh_database.dz.gui.AdminCategoryGui
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -18,8 +20,13 @@ import java.util.*
 
 class DzCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompleter {
     private val stationKey: NamespacedKey = NamespacedKey(plugin, "hjh_forge_station")
+    private val forgeAdminGui = ForgeAdminGui(plugin)
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
+        return handle(sender, args)
+    }
+
+    fun handle(sender: CommandSender, args: Array<out String>): Boolean {
         if (args.isEmpty()) {
             sendHelp(sender)
             return true
@@ -55,15 +62,30 @@ class DzCommand(private val plugin: Hjh_database) : CommandExecutor, TabComplete
             return true
         }
 
+        // 数据库级分页查看，包含所有在线与离线玩家。
+        if (args[0].equals("players", ignoreCase = true) || args[0].equals("list", ignoreCase = true)) {
+            if (sender !is Player) {
+                sender.sendMessage("§c只有游戏内管理员可以打开锻造信息界面。")
+                return true
+            }
+            val sort = ForgeSort.fromCommand(args.getOrNull(1), args.getOrNull(2))
+            if (sort == null) {
+                sender.sendMessage("§c用法: /hjhadmin dz players [name|level|exp|license] [asc|desc]")
+                return true
+            }
+            forgeAdminGui.open(sender, sort)
+            return true
+        }
+
         // 4. 管理员修改数据指令
-        // /hjhdz admin set <player> <type> <value>
+        // /hjhadmin dz admin set <player> <type> <value>
         if (args[0].equals("admin", ignoreCase = true)) {
             if (!sender.isOp) {
                 sender.sendMessage("§c权限不足。")
                 return true
             }
             if (args.size < 5 || !args[1].equals("set", ignoreCase = true)) {
-                sender.sendMessage("§c用法: /hjhdz admin set <玩家> <level/exp/license> <数值>")
+                sender.sendMessage("§c用法: /hjhadmin dz admin set <玩家> <level/exp/license> <数值>")
                 return true
             }
 
@@ -130,31 +152,42 @@ class DzCommand(private val plugin: Hjh_database) : CommandExecutor, TabComplete
 
     private fun sendHelp(sender: CommandSender) {
         sender.sendMessage("${ChatColor.GOLD}=== 锻造系统指令 ===")
-        sender.sendMessage("§e/hjhdz station §7- 获取锻造台")
-        sender.sendMessage("§e/hjhdz edit §7- 编辑/管理配方")
+        sender.sendMessage("§e/hjhadmin dz station §7- 获取锻造台")
+        sender.sendMessage("§e/hjhadmin dz edit §7- 编辑/管理配方")
         if (sender.isOp) {
-            sender.sendMessage("§c/hjhdz admin set <玩家> level <数值> §7- 修改锻造等级")
-            sender.sendMessage("§c/hjhdz admin set <玩家> exp <数值> §7- 修改锻造经验")
-            sender.sendMessage("§c/hjhdz admin set <玩家> license <数值> §7- 修改资质ID")
-            sender.sendMessage("§c/hjhdz reload §7- 重载配置文件")
+            sender.sendMessage("§e/hjhadmin dz players [排序] [asc|desc] §7- 查看全部玩家锻造信息")
+            sender.sendMessage("§c/hjhadmin dz admin set <玩家> level <数值> §7- 修改锻造等级")
+            sender.sendMessage("§c/hjhadmin dz admin set <玩家> exp <数值> §7- 修改锻造经验")
+            sender.sendMessage("§c/hjhadmin dz admin set <玩家> license <数值> §7- 修改资质ID")
+            sender.sendMessage("§c/hjhadmin dz reload §7- 重载配置文件")
         }
     }
 
     override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<String>): List<String>? {
+        return tabComplete(sender, args)
+    }
+
+    fun tabComplete(sender: CommandSender, args: Array<out String>): List<String>? {
         // args[0]
         if (args.size == 1) {
-            val list = mutableListOf("station", "edit")
+            val list = mutableListOf("station", "edit", "players")
             if (sender.isOp) {
                 list.add("admin")
                 list.add("reload")
             }
-            return list
+            return list.filter { it.startsWith(args[0].lowercase()) }
+        }
+
+        if (args[0].equals("players", ignoreCase = true) || args[0].equals("list", ignoreCase = true)) {
+            if (args.size == 2) return listOf("name", "level", "exp", "license").filter { it.startsWith(args[1].lowercase()) }
+            if (args.size == 3) return listOf("asc", "desc").filter { it.startsWith(args[2].lowercase()) }
+            return emptyList()
         }
 
         // admin
         if (args[0].equals("admin", ignoreCase = true) && sender.isOp) {
             if (args.size == 2) {
-                return Collections.singletonList("set")
+                return Collections.singletonList("set").filter { it.startsWith(args[1].lowercase()) }
             }
             if (args.size == 3 && args[1].equals("set", ignoreCase = true)) {
                 return null // 显示玩家列表

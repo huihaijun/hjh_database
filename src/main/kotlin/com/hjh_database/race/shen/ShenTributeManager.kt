@@ -191,6 +191,14 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
         pendingLoads.clear()
     }
 
+    fun resetPlayerData(player: Player) {
+        val playerId = player.uniqueId
+        sessionTokens.computeIfAbsent(playerId) { AtomicLong() }.incrementAndGet()
+        pendingLoads.remove(playerId)
+        removeDisplay(playerId)
+        states[playerId] = TributeState(player.name)
+    }
+
     private fun tick() {
         val now = System.currentTimeMillis()
         for (player in plugin.server.onlinePlayers) {
@@ -337,27 +345,53 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
 
     private fun rewardsFor(category: TributeCategory, tier: Int): List<Reward> = when (category) {
         TributeCategory.HUMAN -> when (tier) {
-            1 -> listOf(vanilla(Material.COOKED_BEEF, 16), resource("yuansuduihuanquan", 5))
-            2 -> listOf(vanilla(Material.COOKED_BEEF, 32), resource("yuansuduihuanquan", 10))
-            3 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 10), resource("jinyuanbao", 5))
-            4 -> listOf(vanilla(Material.COOKED_BEEF, 48), resource("yuansuduihuanquan", 20), resource("jinyuanbao", 8))
-            else -> listOf(vanilla(Material.COOKED_BEEF, 64), resource("yuansuduihuanquan", 30), resource("yinpiao", 1))
+            1 -> listOf(
+                vanilla(Material.COOKED_BEEF, 64),
+                resource("yuansuduihuanquan", 8)
+            )
+            2 -> listOf(
+                vanilla(Material.COOKED_BEEF, 64),
+                resource("yuansuduihuanquan", 16),
+                resource("jianghuxinde_dalu", 10)
+            )
+            else -> listOf(
+                vanilla(Material.COOKED_BEEF, 64),
+                resource("yuansuduihuanquan", 32),
+                resource("jianghuxinde_dalu", 20)
+            )
         }
 
         TributeCategory.IMMORTAL -> when (tier) {
-            1 -> listOf(resource("yuansuzhuanhuaquan", 5), resource("jianghuxinde_dalu", 5))
-            2 -> listOf(resource("jinyuanbao", 1), resource("yuansuzhuanhuaquan", 5), resource("yuansuduihuanquan", 5), resource("jianghuxinde_dalu", 8))
-            3 -> listOf(resource("jinyuanbao", 3), resource("yuansuzhuanhuaquan", 5), resource("yuansuduihuanquan", 5), resource("jianghuxinde_dalu", 8))
-            4 -> listOf(resource("jinyuanbao", 5), resource("yuansuzhuanhuaquan", 15), resource("yuansuduihuanquan", 15), resource("jianghuxinde_dalu", 15))
-            else -> listOf(resource("jinyuanbao", 8), resource("yuansuzhuanhuaquan", 20), resource("yuansuduihuanquan", 20), resource("jianghuxinde_dalu", 20))
+            1 -> listOf(
+                resource("yuansuduihuanquan", 12),
+                resource("yuansuzhuanhuaquan", 12)
+            )
+            2 -> listOf(
+                resource("jinyuanbao", 2),
+                resource("yuansuduihuanquan", 24),
+                resource("yuansuzhuanhuaquan", 24)
+            )
+            else -> listOf(
+                resource("jinyuanbao", 4),
+                resource("yuansuduihuanquan", 48),
+                resource("yuansuzhuanhuaquan", 48)
+            )
         }
 
         TributeCategory.YAO -> when (tier) {
-            1 -> listOf(resource("yuhedan0", 20))
-            2 -> listOf(resource("yuhedan1", 20))
-            3 -> listOf(resource("yuhedan1", 20), resource("yy_tongyong0", 10))
-            4 -> listOf(resource("yuhedan2", 20), resource("yy_tongyong1", 10))
-            else -> listOf(resource("yuhedan2", 20), resource("yy_tongyong2", 15))
+            1 -> listOf(
+                resource("yuhedan0", 16),
+                resource("huilingdan0", 16)
+            )
+            2 -> listOf(
+                resource("yuhedan1", 20),
+                resource("huilingdan1", 20)
+            )
+            else -> listOf(
+                resource("yuhedan2", 20),
+                resource("huilingdan2", 20),
+                resource("yy_tongyong2", 5)
+            )
         }
     }
 
@@ -473,7 +507,8 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
                         playerName = playerName,
                         arrivalRemainingSeconds = result.getInt("arrival_remaining_seconds").coerceAtLeast(0),
                         category = category.takeIf { claimRemaining > 0 },
-                        tier = result.getInt("tribute_tier").coerceIn(0, 5),
+                        // 旧数据可能仍存有四、五阶贡品；统一折算为新版最高三阶。
+                        tier = result.getInt("tribute_tier").coerceIn(0, 3),
                         claimRemainingSeconds = if (category != null) claimRemaining else 0,
                         reminderMask = result.getInt("reminder_mask"),
                         claimWindowStartedAt = result.getLong("claim_window_started_at"),
@@ -540,11 +575,9 @@ class ShenTributeManager(private val plugin: Hjh_database) : Listener {
         plugin.raceModule.getRace(0)?.isRaceActive(player) == true
 
     private fun tierForLevel(level: Int): Int = when {
-        level < 10 -> 1
-        level <= 20 -> 2
-        level <= 30 -> 3
-        level <= 40 -> 4
-        else -> 5
+        level <= 19 -> 1
+        level <= 39 -> 2
+        else -> 3
     }
 
     private fun tributeLocation(world: org.bukkit.World): Location = Location(world, TRIBUTE_X, TRIBUTE_Y, TRIBUTE_Z)

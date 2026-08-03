@@ -192,11 +192,12 @@ class WeaponManager(private val plugin: Hjh_database) {
             // =======================================================
             if (item.type == Material.CROSSBOW) {
                 if (isActive) {
-                    // 【修改点】判断 ID 是否为 tingchao，赋予不同的快速装填等级
-                    val quickChargeLevel = if (id == "tingchao" || id == "zhuiyue") 3 else 2
-
                     meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-                    meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
+                    meta.addEnchant(
+                        org.bukkit.enchantments.Enchantment.QUICK_CHARGE,
+                        wData.quickChargeLevel,
+                        true
+                    )
                 } else {
                     // 失效时移除，防止玩家放回背包依然能射出多重箭
                     meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
@@ -346,10 +347,12 @@ class WeaponManager(private val plugin: Hjh_database) {
 
         // 【新增】如果拿出来的是弩，默认给它附魔
         if (item.type == Material.CROSSBOW) {
-            // 【修改点】针对 tingchao 给予 3 级快速装填
-            val quickChargeLevel = if (id == "tingchao" || id == "zhuiyue") 3 else 2
             meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
+            meta.addEnchant(
+                org.bukkit.enchantments.Enchantment.QUICK_CHARGE,
+                data.quickChargeLevel,
+                true
+            )
         }
 
         // 【关键修复】显式设置空属性修改器，清除原版属性
@@ -435,6 +438,9 @@ class WeaponManager(private val plugin: Hjh_database) {
          */
         @JvmField var piercingEntities: Int = sec.getInt("piercing", 1).coerceIn(1, 128)
 
+        /** 原版快速装填附魔等级；弩未配置 quick_charge 时默认使用Ⅱ。 */
+        @JvmField var quickChargeLevel: Int = sec.getInt("quick_charge", 2).coerceAtLeast(1)
+
         // 【新增】灵力回复数值 (默认 0.0 代表不回蓝)
         @JvmField var manaRegen: Double = 0.0
 
@@ -443,7 +449,9 @@ class WeaponManager(private val plugin: Hjh_database) {
             requiredJob = reqJob,
             requiredLevel = reqLv,
             acceptedInventorySlots = if (activateSlot == -1) null else intArrayOf(activateSlot),
-            bypassLevelWhen = { it.status == 4 }
+            // 职业体验期间跳过职业与等级资格，但仍要求武器位于其规定的激活槽位，
+            // 防止背包内多把体验武器同时叠加属性。
+            bypassEligibilityWhen = { it.status == 4 }
         )
 
         init {

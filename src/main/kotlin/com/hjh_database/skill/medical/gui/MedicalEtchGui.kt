@@ -63,24 +63,32 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         val inv = Bukkit.createInventory(MainMenuHolder(), 27, TITLE_MAIN)
         inv.setItem(11, createItem(Material.LOOM, "§a§l绘制医术", "§7将医术绘制到旗帜上", "§e点击进入"))
         inv.setItem(13, createItem(Material.GRINDSTONE, "§b§l医术分离", "§7将已绘制的旗帜还原", "§7分为: 空白旗 + 秘籍", "§c需要消耗记忆！", "§e点击进入"))
-        // --- 修改部分开始 ---
-        // 动态构建遗忘医术按钮的 Lore
-        val lore = mutableListOf("§c慎用！", "§7清空所有已学会的医术记录", "§e双击确认", "§8----------------")
-        val data = plugin.playerManager.getData(p.uniqueId)
-
-        if (data != null && data.medicalSkills.isNotEmpty()) {
-            lore.add("§e当前已掌握的医术:")
-            for (skillId in data.medicalSkills) {
-                // 通过 MedicalManager 获取医术的真实名称
-                val skillName = manager.getSkillName(skillId)
-                lore.add("§7- §a$skillName")
-            }
+        if (!p.isOp) {
+            inv.setItem(
+                15,
+                createItem(
+                    Material.BARRIER,
+                    "§8§l遗忘所有医术",
+                    "§c仅服务器管理员可使用此功能"
+                )
+            )
         } else {
-            lore.add("§7当前未掌握任何医术")
-        }
+            // 仅向管理员展示待清除的医术详情。
+            val lore = mutableListOf("§c管理员功能，慎用！", "§7清空所有已学会的医术记录", "§e双击确认", "§8----------------")
+            val data = plugin.playerManager.getData(p.uniqueId)
 
-        inv.setItem(15, createItem(Material.BARRIER, "§c§l遗忘所有医术", *lore.toTypedArray()))
-        // --- 修改部分结束 ---
+            if (data != null && data.medicalSkills.isNotEmpty()) {
+                lore.add("§e当前已掌握的医术:")
+                for (skillId in data.medicalSkills) {
+                    val skillName = manager.getSkillName(skillId)
+                    lore.add("§7- §a$skillName")
+                }
+            } else {
+                lore.add("§7当前未掌握任何医术")
+            }
+
+            inv.setItem(15, createItem(Material.BARRIER, "§c§l遗忘所有医术", *lore.toTypedArray()))
+        }
         fillGlass(inv, 27)
         p.openInventory(inv)
     }
@@ -260,11 +268,23 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
 
     private fun handleForgetButton(p: Player) {
         val uuid = p.uniqueId
+        // 服务端执行入口再次校验，防止旧界面、权限中途变更等方式绕过 GUI 提示。
+        if (!p.isOp) {
+            deleteConfirm.remove(uuid)
+            p.sendMessage("§c只有服务器管理员可以使用“遗忘所有医术”功能。")
+            p.playSound(p.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1f)
+            return
+        }
+
         val now = System.currentTimeMillis()
 
         if (deleteConfirm.containsKey(uuid) && (now - deleteConfirm[uuid]!! < 3000)) {
-            // 【关键点】显式使用 !! 断言，将 PlayerData? 转为 PlayerData
-            val data = plugin.playerManager.getPlayerData(p)!!
+            val data = plugin.playerManager.getPlayerData(p)
+            if (data == null) {
+                deleteConfirm.remove(uuid)
+                p.sendMessage("§c玩家数据尚未加载完成，请稍后再试。")
+                return
+            }
 
             data.clearMedicalSkills()
 

@@ -490,8 +490,11 @@ class BaihuDzManager(private val plugin: Hjh_database) {
         if (item.type != Material.CROSSBOW) return
         if (active) {
             meta.addEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT, 1, true)
-            val quickChargeLevel = if (data.id == "anhuishinu") 3 else 2
-            meta.addEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE, quickChargeLevel, true)
+            meta.addEnchant(
+                org.bukkit.enchantments.Enchantment.QUICK_CHARGE,
+                data.quickChargeLevel,
+                true
+            )
         } else {
             meta.removeEnchant(org.bukkit.enchantments.Enchantment.MULTISHOT)
             meta.removeEnchant(org.bukkit.enchantments.Enchantment.QUICK_CHARGE)
@@ -660,6 +663,8 @@ class BaihuWeaponData(id: String, sec: ConfigurationSection) : BaihuEquipmentDat
     val activeLoreLine: String = sec.getString("active_lore_line", "&c请放入指定激活栏，并身负虎瘴。")!!
     /** 自定义穿透实体总数；piercing: 2 表示整支箭最多命中2个实体。 */
     val piercingEntities: Int = sec.getInt("piercing", 1).coerceIn(1, 128)
+    /** 原版快速装填附魔等级；弩未配置 quick_charge 时默认使用Ⅱ。 */
+    val quickChargeLevel: Int = sec.getInt("quick_charge", 2).coerceAtLeast(1)
     val stats: MutableMap<String, Double> = mutableMapOf()
     override val activationSpec: ActivationSpec = ActivationSpec(
         requiredJob = reqJob,

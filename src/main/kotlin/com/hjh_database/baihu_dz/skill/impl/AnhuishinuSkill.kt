@@ -12,6 +12,7 @@ import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Sound
+import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.AbstractArrow
@@ -52,7 +53,7 @@ class AnhuishinuSkill(
         val startedTick: Int,
         val expiresAt: Long,
         var nextRecoveryAt: Long,
-        val staminaPerSecond: Int,
+        val healthPerSecond: Double,
         val saturationPerSecond: Float,
         val settings: Settings
     )
@@ -95,7 +96,7 @@ class AnhuishinuSkill(
             enhancedShots = config.getInt("enhanced_shots", 3).coerceAtLeast(1),
             enhancedDurationMs = (config.getDouble("enhanced_duration", 10.0) * 1000.0).toLong().coerceAtLeast(1L),
             shotCooldownTicks = (config.getDouble("enhanced_shot_cooldown", 0.5) * 20.0).toInt().coerceAtLeast(0),
-            bonusDamageMultiplier = config.getDouble("bonus_damage_multiplier", 1.0).coerceAtLeast(0.0),
+            bonusDamageMultiplier = config.getDouble("bonus_damage_multiplier", 1.5).coerceAtLeast(0.0),
             pierceLevel = config.getInt("pierce_level", 127).coerceIn(1, 127),
             slowTicks = (config.getDouble("slow_seconds", 5.0) * 20.0).toInt().coerceAtLeast(1),
             slowAmplifier = config.getInt("slow_amplifier", 1).coerceAtLeast(0)
@@ -105,7 +106,11 @@ class AnhuishinuSkill(
             startedTick = Bukkit.getCurrentTick(),
             expiresAt = now + durationMs,
             nextRecoveryAt = now + 1000L,
-            staminaPerSecond = config.getInt("stamina_per_second", 4).coerceAtLeast(0),
+            // 兼容旧版 stamina_per_second；该效果语义为恢复生命，并非恢复饥饿度。
+            healthPerSecond = config.getDouble(
+                "health_per_second",
+                config.getDouble("stamina_per_second", 4.0)
+            ).coerceAtLeast(0.0),
             saturationPerSecond = config.getDouble("saturation_per_second", 2.0).toFloat().coerceAtLeast(0.0f),
             settings = settings
         )
@@ -290,8 +295,9 @@ class AnhuishinuSkill(
     }
 
     private fun restoreHuntingResources(player: Player, state: HuntingState) {
-        if (state.staminaPerSecond > 0) {
-            player.foodLevel = (player.foodLevel + state.staminaPerSecond).coerceAtMost(20)
+        if (state.healthPerSecond > 0.0) {
+            val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: player.maxHealth
+            player.health = min(maxHealth, player.health + state.healthPerSecond)
         }
         if (state.saturationPerSecond > 0.0f) {
             player.saturation = min(player.foodLevel.toFloat(), player.saturation + state.saturationPerSecond)

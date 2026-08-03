@@ -2,6 +2,7 @@ package com.hjh_database.quest.core
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.title.QuestTitleRewards
 import org.bukkit.Bukkit
 import org.bukkit.Sound
 import org.bukkit.entity.Player
@@ -46,6 +47,9 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
 
         plugin.databaseManager.saveQuestData(player, quest.id, QuestStatus.COMPLETED, 9999)
         quest.giveReward(player)
+        QuestTitleRewards.byQuestId[quest.id]?.let { reward ->
+            plugin.titleManager.grantQuestCompletionTitle(player, reward.titleId, reward.questId)
+        }
 
         player.sendMessage("§6§l[任务完成] §f${quest.title}")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)

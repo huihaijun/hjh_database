@@ -19,15 +19,19 @@ import org.bukkit.boss.BossBar
 import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.entity.Zombie
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityTransformEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.entity.ProjectileLaunchEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
@@ -199,6 +203,17 @@ object NorthWetnessSkill : Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    fun onAffixZombieTransform(event: EntityTransformEvent) {
+        if (event.transformReason != EntityTransformEvent.TransformReason.DROWNED) return
+        val zombie = event.entity as? Zombie ?: return
+        if (!MobAffixSupport.hasAffix(zombie, MobAffix.NORTH_WETNESS)) return
+
+        event.isCancelled = true
+        zombie.stopDrowning()
+        maintainAquaticPassives(zombie)
+    }
+
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         clearPlayer(event.player)
@@ -215,6 +230,7 @@ object NorthWetnessSkill : Listener {
                 .asSequence()
                 .filter { MobAffixSupport.hasAffix(it, MobAffix.NORTH_WETNESS) }
                 .forEach { monster ->
+                    maintainAquaticPassives(monster)
                     world.players
                         .asSequence()
                         .filter(::isValidTarget)
@@ -222,6 +238,26 @@ object NorthWetnessSkill : Listener {
                         .forEach { addWetness(it) }
                 }
         }
+    }
+
+    private fun maintainAquaticPassives(monster: LivingEntity) {
+        ensureInfiniteEffect(monster, PotionEffectType.WATER_BREATHING)
+        ensureInfiniteEffect(monster, PotionEffectType.DOLPHINS_GRACE)
+
+        val zombie = monster as? Zombie ?: return
+        if (zombie.isDrowning) {
+            zombie.stopDrowning()
+        }
+    }
+
+    private fun ensureInfiniteEffect(monster: LivingEntity, type: PotionEffectType) {
+        val current = monster.getPotionEffect(type)
+        if (current?.isInfinite == true) return
+        if (current != null && current.amplifier > 0) return
+
+        monster.addPotionEffect(
+            PotionEffect(type, PotionEffect.INFINITE_DURATION, 0, true, false, false)
+        )
     }
 
     private fun decayWetness() {

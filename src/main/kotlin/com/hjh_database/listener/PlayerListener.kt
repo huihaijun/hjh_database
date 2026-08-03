@@ -119,7 +119,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
                 }
                 3, 5, 6 -> {
                     // 3, 5, 6 复活点一致
-                    targetLoc = org.bukkit.Location(world, 205.0, 54.0, -1771.0, 0f, 0f)
+                    targetLoc = org.bukkit.Location(world, -407.5, 67.5, 1565.5, -180f, 0f)
                     // 状态为 3 或 5 时，改写为 6
                     if (data.status == 3 || data.status == 5) {
                         data.updateStatus(6)

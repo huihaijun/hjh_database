@@ -5,6 +5,7 @@ import com.hjh_database.warehouse.data.WarehouseData
 import com.hjh_database.warehouse.gui.WarehouseGUI
 import org.bukkit.entity.Player
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 class WarehouseManager(private val plugin: Hjh_database) {
@@ -27,7 +28,11 @@ class WarehouseManager(private val plugin: Hjh_database) {
                 // 【修改】从外层获取连接，并传给 loadWarehouse
                 plugin.databaseManager.dataSource?.connection?.use { conn ->
                     val data = plugin.databaseManager.loadWarehouse(conn, player.uniqueId, player.name)
-                    cache[player.uniqueId] = data
+                    // 管理员可能正在编辑该玩家的离线仓库。此时保留同一份内存数据，
+                    // 防止玩家上线加载出的旧快照覆盖管理员尚未保存的修改。
+                    cache.compute(player.uniqueId) { _, current ->
+                        current?.apply { playerName = player.name } ?: data
+                    }
                 }
             } catch (e: Exception) {
                 plugin.logger.severe("加载仓库数据失败: ${e.message}")
@@ -73,6 +78,31 @@ class WarehouseManager(private val plugin: Hjh_database) {
         return cache[uuid]
     }
 
+    /** 将离线读取的数据纳入统一缓存；若玩家已在线，则优先返回在线缓存。 */
+    fun adoptAdminData(loaded: WarehouseData): WarehouseData {
+        return cache.putIfAbsent(loaded.uuid, loaded) ?: loaded
+    }
+
+    /** 管理员结束离线编辑后释放临时缓存；在线玩家的数据必须继续保留。 */
+    fun releaseAdminData(data: WarehouseData) {
+        if (plugin.server.getPlayer(data.uuid)?.isOnline == true) return
+        cache.remove(data.uuid, data)
+    }
+
+    /**
+     * 在主线程克隆快照，再把序列化与 JDBC 写入统一数据库队列。
+     * 这样异步线程不会一边遍历 ItemStack 数组，一边与 GUI 修改竞争。
+     */
+    fun saveAsync(data: WarehouseData): CompletableFuture<Unit> {
+        val snapshot = snapshot(data)
+        return plugin.databaseManager.submitDatabaseOperation {
+            plugin.databaseManager.dataSource?.connection?.use { conn ->
+                plugin.databaseManager.saveWarehouse(conn, snapshot)
+            }
+            Unit
+        }
+    }
+
     fun getAllCachedData(): List<WarehouseData> {
         return cache.values.toList()
     }
@@ -111,6 +141,15 @@ class WarehouseManager(private val plugin: Hjh_database) {
         for (player in org.bukkit.Bukkit.getOnlinePlayers()) {
             if (!cache.containsKey(player.uniqueId)) {
                 loadAndCache(player)
+            }
+        }
+    }
+
+    private fun snapshot(source: WarehouseData): WarehouseData {
+        return WarehouseData(source.uuid, source.playerName).also { copy ->
+            copy.categoryNames = source.categoryNames.copyOf()
+            copy.items = Array(8) { category ->
+                Array<org.bukkit.inventory.ItemStack?>(108) { slot -> source.items[category][slot]?.clone() }
             }
         }
     }

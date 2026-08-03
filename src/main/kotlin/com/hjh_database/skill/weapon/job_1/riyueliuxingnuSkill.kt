@@ -9,6 +9,7 @@ import org.bukkit.Location
 import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Sound
+import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.Entity
@@ -37,7 +38,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
     private val appliedSpeedStacks = ConcurrentHashMap<UUID, Int>()
 
     // 记录玩家留下的星域
-    private data class StarField(val loc: Location, val expireTime: Long)
+    private data class StarField(val loc: Location, val expireTime: Long, val sourceTargetId: UUID)
     private val activeStarFields = ConcurrentHashMap<UUID, MutableList<StarField>>()
 
     init {
@@ -126,9 +127,9 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
 
                                 iter.remove()
 
-                                // 1. 恢复体力
-                                player.foodLevel = (player.foodLevel + 2).coerceAtMost(20)
-                                player.saturation = (player.saturation + 2.0f).coerceAtMost(20.0f)
+                                // 1. 恢复4点生命，不再恢复饱食度或饱和度。
+                                val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: player.health
+                                player.health = (player.health + 4.0).coerceAtMost(maxHealth)
 
                                 // 2. 增加流星
                                 addMeteor(player)
@@ -141,7 +142,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
                                 }
 
                                 player.playSound(player.location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f)
-                                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e§l拾取星域！+1 流星，技能冷却 -1秒！"))
+                                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e§l拾取星域！恢复4点生命，+1 流星，技能冷却 -1秒！"))
                             }
                         }
                     }
@@ -171,7 +172,10 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
         }
 
         player.world.playSound(player.location, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 1.2f)
-        val damageAmount = data.archerDamage * 2.0
+        // 同一次主动共享目标记录：每只怪物最多为本次繁星落生成一片星域。
+        val starFieldTargets = HashSet<UUID>()
+        // 同一次主动按目标分别记录命中次数，用于后续流星的伤害衰减。
+        val meteorHitCounts = HashMap<UUID, Int>()
 
         for (i in 0 until meteorCount) {
             // 均匀分配目标，如果没有目标则设为 null (朝前瞎射)
@@ -182,7 +186,14 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
             val randomOffset = Vector((Math.random() - 0.5) * 2, Math.random() * 1.5, (Math.random() - 0.5) * 2)
             startLoc.add(randomOffset)
 
-            HomingMeteor(startLoc, target, player, damageAmount).runTaskTimer(plugin, 0L, 1L)
+            HomingMeteor(
+                startLoc,
+                target,
+                player,
+                data.archerDamage,
+                starFieldTargets,
+                meteorHitCounts
+            ).runTaskTimer(plugin, 0L, 1L)
         }
 
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§b§l[繁星落] 发射了 $meteorCount 枚流星！"))
@@ -266,7 +277,9 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
         startLoc: Location,
         val target: LivingEntity?,
         val shooter: Player,
-        val damage: Double
+        val archerDamage: Double,
+        private val starFieldTargets: MutableSet<UUID>,
+        private val meteorHitCounts: MutableMap<UUID, Int>
     ) : BukkitRunnable() {
 
         var loc = startLoc.clone()
@@ -306,6 +319,12 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
 
                 // 如果确实命中了怪物，造成穿甲伤害
                 if (hit && target != null) {
+                    val previousHits = meteorHitCounts.getOrDefault(target.uniqueId, 0)
+                    // 200% → 150% → 100% → 50%，第四颗之后保持50%。
+                    val damageMultiplier = (2.0 - previousHits.coerceAtMost(3) * 0.5).coerceAtLeast(0.5)
+                    meteorHitCounts[target.uniqueId] = previousHits + 1
+                    val damage = archerDamage * damageMultiplier
+
                     target.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
                     target.setMetadata("hjh_physical_skill", FixedMetadataValue(plugin, true))
                     target.noDamageTicks = 0
@@ -318,12 +337,17 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
                     }
                 }
 
-                // 在命中的地面生成星域
-                val groundLoc = (target?.location ?: loc).clone()
-                groundLoc.y = Math.floor(groundLoc.y) + 0.1 // 贴着方块上面一点
-                activeStarFields.computeIfAbsent(shooter.uniqueId) { mutableListOf() }.add(
-                    StarField(groundLoc, System.currentTimeMillis() + 7000L) // 持续 7 秒
-                )
+                // 只有真正命中怪物时才生成星域；同一次主动中，同一目标只生成一次。
+                if (hit && target != null && starFieldTargets.add(target.uniqueId)) {
+                    val now = System.currentTimeMillis()
+                    val fields = activeStarFields.computeIfAbsent(shooter.uniqueId) { mutableListOf() }
+                    // 冷却缩减可能令下一次主动在旧星域消失前发动，仍保证该怪物只有一片有效星域。
+                    if (fields.none { it.sourceTargetId == target.uniqueId && it.expireTime > now }) {
+                        val groundLoc = target.location.clone()
+                        groundLoc.y = Math.floor(groundLoc.y) + 0.1 // 贴着方块上面一点
+                        fields.add(StarField(groundLoc, now + 7000L, target.uniqueId)) // 持续 7 秒
+                    }
+                }
 
                 cancel()
             }

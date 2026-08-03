@@ -72,6 +72,17 @@ abstract class SpeedFeather(
         return false
     }
 
+    /** 供 FeatherManager 在退服或插件关闭前保存受伤衰减后的实际加成。 */
+    fun currentBonus(player: Player): Double? = activeBonuses[player.uniqueId]
+
+    /** 从玩家 PDC 静默恢复，不重复发送开启消息或播放音效。 */
+    fun restoreState(player: Player, savedBonus: Double) {
+        val restoredBonus = savedBonus.coerceIn(0.0, initialSpeedBonus)
+        if (restoredBonus <= 0.000001) return
+        activeBonuses[player.uniqueId] = restoredBonus
+        applyBaseSpeedBonus(player, restoredBonus)
+    }
+
     final override fun onEnd(player: Player, reason: FeatherEndReason) {
         activeBonuses.remove(player.uniqueId)
         removeSharedModifier(player)

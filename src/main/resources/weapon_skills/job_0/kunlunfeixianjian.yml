@@ -10,3 +10,4 @@ active:
   damage_max_health_percent: 0.25
   retarget_radius: 10.0
   finish_heal_amount: 8.0
+  finish_heal_cap: 24.0

@@ -201,6 +201,24 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     ps.executeUpdate()
                 }
 
+                val playerUuidTables = listOf(
+                    "player_shen_consciousness",
+                    "player_shen_tribute",
+                    "qixiazhen_busuan",
+                    "farm_player_plots"
+                )
+                for (table in playerUuidTables) {
+                    conn.prepareStatement("DELETE FROM $table WHERE player_uuid = ?").use { ps ->
+                        ps.setString(1, uuid.toString())
+                        ps.executeUpdate()
+                    }
+                }
+
+                conn.prepareStatement("DELETE FROM player_baihu_miasma WHERE uuid = ?").use { ps ->
+                    ps.setString(1, uuid.toString())
+                    ps.executeUpdate()
+                }
+
                 subsystems.saveWarehouse(conn, WarehouseData(uuid, playerName))
 
                 conn.prepareStatement(

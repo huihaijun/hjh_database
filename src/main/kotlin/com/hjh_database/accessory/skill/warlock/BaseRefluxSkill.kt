@@ -4,17 +4,28 @@ package com.hjh_database.accessory.skill.warlock
 import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
 import com.hjh_database.weapon.CrystalData
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import java.util.UUID
+import org.bukkit.persistence.PersistentDataType
 
 abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
 
     companion object {
-        // 全局管理开启了【回流】状态的玩家
-        val refluxActivePlayers = mutableSetOf<UUID>()
-        fun isRefluxActive(player: Player): Boolean = refluxActivePlayers.contains(player.uniqueId)
+        // 玩家 PDC 会随退服保存，且 /reload 后仍由同一在线 Player 实体保留。
+        private val REFLUX_ACTIVE_KEY = NamespacedKey.fromString("hjh_database:reflux_active")!!
+
+        fun isRefluxActive(player: Player): Boolean =
+            player.persistentDataContainer.get(REFLUX_ACTIVE_KEY, PersistentDataType.BYTE)?.toInt() == 1
+
+        private fun setRefluxActive(player: Player, active: Boolean) {
+            if (active) {
+                player.persistentDataContainer.set(REFLUX_ACTIVE_KEY, PersistentDataType.BYTE, 1.toByte())
+            } else {
+                player.persistentDataContainer.remove(REFLUX_ACTIVE_KEY)
+            }
+        }
     }
 
     // ==========================================
@@ -42,17 +53,16 @@ abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
     // ==========================================
     override fun handleShiftClick(player: Player, item: ItemStack, isExtract: Boolean, crystalData: CrystalData): Boolean {
         if (isExtract) {
-            refluxActivePlayers.remove(player.uniqueId)
+            setRefluxActive(player, false)
             return false
         }
 
-        val uuid = player.uniqueId
-        if (refluxActivePlayers.contains(uuid)) {
-            refluxActivePlayers.remove(uuid)
+        if (isRefluxActive(player)) {
+            setRefluxActive(player, false)
             player.sendMessage("§c关闭【回流】模式，释放阵法将正常消耗元素。")
             player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 0.8f)
         } else {
-            refluxActivePlayers.add(uuid)
+            setRefluxActive(player, true)
             player.sendMessage("§a开启【回流】模式！灵力充沛时，释放阵法将消耗灵力。")
             player.playSound(player.location, Sound.BLOCK_BEACON_ACTIVATE, 1f, 1.5f)
         }

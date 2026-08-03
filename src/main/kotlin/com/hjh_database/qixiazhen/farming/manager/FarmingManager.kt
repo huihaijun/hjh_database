@@ -120,6 +120,14 @@ class FarmingManager(val plugin: Hjh_database) {
         submitSave { repository.saveAll(player.name, snapshot) }
     }
 
+    fun resetPlayerData(player: Player) {
+        displays.clearPlayer(player)
+        pendingCropRemovals.remove(player.uniqueId)
+        loading.remove(player.uniqueId)?.cancel(false)
+        playerNames[player.uniqueId] = player.name
+        playerStates[player.uniqueId] = mutableMapOf()
+    }
+
     fun saveAllOnline() {
         playerStates.forEach { (id, states) ->
             val playerName = playerNames[id] ?: plugin.server.getOfflinePlayer(id).name.orEmpty()

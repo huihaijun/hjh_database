@@ -1,7 +1,10 @@
 package com.hjh_database.command
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.admin.money.MoneyAdminGui
+import com.hjh_database.admin.money.MoneySort
 import com.hjh_database.alchemy.data.AlchemyTier
+import com.hjh_database.dz.command.DzCommand
 import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.quest.core.StoryNpcs
 import com.hjh_database.spawner.MobRegistry
@@ -15,6 +18,10 @@ import org.bukkit.entity.Player
 import java.util.ArrayList
 
 class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompleter {
+
+    private val moneyAdminGui = MoneyAdminGui(plugin)
+    private val dzCommand = DzCommand(plugin)
+    private val adminWarehouseGui = plugin.adminWarehouseGui
 
     // 映射表
     private val jobMap = mapOf(
@@ -69,10 +76,25 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin title <list|give|take|display|reload> - 称号管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin shengong <玩家> <秒数> - 设置神族贡品到达时间")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin damagetest - 获取受伤测试仪")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin money [name|money] [asc|desc] - 查看玩家财产 GUI")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dz <station|edit|reload|players|admin> - 锻造系统管理")
+            sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin openwarehouse <玩家名> - 编辑任意数据库玩家的个人仓库")
             return true
         }
 
         val subCommand = args[0].lowercase()
+
+        if (subCommand == "dz") {
+            return dzCommand.handle(sender, args.drop(1).toTypedArray())
+        }
+
+        if (subCommand == "money" || subCommand == "财产") {
+            if (sender !is Player) return error(sender, "只有游戏内玩家可以打开财产管理界面。")
+            val sort = MoneySort.fromCommand(args.getOrNull(1), args.getOrNull(2))
+                ?: return error(sender, "用法: /hjhadmin money [name|money] [asc|desc]")
+            moneyAdminGui.open(sender, sort)
+            return true
+        }
 
         if (subCommand == "damagetest" || subCommand == "getdamagetest" || subCommand == "受伤测试仪") {
             if (sender !is Player) return error(sender, "只有玩家管理员可以获取受伤测试仪。")
@@ -182,6 +204,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         // === reload (重载) ===
         if (subCommand == "reload") {
             plugin.reloadConfig()
+            moneyAdminGui.reload()
             plugin.menuManager.reload()
             plugin.playerManager.weaponManager.reload()
             plugin.playerManager.armorManager.reload()
@@ -1026,14 +1049,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         if (subCommand == "openwarehouse") {
             if (args.size < 2) return error(sender, "用法: /hjhadmin openwarehouse <玩家>")
-            val targetName = args[1]
-            val target = Bukkit.getPlayerExact(targetName)
-            if (target == null) return error(sender, "玩家不在线")
-            // 强制打开目标玩家的仓库 GUI（需要你在 Manager 里提供打开逻辑，传入 target 的数据即可）
-            if (sender is Player) {
-                plugin.warehouseManager.openMainMenu(sender, target)
-                sender.sendMessage("§a正在查看 ${target.name} 的仓库")
-            }
+            if (sender !is Player) return error(sender, "只有游戏内管理员可以编辑个人仓库。")
+            adminWarehouseGui.open(sender, args[1])
             return true
         }
 
@@ -1138,7 +1155,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
-                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong", "damagetest"
+                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong", "damagetest", "money", "dz"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1148,6 +1165,12 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         // === 2. 二级及以上补全 (根据主指令分支) ===
         when (subCmd) {
+            "dz" -> return dzCommand.tabComplete(sender, args.drop(1).toTypedArray())
+            "money", "财产" -> {
+                if (args.size == 2) return listOf("name", "money").filter { it.startsWith(args[1].lowercase()) }
+                if (args.size == 3) return listOf("asc", "desc").filter { it.startsWith(args[2].lowercase()) }
+                return emptyList()
+            }
             "shengong", "gongpin" -> {
                 if (args.size == 2) return null
                 if (args.size == 3) {
@@ -1338,7 +1361,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 if (args.size == 2) return emptyList()
             }
             "openwarehouse" -> {
-                // 强制打开某人仓库，第二个参数为玩家名。返回 null 会自动调用 Bukkit 的在线玩家补全
+                // 数据库中的离线玩家名无法安全地在主线程做模糊查询；仍保留在线名补全，手输离线名即可。
                 if (args.size == 2) return null
             }
             "medicaltest" -> {

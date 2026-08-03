@@ -23,11 +23,11 @@ import com.hjh_database.qixiazhen.busuan.BusuanListener
 import com.hjh_database.qixiazhen.busuan.BusuanManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
+import com.hjh_database.dungeon.qixi.QixiDungeonManager
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
 import com.hjh_database.dungeon.xuanwu.trial.XuanwuTrialManager
 import com.hjh_database.dungeon.zhuque.ZhuQueManager
-import com.hjh_database.dz.command.DzCommand
 import com.hjh_database.dz.listener.StationListener
 import com.hjh_database.dz.manager.DzLevelManager
 import com.hjh_database.dz.manager.RecipeManager
@@ -71,6 +71,7 @@ import com.hjh_database.accessory.element.ElementCrystalGui
 import com.hjh_database.accessory.element.ElementCrystalInteractListener
 import com.hjh_database.title.TitleListener
 import com.hjh_database.title.TitleManager
+import com.hjh_database.title.TitleClaimBeaconListener
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -114,7 +115,9 @@ class Hjh_database : JavaPlugin() {
     lateinit var baihuTrialManager: BaihuTrialManager
     lateinit var xuanwuTrialManager: XuanwuTrialManager
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
+    lateinit var qixiDungeonManager: QixiDungeonManager
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
+    lateinit var adminWarehouseGui: com.hjh_database.warehouse.admin.AdminWarehouseGui
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
     lateinit var jianghuXindeManager: com.hjh_database.jianghu.JianghuXindeManager
     lateinit var passbookListener: PassbookListener
@@ -201,8 +204,10 @@ class Hjh_database : JavaPlugin() {
         this.xuanwuTrialManager = XuanwuTrialManager(this)
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
+        this.qixiDungeonManager = QixiDungeonManager(this)
         // 【新增】初始化个人仓库管理器
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
+        this.adminWarehouseGui = com.hjh_database.warehouse.admin.AdminWarehouseGui(this)
         // 【新增】初始化医术试炼管理器
         this.medicalTrialManager = MedicalTrialManager(this)
         this.jianghuXindeManager = com.hjh_database.jianghu.JianghuXindeManager(this)
@@ -286,6 +291,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(this.xuanwuTrialManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
+        pm.registerEvents(this.qixiDungeonManager, this)
         // 【新增】个人仓库系统监听
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
         // 假设你的 GUI 监听器叫 WarehouseGuiListener 并且放在 listener 包下
@@ -296,6 +302,7 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(BusuanListener(this.busuanManager), this)
         pm.registerEvents(this.globalMarketManager, this)
         pm.registerEvents(TitleListener(this.titleManager), this)
+        pm.registerEvents(TitleClaimBeaconListener(this), this)
 
         this.baihuMiasmaManager.start()
         this.baihuTownFireManager.start()
@@ -311,7 +318,6 @@ class Hjh_database : JavaPlugin() {
             tabCompleter = adminCmd
         }
 
-        getCommand("hjhdz")?.setExecutor(DzCommand(this))
         getCommand("zfset")?.setExecutor(com.hjh_database.command.ZfCommand(this))
 
         getCommand("testmob")?.setExecutor(com.hjh_database.command.TestMobCommand(this))
@@ -419,6 +425,10 @@ class Hjh_database : JavaPlugin() {
             xuanwuTrialManager.shutdown()
         }
 
+        if (::qixiDungeonManager.isInitialized) {
+            qixiDungeonManager.shutdown()
+        }
+
         if (::bgmManager.isInitialized) {
             bgmManager.shutdown()
         }
@@ -442,6 +452,9 @@ class Hjh_database : JavaPlugin() {
 
         // 【新增】关服时保存所有仓库数据
         if (::warehouseManager.isInitialized) {
+            if (::adminWarehouseGui.isInitialized) {
+                adminWarehouseGui.flushAllToMemory()
+            }
             warehouseManager.saveAllOnline()
         }
 

@@ -98,6 +98,9 @@ class honglingnuSkill : WeaponSkill, Listener {
                             // ★★★ 取消无敌帧前置 ★★★
                             target.noDamageTicks = 0
 
+                            // 炎海是固定区域持续伤害，不应沿用带攻击者伤害入口产生的原版击退。
+                            // 记录怪物原有速度并在结算后还原，既保留事件链/护甲结算，也不会把怪物弹出火海。
+                            val velocityBeforeDamage = target.velocity.clone()
                             try {
                                 target.damage(damageAmount, shooter)
                             } finally {
@@ -106,6 +109,9 @@ class honglingnuSkill : WeaponSkill, Listener {
                                 }
                                 // ★★★ 取消无敌帧后置，防止火海吞掉玩家紧接着的平A伤害 ★★★
                                 target.noDamageTicks = 0
+                                if (target.isValid && !target.isDead) {
+                                    target.velocity = velocityBeforeDamage
+                                }
                             }
                         }
                     }

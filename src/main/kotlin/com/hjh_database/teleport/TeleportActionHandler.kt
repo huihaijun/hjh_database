@@ -377,11 +377,22 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                             val item = rm.getItem(id) ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_NUGGET).apply {
                                 itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] $id") }
                             }
-                            item.amount = 8
+                            item.amount = 15
                             item
                         }
-                        // 武器和元素一起塞入背包
-                        leftovers.putAll(player.inventory.addItem(weapon, *elements.toTypedArray()))
+                        val conversionTickets = rm.getItem("yuansuzhuanhuaquan")
+                            ?.apply { amount = 15 }
+                            ?: org.bukkit.inventory.ItemStack(org.bukkit.Material.PAPER, 15).apply {
+                                itemMeta = itemMeta?.apply { setDisplayName("§c[配置缺失] yuansuzhuanhuaquan") }
+                            }
+                        // 武器、元素和元素转化券一起塞入背包
+                        leftovers.putAll(
+                            player.inventory.addItem(
+                                weapon,
+                                *elements.toTypedArray(),
+                                conversionTickets
+                            )
+                        )
                     }
                     "CHOOSE_JOB_DOCTOR" -> {
                         data.job = 3

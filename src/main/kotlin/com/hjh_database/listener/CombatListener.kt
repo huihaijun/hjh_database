@@ -200,11 +200,11 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                             val velocity = attacker.velocity.length()
                             var arrowDamage = archerDmg * (min(3.0, velocity) / 3.0)
 
-                            if (pdc.has(isBowKey, PersistentDataType.BYTE)) {
-                                arrowDamage *= 2.5
-                            }
-                            if (pdc.has(multishotSideKey, PersistentDataType.BYTE)) {
-                                arrowDamage *= 0.2
+                            arrowDamage *= when {
+                                pdc.has(isBowKey, PersistentDataType.BYTE) -> 2.5
+                                pdc.has(multishotSideKey, PersistentDataType.BYTE) -> 0.2
+                                pdc.has(rpgCrossbowArrowKey, PersistentDataType.BYTE) -> 2.0
+                                else -> 1.0
                             }
 
                             damage = arrowDamage
@@ -490,7 +490,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     /**
      * 原版受伤间隔会拒绝同一散射齐射中稍晚碰撞的副箭，并让箭矢反弹。
      * ProjectileHitEvent 发生在箭矢实际伤害结算前；只对本插件激活弩射出的箭及合法怪物
-     * 清除当前无敌帧，使三支箭在贴脸时仍按主箭100%、副箭各20%的既有倍率正常结算。
+     * 清除当前无敌帧，使三支箭在贴脸时仍按主箭200%、副箭各20%的倍率正常结算。
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onRpgCrossbowProjectileHit(event: ProjectileHitEvent) {

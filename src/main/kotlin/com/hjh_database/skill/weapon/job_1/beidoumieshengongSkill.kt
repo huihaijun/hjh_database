@@ -111,12 +111,14 @@ class beidoumieshengongSkill : WeaponSkill, Listener {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(ChatColor.translateAlternateColorCodes('&', msg)))
 
         if (stars > 0) {
+            // 先锁定【星】仍存在时的箭矢强度，供本次由【星】转化出的全部技能箭矢使用。
+            // 随后可安全清层并刷新玩家属性，不会让技能箭错误读取到清层后的数值。
+            val baseDamage = data.archerDamage
+
             // 清空星与对应的 Buff
             activeStars.remove(uuid)
             starTicks[uuid] = 0
             updateStarBuff(player, 0)
-
-            val baseDamage = data.archerDamage
 
             // 连发机制：每 2 tick 射出一支虚拟星辰
             object : BukkitRunnable() {

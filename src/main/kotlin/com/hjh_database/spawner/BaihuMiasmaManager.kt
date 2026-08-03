@@ -21,6 +21,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
@@ -80,6 +81,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     private val increaseModifiers = ConcurrentHashMap<UUID, MutableMap<String, IncreaseModifier>>()
     private val thresholdPenaltyTimes = ConcurrentHashMap<UUID, LongArray>()
     private val bossBars = ConcurrentHashMap<UUID, BossBar>()
+    private val sessionTokens = ConcurrentHashMap<UUID, AtomicLong>()
     private val ioExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "hjh-baihu-miasma-db").apply { isDaemon = true }
     }
@@ -133,6 +135,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     private fun load(player: Player) {
         val uuid = player.uniqueId
         val playerName = player.name
+        val token = sessionTokens.computeIfAbsent(uuid) { AtomicLong() }.incrementAndGet()
         ioExecutor.execute {
             val loaded = plugin.databaseManager.dataSource?.connection?.use { conn ->
                 conn.prepareStatement(
@@ -158,7 +161,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
             plugin.server.scheduler.runTask(plugin, Runnable {
                 val online = Bukkit.getPlayer(uuid) ?: return@Runnable
-                if (!online.isOnline) return@Runnable
+                if (!online.isOnline || sessionTokens[uuid]?.get() != token) return@Runnable
                 statuses[uuid] = loaded.apply {
                     this.playerName = online.name
                     if (lastIncreaseMs <= 0L) lastIncreaseMs = System.currentTimeMillis()
@@ -417,6 +420,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         val player = event.player
+        sessionTokens.computeIfAbsent(player.uniqueId) { AtomicLong() }.incrementAndGet()
         statuses[player.uniqueId]?.let { status ->
             status.lastInCave = isInBaihuCave(player)
             status.dirty = true
@@ -438,6 +442,21 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         statuses[player.uniqueId] = status
         clearMiasmaBonuses(player)
         bossBars.remove(player.uniqueId)?.removeAll()
+        saveAsync(status)
+    }
+
+    fun resetPlayerData(player: Player) {
+        sessionTokens.computeIfAbsent(player.uniqueId) { AtomicLong() }.incrementAndGet()
+        val status = MiasmaStatus(
+            uuid = player.uniqueId,
+            playerName = player.name,
+            lastIncreaseMs = System.currentTimeMillis()
+        )
+        statuses[player.uniqueId] = status
+        increaseModifiers.remove(player.uniqueId)
+        thresholdPenaltyTimes.remove(player.uniqueId)
+        bossBars.remove(player.uniqueId)?.removeAll()
+        clearMiasmaBonuses(player)
         saveAsync(status)
     }
 

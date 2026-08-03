@@ -1,5 +1,6 @@
 package com.hjh_database.spawner
 
+import com.hjh_database.spawner.dungeon.DungeonMobRegistry
 import org.bukkit.Material
 import org.bukkit.entity.EntityType
 import java.util.HashMap
@@ -912,6 +913,8 @@ object MobRegistry {
                 MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
                 // 30%掉落瘴气玄铁
                 MobDrop("fumanzhangqidexuantieding", 1, 1, 0.3),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_huzhuashanmai", 1, 1, 0.05),
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -940,6 +943,8 @@ object MobRegistry {
                 MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
                 // 30%掉落瘴气玄铁
                 MobDrop("fumanzhangqidezhuangbeihexin", 1, 1, 0.3),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_huzhuashanmai", 1, 1, 0.05),
                 ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -972,6 +977,8 @@ object MobRegistry {
                 MobDrop("fumanzhangqidezhuangbeihexin", 1, 1, 0.15),
                 // 15掉落瘴气玄铁
                 MobDrop("fumanzhangqidexuantieding", 1, 1, 0.15),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_huzhuashanmai", 1, 1, 0.05),
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
         ))
@@ -1089,6 +1096,8 @@ object MobRegistry {
                 MobDrop("fumanzhangqidemeitan", 2, 2, 0.5),
                 // 35%掉落瘴气虎魄
                 MobDrop("zhangqi_hupo", 1, 1, 0.35),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_huzhuashanmai", 1, 1, 0.1),
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             helmet = Material.DIAMOND_HELMET, // 纯装饰
@@ -1119,6 +1128,8 @@ object MobRegistry {
                 MobDrop("zhangqi_hujin", 1, 1, 0.35),
                 // 15%掉落zhichunzhixin
                 MobDrop("zhichunzhixin", 1, 1, 0.15),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_huzhuashanmai", 1, 1, 0.1),
             ),
             affixes = listOf(MobAffix.BAIHU_WEST), // 西方词条
             mainHand = Material.IRON_PICKAXE  // 纯装饰
@@ -1310,6 +1321,8 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 1, 0.3),
                 // 30%掉落破旧皮革
                 MobDrop("pojiupige", 1, 2, 0.4),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS), //
             helmet = Material.TURTLE_HELMET, // 纯装饰
@@ -1336,6 +1349,8 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 1, 0.3),
                 // 30%掉落破旧皮革
                 MobDrop("pojiupige", 1, 2, 0.4),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS), //
             helmet = Material.IRON_HELMET, // 纯装饰
@@ -1362,6 +1377,8 @@ object MobRegistry {
                 MobDrop("relive_stone", 1, 1, 0.3),
                 // 30%掉落蜘蛛眼
                 MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS),
         ))
@@ -1551,6 +1568,8 @@ object MobRegistry {
                 MobDrop("shuizudegongpin", 3, 4, 0.85),
                 // 35%掉落水魂鳞片
                 MobDrop("shuihunlinpian", 1, 1, 0.35),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.1),
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS),
             mainHand = Material.IRON_SWORD  // 纯装饰
@@ -1578,11 +1597,15 @@ object MobRegistry {
                 MobDrop("shuizudegongpin", 3, 4, 0.85),
                 // 35%掉落千里木
                 MobDrop("qianligongtanmu", 1, 1, 0.45),
+                // 极低概率掉落江湖心得
+                MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.1),
             ),
             affixes = listOf(MobAffix.NORTH_WETNESS),
             helmet = Material.DIAMOND_HELMET,
             boots = Material.DIAMOND_BOOTS,
             mainHand = Material.BOW  // 纯装饰
         ))
+
+        DungeonMobRegistry.registerAll(::register)
     }
 }
