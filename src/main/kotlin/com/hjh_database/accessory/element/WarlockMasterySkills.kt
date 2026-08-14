@@ -101,7 +101,9 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
         plugin.databaseManager.queuePlayerSave(pData)
         player.addPotionEffect(PotionEffect(PotionEffectType.SPEED, speedSeconds * 20, 0, false, true, true))
 
-        player.sendMessage("§9[术] [水·精进] [回潮] §f已触发，回复 §b${format(actual)} §f点灵力并加速 §b$speedSeconds §f秒")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warlock.water")) {
+            player.sendMessage("§9[术] [水·精进] [回潮] §f已触发，回复 §b${format(actual)} §f点灵力并加速 §b$speedSeconds §f秒")
+        }
         player.world.spawnParticle(Particle.NAUTILUS, player.location.add(0.0, 1.0, 0.0), 24, 1.2, 0.8, 1.2, 0.05)
         player.world.playSound(player.location, Sound.BLOCK_BUBBLE_COLUMN_UPWARDS_INSIDE, 1.0f, 1.25f)
     }
@@ -137,7 +139,9 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
         val mark = GoldMark(player.uniqueId, damage)
         if (goldMarks.putIfAbsent(victim.uniqueId, mark) != null) return
         goldCd[player.uniqueId] = System.currentTimeMillis() + GOLD_CD_MS
-        player.sendMessage("§e[术] [金·精进] [金印] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warlock.metal")) {
+            player.sendMessage("§e[术] [金·精进] [金印] §f已触发")
+        }
         victim.world.playSound(victim.location, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.8f, 1.6f)
 
         object : BukkitRunnable() {
@@ -191,7 +195,9 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
         if (eData.woodPoints < 4 || onCooldown(woodCd, player.uniqueId)) return
         woodCd[player.uniqueId] = System.currentTimeMillis() + WOOD_CD_MS
         val healPerTick = damage * 0.7 / 3.0
-        player.sendMessage("§a[术] [木·精进] [溯生] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warlock.wood")) {
+            player.sendMessage("§a[术] [木·精进] [溯生] §f已触发")
+        }
 
         object : BukkitRunnable() {
             var pulses = 0
@@ -214,7 +220,9 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
         if (eData.firePoints < 4 || onCooldown(fireCd, player.uniqueId)) return
         fireCd[player.uniqueId] = System.currentTimeMillis() + FIRE_CD_MS
         val damage = pData.zfStr * 2.5
-        player.sendMessage("§c[术] [火·精进] [阵焚] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warlock.fire")) {
+            player.sendMessage("§c[术] [火·精进] [阵焚] §f已触发")
+        }
         drawBurningFormation(center)
 
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
@@ -254,7 +262,9 @@ class WarlockMasterySkills(private val plugin: Hjh_database) : Listener {
         }
 
         val shieldAmount = damage * 2.0
-        player.sendMessage("§6[术] [土·精进] [镇石] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warlock.earth")) {
+            player.sendMessage("§6[术] [土·精进] [镇石] §f已触发")
+        }
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline && !player.isDead) grantEarthShield(player, shieldAmount)
         }, 1L)

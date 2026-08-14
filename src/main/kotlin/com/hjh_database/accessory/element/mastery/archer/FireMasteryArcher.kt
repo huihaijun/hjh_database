@@ -37,7 +37,9 @@ class FireMasteryArcher(private val plugin: Hjh_database) {
 
         // 触发爆燃：进入冷却
         cd[uuid] = System.currentTimeMillis() + CD_MS
-        player.sendMessage("§c[弓] [火·精进] [爆燃] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.archer.fire")) {
+            player.sendMessage("§c[弓] [火·精进] [爆燃] §f已触发")
+        }
 
         val center = victim.location.clone().add(0.0, 0.5, 0.0)
         val world = victim.world

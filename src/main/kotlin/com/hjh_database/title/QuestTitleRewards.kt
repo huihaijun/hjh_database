@@ -16,7 +16,11 @@ object QuestTitleRewards {
         QuestTitleReward("main_north_5", "bei_huanxingxuanshuishengjideren")
     )
 
-    val byQuestId = (listOf(human, shen, yao) + regional).associateBy { it.questId }
+    val encounters = listOf(
+        QuestTitleReward("side_qixi_starwish", "zhixingtu")
+    )
+
+    val byQuestId = (listOf(human, shen, yao) + regional + encounters).associateBy { it.questId }
 
     fun forRace(race: Int?): QuestTitleReward? = when (race) {
         0 -> shen

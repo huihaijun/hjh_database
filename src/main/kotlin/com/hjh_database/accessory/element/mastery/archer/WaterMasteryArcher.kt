@@ -71,7 +71,9 @@ class WaterMasteryArcher(private val plugin: Hjh_database) {
 
         // 触发水月：进入冷却
         cd[uuid] = System.currentTimeMillis() + CD_MS
-        player.sendMessage("§9[弓] [水·精进] [水月] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.archer.water")) {
+            player.sendMessage("§9[弓] [水·精进] [水月] §f已触发")
+        }
 
         // 复制箭从玩家主手弓弩附近射出，不再从受击怪物体内生成。
         val eyeLoc = player.eyeLocation

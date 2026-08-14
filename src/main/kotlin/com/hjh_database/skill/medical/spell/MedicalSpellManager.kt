@@ -36,6 +36,7 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import java.io.File
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -144,6 +145,18 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         // 3. 释放
         if (spell.cast(player, data, config)) {
             data.lingli = data.lingli - manaCost
+            if (manaCost > 0.0) {
+                val costText = if (manaCost % 1.0 == 0.0) {
+                    manaCost.toInt().toString()
+                } else {
+                    String.format(Locale.US, "%.1f", manaCost)
+                }
+                val manaMessage = "&6☯当前灵力值：&b${String.format(Locale.US, "%.1f", data.lingli)} &c(-$costText) &6/ &b${String.format(Locale.US, "%.0f", data.maxLingli)} &6☯"
+                player.spigot().sendMessage(
+                    ChatMessageType.ACTION_BAR,
+                    TextComponent(ChatColor.translateAlternateColorCodes('&', manaMessage))
+                )
+            }
 
             // A. 设置逻辑冷却 (插件内部判断用)
             setCooldown(player, skillId, cdMillis)
@@ -153,16 +166,21 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
             // Trigger Water skill for cooldown refund
             plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, cdMillis / 1000.0)
 
-            // Fix #2: 释放消息与 YML 一致
-            var msg = config?.getString("cast_message")
-            if (msg != null) {
-                msg = msg.replace("%player%", player.name)
-                if (msg.contains("%skill%")) {
-                    msg = msg.replace("%skill%", skillFullName)
+            // 冥想的提示由技能自身按“开始/结束”状态发送，避免与通用医术释放字幕重复。
+            if (!skillId.equals("mingxiang", ignoreCase = true)) {
+                // Fix #2: 释放消息与 YML 一致
+                var msg = config?.getString("cast_message")
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "doctor.cast.${skillId.lowercase()}")) {
+                    if (msg != null) {
+                        msg = msg.replace("%player%", player.name)
+                        if (msg.contains("%skill%")) {
+                            msg = msg.replace("%skill%", skillFullName)
+                        }
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg))
+                    } else {
+                        player.sendMessage("§e" + player.name + " §f释放了 §e" + skillFullName)
+                    }
                 }
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg))
-            } else {
-                player.sendMessage("§e" + player.name + " §f释放了 §e" + skillFullName)
             }
 
             // B. 【核心修改】设置独立的视觉冷却 (物品栏转圈圈)
@@ -180,16 +198,17 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
     fun applyMedicalHeal(caster: Player, target: LivingEntity, amount: Double, spellId: String? = null): Double {
         if (amount <= 0.0 || target.isDead) return 0.0
 
+        val adjustedAmount = amount * plugin.queqiaoyinSkill.healingMultiplier(target)
         val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return 0.0
         val oldHealth = target.health
-        val actualHeal = amount.coerceAtMost(maxHealth - oldHealth).coerceAtLeast(0.0)
-        val overflowHeal = (amount - actualHeal).coerceAtLeast(0.0)
+        val actualHeal = adjustedAmount.coerceAtMost(maxHealth - oldHealth).coerceAtLeast(0.0)
+        val overflowHeal = (adjustedAmount - actualHeal).coerceAtLeast(0.0)
 
         if (actualHeal > 0.0) {
             target.health = (oldHealth + actualHeal).coerceAtMost(maxHealth)
         }
 
-        val event = MedicalHealEvent(caster, target, spellId, amount, actualHeal, overflowHeal)
+        val event = MedicalHealEvent(caster, target, spellId, adjustedAmount, actualHeal, overflowHeal)
         plugin.server.pluginManager.callEvent(event)
         return actualHeal
     }

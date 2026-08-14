@@ -18,6 +18,7 @@ class TeleportManager(private val plugin: Hjh_database) {
 
     val points = HashMap<String, TeleportPoint>()
     private val blockMap = HashMap<String, String>()
+    private val configuredBlockMap = HashMap<String, String>()
     private val actionHandler = TeleportActionHandler(plugin)
 
     init {
@@ -44,6 +45,7 @@ class TeleportManager(private val plugin: Hjh_database) {
         }
 
         points.clear()
+        configuredBlockMap.clear()
 
         val section = config.getConfigurationSection("points") ?: return
         for (key in section.getKeys(false)) {
@@ -102,6 +104,17 @@ class TeleportManager(private val plugin: Hjh_database) {
                 customAction = customAction,
                 successMsg = successMsg
             )
+
+            if (config.contains("$path.trigger.x") &&
+                config.contains("$path.trigger.y") &&
+                config.contains("$path.trigger.z")
+            ) {
+                val triggerWorld = config.getString("$path.trigger.world", worldName) ?: worldName
+                val triggerX = config.getInt("$path.trigger.x")
+                val triggerY = config.getInt("$path.trigger.y")
+                val triggerZ = config.getInt("$path.trigger.z")
+                configuredBlockMap["$triggerWorld,$triggerX,$triggerY,$triggerZ"] = key
+            }
         }
         plugin.logger.info("已加载 ${points.size} 个传送点配置。")
     }
@@ -154,7 +167,10 @@ class TeleportManager(private val plugin: Hjh_database) {
         blockMap.remove(locToString(loc))?.let { saveBlockData() }
     }
 
-    fun getPointIdByBlock(loc: Location): String? = blockMap[locToString(loc)]
+    fun getPointIdByBlock(loc: Location): String? {
+        val key = locToString(loc)
+        return blockMap[key] ?: configuredBlockMap[key]
+    }
 
     private fun locToString(loc: Location): String = "${loc.world?.name},${loc.blockX},${loc.blockY},${loc.blockZ}"
 

@@ -4,6 +4,7 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.Color
 import org.bukkit.Particle
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
@@ -11,7 +12,15 @@ import org.bukkit.potion.PotionEffectType
 class JinshengzhiSkill(plugin: Hjh_database) : BaseMedicalOverflowSkill(plugin) {
     private val flameDust = Particle.DustOptions(Color.fromRGB(255, 96, 24), 1.05f)
 
-    override fun getBirdCount(crystalData: CrystalData): Int = 2
+    override fun getBirdCount(crystalData: CrystalData): Int = 1
+
+    override fun getMaxDamageRetargets(): Int = 2
+
+    override fun getOverflowRetargetRange(): Double = 16.0
+
+    override fun canKnockback(target: LivingEntity): Boolean {
+        return !target.scoreboardTags.contains("instance_boss")
+    }
 
     override fun getBirdDisplayName(): String = "火灵鸟"
 

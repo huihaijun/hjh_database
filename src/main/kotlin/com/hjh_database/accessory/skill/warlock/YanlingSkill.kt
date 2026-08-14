@@ -3,8 +3,6 @@ package com.hjh_database.accessory.skill.warlock
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.weapon.CrystalData
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
@@ -36,6 +34,8 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
     private val flameDust = Particle.DustOptions(Color.fromRGB(255, 95, 24), 0.85f)
     private val goldDust = Particle.DustOptions(Color.fromRGB(255, 190, 55), 0.7f)
 
+    override val accessoryId: String = "yanling"
+
     override fun getThresholdPercent(crystalData: CrystalData): Double = 0.5
 
     override fun getCostPerLevel(crystalData: CrystalData): Double = 3.0
@@ -63,10 +63,9 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
 
         player.world.playSound(player.location, Sound.ITEM_FIRECHARGE_USE, 0.65f, 1.35f)
         player.world.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.35f, 1.65f)
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent("§a§l饰品技【炎灵祝礼】已发动！")
-        )
+        if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId, "blessing")) {
+            player.sendActionBar("§a§l饰品技【炎灵祝礼】已发动！")
+        }
 
         var lived = 0
         val task = object : BukkitRunnable() {

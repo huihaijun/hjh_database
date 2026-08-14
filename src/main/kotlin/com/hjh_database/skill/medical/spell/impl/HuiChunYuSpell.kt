@@ -28,7 +28,7 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
         // 读取配置参数
         val radius = config?.getDouble("radius", 8.0) ?: 8.0
-        val healMultiplier = config?.getDouble("heal_multiplier", 2.5) ?: 2.5
+        val healMultiplier = config?.getDouble("heal_multiplier", 2.8) ?: 2.8
         val shieldDuration = config?.getInt("shield_duration", 30) ?: 30
         val shieldMultiplier = config?.getDouble("shield_multiplier", 0.5) ?: 0.5 // 50%的自身生命值
 
@@ -101,7 +101,6 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             true
         )
         target.absorptionAmount = shieldAmount
-        target.sendMessage("§a[回春域] §f纯净的生命能量汇聚于你，为你凝聚了护盾！")
         target.world.playSound(target.location, Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.5f)
         target.world.spawnParticle(
             Particle.DUST,

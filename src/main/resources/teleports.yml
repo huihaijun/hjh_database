@@ -32,6 +32,21 @@
 #      set_job: 0  # 踩上去就变成战士(id:0)
 #    # set_race: 1  custom_action: "ENTER_BOSS_ROOM"
 points:
+  皇城东门-鹊影桥:
+    world: "world"
+    x: 1301.78
+    y: 37.00
+    z: 3018.47
+    yaw: -89.14
+    pitch: 0.15
+    trigger:
+      world: "world"
+      x: 347
+      y: 55
+      z: 79
+    actions:
+      custom_action: "ENTER_QIXI_BRIDGE"
+
   东门-栖霞镇:
     world: "world"
     x: 629.77

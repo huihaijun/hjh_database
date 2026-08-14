@@ -122,7 +122,9 @@ class MedicalMasterySkills(private val plugin: Hjh_database) : Listener {
         if (targets.isEmpty()) return
         val shots = if (targets.size == 1) listOf(targets[0], targets[0]) else targets
         goldCd[player.uniqueId] = System.currentTimeMillis() + 15_000L
-        player.sendMessage("§e[医] [金·精进] [金针] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.doctor.metal")) {
+            player.sendMessage("§e[医] [金·精进] [金针] §f已触发")
+        }
         shots.forEachIndexed { index, target ->
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 if (target.isValid && !target.isDead) launchGoldNeedle(player, target, data.zfStr * 1.5)
@@ -172,7 +174,9 @@ class MedicalMasterySkills(private val plugin: Hjh_database) : Listener {
         used += source.uniqueId
         val first = nearestTeammate(source, used) ?: return
         woodCd[event.caster.uniqueId] = System.currentTimeMillis() + 15_000L
-        event.caster.sendMessage("§a[医] [木·精进] [花语] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(event.caster, "element.mastery.doctor.wood")) {
+            event.caster.sendMessage("§a[医] [木·精进] [花语] §f已触发")
+        }
         transferFlower(source, first, event.actualHeal * 0.5, used, 1)
     }
 
@@ -218,7 +222,9 @@ class MedicalMasterySkills(private val plugin: Hjh_database) : Listener {
         if (crystal.waterPoints < 4 || onCooldown(waterCd, player.uniqueId)) return
         waterCd[player.uniqueId] = System.currentTimeMillis() + 20_000L
         pureFlowEnds[player.uniqueId] = System.currentTimeMillis() + 8_000L
-        player.sendMessage("§9[医] [水·精进] [净流] §f已触发，持续 §b8 §f秒")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.doctor.water")) {
+            player.sendMessage("§9[医] [水·精进] [净流] §f已触发，持续 §b8 §f秒")
+        }
         player.world.spawnParticle(Particle.SPLASH, player.location.add(0.0, 1.0, 0.0), 28, 0.7, 0.8, 0.7, 0.1)
         player.world.playSound(player.location, Sound.ITEM_TRIDENT_RETURN, 0.8f, 1.4f)
     }
@@ -228,7 +234,9 @@ class MedicalMasterySkills(private val plugin: Hjh_database) : Listener {
         fireCd[player.uniqueId] = System.currentTimeMillis() + 20_000L
         meridianEnds[target.uniqueId] = System.currentTimeMillis() + 5_000L
         applyMeridianSpeed(target)
-        player.sendMessage("§c[医] [火·精进] [灼脉] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.doctor.fire")) {
+            player.sendMessage("§c[医] [火·精进] [灼脉] §f已触发")
+        }
         target.world.spawnParticle(Particle.DUST, target.location.add(0.0, target.height * 0.5, 0.0), 16, 0.3, 0.45, 0.3, 0.0, Particle.DustOptions(Color.fromRGB(180, 20, 20), 1.0f))
         target.world.playSound(target.location, Sound.ENTITY_BLAZE_HURT, 0.8f, 0.7f)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
@@ -262,7 +270,9 @@ class MedicalMasterySkills(private val plugin: Hjh_database) : Listener {
             if (onCooldown(earthCd, uuid)) return
             earthCd[uuid] = now + 20_000L
             earthWindows[uuid] = EarthWindow(event.spellId, now + 500L)
-            event.caster.sendMessage("§6[医] [土·精进] [厚土] §f已触发")
+            if (!plugin.passiveSubtitleManager.showCombatEvent(event.caster, "element.mastery.doctor.earth")) {
+                event.caster.sendMessage("§6[医] [土·精进] [厚土] §f已触发")
+            }
         }
         grantShield(target, formationStrength.coerceAtLeast(0.0))
     }

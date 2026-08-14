@@ -27,7 +27,10 @@ class DuSuZhenSpell(private val plugin: Hjh_database) : MedicalSpell {
         val slowDurationTicks = (config?.getInt("slow_duration", 3) ?: 3) * 20
 
         // 计算毒针数量：基础3根，每5点阵法强度增加2根，上限10根
-        var needleCount = 3 + ((zfStr / 5) * 2).toInt()
+        // 必须先按每完整5点阵法强度计算档位，再让每个档位增加2根。
+        // 不能在乘2后取整，否则会变成每2.5点增加1根。
+        val strengthTiers = (zfStr.coerceAtLeast(0.0) / 5.0).toInt()
+        var needleCount = 3 + strengthTiers * 2
         if (needleCount > 10) needleCount = 10
 
         // 【核心机制】记录本次技能命中的实体UUID。
@@ -80,7 +83,15 @@ class DuSuZhenSpell(private val plugin: Hjh_database) : MedicalSpell {
                     // 碰撞检测：检查是否命中怪物 (检测半径0.5格)
                     val nearby = player.world.getNearbyEntities(currentLoc, 0.5, 0.5, 0.5)
                     for (entity in nearby) {
-                        if (entity !== player && entity is LivingEntity && entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
+                        if (
+                            entity !== player &&
+                            entity is LivingEntity &&
+                            entity.isValid &&
+                            !entity.isDead &&
+                            entity.health > 0.0 &&
+                            entity.scoreboardTags.contains("panling") &&
+                            entity.scoreboardTags.contains("monster")
+                        ) {
 
                             // 命中！取消这根毒针的飞行
                             cancel()

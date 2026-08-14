@@ -46,10 +46,10 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         // 读取配置
-        val radius = config?.getDouble("radius", 10.0) ?: 10.0
-        val speedDuration = config?.getInt("speed_duration", 20) ?: 20
+        val radius = config?.getDouble("radius", 12.0) ?: 12.0
+        val speedDuration = config?.getInt("speed_duration", 32) ?: 32
         val vulnerability = (config?.getDouble("vulnerability", 0.15) ?: 0.15).coerceAtLeast(0.0)
-        val vulnerabilityDuration = (config?.getDouble("vulnerability_duration", 7.0) ?: 7.0).coerceAtLeast(0.0)
+        val vulnerabilityDuration = (config?.getDouble("vulnerability_duration", 8.0) ?: 8.0).coerceAtLeast(0.0)
         val speedTicks = speedDuration * 20
 
         val center = player.location

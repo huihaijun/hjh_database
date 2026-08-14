@@ -58,6 +58,9 @@ tasks {
         from("src/main/resources/weapons.yml") {
             into("hjh_database")
         }
+        from("src/main/resources/artifacts.yml") {
+            into("hjh_database")
+        }
         from("src/main/resources/chonghua_waypoints.yml") {
             into("hjh_database")
         }
@@ -72,6 +75,9 @@ tasks {
         }
         from("src/main/resources/dungeon/qixi.yml") {
             into("hjh_database/dungeon")
+        }
+        from("src/main/resources/titles/encounter.yml") {
+            into("hjh_database/titles")
         }
         from("src/main/resources/admin_money.yml") {
             into("hjh_database")

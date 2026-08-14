@@ -4,6 +4,11 @@ import com.hjh_database.accessory.AccessorySkillManager
 import com.hjh_database.accessory.skill.quiver.JiandaiSkill
 import com.hjh_database.alchemy.listener.AlchemyListener
 import com.hjh_database.alchemy.manager.AlchemyManager
+import com.hjh_database.artifact.ArtifactManager
+import com.hjh_database.artifact.LingyunsuoSkill
+import com.hjh_database.artifact.QueqiaoyinSkill
+import com.hjh_database.artifact.QueshuanglingSkill
+import com.hjh_database.artifact.TianheyiSkill
 import com.hjh_database.baihu_dz.BaihuDzManager
 import com.hjh_database.baihu_dz.BaihuDzStationListener
 import com.hjh_database.baihu_dz.BaihuEquipmentDamageMarkerListener
@@ -72,6 +77,7 @@ import com.hjh_database.accessory.element.ElementCrystalInteractListener
 import com.hjh_database.title.TitleListener
 import com.hjh_database.title.TitleManager
 import com.hjh_database.title.TitleClaimBeaconListener
+import com.hjh_database.subtitle.PassiveSubtitleManager
 
 class Hjh_database : JavaPlugin() {
     companion object {
@@ -104,6 +110,11 @@ class Hjh_database : JavaPlugin() {
     lateinit var baihuTownFireManager: BaihuTownFireManager
     lateinit var baihuDzManager: BaihuDzManager
     lateinit var baihuWeaponSkillManager: BaihuWeaponSkillManager
+    lateinit var artifactManager: ArtifactManager
+    lateinit var tianheyiSkill: TianheyiSkill
+    lateinit var queqiaoyinSkill: QueqiaoyinSkill
+    lateinit var queshuanglingSkill: QueshuanglingSkill
+    lateinit var lingyunsuoSkill: LingyunsuoSkill
     lateinit var teleportManager: com.hjh_database.teleport.TeleportManager
     lateinit var bgmManager: com.hjh_database.bgm.BgmManager
     lateinit var jobTrialManager: JobTrialManager
@@ -134,6 +145,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var damageTestManager: DamageTestManager
     lateinit var featherManager: com.hjh_database.feather.FeatherManager
     lateinit var equipmentActivationManager: EquipmentActivationManager
+    lateinit var passiveSubtitleManager: PassiveSubtitleManager
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
     }
@@ -147,6 +159,7 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         this.databaseManager = DatabaseManager(this)
         this.playerManager = PlayerManager(this)
+        this.passiveSubtitleManager = PassiveSubtitleManager(this)
         // PlayerManager 持有唯一的普通武器管理器，避免重复加载配置和热重载数据分叉。
         this.weaponManager = this.playerManager.weaponManager
         this.menuManager = MenuManager(this)
@@ -168,6 +181,11 @@ class Hjh_database : JavaPlugin() {
         this.baihuTownFireManager = BaihuTownFireManager(this)
         this.baihuDzManager = BaihuDzManager(this)
         this.baihuWeaponSkillManager = BaihuWeaponSkillManager(this)
+        this.artifactManager = ArtifactManager(this)
+        this.tianheyiSkill = TianheyiSkill(this)
+        this.queqiaoyinSkill = QueqiaoyinSkill(this)
+        this.queshuanglingSkill = QueshuanglingSkill(this)
+        this.lingyunsuoSkill = LingyunsuoSkill(this)
         this.equipmentActivationManager = EquipmentActivationManager(this)
         this.teleportManager = com.hjh_database.teleport.TeleportManager(this)
         this.bgmManager = com.hjh_database.bgm.BgmManager(this)
@@ -246,6 +264,7 @@ class Hjh_database : JavaPlugin() {
         // 必须早于其他伤害监听器注册，以便测试仪在LOWEST阶段拿到未经插件修改的事件。
         pm.registerEvents(this.damageTestManager, this)
         pm.registerEvents(PlayerListener(this), this)
+        pm.registerEvents(this.passiveSubtitleManager, this)
         pm.registerEvents(rebirthListener, this)
         pm.registerEvents(CombatListener(this), this)
         pm.registerEvents(MenuListener(this), this) // 依赖 questGui，放在后面注册合理
@@ -255,6 +274,10 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(BaihuEquipmentDamageMarkerListener(this), this)
         pm.registerEvents(BaihuWeaponSkillListener(this), this)
         pm.registerEvents(HuzhizhanqiSkill(this), this)
+        pm.registerEvents(this.tianheyiSkill, this)
+        pm.registerEvents(this.queqiaoyinSkill, this)
+        pm.registerEvents(this.queshuanglingSkill, this)
+        pm.registerEvents(this.lingyunsuoSkill, this)
         pm.registerEvents(com.hjh_database.teleport.TeleportListener(this), this)
         pm.registerEvents(com.hjh_database.spawner.SpawnerListener(this), this)
         pm.registerEvents(this.baihuMiasmaManager, this)
@@ -383,8 +406,25 @@ class Hjh_database : JavaPlugin() {
         // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
         TianjiUtilityMenus.closeOpenMenusForDisable()
 
+        if (::tianheyiSkill.isInitialized) {
+            tianheyiSkill.shutdown()
+        }
+        if (::queqiaoyinSkill.isInitialized) {
+            queqiaoyinSkill.shutdown()
+        }
+        if (::queshuanglingSkill.isInitialized) {
+            queshuanglingSkill.shutdown()
+        }
+        if (::lingyunsuoSkill.isInitialized) {
+            lingyunsuoSkill.shutdown()
+        }
+
         if (::globalMarketManager.isInitialized) {
             globalMarketManager.shutdown()
+        }
+
+        if (::passiveSubtitleManager.isInitialized) {
+            passiveSubtitleManager.clear()
         }
 
         if (::titleManager.isInitialized) {

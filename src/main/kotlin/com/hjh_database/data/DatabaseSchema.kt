@@ -140,6 +140,7 @@ internal class DatabaseSchema(
                     safeAddColumn(stmt, "player_data", "player_name", "VARCHAR(16)")
                     safeAddColumn(stmt, "player_data", "money", "DOUBLE DEFAULT 0")
                     safeAddColumn(stmt, "player_data", "total_rarity", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "player_data", "spirit_siphon", "DOUBLE DEFAULT 0")
 
                     // 2. 修复 player_element_zf_lvl
                     safeAddColumn(stmt, "player_element_zf_lvl", "player_name", "VARCHAR(16)")
@@ -235,7 +236,8 @@ internal class DatabaseSchema(
                 cool_reduce DOUBLE DEFAULT 0, 
                 lingli DOUBLE DEFAULT 0, 
                 money DOUBLE DEFAULT 0,
-                total_rarity INT DEFAULT 0
+                total_rarity INT DEFAULT 0,
+                spirit_siphon DOUBLE DEFAULT 0
             );
         """.trimIndent()
         executeSql(sql)

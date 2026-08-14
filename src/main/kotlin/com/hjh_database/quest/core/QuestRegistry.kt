@@ -43,6 +43,7 @@ import com.hjh_database.quest.impl.main.west.West_03
 import com.hjh_database.quest.impl.main.west.West_04
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
+import com.hjh_database.quest.impl.side.Side_Qixi_StarWish
 import com.hjh_database.quest.impl.side.Side_StrangeTree
 import com.hjh_database.quest.impl.side.Side_Tianjige_Rumor
 import com.hjh_database.quest.impl.side.Side_Warrior_ShieldBook
@@ -117,5 +118,6 @@ object QuestRegistry {
         manager.register(Side_Medical_TaolizhiBook())
         manager.register(Side_Tianjige_Rumor())
         manager.register(Side_StrangeTree())
+        manager.register(Side_Qixi_StarWish())
     }
 }

@@ -38,6 +38,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // --- 法术与公用战斗属性 ---
     var zfStr: Double = 0.0
     var coolReduce: Double = 0.0
+    var spiritSiphon: Double = 0.0
 
     // ★★★ 通用临时属性池 ★★★
     // Key 对应 PlayerManager 里的属性名 (如 "attack", "max_health", "speed_percent")

@@ -4,3 +4,101 @@ database:
   name: "hjh_rpg"
   user: "root"
   password: "root"
+
+# 以极短静音 Sound Event 驱动客户端右下角字幕。
+# display-cooldown-ticks 只限制字幕数据包，不参与任何技能真实冷却或判定。
+passive-subtitles:
+  enabled: true
+  display-cooldown-ticks: 10
+
+  accessories:
+    # 通用新增模板（内部 ID 来自 crystals.yml 的 skill_id/id）：
+    # "<饰品内部ID>":
+    #   sound-event: "hjh:subtitle.accessory.xxxxx"
+
+    # 本次精准迁移范围：回流仪与炎灵。
+    huiliuyi:
+      sound-event: "hjh:subtitle.accessory.reflux.triggered"
+      event-sounds:
+        enabled: "hjh:subtitle.accessory.reflux.enabled"
+        disabled: "hjh:subtitle.accessory.reflux.disabled"
+    yanling:
+      sound-event: "hjh:subtitle.accessory.reflux.triggered"
+      event-sounds:
+        enabled: "hjh:subtitle.accessory.reflux.enabled"
+        disabled: "hjh:subtitle.accessory.reflux.disabled"
+        blessing: "hjh:subtitle.accessory.yanling.blessing"
+
+  # 固定战斗事件；键由代码使用，值在插件加载/reload时校验并缓存。
+  combat-events:
+    "element.revelation.metal": "hjh:subtitle.element.revelation.metal"
+    "element.revelation.wood": "hjh:subtitle.element.revelation.wood"
+    "element.revelation.water": "hjh:subtitle.element.revelation.water"
+    "element.revelation.fire": "hjh:subtitle.element.revelation.fire"
+    "element.revelation.earth": "hjh:subtitle.element.revelation.earth"
+    "element.mastery.warrior.metal": "hjh:subtitle.element.mastery.warrior.metal"
+    "element.mastery.warrior.wood": "hjh:subtitle.element.mastery.warrior.wood"
+    "element.mastery.warrior.water": "hjh:subtitle.element.mastery.warrior.water"
+    "element.mastery.warrior.fire.stack_1": "hjh:subtitle.element.mastery.warrior.fire.stack_1"
+    "element.mastery.warrior.fire.stack_2": "hjh:subtitle.element.mastery.warrior.fire.stack_2"
+    "element.mastery.warrior.fire": "hjh:subtitle.element.mastery.warrior.fire"
+    "element.mastery.warrior.earth": "hjh:subtitle.element.mastery.warrior.earth"
+    "element.mastery.warrior.earth.shield_4": "hjh:subtitle.element.mastery.warrior.earth.shield_4"
+    "element.mastery.warrior.earth.shield_8": "hjh:subtitle.element.mastery.warrior.earth.shield_8"
+    "element.mastery.warrior.earth.shield_12": "hjh:subtitle.element.mastery.warrior.earth.shield_12"
+    "element.mastery.warrior.earth.shield_16": "hjh:subtitle.element.mastery.warrior.earth.shield_16"
+    "element.mastery.warrior.earth.shield_20": "hjh:subtitle.element.mastery.warrior.earth.shield_20"
+    "element.mastery.warrior.earth.shield_24": "hjh:subtitle.element.mastery.warrior.earth.shield_24"
+    "element.mastery.warrior.earth.shield_28": "hjh:subtitle.element.mastery.warrior.earth.shield_28"
+    "element.mastery.warrior.earth.shield_32": "hjh:subtitle.element.mastery.warrior.earth.shield_32"
+    "element.mastery.warrior.earth.shield_36": "hjh:subtitle.element.mastery.warrior.earth.shield_36"
+    "element.mastery.warrior.earth.shield_40": "hjh:subtitle.element.mastery.warrior.earth.shield_40"
+    "element.mastery.archer.metal": "hjh:subtitle.element.mastery.archer.metal"
+    "element.mastery.archer.wood": "hjh:subtitle.element.mastery.archer.wood"
+    "element.mastery.archer.water": "hjh:subtitle.element.mastery.archer.water"
+    "element.mastery.archer.fire": "hjh:subtitle.element.mastery.archer.fire"
+    "element.mastery.archer.earth": "hjh:subtitle.element.mastery.archer.earth"
+    "element.mastery.warlock.metal": "hjh:subtitle.element.mastery.warlock.metal"
+    "element.mastery.warlock.wood": "hjh:subtitle.element.mastery.warlock.wood"
+    "element.mastery.warlock.water": "hjh:subtitle.element.mastery.warlock.water"
+    "element.mastery.warlock.fire": "hjh:subtitle.element.mastery.warlock.fire"
+    "element.mastery.warlock.earth": "hjh:subtitle.element.mastery.warlock.earth"
+    "element.mastery.doctor.metal": "hjh:subtitle.element.mastery.doctor.metal"
+    "element.mastery.doctor.wood": "hjh:subtitle.element.mastery.doctor.wood"
+    "element.mastery.doctor.water": "hjh:subtitle.element.mastery.doctor.water"
+    "element.mastery.doctor.fire": "hjh:subtitle.element.mastery.doctor.fire"
+    "element.mastery.doctor.earth": "hjh:subtitle.element.mastery.doctor.earth"
+    "sorcerer.formation.metal": "hjh:subtitle.sorcerer.formation.metal"
+    "sorcerer.formation.wood": "hjh:subtitle.sorcerer.formation.wood"
+    "sorcerer.formation.water": "hjh:subtitle.sorcerer.formation.water"
+    "sorcerer.formation.fire": "hjh:subtitle.sorcerer.formation.fire"
+    "sorcerer.formation.earth": "hjh:subtitle.sorcerer.formation.earth"
+    "doctor.cast.yuhehua": "hjh:subtitle.doctor.cast.yuhehua"
+    "doctor.cast.tuidi": "hjh:subtitle.doctor.cast.tuidi"
+    "doctor.cast.muchunyu": "hjh:subtitle.doctor.cast.muchunyu"
+    "doctor.cast.lingcaojue": "hjh:subtitle.doctor.cast.lingcaojue"
+    "doctor.cast.hushenzhou": "hjh:subtitle.doctor.cast.hushenzhou"
+    "doctor.cast.dusuzhen": "hjh:subtitle.doctor.cast.dusuzhen"
+    "doctor.cast.mingxiang": "hjh:subtitle.doctor.cast.mingxiang"
+    "doctor.cast.bingqingyu": "hjh:subtitle.doctor.cast.bingqingyu"
+    "doctor.cast.huichunyu": "hjh:subtitle.doctor.cast.huichunyu"
+    "doctor.cast.xinghuayu": "hjh:subtitle.doctor.cast.xinghuayu"
+    "doctor.cast.nianqijin": "hjh:subtitle.doctor.cast.nianqijin"
+    "doctor.cast.hunlingyou": "hjh:subtitle.doctor.cast.hunlingyou"
+    "doctor.cast.tianyou": "hjh:subtitle.doctor.cast.tianyou"
+    "doctor.cast.jiangtianguang": "hjh:subtitle.doctor.cast.jiangtianguang"
+    "doctor.cast.wanxiangsu": "hjh:subtitle.doctor.cast.wanxiangsu"
+    "doctor.cast.huanshengyu": "hjh:subtitle.doctor.cast.huanshengyu"
+    "doctor.cast.bazhenjue": "hjh:subtitle.doctor.cast.bazhenjue"
+    "doctor.cast.ningqibao": "hjh:subtitle.doctor.cast.ningqibao"
+    "doctor.cast.zhangqisan": "hjh:subtitle.doctor.cast.zhangqisan"
+    "doctor.effect.mingxiang.ended": "hjh:subtitle.doctor.effect.mingxiang.ended"
+    "feather.hjh_xyzy.started": "hjh:subtitle.feather.hjh_xyzy.started"
+    "feather.hjh_xyzy.damaged": "hjh:subtitle.feather.hjh_xyzy.damaged"
+    "feather.hjh_xyzy.expired": "hjh:subtitle.feather.hjh_xyzy.expired"
+    "feather.qingyingzhiyu.started": "hjh:subtitle.feather.qingyingzhiyu.started"
+    "feather.qingyingzhiyu.damaged": "hjh:subtitle.feather.qingyingzhiyu.damaged"
+    "feather.qingyingzhiyu.expired": "hjh:subtitle.feather.qingyingzhiyu.expired"
+    "feather.jifengzhiyu.started": "hjh:subtitle.feather.jifengzhiyu.started"
+    "feather.jifengzhiyu.damaged": "hjh:subtitle.feather.jifengzhiyu.damaged"
+    "feather.jifengzhiyu.expired": "hjh:subtitle.feather.jifengzhiyu.expired"

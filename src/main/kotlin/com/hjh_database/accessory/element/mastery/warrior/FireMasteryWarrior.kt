@@ -61,7 +61,9 @@ class FireMasteryWarrior(private val plugin: Hjh_database) {
             cd[uuid] = now + CD_MS
             trigger(player, victim, pData)
         } else {
-            player.sendMessage("§c[火·炎斩] 叠层中... 当前层数: §b${stackData.count}/3")
+            if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.fire.stack_${stackData.count}")) {
+                player.sendMessage("§c[火·炎斩] 叠层中... 当前层数: §b${stackData.count}/3")
+            }
             // 叠层粒子
             victim.world.spawnParticle(Particle.FLAME, victim.location.add(0.0, victim.height * 0.5, 0.0), 3, 0.15, 0.15, 0.15, 0.05)
             victim.world.playSound(victim.location, Sound.BLOCK_FIRE_AMBIENT, 1.0f, 1.5f)
@@ -92,7 +94,9 @@ class FireMasteryWarrior(private val plugin: Hjh_database) {
     }
 
     private fun trigger(player: Player, victim: LivingEntity, pData: PlayerData) {
-        player.sendMessage("§c[火·精进] [炎斩] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.fire")) {
+            player.sendMessage("§c[火·精进] [炎斩] §f已触发")
+        }
         val targetMaxHealth = victim.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
         // 炎斩触发伤害必定暴击；8%最大生命的斩杀段在暴击后仍最多贡献150点。
         val criticalAttackDamage = pData.attack * 2.5 * CRITICAL_MULTIPLIER

@@ -28,6 +28,7 @@ gui:
         - "&f抗击退: &b%knock_back_res%"
         - "&f冷却缩减: &b%CoolReduce%"
         - "&f%crit_stat_name%: &b%crit_chance%"
+        - "&f灵力攫取: &b%spirit_siphon%"
         - "&f生命: &b%current_health% / %max_health%"
         - "&f护甲: &b%armor%"
         - "&f灵力: &b%lingli%"

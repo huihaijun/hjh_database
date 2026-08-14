@@ -25,6 +25,9 @@ data class ActivatedWeapon(
 ) {
     val attackSpeed: Double?
         get() = stats["attack_speed"]
+
+    val rarity: Int
+        get() = standardData?.rarity ?: baihuData?.rarity ?: 0
 }
 
 class EquipmentActivationManager(private val plugin: Hjh_database) {

@@ -3,14 +3,20 @@ package com.hjh_database.feather
 import com.hjh_database.Hjh_database
 import com.hjh_database.feather.impl.HumanSpeedFeather
 import com.hjh_database.feather.impl.JifengSpeedFeather
+import com.hjh_database.feather.impl.LuoyuXingheSpeedFeather
 import com.hjh_database.feather.impl.QingyingSpeedFeather
 import com.hjh_database.feather.impl.SpeedFeather
 import org.bukkit.Bukkit
 import org.bukkit.NamespacedKey
+import org.bukkit.Material
 import org.bukkit.entity.Player
+import org.bukkit.entity.Entity
+import org.bukkit.entity.Monster
+import org.bukkit.entity.Projectile
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
@@ -40,12 +46,16 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
     private val activeFeatherIdKey = NamespacedKey(plugin, "active_feather_id")
     private val activeFeatherExpiresAtKey = NamespacedKey(plugin, "active_feather_expires_at")
     private val activeFeatherBonusKey = NamespacedKey(plugin, "active_feather_bonus")
+    private val activeFeatherDamageHitsKey = NamespacedKey(plugin, "active_feather_damage_hits")
+    private val featherCooldownUntilKey = NamespacedKey(plugin, "feather_cooldown_until")
+    private val environmentTask: BukkitTask
 
     init {
         // === 在这里注册所有的羽毛 ===
-        register(HumanSpeedFeather())
-        register(QingyingSpeedFeather())
-        register(JifengSpeedFeather())
+        register(HumanSpeedFeather(plugin))
+        register(QingyingSpeedFeather(plugin))
+        register(JifengSpeedFeather(plugin))
+        register(LuoyuXingheSpeedFeather(plugin))
 
         // 兼容热重载及旧版可能遗留的持久修饰器。
         Bukkit.getOnlinePlayers().forEach(SpeedFeather::removeSharedModifier)
@@ -57,6 +67,14 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         Bukkit.getScheduler().runTask(plugin, Runnable {
             Bukkit.getOnlinePlayers().forEach(::restorePersistedEffect)
         })
+
+        // 状态可能在不换世界时改变；低频同步即可保证从大陆进入指定状态后立即套用秘境倍率。
+        environmentTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+            for ((uuid, info) in activeEffects) {
+                val player = Bukkit.getPlayer(uuid) ?: continue
+                (info.feather as? SpeedFeather)?.refreshEnvironment(player)
+            }
+        }, 20L, 20L)
     }
 
     private fun register(feather: FeatherBase) {
@@ -87,8 +105,10 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         // 2. 阻止原版动作（防止乱挥手）
         event.isCancelled = true
 
-        // 3. 检查原版冷却 (不受冷却缩减属性影响，固定 CD)
-        if (player.getCooldown(item.type) > 0) {
+        // 3. 羽毛使用独立的绝对时间冷却，不读取玩家冷却缩减属性；原版冷却仅负责视觉反馈。
+        val remainingCooldownTicks = remainingCooldownTicks(player)
+        if (remainingCooldownTicks > 0 || player.getCooldown(item.type) > 0) {
+            if (remainingCooldownTicks > 0) player.setCooldown(Material.FEATHER, remainingCooldownTicks)
             return
         }
 
@@ -106,8 +126,7 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
             // 6. 激活新效果
             feather.onStart(player)
 
-            // 7. 设置冷却 (Ticks)
-            player.setCooldown(item.type, feather.cooldownSeconds * 20)
+            // 7. 冷却延后至第一次有效受伤时启动。
 
             // 8. 使用绝对到期时间追踪，退服时间也计入原持续时间。
             val expiresAt = System.currentTimeMillis() + feather.durationSeconds * 1000L
@@ -121,8 +140,13 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
     fun onDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
         if (event.finalDamage <= 0.0) return
+        if (!isFeatherInterruptingDamage(event, player)) return
 
         val info = activeEffects[player.uniqueId] ?: return
+        val speedFeather = info.feather as? SpeedFeather
+        if (speedFeather != null && !speedFeather.hasTakenDamage(player)) {
+            startFixedCooldown(player, info.feather.cooldownSeconds)
+        }
         if (info.feather.onDamage(player)) {
             stopEffect(player, FeatherEndReason.DAMAGED)
         } else {
@@ -135,8 +159,48 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
     fun onJoin(event: PlayerJoinEvent) {
         // 等玩家原版属性加载完成后，再恢复瞬时属性修饰器。
         Bukkit.getScheduler().runTask(plugin, Runnable {
-            if (event.player.isOnline) restorePersistedEffect(event.player)
+            if (event.player.isOnline) {
+                restoreCooldownVisual(event.player)
+                restorePersistedEffect(event.player)
+            }
         })
+    }
+
+    private fun isFeatherInterruptingDamage(event: EntityDamageEvent, player: Player): Boolean {
+        if (player.hasMetadata(MIASMA_DAMAGE_METADATA)) return true
+
+        // 只认本次事件中直接存在攻击实体的伤害。即使火焰最初由怪物点燃，后续
+        // FIRE/FIRE_TICK 也属于环境持续伤害，不应打断羽毛。
+        if (event !is EntityDamageByEntityEvent) return false
+        val source = resolveDamageSource(event.damager) ?: return false
+        return source is Monster || source.scoreboardTags.contains("monster")
+    }
+
+    private fun resolveDamageSource(entity: Entity): Entity? {
+        if (entity is Projectile) return entity.shooter as? Entity
+        return entity
+    }
+
+    private fun startFixedCooldown(player: Player, seconds: Int) {
+        val expiresAt = System.currentTimeMillis() + seconds.coerceAtLeast(0) * 1000L
+        player.persistentDataContainer.set(featherCooldownUntilKey, PersistentDataType.LONG, expiresAt)
+        player.setCooldown(Material.FEATHER, seconds.coerceAtLeast(0) * 20)
+    }
+
+    private fun remainingCooldownTicks(player: Player): Int {
+        val pdc = player.persistentDataContainer
+        val expiresAt = pdc.get(featherCooldownUntilKey, PersistentDataType.LONG) ?: return 0
+        val remainingMillis = expiresAt - System.currentTimeMillis()
+        if (remainingMillis <= 0L) {
+            pdc.remove(featherCooldownUntilKey)
+            return 0
+        }
+        return ((remainingMillis + 49L) / 50L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    private fun restoreCooldownVisual(player: Player) {
+        val ticks = remainingCooldownTicks(player)
+        if (ticks > 0) player.setCooldown(Material.FEATHER, ticks)
     }
 
     // === 3. 退服保存与内存清理逻辑 ===
@@ -186,6 +250,11 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         player.persistentDataContainer.set(activeFeatherIdKey, PersistentDataType.STRING, info.feather.id)
         player.persistentDataContainer.set(activeFeatherExpiresAtKey, PersistentDataType.LONG, info.expiresAt)
         player.persistentDataContainer.set(activeFeatherBonusKey, PersistentDataType.DOUBLE, bonus)
+        player.persistentDataContainer.set(
+            activeFeatherDamageHitsKey,
+            PersistentDataType.INTEGER,
+            speedFeather.currentDamageHits(player)
+        )
     }
 
     private fun restorePersistedEffect(player: Player) {
@@ -196,6 +265,7 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         val featherId = pdc.get(activeFeatherIdKey, PersistentDataType.STRING)
         val expiresAt = pdc.get(activeFeatherExpiresAtKey, PersistentDataType.LONG)
         val savedBonus = pdc.get(activeFeatherBonusKey, PersistentDataType.DOUBLE)
+        val savedDamageHits = pdc.get(activeFeatherDamageHitsKey, PersistentDataType.INTEGER) ?: 0
         val feather = featherId?.let(feathers::get) as? SpeedFeather
         if (feather == null || expiresAt == null || savedBonus == null ||
             expiresAt <= System.currentTimeMillis() || savedBonus <= 0.000001
@@ -204,7 +274,7 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
             return
         }
 
-        feather.restoreState(player, savedBonus)
+        feather.restoreState(player, savedBonus, savedDamageHits)
         trackEffect(player, feather, expiresAt)
     }
 
@@ -213,9 +283,11 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         pdc.remove(activeFeatherIdKey)
         pdc.remove(activeFeatherExpiresAtKey)
         pdc.remove(activeFeatherBonusKey)
+        pdc.remove(activeFeatherDamageHitsKey)
     }
 
     fun shutdown() {
+        environmentTask.cancel()
         for (player in Bukkit.getOnlinePlayers()) {
             if (activeEffects.containsKey(player.uniqueId)) {
                 persistEffect(player)
@@ -225,5 +297,9 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
             }
         }
         activeEffects.clear()
+    }
+
+    companion object {
+        const val MIASMA_DAMAGE_METADATA = "HJH_MIASMA_DAMAGE"
     }
 }

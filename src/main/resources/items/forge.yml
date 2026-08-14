@@ -126,6 +126,14 @@ xuantieding:
     - "&7&o非常珍贵的金属材料"
     - "&7&o打造中加入,能大大增加装备的耐久度"
 
+lingyujian:
+  material: GOLD_NUGGET
+  custom_model_data: 10057
+  rarity: 5
+  name: "&b灵玉简"
+  lore:
+    - "&7&o刻满了华丽花纹的绿色金属"
+    - "&7&o是锻造兵器的不二之选"
 
 kaishandao_chuxing:
   material: GOLD_NUGGET

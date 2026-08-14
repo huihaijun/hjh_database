@@ -76,7 +76,9 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
         val origin = player.location.clone().add(0.0, 1.0, 0.0)
         val world = player.world
 
-        player.sendMessage("§e[金·精进] [金戈] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.metal")) {
+            player.sendMessage("§e[金·精进] [金戈] §f已触发")
+        }
         world.playSound(player.location, Sound.ITEM_TRIDENT_THROW, 1.2f, 1.2f)
         world.playSound(player.location, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 0.6f)
 

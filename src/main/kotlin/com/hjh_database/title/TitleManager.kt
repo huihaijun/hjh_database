@@ -249,7 +249,7 @@ class TitleManager(private val plugin: Hjh_database) {
                 if (changed && player.isOnline) {
                     val owned = profile.ownedTitles[titleId]
                     player.sendMessage(
-                        Component.text("[称号] 获得云游称号：", NamedTextColor.GREEN)
+                        Component.text("[称号] 获得${definition.category.displayName}：", NamedTextColor.GREEN)
                             .append(TitleTextFormatter.component(displayText(definition, owned)))
                     )
                 }

@@ -100,3 +100,25 @@ areas:
     volume: 1.0
     pitch: 1.0
     loop-ticks: 2860
+  queyingqiao:
+    tracks:
+      - sound: "hjh:bgm_queyingqiao1"
+        loop-ticks: 2640
+      - sound: "hjh:bgm_queyingqiao2"
+        loop-ticks: 3720
+    random-start: true
+    follow-player: true
+    category: "RECORDS"
+    world: "world"
+    shape: "CUBOID"
+    bounds:
+      min:
+        x: 1286.0
+        y: 16.0
+        z: 2983.0
+      max:
+        x: 1473.0
+        y: 56.0
+        z: 3052.0
+    volume: 1.0
+    pitch: 1.0

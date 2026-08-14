@@ -44,7 +44,9 @@ class EarthMasteryArcher(private val plugin: Hjh_database) {
 
         // 触发岩钉：进入冷却
         cd[uuid] = System.currentTimeMillis() + CD_MS
-        player.sendMessage("§6[弓] [土·精进] [岩钉] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.archer.earth")) {
+            player.sendMessage("§6[弓] [土·精进] [岩钉] §f已触发")
+        }
 
         val world = victim.world
         world.playSound(victim.location, Sound.BLOCK_POINTED_DRIPSTONE_LAND, 1.2f, 0.7f)

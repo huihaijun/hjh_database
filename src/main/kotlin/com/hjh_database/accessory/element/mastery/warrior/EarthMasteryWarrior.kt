@@ -72,7 +72,9 @@ class EarthMasteryWarrior(private val plugin: Hjh_database) {
         val center = player.location.clone()
         val world = player.world
 
-        player.sendMessage("§6[土·精进] [崩山] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.earth")) {
+            player.sendMessage("§6[土·精进] [崩山] §f已触发")
+        }
         world.playSound(center, Sound.BLOCK_ANVIL_LAND, 1.2f, 0.5f)
         world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8f, 0.5f)
 
@@ -111,7 +113,10 @@ class EarthMasteryWarrior(private val plugin: Hjh_database) {
             absorptionLevel - 1,          // amplifier (0-based)
             false, true, true
         ))
-        player.sendMessage("§6获得 §b${(absorptionLevel * 4)} §6点吸收护盾，持续 §b15 §6秒")
+        val shieldDisplayAmount = absorptionLevel * 4
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.earth.shield_$shieldDisplayAmount")) {
+            player.sendMessage("§6获得 §b$shieldDisplayAmount §6点吸收护盾，持续 §b15 §6秒")
+        }
     }
 
     private fun drawGroundSlam(center: Location) {

@@ -201,7 +201,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
                 // 开启新一轮叠层
                 goldStacks[player.uniqueId] = 1
                 goldEndTime[player.uniqueId] = now + goldDurationMillis
-                player.sendMessage("§e[金·启示]已触发")
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.revelation.metal")) {
+                    player.sendMessage("§e[金·启示]已触发")
+                }
                 player.world.spawnParticle(org.bukkit.Particle.CRIT, player.location.add(0.0, 1.0, 0.0), 10, 0.2, 0.2, 0.2, 0.1)
             } else {
                 val current = goldStacks.getOrDefault(player.uniqueId, 0)
@@ -218,7 +220,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
             val cdEnd = fireCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 fireCd[player.uniqueId] = now + 6000L // 6秒冷却
-                player.sendMessage("§c[火·启示]已触发")
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.revelation.fire")) {
+                    player.sendMessage("§c[火·启示]已触发")
+                }
                 player.world.spawnParticle(org.bukkit.Particle.LAVA, victim.location.add(0.0, 1.0, 0.0), 10, 0.3, 0.3, 0.3, 0.1)
 
                 val pData = plugin.playerManager.getPlayerData(player)
@@ -275,7 +279,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
             val cdEnd = earthCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 earthCd[player.uniqueId] = now + 12000L // 12秒冷却
-                player.sendMessage("§6[土·启示]已触发")
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.revelation.earth")) {
+                    player.sendMessage("§6[土·启示]已触发")
+                }
                 
                 try {
                     player.world.spawnParticle(
@@ -315,7 +321,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
                     val currentHp = player.health - event.finalDamage
                     if (currentHp < maxHp * 0.5 && currentHp > 0.0) {
                         woodCd[player.uniqueId] = now + 30000L // 30秒冷却
-                        player.sendMessage("§a[木·启示]已触发")
+                        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.revelation.wood")) {
+                            player.sendMessage("§a[木·启示]已触发")
+                        }
                         player.world.spawnParticle(org.bukkit.Particle.HEART, player.location.add(0.0, 1.5, 0.0), 5, 0.2, 0.2, 0.2, 0.1)
 
                         val healPerTick = maxHp * (0.20 / 3.0)
@@ -361,7 +369,9 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
             val cdEnd = waterCd.getOrDefault(player.uniqueId, 0L)
             if (now >= cdEnd) {
                 waterCd[player.uniqueId] = now + 10000L // 10秒冷却
-                player.sendMessage("§9[水·启示]已触发")
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.revelation.water")) {
+                    player.sendMessage("§9[水·启示]已触发")
+                }
                 player.world.spawnParticle(org.bukkit.Particle.SPLASH, player.location.add(0.0, 1.0, 0.0), 20, 0.3, 0.5, 0.3, 0.1)
 
                 val refundSeconds = totalCd * 0.15

@@ -176,6 +176,9 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
             // 刷新虎瘴装 Lore (瘴气、耐久与激活状态)
             plugin.baihuDzManager.refreshPlayerEquipment(player)
 
+            // 刷新普通法宝 Lore（槽位、职业与等级激活状态）
+            plugin.artifactManager.refreshPlayerArtifacts(player)
+
             // 重新计算所有属性 (数值反馈)
             plugin.playerManager.updateStats(player)
 

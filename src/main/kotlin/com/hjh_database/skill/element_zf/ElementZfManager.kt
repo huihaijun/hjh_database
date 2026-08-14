@@ -29,6 +29,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
     // 系统级冷却记录表: PlayerUUID -> (ElementType -> CooldownEndTime)
     private val internalCooldowns: MutableMap<UUID, MutableMap<String, Long>> = ConcurrentHashMap()
+    private val formationLingliGains: MutableMap<UUID, Double> = HashMap()
 
     // 【新增】定义不同元素的冷却组 Key
     private val groupKeys: Map<String, NamespacedKey> = mapOf(
@@ -132,7 +133,8 @@ class ElementZfManager(private val plugin: Hjh_database) {
             return
         }
 
-        // 3. 执行技能逻辑
+        // 3. 执行技能逻辑；阵法自身回灵与回流饰品的灵力消耗分开记录。
+        formationLingliGains.remove(player.uniqueId)
         val success = skill.cast(player, level, config!!.getConfigurationSection("skills.$type"))
 
         if (success) {
@@ -157,17 +159,30 @@ class ElementZfManager(private val plugin: Hjh_database) {
             // 5. 发送提示消息
             val msg = config!!.getString("skills.$type.message")
             if (msg != null && msg.isNotEmpty()) {
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.name)))
+                if (!plugin.passiveSubtitleManager.showCombatEvent(player, "sorcerer.formation.${type.lowercase()}")) {
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.name)))
+                }
             }
             // ==========================================
             // 1. 构建带颜色代码的字符串 (使用 Kotlin 字符串模板更优雅)
-            val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
+            val lingliGain = formationLingliGains.remove(player.uniqueId) ?: 0.0
+            val gainText = if (lingliGain > 0.0) " &a(+${formatLingliChange(lingliGain)})" else ""
+            val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)}$gainText &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
             // 2. 使用 LegacyComponentSerializer 将 & 符号解析为真正的颜色组件
             val component = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage)
             // 3. 直接发送给玩家
             player.sendActionBar(component)
+        } else {
+            formationLingliGains.remove(player.uniqueId)
         }
     }
+
+    internal fun recordFormationLingliGain(playerId: UUID, amount: Double) {
+        formationLingliGains[playerId] = amount.coerceAtLeast(0.0)
+    }
+
+    private fun formatLingliChange(value: Double): String =
+        if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.1f", value)
 
     /**
      * 【新功能】设置视觉冷却组

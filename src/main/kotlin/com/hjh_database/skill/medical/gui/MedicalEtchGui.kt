@@ -14,6 +14,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryDragEvent
+import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
@@ -52,7 +53,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         private const val SLOT_SEP_OUT_BOOK = 32
     }
 
-    private val etchInteractiveSlots: Set<Int> = HashSet(Arrays.asList(SLOT_ETCH_BANNER, SLOT_ETCH_BOOK, SLOT_ETCH_RESULT))
+    private val etchInputSlots: Set<Int> = HashSet(Arrays.asList(SLOT_ETCH_BANNER, SLOT_ETCH_BOOK))
     private val separateInteractiveSlots: Set<Int> = HashSet(Arrays.asList(SLOT_SEP_INPUT, SLOT_SEP_OUT_BANNER, SLOT_SEP_OUT_BOOK))
 
     init {
@@ -60,6 +61,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
     }
 
     fun openMainMenu(p: Player) {
+        if (!canUseMedicalStation(p, true)) return
         val inv = Bukkit.createInventory(MainMenuHolder(), 27, TITLE_MAIN)
         inv.setItem(11, createItem(Material.LOOM, "§a§l绘制医术", "§7将医术绘制到旗帜上", "§e点击进入"))
         inv.setItem(13, createItem(Material.GRINDSTONE, "§b§l医术分离", "§7将已绘制的旗帜还原", "§7分为: 空白旗 + 秘籍", "§c需要消耗记忆！", "§e点击进入"))
@@ -94,6 +96,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
     }
 
     fun openEtchGui(p: Player) {
+        if (!canUseMedicalStation(p, true)) return
         val inv = Bukkit.createInventory(EtchHolder(), 27, TITLE_ETCH)
         fillGlass(inv, 27)
         inv.setItem(SLOT_ETCH_BANNER, null)
@@ -112,6 +115,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
     }
 
     fun openSeparateGui(p: Player) {
+        if (!canUseMedicalStation(p, true)) return
         val inv = Bukkit.createInventory(SeparateHolder(), 45, TITLE_SEPARATE)
         fillGlass(inv, 45)
         inv.setItem(SLOT_SEP_INPUT, null)
@@ -132,6 +136,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         if (!stationLocations.contains(locToString(block.location))) return
 
         e.isCancelled = true
+        if (!canUseMedicalStation(e.player, true)) return
         openMainMenu(e.player)
         e.player.playSound(e.player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
     }
@@ -185,9 +190,23 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         val slot = e.rawSlot
         val isTopInv = (e.clickedInventory == inv)
 
+        // 即使职业在菜单打开后发生变化，也不能继续操作医术台。
+        if (!canUseMedicalStation(p, false)) {
+            e.isCancelled = true
+            p.closeInventory()
+            p.sendMessage("§c只有医师职业可以使用医术绘制台。")
+            p.playSound(p.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1f)
+            return
+        }
+
         if (isTopInv) {
             e.isCancelled = true
         } else {
+            // 防止从玩家背包双击，把只读输出槽内的成品吸入或交换。
+            if (e.click == org.bukkit.event.inventory.ClickType.DOUBLE_CLICK) {
+                e.isCancelled = true
+                return
+            }
             if (e.isShiftClick) {
                 e.isCancelled = true
                 if (holder is EtchHolder) {
@@ -206,8 +225,12 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         }
 
         if (isTopInv) {
-            if (holder is EtchHolder && etchInteractiveSlots.contains(slot)) {
+            if (holder is EtchHolder && etchInputSlots.contains(slot)) {
                 e.isCancelled = false
+            }
+            if (holder is EtchHolder && slot == SLOT_ETCH_RESULT) {
+                // 成品槽只能把物品取出，禁止放入、交换、数字键替换或拖入物品。
+                e.isCancelled = !isOutputTakeAction(e.action)
             }
             if (holder is SeparateHolder && separateInteractiveSlots.contains(slot)) {
                 e.isCancelled = false
@@ -221,6 +244,11 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
                 else if (slot == 15) handleForgetButton(p)
             } else if (holder is EtchHolder) {
                 if (slot == SLOT_ETCH_BUTTON) {
+                    if (!isEmpty(inv.getItem(SLOT_ETCH_RESULT))) {
+                        p.sendMessage("§c请先取走上一把已经绘制完成的医旗，再绘制新的医术。")
+                        p.playSound(p.location, Sound.BLOCK_CHEST_LOCKED, 0.8f, 1f)
+                        return
+                    }
                     val res = manager.etchSkill(p, inv.getItem(SLOT_ETCH_BANNER), inv.getItem(SLOT_ETCH_BOOK))
                     if (res != null) {
                         consumeItem(inv, SLOT_ETCH_BANNER)
@@ -255,7 +283,7 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         for (slot in slots) {
             if (slot < inv.size) {
                 var isAllowed = false
-                if (holder is EtchHolder && etchInteractiveSlots.contains(slot)) isAllowed = true
+                if (holder is EtchHolder && etchInputSlots.contains(slot)) isAllowed = true
                 if (holder is SeparateHolder && separateInteractiveSlots.contains(slot)) isAllowed = true
 
                 if (!isAllowed) {
@@ -345,6 +373,31 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         if (lore.isNotEmpty()) meta.lore = Arrays.asList(*lore)
         item.itemMeta = meta
         return item
+    }
+
+    private fun canUseMedicalStation(player: Player, notify: Boolean): Boolean {
+        val data = plugin.playerManager.getPlayerData(player)
+        if (data == null) {
+            if (notify) player.sendMessage("§c玩家数据尚未加载完成，请稍后再试。")
+            return false
+        }
+        if (data.job == 3) return true
+        if (notify) {
+            player.sendMessage("§c只有医师职业可以使用医术绘制台。")
+            player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1f)
+        }
+        return false
+    }
+
+    private fun isOutputTakeAction(action: InventoryAction): Boolean = when (action) {
+        InventoryAction.PICKUP_ALL,
+        InventoryAction.PICKUP_HALF,
+        InventoryAction.PICKUP_ONE,
+        InventoryAction.PICKUP_SOME,
+        InventoryAction.MOVE_TO_OTHER_INVENTORY,
+        InventoryAction.DROP_ALL_SLOT,
+        InventoryAction.DROP_ONE_SLOT -> true
+        else -> false
     }
 
     private fun loadStationLocations() {

@@ -319,6 +319,20 @@ enum class StoryNpcs(
         Villager.Profession.NONE,
         Villager.Type.PLAINS,
         -300.5, 23.5, -659.5, 0f
+    ),
+    SHENGUAN(
+        "shenguan",
+        "§a§l监星官-沈观",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        324.5, 44.5, 66.5, 0f
+    ),
+    LIUAN(
+        "liuan",
+        "§a§l守桥人-柳安",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        1307.5, 37.5, 3014.5, 0f
     );
 
 

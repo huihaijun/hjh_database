@@ -72,7 +72,9 @@ class WoodMasteryWarrior(private val plugin: Hjh_database) {
         val triggerLocation = player.location.clone()
         val world = player.world
 
-        player.sendMessage("§a[木·精进] [生根] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.wood")) {
+            player.sendMessage("§a[木·精进] [生根] §f已触发")
+        }
         world.playSound(triggerLocation, Sound.BLOCK_GRASS_BREAK, 1.2f, 0.6f)
         world.playSound(triggerLocation, Sound.BLOCK_AZALEA_LEAVES_PLACE, 1.0f, 1.0f)
 

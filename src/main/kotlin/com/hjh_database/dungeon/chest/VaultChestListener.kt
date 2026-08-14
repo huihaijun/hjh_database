@@ -2,6 +2,8 @@ package com.hjh_database.dungeon.chest
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.dungeon.DungeonRecord
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
@@ -45,6 +47,9 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
         val record = playerData.dungeonRecords.computeIfAbsent(dungeonId) { DungeonRecord() }
+        val oneTimeRecord = playerData.dungeonRecords.computeIfAbsent(
+            plugin.goldenChestManager.oneTimeScopeId(config)
+        ) { DungeonRecord() }
 
         // 验证可开箱次数
         if (record.availableOpens <= 0) {
@@ -79,18 +84,28 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
         record.opens += 1
 
         // 4. 计算掉落
-        val droppedItems = plugin.goldenChestManager.rollLoot(player, dungeonId, record)
+        val droppedItems = plugin.goldenChestManager.rollLoot(player, dungeonId, record, oneTimeRecord)
 
         // 更新保底数据
-        val droppedIds = droppedItems.map { it.resourceId }
+        val droppedIds = droppedItems.mapTo(HashSet()) { it.resourceId }
         for (itemConf in config.lootTable) {
+            if (itemConf.requiredJob != null && itemConf.requiredJob != playerData.job) continue
             if (droppedIds.contains(itemConf.resourceId)) {
                 record.dropCounts[itemConf.resourceId] = record.dropCounts.getOrDefault(itemConf.resourceId, 0) + 1
                 record.opensSinceLastDrop[itemConf.resourceId] = 0
+                if (itemConf.oneTimeOnly && oneTimeRecord !== record) {
+                    oneTimeRecord.dropCounts[itemConf.resourceId] =
+                        oneTimeRecord.dropCounts.getOrDefault(itemConf.resourceId, 0) + 1
+                }
+            } else if (itemConf.oneTimeOnly && oneTimeRecord.dropCounts.getOrDefault(itemConf.resourceId, 0) > 0) {
+                // 已经取得终身唯一物品后不再无意义地累积保底。
+                record.opensSinceLastDrop.remove(itemConf.resourceId)
             } else {
                 record.opensSinceLastDrop[itemConf.resourceId] = record.opensSinceLastDrop.getOrDefault(itemConf.resourceId, 0) + 1
             }
         }
+        // 数据库保存走现有异步写入队列，不在交互事件主线程执行 SQL。
+        plugin.databaseManager.savePlayerAsync(playerData)
 
         // 强制触发 Vault 开箱物理动画
         try {
@@ -135,8 +150,7 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
             // 4. 【新增】触发全服通告
             if (loot.announceGlobal) {
-                // 广播消息：恭喜玩家XXX在秘境XXXX获得了[物品] × [数量]
-                org.bukkit.Bukkit.broadcastMessage("§6§l恭喜玩家§e§l[${player.name}]§6§l在秘境§b§l${config.displayName}§6§l获得了 $itemName §6§l× $amount")
+                broadcastRareDrop(player, config, itemStack)
             }
 
             val dropLoc = block.location.clone().add(0.5, 1.2, 0.5)
@@ -155,6 +169,25 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
         } else {
             player.sendMessage("§f你开启了宝箱，但是里面空空如也...")
         }
+    }
+
+    private fun broadcastRareDrop(
+        player: Player,
+        config: GoldenChestConfig,
+        itemStack: org.bukkit.inventory.ItemStack
+    ) {
+        val itemName = itemStack.itemMeta?.displayName()
+            ?: Component.translatable(itemStack.type.translationKey())
+        val hoveredItem = itemName.hoverEvent(itemStack.asHoverEvent { it })
+        org.bukkit.Bukkit.broadcast(
+            Component.text("恭喜玩家", NamedTextColor.GOLD)
+                .append(Component.space())
+                .append(Component.text(player.name, NamedTextColor.YELLOW))
+                .append(Component.text(" 在秘境 ", NamedTextColor.GOLD))
+                .append(Component.text(config.displayName, NamedTextColor.AQUA))
+                .append(Component.text(" 获得了 ", NamedTextColor.GOLD))
+                .append(hoveredItem)
+        )
     }
 
     // 专属权保护：别人无法捡起

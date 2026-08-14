@@ -294,6 +294,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         data.attackSpeed = 4.0
         data.critChance = 0.0
         data.coolReduce = 0.0
+        data.spiritSiphon = 0.0
         data.totalRarity = 0
 
         // 鈽呫€愭柊澧炪€戦噸缃€诲垎 鍜?娓呯┖鏄庣粏鍒楄〃 (蹇呴』鍔犺繖鍙ワ紒)
@@ -304,6 +305,11 @@ class PlayerManager(private val plugin: Hjh_database) {
 
         val weaponStats = weaponManager.calculateWeaponStats(player, data)
         weaponStats.forEach { (k, v) ->
+            bonuses.merge(k, v) { a, b -> a + b }
+        }
+
+        val artifactStats = plugin.artifactManager.calculateStats(player, data)
+        artifactStats.forEach { (k, v) ->
             bonuses.merge(k, v) { a, b -> a + b }
         }
 
@@ -389,6 +395,7 @@ class PlayerManager(private val plugin: Hjh_database) {
             data.critChance = max(data.critChance, 1.0)
         }
         data.coolReduce += bonuses.getOrDefault("cool_reduce", 0.0)
+        data.spiritSiphon += bonuses.getOrDefault("spirit_siphon", 0.0)
 
         // 攻击速度是“当前手持武器”属性，不参与背包常驻属性汇总。
         data.attackSpeed = plugin.equipmentActivationManager.heldAttackSpeed(player, data)

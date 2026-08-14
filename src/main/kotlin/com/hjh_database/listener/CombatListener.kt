@@ -9,6 +9,7 @@ import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
 import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
+import com.hjh_database.skill.medical.spell.impl.JiangTianGuangSpell
 import com.hjh_database.skill.weapon.job_0.pokongfuSkill
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
@@ -25,8 +26,11 @@ import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.persistence.PersistentDataType
+import java.util.ArrayDeque
 import java.util.EnumSet
+import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.min
 
@@ -41,9 +45,18 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
     private val storedDamageKey = NamespacedKey(plugin, "stored_arrow_damage")
     private val storedCritKey = NamespacedKey(plugin, "stored_arrow_crit")
     private val rpgCrossbowArrowKey = NamespacedKey(plugin, "rpg_crossbow_arrow")
+    private val spiritSiphonChanceKey = NamespacedKey(plugin, "spirit_siphon_chance")
+    private val spiritSiphonRarityKey = NamespacedKey(plugin, "spirit_siphon_rarity")
+    private val spiritSiphonShotKey = NamespacedKey(plugin, "spirit_siphon_shot")
+    private val spiritSiphonCooldowns = HashMap<UUID, Long>()
+    private val lastMeleeAttackTick = HashMap<UUID, Int>()
+    private val processedBowShots = HashMap<UUID, ArrayDeque<Long>>()
+
     companion object {
         private const val TEST_DUMMY_TAG = "hjh_test_dummy"
         const val PHYSICAL_ARMOR_PENETRATION_METADATA = "hjh_physical_armor_penetration"
+        private const val SPIRIT_SIPHON_COOLDOWN_MILLIS = 1_500L
+        private const val MAX_TRACKED_BOW_SHOTS = 64
 
         // --- 使用 EnumSet (位图向量) 提升高频事件中的判断速度，替代低效的 when 遍历 ---
         private val IGNORED_DAMAGE_CAUSES = EnumSet.of(
@@ -258,6 +271,24 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     entity.removeMetadata(BingQingYuSpell.VULNERABILITY_AMOUNT_METADATA, plugin)
                 }
             }
+
+            val jiangTianGuangUntil = entity.getMetadata(JiangTianGuangSpell.VULNERABILITY_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (jiangTianGuangUntil != null) {
+                if (jiangTianGuangUntil > System.currentTimeMillis()) {
+                    val vulnerability = entity.getMetadata(JiangTianGuangSpell.VULNERABILITY_AMOUNT_METADATA)
+                        .firstOrNull { it.owningPlugin == plugin }
+                        ?.asDouble()
+                        ?.coerceAtLeast(0.0) ?: 0.0
+                    // 降天光使用单一 metadata，多名施法者的同名易伤只结算一次。
+                    damage *= 1.0 + vulnerability
+                } else {
+                    entity.removeMetadata(JiangTianGuangSpell.VULNERABILITY_UNTIL_METADATA, plugin)
+                    entity.removeMetadata(JiangTianGuangSpell.VULNERABILITY_AMOUNT_METADATA, plugin)
+                }
+            }
+
         }
 
         // 受伤测试仪以此值作为进入自定义护甲公式前的原伤害。
@@ -365,6 +396,95 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
         msgTarget?.sendMessage("§e[测试] §f造成伤害: §c%.2f".format(event.finalDamage))
     }
 
+    /**
+     * 只在最终未取消且确实造成伤害的普攻上判定灵力攫取。
+     * 近战按游戏刻去重横扫的多目标事件；弓箭按射击编号去重穿透和散射命中。
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onSpiritSiphonHit(event: EntityDamageByEntityEvent) {
+        if (event.finalDamage <= 0.0) return
+
+        when (val damager = event.damager) {
+            is Player -> {
+                if (event.cause != EntityDamageEvent.DamageCause.ENTITY_ATTACK &&
+                    event.cause != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK
+                ) return
+                val data = plugin.playerManager.getData(damager.uniqueId) ?: return
+                if (data.job != 0) return
+                val activeWeapon = plugin.equipmentActivationManager.resolveHeldWeapon(damager, data) ?: return
+                val currentTick = Bukkit.getCurrentTick()
+                if (lastMeleeAttackTick.put(damager.uniqueId, currentTick) == currentTick) return
+                attemptSpiritSiphon(damager, data.spiritSiphon, activeWeapon.rarity)
+            }
+
+            is AbstractArrow -> {
+                val shooter = damager.shooter as? Player ?: return
+                val data = plugin.playerManager.getData(shooter.uniqueId) ?: return
+                if (data.job != 1) return
+                val pdc = damager.persistentDataContainer
+                val shotId = pdc.get(spiritSiphonShotKey, PersistentDataType.LONG) ?: return
+                if (!markBowShotProcessed(shooter.uniqueId, shotId)) return
+                val chance = pdc.get(spiritSiphonChanceKey, PersistentDataType.DOUBLE) ?: return
+                val rarity = pdc.get(spiritSiphonRarityKey, PersistentDataType.INTEGER) ?: return
+                attemptSpiritSiphon(shooter, chance, rarity)
+            }
+        }
+    }
+
+    private fun markBowShotProcessed(uuid: UUID, shotId: Long): Boolean {
+        val recent = processedBowShots.getOrPut(uuid) { ArrayDeque() }
+        if (recent.contains(shotId)) return false
+        recent.addLast(shotId)
+        while (recent.size > MAX_TRACKED_BOW_SHOTS) recent.removeFirst()
+        return true
+    }
+
+    private fun attemptSpiritSiphon(player: Player, rawChance: Double, weaponRarity: Int) {
+        val chance = rawChance.coerceIn(0.0, 1.0)
+        if (chance <= 0.0 || weaponRarity <= 0) return
+
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        if (data.lingli >= data.maxLingli) return
+
+        val now = System.currentTimeMillis()
+        if (now < (spiritSiphonCooldowns[player.uniqueId] ?: 0L)) return
+        if (ThreadLocalRandom.current().nextDouble() >= chance) return
+
+        val restoreAmount = when (weaponRarity.coerceAtMost(5)) {
+            1 -> 3.0
+            2 -> 4.0
+            3 -> 6.0
+            4 -> 8.0
+            5 -> 10.0
+            else -> return
+        }
+        val lingliBefore = data.lingli
+        data.addLingli(restoreAmount)
+        val actualRestore = data.lingli - lingliBefore
+        if (actualRestore <= 0.0) return
+
+        spiritSiphonCooldowns[player.uniqueId] = now + SPIRIT_SIPHON_COOLDOWN_MILLIS
+        plugin.databaseManager.queuePlayerSave(data)
+        val restoreDisplay = if (actualRestore % 1.0 == 0.0) {
+            actualRestore.toInt().toString()
+        } else {
+            String.format("%.1f", actualRestore)
+        }
+        val message = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &a(+$restoreDisplay) &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
+        player.sendActionBar(
+            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
+                .deserialize(message)
+        )
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        val uuid = event.player.uniqueId
+        spiritSiphonCooldowns.remove(uuid)
+        lastMeleeAttackTick.remove(uuid)
+        processedBowShots.remove(uuid)
+    }
+
     @EventHandler(ignoreCancelled = true)
     fun onDeath(event: EntityDeathEvent) {
         val entity = event.entity
@@ -459,6 +579,10 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             // ⭐ 【关键修复】将射出瞬间的面板伤害和暴击率死死地绑定在箭矢上！
             pdc.set(storedDamageKey, PersistentDataType.DOUBLE, data.archerDamage)
             pdc.set(storedCritKey, PersistentDataType.DOUBLE, data.critChance)
+            pdc.set(spiritSiphonChanceKey, PersistentDataType.DOUBLE, data.spiritSiphon)
+            pdc.set(spiritSiphonRarityKey, PersistentDataType.INTEGER, activeWeapon.rarity)
+            // 同一游戏刻产生的多重箭共享编号，整次射击只进行一次概率判定。
+            pdc.set(spiritSiphonShotKey, PersistentDataType.LONG, Bukkit.getCurrentTick().toLong())
             // ⭐ 判断武器材质并写入 PDC 供子弹命中间判断
             if (bow.type == Material.BOW) {
                 // 打上专属标记，用于在伤害判定时实现 250% 缩放

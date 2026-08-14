@@ -7,6 +7,7 @@ import com.hjh_database.spawner.impl.Qianlishensheshou
 import com.hjh_database.spawner.impl.Shamofengbao
 import com.hjh_database.spawner.impl.Xiongshentaisui
 import com.hjh_database.spawner.impl.Xuanshuihun
+import com.hjh_database.spawner.impl.XingheTonglingSkill
 import org.bukkit.ChatColor
 import org.bukkit.Location
 import org.bukkit.Material
@@ -116,6 +117,7 @@ object MobFactory {
             "kuanggongwanghun" -> Kuanggongwanghun(plugin, entity)
             "xuanshuihun" -> Xuanshuihun(plugin, entity)
             "qianlishensheshou" -> Qianlishensheshou(plugin, entity)
+            "xinghetongling" -> XingheTonglingSkill(plugin, entity)
             // 以后如果有新 boss，继续往下加就行：
 //             "shiyanguai" -> Shiyanguai(plugin, entity)
             // "kulouwang" -> Kulouwang(plugin, entity)

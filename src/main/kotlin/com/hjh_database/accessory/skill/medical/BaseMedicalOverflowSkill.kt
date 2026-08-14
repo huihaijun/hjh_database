@@ -24,6 +24,7 @@ import net.md_5.bungee.api.chat.TextComponent
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
+import java.util.UUID
 
 abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
     private val storedKey = NamespacedKey(plugin, "medical_overflow_stored")
@@ -84,6 +85,9 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
     protected open fun hasFlameTrail(): Boolean = false
     protected open fun applyAllyBuffs(target: Player) {}
     protected open fun getKnockbackStrength(): Double = 0.65
+    protected open fun getMaxDamageRetargets(): Int = 0
+    protected open fun getOverflowRetargetRange(): Double = 8.0
+    protected open fun canKnockback(target: LivingEntity): Boolean = true
 
     private fun sendSkillActionBar(player: Player) {
         player.spigot().sendMessage(
@@ -185,9 +189,29 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
         } ?: (consumedStorage * getStorageMultiplier(crystalData))
         val heal = consumedStorage * getHealStorageMultiplier(crystalData)
 
+        flyBirdToTarget(
+            player,
+            bird,
+            target,
+            damage,
+            heal,
+            getMaxDamageRetargets().coerceAtLeast(0),
+            mutableSetOf()
+        )
+    }
+
+    private fun flyBirdToTarget(
+        player: Player,
+        bird: Parrot,
+        target: SpiritTarget,
+        damage: Double,
+        heal: Double,
+        remainingDamageRetargets: Int,
+        healedTargetIds: MutableSet<UUID>
+    ) {
         object : BukkitRunnable() {
             var ticks = 0
-            val start = spawnLoc.clone()
+            val start = bird.location.clone()
             val flightTicks = computeFlightTicks(start, target.entity.location)
 
             override fun run() {
@@ -199,7 +223,70 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
 
                 val targetLoc = targetLocation(target.entity)
                 if (ticks >= flightTicks || bird.location.distanceSquared(targetLoc) <= 0.8) {
-                    impact(player, target, bird, damage, heal)
+                    when (target.kind) {
+                        SpiritTarget.Kind.ALLY, SpiritTarget.Kind.SELF -> {
+                            val healedPlayer = target.entity as Player
+                            healedTargetIds.add(healedPlayer.uniqueId)
+                            val actualHeal = healTarget(healedPlayer, heal)
+                            val remainingHeal = (heal - actualHeal).coerceAtLeast(0.0)
+                            val nextAlly = if (remainingHeal > 0.01) {
+                                findOverflowHealTarget(
+                                    bird.location,
+                                    getOverflowRetargetRange(),
+                                    healedTargetIds
+                                )
+                            } else {
+                                null
+                            }
+
+                            if (nextAlly != null) {
+                                flyBirdToTarget(
+                                    player,
+                                    bird,
+                                    nextAlly,
+                                    0.0,
+                                    remainingHeal,
+                                    remainingDamageRetargets,
+                                    healedTargetIds
+                                )
+                            } else {
+                                bird.remove()
+                            }
+                        }
+
+                        SpiritTarget.Kind.MONSTER -> {
+                            val actualDamage = damageTarget(player, target.entity, damage)
+                            val remainingDamage = (damage - actualDamage).coerceAtLeast(0.0)
+                            val killedTarget = target.entity.isDead || !target.entity.isValid
+                            val nextTarget = if (
+                                killedTarget &&
+                                remainingDamageRetargets > 0 &&
+                                remainingDamage > 0.01
+                            ) {
+                                findOverflowRetarget(
+                                    bird.location,
+                                    getOverflowRetargetRange(),
+                                    target.entity.uniqueId
+                                )
+                            } else {
+                                null
+                            }
+
+                            if (nextTarget != null) {
+                                flyBirdToTarget(
+                                    player,
+                                    bird,
+                                    nextTarget,
+                                    remainingDamage,
+                                    0.0,
+                                    remainingDamageRetargets - 1,
+                                    healedTargetIds
+                                )
+                            } else {
+                                bird.remove()
+                            }
+                        }
+                    }
                     cancel()
                     return
                 }
@@ -209,6 +296,37 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
                 ticks++
             }
         }.runTaskTimer(plugin, 0L, 1L)
+    }
+
+    private fun findOverflowRetarget(origin: Location, range: Double, excludedTarget: UUID): SpiritTarget? {
+        val rangeSquared = range * range
+        val monster = origin.world
+            ?.getNearbyEntities(origin, range, range, range)
+            ?.asSequence()
+            ?.filterIsInstance<LivingEntity>()
+            ?.filter { it.uniqueId != excludedTarget }
+            ?.filter { isValidMonster(it) && it.location.distanceSquared(origin) <= rangeSquared }
+            ?.minByOrNull { it.location.distanceSquared(origin) }
+            ?: return null
+        return SpiritTarget(monster, SpiritTarget.Kind.MONSTER)
+    }
+
+    private fun findOverflowHealTarget(
+        origin: Location,
+        range: Double,
+        excludedTargets: Set<UUID>
+    ): SpiritTarget? {
+        val rangeSquared = range * range
+        val ally = origin.world
+            ?.getNearbyEntities(origin, range, range, range)
+            ?.asSequence()
+            ?.filterIsInstance<Player>()
+            ?.filter { it.uniqueId !in excludedTargets }
+            ?.filter { it.isOnline && !it.isDead && isInjured(it) }
+            ?.filter { it.location.distanceSquared(origin) <= rangeSquared }
+            ?.minByOrNull { it.location.distanceSquared(origin) }
+            ?: return null
+        return SpiritTarget(ally, SpiritTarget.Kind.ALLY)
     }
 
     private fun computeFlightTicks(start: Location, target: Location): Int {
@@ -242,16 +360,8 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
         }
     }
 
-    private fun impact(player: Player, target: SpiritTarget, bird: Parrot, damage: Double, heal: Double) {
-        when (target.kind) {
-            SpiritTarget.Kind.ALLY, SpiritTarget.Kind.SELF -> healTarget(target.entity as Player, heal)
-            SpiritTarget.Kind.MONSTER -> damageTarget(player, target.entity, damage)
-        }
-        bird.remove()
-    }
-
-    private fun healTarget(target: Player, amount: Double) {
-        val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return
+    private fun healTarget(target: Player, amount: Double): Double {
+        val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return 0.0
         val actualHeal = amount.coerceAtMost(maxHealth - target.health).coerceAtLeast(0.0)
         if (actualHeal > 0.0) {
             target.health = (target.health + actualHeal).coerceAtMost(maxHealth)
@@ -266,21 +376,25 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
             target.world.playSound(target.location, Sound.BLOCK_FIRE_AMBIENT, 0.45f, 1.55f)
         }
         target.world.playSound(target.location, Sound.ENTITY_PARROT_AMBIENT, 0.9f, 1.65f)
+        return actualHeal
     }
 
-    private fun damageTarget(player: Player, target: LivingEntity, damage: Double) {
-        FormationMagicDamage.deal(plugin, player, target, damage)
+    private fun damageTarget(player: Player, target: LivingEntity, damage: Double): Double {
+        val actualDamage = FormationMagicDamage.deal(plugin, player, target, damage)
 
-        val knockback = target.location.toVector().subtract(player.location.toVector())
-        knockback.y = 0.0
-        if (knockback.lengthSquared() > 0.001) {
-            target.velocity = knockback.normalize().multiply(getKnockbackStrength()).setY(0.0)
+        if (target.isValid && !target.isDead && canKnockback(target)) {
+            val knockback = target.location.toVector().subtract(player.location.toVector())
+            knockback.y = 0.0
+            if (knockback.lengthSquared() > 0.001) {
+                target.velocity = knockback.normalize().multiply(getKnockbackStrength()).setY(0.0)
+            }
         }
 
         val center = target.location.clone().add(0.0, 1.0, 0.0)
         target.world.spawnParticle(if (hasFlameTrail()) Particle.FLAME else Particle.CLOUD, center, 16, 0.3, 0.3, 0.3, 0.03)
         target.world.spawnParticle(Particle.DUST, center, 10, 0.28, 0.35, 0.28, 0.0, getTrailDust())
         target.world.playSound(target.location, if (hasFlameTrail()) Sound.ITEM_FIRECHARGE_USE else Sound.ENTITY_PARROT_AMBIENT, 0.9f, 1.35f)
+        return actualDamage
     }
 
 }

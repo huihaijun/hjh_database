@@ -470,11 +470,12 @@ class ResourceManager(private val plugin: Hjh_database) {
         list.addAll(plugin.playerManager.weaponManager.allIds) // 姝﹀櫒ID
         list.addAll(plugin.playerManager.armorManager.allIds) // 鎶ょ敳ID
         list.addAll(plugin.playerManager.crystalManager.allIds)
+        list.addAll(plugin.artifactManager.allIds) // 普通法宝 ID
         if (plugin.isBaihuDzManagerInitialized()) {
             list.addAll(plugin.baihuDzManager.weapons.keys)
             list.addAll(plugin.baihuDzManager.artifacts.keys)
         }
-        return list
+        return list.distinct().sorted()
     }
 
 }

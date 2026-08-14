@@ -22,6 +22,8 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             plugin.kaiWuManager.loadConfig()
             plugin.kaiWuManager.loadNodes()
             plugin.resourceManager.reload()
+            plugin.tianheyiSkill.reloadPreservingStock()
+            plugin.artifactManager.reload()
             plugin.recipeManager.loadAllRecipes()
             if (plugin.isBaihuDzManagerInitialized()) {
                 plugin.baihuDzManager.reload()
@@ -30,6 +32,11 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             plugin.jianghuXindeManager.reload()
             plugin.jianghuXindeManager.ensureStationBlock()
             plugin.bgmManager.reload()
+
+            plugin.server.onlinePlayers.forEach { player ->
+                plugin.artifactManager.refreshPlayerArtifacts(player)
+                plugin.playerManager.updateStats(player)
+            }
 
             sender.sendMessage(ChatColor.GREEN.toString() + "资源重载完成，在线玩家物品已刷新。")
             sender.sendMessage(ChatColor.GREEN.toString() + "普通锻造、白虎锻造、炼药配方已同步刷新。炼药物品快照刷新 $refreshedAlchemyItems 个。")

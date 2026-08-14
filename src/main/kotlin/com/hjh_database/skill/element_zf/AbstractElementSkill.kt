@@ -59,7 +59,10 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
                     if (Math.random() <= prob) {
                         data.lingli -= actualLingliCost // 扣除灵力
                         plugin.databaseManager.queuePlayerSave(data)
-                        player.sendMessage("§d✨ 【回流】触发成功！本次阵法消耗了 $actualLingliCost 点灵力。")
+                        val accessoryId = crystalData.skillId ?: crystalData.id
+                        if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId)) {
+                            player.sendMessage("§d✨ 【回流】触发成功！本次阵法消耗了 $actualLingliCost 点灵力。")
+                        }
                         willConsumeItem = false // 触发了回流，免去物品消耗
                     }
                 }
@@ -71,7 +74,15 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
             handItem.amount = handItem.amount - 1
         }
 
-        // 4. 数据和消耗都处理完了，干干净净地把参数交给子类去放技能！
-        return onCast(player, level, safeConfig, path)
+        // 4. 单独记录阵法本身增加的灵力，避免把回流饰品的扣费算进绿色增量。
+        val lingliBeforeFormation = data.lingli
+        val success = onCast(player, level, safeConfig, path)
+        if (success) {
+            plugin.elementZfManager.recordFormationLingliGain(
+                player.uniqueId,
+                data.lingli - lingliBeforeFormation
+            )
+        }
+        return success
     }
 }

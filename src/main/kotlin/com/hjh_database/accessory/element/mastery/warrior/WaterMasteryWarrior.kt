@@ -66,7 +66,9 @@ class WaterMasteryWarrior(private val plugin: Hjh_database) {
     }
 
     private fun trigger(player: Player, pData: PlayerData) {
-        player.sendMessage("§9[水·精进] [潮返] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.warrior.water")) {
+            player.sendMessage("§9[水·精进] [潮返] §f已触发")
+        }
 
         // 2秒内依次向周围10格扩散三道水波
         // 第一波 (2 tick 后)

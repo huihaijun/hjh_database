@@ -22,9 +22,12 @@ import java.util.ArrayList
 class MenuManager(private val plugin: Hjh_database) {
     companion object {
         const val TIANJI_TOKEN_RESOURCE_ID = "tianjiling"
+        const val COMBAT_NOTICE_MODE_BUTTON_SLOT = 46
         const val SUICIDE_BUTTON_SLOT = 47
         const val PORTABLE_WAREHOUSE_BUTTON_SLOT = 51
         const val TITLE_SYSTEM_BUTTON_SLOT = 49
+        // 天机令最后一行第八列（槽位从 0 开始，因此为 52）。
+        const val DUNGEON_STATISTICS_BUTTON_SLOT = 52
     }
 
     private lateinit var file: File
@@ -164,7 +167,19 @@ class MenuManager(private val plugin: Hjh_database) {
         accessoryButton.itemMeta = accessoryMeta
         inv.setItem(32, accessoryButton)
 
+        // Slot 33: 秘境开箱统计。由程序化入口保证旧版 menus.yml 无需手动补配置。
+        inv.setItem(
+            DUNGEON_STATISTICS_BUTTON_SLOT,
+            createMenuButton(Material.VAULT, "§d§l秘境开箱记录", listOf(
+                "§7查看各个秘境的通关与开箱记录",
+                "§7以及终身唯一奖励的收集进度",
+                "",
+                "§b▶ 点击查看"
+            ))
+        )
+
         inv.setItem(SUICIDE_BUTTON_SLOT, createSuicideButton())
+        inv.setItem(COMBAT_NOTICE_MODE_BUTTON_SLOT, createCombatNoticeModeButton(player))
         inv.setItem(PORTABLE_WAREHOUSE_BUTTON_SLOT, createMenuButton(Material.ENDER_CHEST, "§b随身宝箱", listOf(
             "§7§o天机阁巧匠以须弥芥子之术,将钱庄库房藏入此令",
             "§7§o持令者无论身在何方,皆可随心存取,不受时空所限",
@@ -233,7 +248,13 @@ class MenuManager(private val plugin: Hjh_database) {
         if (material == Material.PLAYER_HEAD && meta is SkullMeta) meta.owningPlayer = player
         if (meta != null) {
             meta.setDisplayName(format(replacePlaceholders(section.getString("name", "Button") ?: "Button", player, data)))
-            meta.lore = section.getStringList("lore").map { configuredLine ->
+            val configuredLore = section.getStringList("lore").toMutableList()
+            // 兼容服务器数据目录里已经存在的旧 menus.yml：无需管理员手动删配置也能看到新属性。
+            if (section.name == "personal_info" && configuredLore.none { it.contains("%spirit_siphon%") }) {
+                val critLine = configuredLore.indexOfFirst { it.contains("%crit_chance%") }
+                configuredLore.add(if (critLine >= 0) critLine + 1 else configuredLore.size, "&f灵力攫取: &b%spirit_siphon%")
+            }
+            meta.lore = configuredLore.map { configuredLine ->
                 // 兼容服务器数据目录中的旧 menus.yml，无需删除配置也能显示倒计时。
                 val line = if (configuredLine.contains("%kaiwu_max_energy%") &&
                     !configuredLine.contains("%kaiwu_full_countdown%")
@@ -271,6 +292,30 @@ class MenuManager(private val plugin: Hjh_database) {
         meta?.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
         item.itemMeta = meta
         return item
+    }
+
+    private fun createCombatNoticeModeButton(player: Player): ItemStack {
+        val subtitleMode = plugin.passiveSubtitleManager.isSubtitleMode(player)
+        val modeName = if (subtitleMode) "§d字幕模式" else "§f经典模式"
+        val description = if (subtitleMode) {
+            "§7在右下角显示精简战斗提示"
+        } else {
+            "§7在聊天栏显示原有完整提示"
+        }
+        val lore = mutableListOf(
+            "§7当前：$modeName",
+            description
+        )
+        if (subtitleMode) {
+            lore.add("§e需开启：§f选项 > 音乐和声音 > 隐藏式字幕")
+        }
+        lore.add("")
+        lore.add("§b▶ 点击切换")
+        return createMenuButton(
+            if (subtitleMode) Material.ECHO_SHARD else Material.PAPER,
+            "§d§l战斗提示模式",
+            lore
+        )
     }
 
     fun openDaoTianMenu(player: Player) {
@@ -427,6 +472,7 @@ class MenuManager(private val plugin: Hjh_database) {
         if (job == 2 || job == 3) result = result.replace("暴击率", "法穿率")
         result = result.replace("%crit_chance%", String.format("%.1f%%", (data.critChance ?: 0.0) * 100))
         result = result.replace("%CoolReduce%", String.format("%.1f%%", (data.coolReduce ?: 0.0) * 100))
+        result = result.replace("%spirit_siphon%", String.format("%.1f%%", data.spiritSiphon.coerceAtLeast(0.0) * 100))
 
         val lingliDisplay = "${(data.lingli ?: 0.0).toInt()}/${data.maxLingli.toInt()}"
         result = result.replace("%lingli%", lingliDisplay)

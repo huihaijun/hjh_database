@@ -9,27 +9,38 @@ import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
-import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.ItemDisplay
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent
 import org.bukkit.inventory.ItemStack
-import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.scheduler.BukkitRunnable
-import org.bukkit.util.Transformation
 import org.joml.Vector3f
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
-class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
+class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell, Listener {
 
     companion object {
         // 全局静态存储当前存活的所有灵草，用于多玩家释放时的“最近索敌”逻辑
         val activePlants = mutableListOf<PlantData>()
+        private val activeTaunts = ConcurrentHashMap<UUID, UUID>()
+        private val listenerRegistered = AtomicBoolean(false)
     }
 
     // 用于记录单颗灵草的数据
-    data class PlantData(val id: UUID, val location: Location, val targetAnchor: ArmorStand)
+    data class PlantData(val id: UUID, val location: Location)
+
+    init {
+        if (listenerRegistered.compareAndSet(false, true)) {
+            plugin.server.pluginManager.registerEvents(this, plugin)
+        }
+    }
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         // --- 1. 读取配置与计算属性 ---
@@ -43,16 +54,7 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
 
         val center = player.location.clone()
 
-        // --- 2. 生成实体 ---
-        // 生成隐形 ArmorStand 作为怪物的仇恨锚点 (ArmorStand 是 LivingEntity，怪物可以 Target 它)
-        val anchor = center.world.spawn(center, ArmorStand::class.java) {
-            it.isVisible = false
-            it.isMarker = true // 设为 Marker 无法被破坏和碰撞
-            it.setGravity(false)
-            it.isSmall = true
-        }
-
-        // 生成 ItemDisplay 用于视觉展示 (冒险模式下玩家无法破坏 ItemDisplay)
+        // --- 2. 仅生成一个高性能 ItemDisplay 作为视觉实体 ---
         val display = center.world.spawn(center.clone().add(0.0, 0.5, 0.0), ItemDisplay::class.java) {
             it.setItemStack(ItemStack(Material.FERN)) // 视觉为一株蕨类灵草
             // 让灵草稍微变大一点
@@ -63,15 +65,16 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
 
         // 注册到全局存活列表
         val plantId = UUID.randomUUID()
-        val plantData = PlantData(plantId, center, anchor)
+        val plantData = PlantData(plantId, center)
         activePlants.add(plantData)
 
         // 播放施法音效和生成粒子
         center.world.playSound(center, Sound.BLOCK_GRASS_PLACE, 1.0f, 1.0f)
         center.world.spawnParticle(Particle.HAPPY_VILLAGER, center.clone().add(0.0, 0.5, 0.0), 10, 0.3, 0.3, 0.3, 0.0)
+        drawTauntRadius(center, tauntRadius)
 
         // 释放瞬间固定一次嘲讽名单；后续只维持这批怪物的仇恨，不再吸引新进入范围的怪。
-        val tauntedMobIds = captureTauntTargets(center, tauntRadius, anchor)
+        val tauntedMobIds = captureTauntTargets(center, tauntRadius, plantId)
 
         // --- 3. 核心循环任务：维持初始嘲讽名单 + 倒计时爆炸 ---
         object : BukkitRunnable() {
@@ -85,17 +88,17 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
                     return
                 }
 
+                // 目标事件会阻止怪物转火；寻路只需每0.5秒刷新，避免每tick重算路径。
                 if (ticks % 10 == 0) {
-                    refreshTauntedMobs(tauntedMobIds, anchor)
+                    refreshTauntedMobs(tauntedMobIds, center, plantId)
                 }
-
-                ticks += 5 // 任务本身每 5 ticks 执行一次(为了倒计时精确)
+                ticks += 5
             }
 
             // 清理方法：移除实体和全局注册
             private fun cleanup() {
                 activePlants.remove(plantData)
-                if (!anchor.isDead) anchor.remove()
+                for (mobId in tauntedMobIds) activeTaunts.remove(mobId, plantId)
                 if (!display.isDead) display.remove()
             }
         }.runTaskTimer(plugin, 0L, 5L)
@@ -103,33 +106,75 @@ class LingCaoJueSpell(private val plugin: Hjh_database) : MedicalSpell {
         return true
     }
 
-    private fun captureTauntTargets(center: Location, tauntRadius: Double, anchor: ArmorStand): List<UUID> {
+    private fun captureTauntTargets(center: Location, tauntRadius: Double, plantId: UUID): List<UUID> {
         val targetIds = mutableListOf<UUID>()
+        val radiusSquared = tauntRadius * tauntRadius
         val nearbyEntities = center.world.getNearbyEntities(center, tauntRadius, tauntRadius, tauntRadius)
         for (entity in nearbyEntities) {
-            if (entity is Mob && entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
+            if (
+                entity is Mob &&
+                entity.isValid &&
+                !entity.isDead &&
+                entity.scoreboardTags.contains("panling") &&
+                entity.scoreboardTags.contains("monster") &&
+                !entity.scoreboardTags.contains("instance_boss") &&
+                entity.location.distanceSquared(center) <= radiusSquared
+            ) {
                 targetIds.add(entity.uniqueId)
-                redirectMobToAnchor(entity, anchor)
+                activeTaunts[entity.uniqueId] = plantId
+                redirectMobToPlant(entity, center)
             }
         }
         return targetIds
     }
 
-    private fun refreshTauntedMobs(targetIds: List<UUID>, anchor: ArmorStand) {
+    private fun refreshTauntedMobs(targetIds: List<UUID>, center: Location, plantId: UUID) {
         for (targetId in targetIds) {
+            if (activeTaunts[targetId] != plantId) continue
             val mob = Bukkit.getEntity(targetId) as? Mob ?: continue
-            if (!mob.isValid || mob.isDead) continue
+            if (!mob.isValid || mob.isDead) {
+                activeTaunts.remove(targetId, plantId)
+                continue
+            }
             if (!mob.scoreboardTags.contains("panling") || !mob.scoreboardTags.contains("monster")) continue
-            redirectMobToAnchor(mob, anchor)
+            if (mob.scoreboardTags.contains("instance_boss")) {
+                activeTaunts.remove(targetId, plantId)
+                continue
+            }
+            redirectMobToPlant(mob, center)
         }
     }
 
-    private fun redirectMobToAnchor(mob: Mob, anchor: ArmorStand) {
-        mob.target = anchor
+    private fun redirectMobToPlant(mob: Mob, center: Location) {
+        // ItemDisplay 不是 LivingEntity，不能赋给 Mob.target；取消生物目标后直接驱动寻路即可。
+        if (mob.target != null) mob.target = null
         try {
-            mob.pathfinder.moveTo(anchor.location)
+            mob.pathfinder.moveTo(center)
         } catch (ignored: Exception) {
-            // 部分服务端不支持直接改寻路目标，保留 target 即可。
+            // 个别没有寻路能力的 Mob 保持清空攻击目标，避免转火玩家。
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onTauntedMobSelectTarget(event: EntityTargetLivingEntityEvent) {
+        if (event.target != null && activeTaunts.containsKey(event.entity.uniqueId)) {
+            // 在灵草存活期间阻止初始名单中的怪物被自身 AI 或其他普通仇恨覆盖。
+            event.isCancelled = true
+        }
+    }
+
+    private fun drawTauntRadius(center: Location, radius: Double) {
+        if (radius <= 0.0) return
+        val particle = Particle.DustOptions(org.bukkit.Color.fromRGB(105, 225, 95), 1.0f)
+        val points = 72
+        for (index in 0 until points) {
+            val angle = Math.PI * 2.0 * index / points
+            val point = center.clone().add(
+                Math.cos(angle) * radius,
+                0.15,
+                Math.sin(angle) * radius
+            )
+            center.world.spawnParticle(Particle.DUST, point, 1, 0.0, 0.0, 0.0, 0.0, particle)
         }
     }
 

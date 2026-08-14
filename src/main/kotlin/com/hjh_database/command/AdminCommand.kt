@@ -204,15 +204,19 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         // === reload (重载) ===
         if (subCommand == "reload") {
             plugin.reloadConfig()
+            plugin.passiveSubtitleManager.reload()
             moneyAdminGui.reload()
             plugin.menuManager.reload()
             plugin.playerManager.weaponManager.reload()
             plugin.playerManager.armorManager.reload()
             plugin.playerManager.crystalManager.reload()
             plugin.weaponSkillManager.reload()
+            plugin.tianheyiSkill.reloadPreservingStock()
+            plugin.artifactManager.reload()
             plugin.baihuDzManager.reload()
             plugin.baihuWeaponSkillManager.reload()
             plugin.chonghuaManager.reload()
+            com.hjh_database.dungeon.qixi.QixiAccessPolicy.reload(plugin)
             plugin.kaiWuManager.loadConfig()
             plugin.kaiWuManager.loadNodes()
 
@@ -244,8 +248,12 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             // 重载传送点
             plugin.teleportManager.reload()
             plugin.farmingManager.reload()
+            plugin.server.onlinePlayers.forEach { player ->
+                plugin.artifactManager.refreshPlayerArtifacts(player)
+                plugin.playerManager.updateStats(player)
+            }
             plugin.titleManager.reloadAsync(sender)
-            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶/灵田)已重载！")
+            sender.sendMessage(ChatColor.GREEN.toString() + "所有配置文件(含Resource/Medical/Alchemy/teleport/重华晶/灵田/七夕白名单)已重载！")
             return true
         }
 
@@ -288,7 +296,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             if (args.size < 2) return error(sender, "用法: /hjhadmin <get|give> <物品ID或名字> [数量]")
 
             val itemName = args[1]
-            val item = plugin.resourceManager.getItem(itemName) ?: plugin.baihuDzManager.getItem(itemName)
+            val item = plugin.resourceManager.getItem(itemName)
+                ?: plugin.artifactManager.getItem(itemName)
+                ?: plugin.baihuDzManager.getItem(itemName)
 
             if (item == null) {
                 return error(sender, "未找到名为 [$itemName] 的物品！请检查 resources 文件夹。")
@@ -839,6 +849,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 sender.sendMessage("§c - /hjhadmin dungeon getchest <副本ID>  (获取金宝箱方块)")
                 sender.sendMessage("§c - /hjhadmin dungeon info <玩家> <副本ID>  (查询进度)")
                 sender.sendMessage("§c - /hjhadmin dungeon addclear/addopen <玩家> <副本ID> <数量>")
+                sender.sendMessage("§c - /hjhadmin dungeon resetdrop <玩家> <副本ID> <一次性物品ID>")
                 return true
             }
 
@@ -958,6 +969,10 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
             // 4. 查询与修改玩家的金宝箱数据 (用于测试保底和通关逻辑)
             if (action == "info") {
+                if (args.size < 4) {
+                    sender.sendMessage("§c[系统] 用法: /hjhadmin dungeon info <玩家> <副本ID>")
+                    return true
+                }
                 val target = Bukkit.getPlayerExact(args[2]) ?: return true
                 val dungeonId = args[3]
 
@@ -985,24 +1000,43 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 val target = Bukkit.getPlayerExact(args[2]) ?: return true
                 val dungeonId = args[3]
                 val resourceId = args[4]
+                val config = plugin.goldenChestManager.chestRegistry[dungeonId]
+                if (config == null) {
+                    sender.sendMessage("§c[系统] 未知的副本宝箱ID：$dungeonId")
+                    return true
+                }
+                if (resourceId !in plugin.goldenChestManager.oneTimeLootIds(dungeonId)) {
+                    sender.sendMessage("§c[系统] [$resourceId] 不是该金宝箱登记的一次性物品！")
+                    return true
+                }
 
                 val pd = plugin.playerManager.getPlayerData(target) ?: return true
-                val rec = pd.dungeonRecords[dungeonId]
-                if (rec == null) {
+                val scopeId = plugin.goldenChestManager.oneTimeScopeId(config)
+                val relatedDungeonIds = plugin.goldenChestManager.chestRegistry.values
+                    .filter { plugin.goldenChestManager.oneTimeScopeId(it) == scopeId }
+                    .map { it.dungeonId }
+                val records = (relatedDungeonIds + scopeId).distinct().mapNotNull(pd.dungeonRecords::get)
+                if (records.isEmpty()) {
                     sender.sendMessage("§c[系统] 该玩家尚未有该副本的任何数据！")
                     return true
                 }
 
-                // 移除已经掉落的次数
-                rec.dropCounts.remove(resourceId)
-                // 顺便把保底垫数也清零
-                rec.opensSinceLastDrop.remove(resourceId)
+                // 一次性资格跨难度共享；管理员重置时同步清理所有关联难度的记录与保底。
+                records.forEach { record ->
+                    record.dropCounts.remove(resourceId)
+                    record.opensSinceLastDrop.remove(resourceId)
+                }
+                plugin.databaseManager.savePlayerAsync(pd)
 
-                sender.sendMessage("§a[系统] 成功清除了玩家 ${target.name} 在副本 $dungeonId 中关于物品 [$resourceId] 的开出记录！现在TA可以再次抽到此生仅一次的物品了。")
+                sender.sendMessage("§a[系统] 已异步保存：成功清除玩家 ${target.name} 关于一次性物品 [$resourceId] 的共享开出记录与关联保底！")
                 return true
             }
 
             if (action == "addclear" || action == "addopen" || action == "addavail") {
+                if (args.size < 4) {
+                    sender.sendMessage("§c[系统] 用法: /hjhadmin dungeon $action <玩家> <副本ID> [数量]")
+                    return true
+                }
                 val target = Bukkit.getPlayerExact(args[2]) ?: return true
                 val dungeonId = args[3]
                 val amount = args.getOrNull(4)?.toIntOrNull() ?: 1
@@ -1025,6 +1059,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                         sender.sendMessage("§a已为玩家 ${target.name} 副本 $dungeonId 额外赠送 $amount 次可开箱次数！")
                     }
                 }
+                plugin.databaseManager.savePlayerAsync(pd)
                 return true
             }
             sender.sendMessage("§c[系统] 未知的 dungeon 子指令，请使用 trigger, set, getchest 等。")
@@ -1352,7 +1387,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
                     // 【新增】为 resetdrop 提供第 5 参数(物品ID)的补全
                     if (args.size == 5 && args[1].equals("resetdrop", ignoreCase = true)) {
-                        return plugin.resourceManager?.getAllItemNames()?.filter { it.startsWith(args[4]) } ?: emptyList()
+                        return plugin.goldenChestManager.oneTimeLootIds(args[3])
+                            .filter { it.startsWith(args[4], ignoreCase = true) }
                     }
                 }
             }

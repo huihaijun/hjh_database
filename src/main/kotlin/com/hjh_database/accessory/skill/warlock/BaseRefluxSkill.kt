@@ -12,6 +12,8 @@ import org.bukkit.persistence.PersistentDataType
 
 abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
 
+    protected abstract val accessoryId: String
+
     companion object {
         // 玩家 PDC 会随退服保存，且 /reload 后仍由同一在线 Player 实体保留。
         private val REFLUX_ACTIVE_KEY = NamespacedKey.fromString("hjh_database:reflux_active")!!
@@ -59,11 +61,15 @@ abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
 
         if (isRefluxActive(player)) {
             setRefluxActive(player, false)
-            player.sendMessage("§c关闭【回流】模式，释放阵法将正常消耗元素。")
+            if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId, "disabled")) {
+                player.sendMessage("§c关闭【回流】模式，释放阵法将正常消耗元素。")
+            }
             player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 0.8f)
         } else {
             setRefluxActive(player, true)
-            player.sendMessage("§a开启【回流】模式！灵力充沛时，释放阵法将消耗灵力。")
+            if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId, "enabled")) {
+                player.sendMessage("§a开启【回流】模式！灵力充沛时，释放阵法将消耗灵力。")
+            }
             player.playSound(player.location, Sound.BLOCK_BEACON_ACTIVATE, 1f, 1.5f)
         }
         return true

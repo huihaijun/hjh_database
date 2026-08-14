@@ -65,7 +65,9 @@ class WoodMasteryArcher(private val plugin: Hjh_database) {
         // 施加 50% 减速 (缓慢 II) 持续 8秒 (160 ticks)
         victim.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 160, 1, false, false, true))
 
-        player.sendMessage("§a[弓] [木·精进] [藤矢] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.archer.wood")) {
+            player.sendMessage("§a[弓] [木·精进] [藤矢] §f已触发")
+        }
         
         victim.world.playSound(victim.location, Sound.BLOCK_AZALEA_LEAVES_PLACE, 1.2f, 0.8f)
         runVisualTask(victim)

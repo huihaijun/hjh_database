@@ -73,7 +73,9 @@ class GoldMasteryArcher(private val plugin: Hjh_database) {
         // 伤害值：200% 箭矢强度 (非穿甲)
         val damage = pData.archerDamage * 2.0
 
-        player.sendMessage("§e[弓] [金·精进] [鸣镝] §f已触发")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "element.mastery.archer.metal")) {
+            player.sendMessage("§e[弓] [金·精进] [鸣镝] §f已触发")
+        }
         
         val world = victim.world
         world.playSound(victim.location, Sound.ENTITY_ARROW_HIT_PLAYER, 1.2f, 0.5f)

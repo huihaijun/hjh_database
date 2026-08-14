@@ -4,9 +4,12 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.ui.MenuManager.ElementType
 import com.hjh_database.ui.MenuManager.Companion.PORTABLE_WAREHOUSE_BUTTON_SLOT
+import com.hjh_database.ui.MenuManager.Companion.COMBAT_NOTICE_MODE_BUTTON_SLOT
 import com.hjh_database.ui.MenuManager.Companion.SUICIDE_BUTTON_SLOT
 import com.hjh_database.ui.MenuManager.Companion.TITLE_SYSTEM_BUTTON_SLOT
+import com.hjh_database.ui.MenuManager.Companion.DUNGEON_STATISTICS_BUTTON_SLOT
 import com.hjh_database.ui.DustbinMenuHolder
+import com.hjh_database.ui.DungeonStatisticsMenuHolder
 import com.hjh_database.ui.ItemShowcaseMenuHolder
 import com.hjh_database.ui.TianjiUtilityMenus
 import net.kyori.adventure.text.Component
@@ -99,6 +102,11 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
             return
         }
 
+        if (holder is DungeonStatisticsMenuHolder) {
+            handleDungeonStatisticsClick(event, player, holder)
+            return
+        }
+
         // 1. 处理主菜单
         if (plugin.menuManager.isMainMenuTitle(title)) {
             val topSize = event.view.topInventory.size
@@ -135,12 +143,29 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 handleSuicideButton(player)
             }
 
+            else if (event.rawSlot == COMBAT_NOTICE_MODE_BUTTON_SLOT) {
+                val subtitleMode = plugin.passiveSubtitleManager.toggleSubtitleMode(player)
+                plugin.menuManager.openMainMenu(player)
+                player.sendActionBar(
+                    Component.text(
+                        if (subtitleMode) "战斗提示：字幕模式" else "战斗提示：经典模式",
+                        if (subtitleMode) NamedTextColor.LIGHT_PURPLE else NamedTextColor.WHITE
+                    )
+                )
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, if (subtitleMode) 1.2f else 0.8f)
+            }
+
             else if (event.rawSlot == PORTABLE_WAREHOUSE_BUTTON_SLOT) {
                 openPortableWarehouse(player)
             }
 
             else if (event.rawSlot == TITLE_SYSTEM_BUTTON_SLOT) {
                 plugin.titleManager.openMainMenu(player)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+            }
+
+            else if (event.rawSlot == DUNGEON_STATISTICS_BUTTON_SLOT) {
+                TianjiUtilityMenus.openDungeonStatistics(plugin, player)
                 player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             }
 
@@ -218,6 +243,10 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 return
             }
             is ItemShowcaseMenuHolder -> {
+                event.isCancelled = true
+                return
+            }
+            is DungeonStatisticsMenuHolder -> {
                 event.isCancelled = true
                 return
             }
@@ -300,6 +329,27 @@ class MenuListener(private val plugin: Hjh_database) : Listener {
                 .append(shownItem)
         )
         player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.8f, 1.2f)
+    }
+
+    private fun handleDungeonStatisticsClick(
+        event: InventoryClickEvent,
+        player: Player,
+        holder: DungeonStatisticsMenuHolder
+    ) {
+        event.isCancelled = true
+        when (event.rawSlot) {
+            TianjiUtilityMenus.DUNGEON_STATS_PREVIOUS_SLOT -> {
+                if (holder.page <= 0) return
+                TianjiUtilityMenus.openDungeonStatistics(plugin, player, holder.page - 1)
+            }
+            TianjiUtilityMenus.DUNGEON_STATS_BACK_SLOT -> plugin.menuManager.openMainMenu(player)
+            TianjiUtilityMenus.DUNGEON_STATS_NEXT_SLOT -> {
+                if (holder.page + 1 >= holder.totalPages) return
+                TianjiUtilityMenus.openDungeonStatistics(plugin, player, holder.page + 1)
+            }
+            else -> return
+        }
+        player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
     }
 
     private fun handleSuicideButton(player: Player) {

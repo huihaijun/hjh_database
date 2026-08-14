@@ -66,7 +66,9 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
         // ==========================================================
 
         player.world.playSound(player.location, Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f)
-        player.sendMessage("§a[冥想] §f你屏气凝神进入了冥想状态，期间受到伤害将被打断！")
+        if (!plugin.passiveSubtitleManager.showCombatEvent(player, "doctor.cast.mingxiang")) {
+            player.sendMessage("§a[冥想] §f你屏气凝神进入了冥想状态，期间受到伤害将被打断！")
+        }
 
         // 2. 开启冥想持续恢复任务
         val task = object : BukkitRunnable() {
@@ -103,7 +105,9 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
 
                 // 冥想自然结束
                 if (ticks >= maxTicks) {
-                    player.sendMessage("§a[冥想] §f冥想结束。")
+                    if (!plugin.passiveSubtitleManager.showCombatEvent(player, "doctor.effect.mingxiang.ended")) {
+                        player.sendMessage("§a[冥想] §f冥想结束。")
+                    }
                     player.world.playSound(player.location, Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 1.5f)
                     cancelMeditation(player.uniqueId)
                 }
@@ -139,7 +143,9 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
 
         if (activeMeditations.containsKey(player.uniqueId)) {
             cancelMeditation(player.uniqueId)
-            player.sendMessage("§c[冥想] §7冥想被强制打断！")
+            if (!plugin.passiveSubtitleManager.showCombatEvent(player, "doctor.effect.mingxiang.ended")) {
+                player.sendMessage("§c[冥想] §7冥想被强制打断！")
+            }
             // 播放玻璃破碎声代表冥想被打破
             player.world.playSound(player.location, Sound.BLOCK_GLASS_BREAK, 1.0f, 0.8f)
         }

@@ -3,170 +3,355 @@ package com.hjh_database.skill.medical.spell.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalSpell
+import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.entity.Projectile
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.metadata.FixedMetadataValue
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener {
 
-    // 存储被点亮怪物的状态数据：施法者UUID 和 点亮结束的时间戳
-    data class MarkData(val casterId: UUID, val expiryTime: Long, val healRadius: Double)
-
-    companion object {
-        val activeMarks = ConcurrentHashMap<UUID, MarkData>()
-        val healCooldowns = ConcurrentHashMap<UUID, Long>() // 记录上次触发治疗的时间戳 (防高频)
-        private const val HEAL_INTERNAL_COOLDOWN_MILLIS = 800L
-        private const val HEAL_AMOUNT = 2.0
-    }
+    private data class MarkState(
+        val casterId: UUID,
+        val targetId: UUID,
+        val expiryTime: Long,
+        val fallbackFormationStrength: Double,
+        val fallbackMaxHealth: Double,
+        val bonusDamageMultiplier: Double,
+        val sourceHealRatio: Double,
+        val vulnerability: Double,
+        val glowDurationMillis: Long,
+        val triggerCooldownMillis: Long,
+        var glowUntil: Long = 0L,
+        var lastBonusDamageTime: Long = 0L,
+        var lastSourceHealTime: Long = 0L
+    )
 
     init {
-        plugin.server.pluginManager.registerEvents(this, plugin)
+        // MedicalSpellManager 可热重载；事件监听器只注册一次，避免一次受击被重复结算。
+        if (listenerRegistered.compareAndSet(false, true)) {
+            plugin.server.pluginManager.registerEvents(this, plugin)
+        }
     }
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
-        val zfStr = data.zfStr
+        val radius = (config?.getDouble("radius", 12.0) ?: 12.0).coerceAtLeast(0.0)
+        val durationSeconds = (config?.getDouble("duration", 24.0) ?: 24.0).coerceAtLeast(0.0)
+        val pulseIntervalSeconds = (config?.getDouble("pulse_interval", 4.0) ?: 4.0).coerceAtLeast(0.05)
+        val glowDurationSeconds = (config?.getDouble("glow_duration", 1.0) ?: 1.0).coerceAtLeast(0.05)
+        val vulnerability = (config?.getDouble("vulnerability", 0.5) ?: 0.5).coerceAtLeast(0.0)
+        val bonusDamageMultiplier = (config?.getDouble("bonus_damage_multiplier", 1.6) ?: 1.6)
+            .coerceAtLeast(0.0)
+        val sourceHealRatio = (config?.getDouble("source_heal_ratio", 0.04) ?: 0.04).coerceAtLeast(0.0)
+        val triggerCooldownMillis = ((config?.getDouble("trigger_cooldown", 1.0) ?: 1.0) * 1000.0)
+            .toLong()
+            .coerceAtLeast(0L)
 
-        // 读取配置参数
-        val radius = config?.getDouble("radius", 10.0) ?: 10.0
-        val damageMultiplier = config?.getDouble("damage_multiplier", 3.0) ?: 3.0
-        val durationSeconds = config?.getInt("duration", 10) ?: 10
-        val healRadius = config?.getDouble("heal_radius", 4.0) ?: 4.0
-
-        val damage = zfStr * damageMultiplier
-        val durationTicks = durationSeconds * 20L
-
-        // 1. 寻找 10 格内最近的怪物
-        var nearestMob: LivingEntity? = null
-        var minDistance = Double.MAX_VALUE
-
-        val nearby = player.world.getNearbyEntities(player.location, radius, radius, radius)
-        for (entity in nearby) {
-            if (entity is LivingEntity && entity.uniqueId != player.uniqueId) {
-                val tags = entity.scoreboardTags
-                if (tags.contains("panling") && tags.contains("monster")) {
-                    val dist = entity.location.distanceSquared(player.location)
-                    if (dist < minDistance) {
-                        minDistance = dist
-                        nearestMob = entity
-                    }
-                }
-            }
+        val target = findHighestHealthUnmarkedMonster(player, radius)
+        if (target == null) {
+            player.sendMessage("§c[降天光] §7附近没有未被降天光标记的怪物，施法已取消！")
+            return false
         }
 
-        // 如果范围内没有怪物，则释放失败（你可以选择返还灵力，或者直接提示）
-        if (nearestMob == null) {
-            player.sendMessage("§c[降天光] §7附近没有可标记的怪物！")
-            return false // 返回 false 通常不会扣除灵力和进入冷却
-        }
+        val now = System.currentTimeMillis()
+        val durationMillis = (durationSeconds * 1000.0).toLong()
+        val durationTicks = (durationSeconds * 20.0).toLong().coerceAtLeast(1L)
+        val pulseIntervalTicks = (pulseIntervalSeconds * 20.0).toLong().coerceAtLeast(1L)
+        val glowDurationMillis = (glowDurationSeconds * 1000.0).toLong().coerceAtLeast(1L)
+        val targetMap = activeMarks.computeIfAbsent(target.uniqueId) { ConcurrentHashMap() }
+        val mark = MarkState(
+            casterId = player.uniqueId,
+            targetId = target.uniqueId,
+            expiryTime = now + durationMillis,
+            fallbackFormationStrength = data.zfStr,
+            fallbackMaxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: data.maxHealth,
+            bonusDamageMultiplier = bonusDamageMultiplier,
+            sourceHealRatio = sourceHealRatio,
+            vulnerability = vulnerability,
+            glowDurationMillis = glowDurationMillis,
+            triggerCooldownMillis = triggerCooldownMillis
+        )
+        targetMap[player.uniqueId] = mark
 
-        // 2. 播放天光降临的特效
-        val targetLoc = nearestMob.location
-        player.world.playSound(targetLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2.0f)
-        player.world.playSound(targetLoc, Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f)
+        drawDescendingLight(target)
+        target.world.playSound(target.location, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2.0f)
+        target.world.playSound(target.location, Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f)
 
-        // 绘制从天而降的光柱 (使用 END_ROD 粒子从高空垂直下落)
-        for (y in 0..10) {
-            player.world.spawnParticle(Particle.END_ROD, targetLoc.clone().add(0.0, y.toDouble(), 0.0), 5, 0.2, 0.5, 0.2, 0.0)
-        }
-
-        // 3. 造成初始爆发伤害 (因为这发生在标记之前，所以这下伤害不会触发后续的受击回血)
-        plugin.medicalSpellManager.applyMedicalDamage(player, nearestMob, damage, "jiangtianguang")
-
-        // 4. 点亮怪物并记录标记
-        // 使用 1.20+ 最新的药水效果枚举名称，GLOWING 让怪物隔墙可见且高亮
-        nearestMob.addPotionEffect(PotionEffect(PotionEffectType.GLOWING, durationTicks.toInt(), 0, false, false, true))
-
-        val expiry = System.currentTimeMillis() + (durationSeconds * 1000L)
-        activeMarks[nearestMob.uniqueId] = MarkData(player.uniqueId, expiry, healRadius)
-
-        // 定时清理任务
         object : BukkitRunnable() {
             override fun run() {
-                activeMarks.remove(nearestMob.uniqueId)
-                healCooldowns.remove(nearestMob.uniqueId)
-                if (nearestMob.isValid && !nearestMob.isDead) {
-                    nearestMob.removePotionEffect(PotionEffectType.GLOWING)
+                val currentMark = activeMarks[target.uniqueId]?.get(player.uniqueId)
+                val currentTime = System.currentTimeMillis()
+                if (
+                    currentMark !== mark ||
+                    currentTime >= mark.expiryTime ||
+                    !target.isValid ||
+                    target.isDead
+                ) {
+                    removeMark(mark)
+                    cancel()
+                    return
                 }
-            }
-        }.runTaskLater(plugin, durationTicks)
 
+                activateGlowWindow(target, mark, currentTime)
+            }
+        }.runTaskTimer(plugin, pulseIntervalTicks, pulseIntervalTicks)
+
+        // 精确兜底清理，避免非整周期配置留下标记。
+        plugin.server.scheduler.runTaskLater(plugin, Runnable { removeMark(mark) }, durationTicks)
         return true
     }
 
-    // ==================== 受击触发治疗逻辑 ====================
-    // 使用 MONITOR 级别并忽略被取消的伤害，确保只有实际扣血时才触发
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    fun onMarkedMobDamage(e: EntityDamageEvent) {
-        val victim = e.entity as? LivingEntity ?: return
+    fun onMarkedMonsterDamaged(event: EntityDamageEvent) {
+        val target = event.entity as? LivingEntity ?: return
+        if (event.finalDamage <= 0.0 || internalDamageTargets.contains(target.uniqueId)) return
 
-        // 检查怪物是否被标记
-        val markData = activeMarks[victim.uniqueId] ?: return
-        if (e.finalDamage <= 0.0) return
+        val targetMarks = activeMarks[target.uniqueId] ?: return
+        val now = System.currentTimeMillis()
+        val damageSource = resolvePlayerDamageSource(event)
 
-        // 如果标记已过期（保险机制）
-        if (System.currentTimeMillis() > markData.expiryTime) {
-            activeMarks.remove(victim.uniqueId)
-            healCooldowns.remove(victim.uniqueId)
-            return
-        }
-
-        // 每个被标记怪物独立计算 0.8 秒内置 CD，避免高频伤害重复触发范围治疗。
-        val lastHealTime = healCooldowns[victim.uniqueId] ?: 0L
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastHealTime < HEAL_INTERNAL_COOLDOWN_MILLIS) {
-            return // 冷却中，不触发
-        }
-
-        // 更新 CD
-        healCooldowns[victim.uniqueId] = currentTime
-
-        // 触发范围治疗
-        val center = victim.location
-        val healRadius = markData.healRadius
-        val healRadiusSquared = healRadius * healRadius
-        val nearbyEntities = victim.world.getNearbyEntities(center, healRadius, healRadius, healRadius)
-        val caster = plugin.server.getPlayer(markData.casterId)
-
-        var healedAny = false
-
-        for (entity in nearbyEntities) {
-            if (entity is Player && !entity.isDead && entity.location.distanceSquared(center) <= healRadiusSquared) {
-                val healed = if (caster != null) {
-                    plugin.medicalSpellManager.applyMedicalHeal(caster, entity, HEAL_AMOUNT, "jiangtianguang")
-                } else {
-                    // 施法者在短暂标记期间离线时仍保留基础治疗，但不再触发施法者相关联动。
-                    val maxHealth = entity.getAttribute(Attribute.MAX_HEALTH)?.value ?: entity.health
-                    val oldHealth = entity.health
-                    entity.health = (oldHealth + HEAL_AMOUNT).coerceAtMost(maxHealth)
-                    entity.health - oldHealth
-                }
-
-                // 飘出代表治疗的爱心粒子
-                if (healed > 0.0) {
-                    entity.world.spawnParticle(Particle.HEART, entity.location.clone().add(0.0, 2.0, 0.0), 1, 0.3, 0.3, 0.3, 0.0)
-                    healedAny = true
-                }
+        for (mark in targetMarks.values.toList()) {
+            if (now >= mark.expiryTime) {
+                removeMark(mark)
+                continue
             }
-        }
 
-        if (healedAny) {
-            // 播放恩典触发的轻柔音效
-            victim.world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 1.5f)
-            // 在怪物身上爆开一圈金色粒子
-            victim.world.spawnParticle(Particle.WAX_ON, center.clone().add(0.0, 1.0, 0.0), 20, 1.0, 1.0, 1.0, 0.1)
+            // 标记期内的来源回血与发光期追加伤害拥有互相独立的 1 秒内置 CD。
+            if (
+                damageSource != null &&
+                now - mark.lastSourceHealTime >= mark.triggerCooldownMillis
+            ) {
+                mark.lastSourceHealTime = now
+                healDamageSource(mark, damageSource)
+            }
+
+            if (
+                mark.glowUntil > now &&
+                now - mark.lastBonusDamageTime >= mark.triggerCooldownMillis
+            ) {
+                mark.lastBonusDamageTime = now
+                scheduleBonusDamage(mark, target)
+            }
         }
     }
 
+    private fun findHighestHealthUnmarkedMonster(player: Player, radius: Double): LivingEntity? {
+        val center = player.location
+        val radiusSquared = radius * radius
+        val now = System.currentTimeMillis()
+        var selected: LivingEntity? = null
+        var highestHealth = Double.NEGATIVE_INFINITY
+        var nearestTieDistance = Double.POSITIVE_INFINITY
+
+        for (entity in player.world.getNearbyEntities(center, radius, radius, radius)) {
+            val monster = entity as? LivingEntity ?: continue
+            if (!isMonster(monster)) continue
+            val distanceSquared = monster.location.distanceSquared(center)
+            if (distanceSquared > radiusSquared) continue
+            if (hasActiveMark(monster.uniqueId, now)) continue
+
+            if (
+                monster.health > highestHealth ||
+                (monster.health == highestHealth && distanceSquared < nearestTieDistance)
+            ) {
+                selected = monster
+                highestHealth = monster.health
+                nearestTieDistance = distanceSquared
+            }
+        }
+        return selected
+    }
+
+    private fun hasActiveMark(targetId: UUID, now: Long): Boolean {
+        val targetMarks = activeMarks[targetId] ?: return false
+
+        // 索敌时顺便剔除已经到期的状态，避免清理任务延迟一刻导致误判为仍被标记。
+        for ((casterId, mark) in targetMarks.entries.toList()) {
+            if (mark.expiryTime <= now) targetMarks.remove(casterId, mark)
+        }
+        if (targetMarks.isEmpty()) {
+            activeMarks.remove(targetId, targetMarks)
+            return false
+        }
+        return true
+    }
+
+    private fun activateGlowWindow(target: LivingEntity, mark: MarkState, now: Long) {
+        val windowEnd = minOf(now + mark.glowDurationMillis, mark.expiryTime)
+        mark.glowUntil = windowEnd
+        val existingUntil = vulnerabilityUntil(target)
+        if (windowEnd > existingUntil) {
+            target.setMetadata(VULNERABILITY_UNTIL_METADATA, FixedMetadataValue(plugin, windowEnd))
+        }
+        target.setMetadata(VULNERABILITY_AMOUNT_METADATA, FixedMetadataValue(plugin, mark.vulnerability))
+
+        val glowTicks = ((windowEnd - now + 49L) / 50L).toInt().coerceAtLeast(1)
+        target.addPotionEffect(PotionEffect(PotionEffectType.GLOWING, glowTicks, 0, false, false, true))
+        target.world.spawnParticle(
+            Particle.WAX_ON,
+            target.location.clone().add(0.0, target.height * 0.6, 0.0),
+            24,
+            0.65,
+            0.8,
+            0.65,
+            0.06
+        )
+        target.world.playSound(target.location, Sound.BLOCK_BEACON_POWER_SELECT, 0.8f, 1.65f)
+    }
+
+    private fun scheduleBonusDamage(mark: MarkState, target: LivingEntity) {
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            if (!target.isValid || target.isDead) return@Runnable
+            val currentMark = activeMarks[mark.targetId]?.get(mark.casterId)
+            if (currentMark !== mark || System.currentTimeMillis() >= mark.expiryTime) return@Runnable
+            val caster = plugin.server.getPlayer(mark.casterId) ?: return@Runnable
+            if (!caster.isOnline || caster.isDead) return@Runnable
+
+            val formationStrength = plugin.playerManager.getPlayerData(caster)?.zfStr
+                ?: mark.fallbackFormationStrength
+            val bonusDamage = formationStrength * mark.bonusDamageMultiplier
+            if (bonusDamage <= 0.0) return@Runnable
+
+            internalDamageTargets.add(target.uniqueId)
+            try {
+                plugin.medicalSpellManager.applyMedicalDamage(
+                    caster,
+                    target,
+                    bonusDamage,
+                    "jiangtianguang_bonus",
+                    false
+                )
+            } finally {
+                internalDamageTargets.remove(target.uniqueId)
+            }
+
+            target.world.spawnParticle(
+                Particle.END_ROD,
+                target.location.clone().add(0.0, target.height * 0.55, 0.0),
+                14,
+                0.4,
+                0.55,
+                0.4,
+                0.04
+            )
+            target.world.playSound(target.location, Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.75f, 1.8f)
+        })
+    }
+
+    private fun healDamageSource(mark: MarkState, damageSource: Player) {
+        if (!damageSource.isOnline || damageSource.isDead) return
+        val caster = plugin.server.getPlayer(mark.casterId)
+        val casterMaxHealth = caster
+            ?.getAttribute(Attribute.MAX_HEALTH)
+            ?.value
+            ?: mark.fallbackMaxHealth
+        val healAmount = casterMaxHealth * mark.sourceHealRatio
+        if (healAmount <= 0.0) return
+
+        val healed = if (caster != null && caster.isOnline) {
+            plugin.medicalSpellManager.applyMedicalHeal(
+                caster,
+                damageSource,
+                healAmount,
+                "jiangtianguang"
+            )
+        } else {
+            val maxHealth = damageSource.getAttribute(Attribute.MAX_HEALTH)?.value ?: damageSource.health
+            val before = damageSource.health
+            damageSource.health = (before + healAmount).coerceAtMost(maxHealth)
+            damageSource.health - before
+        }
+
+        if (healed > 0.0) {
+            damageSource.world.spawnParticle(
+                Particle.HEART,
+                damageSource.location.clone().add(0.0, 1.8, 0.0),
+                2,
+                0.3,
+                0.35,
+                0.3,
+                0.0
+            )
+            damageSource.world.playSound(damageSource.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.55f, 1.7f)
+        }
+    }
+
+    private fun resolvePlayerDamageSource(event: EntityDamageEvent): Player? {
+        val damageEvent = event as? EntityDamageByEntityEvent ?: return null
+        return when (val damager = damageEvent.damager) {
+            is Player -> damager
+            is Projectile -> damager.shooter as? Player
+            else -> null
+        }
+    }
+
+    private fun drawDescendingLight(target: LivingEntity) {
+        val base = target.location.clone().add(0.0, 0.25, 0.0)
+        for (height in 0..12) {
+            target.world.spawnParticle(
+                Particle.END_ROD,
+                base.clone().add(0.0, height.toDouble(), 0.0),
+                4,
+                0.2,
+                0.35,
+                0.2,
+                0.0
+            )
+        }
+        target.world.spawnParticle(
+            Particle.DUST,
+            base,
+            35,
+            0.85,
+            0.15,
+            0.85,
+            0.0,
+            Particle.DustOptions(Color.fromRGB(255, 235, 125), 1.15f)
+        )
+    }
+
+    private fun removeMark(mark: MarkState) {
+        val targetMap = activeMarks[mark.targetId] ?: return
+        targetMap.remove(mark.casterId, mark)
+        if (targetMap.isEmpty()) activeMarks.remove(mark.targetId, targetMap)
+    }
+
+    private fun isMonster(entity: LivingEntity): Boolean {
+        val tags = entity.scoreboardTags
+        return entity !is Player && entity.isValid && !entity.isDead &&
+            tags.contains(PANLING_TAG) && tags.contains(MONSTER_TAG)
+    }
+
+    companion object {
+        const val VULNERABILITY_UNTIL_METADATA = "hjh_jiangtianguang_vulnerability_until"
+        const val VULNERABILITY_AMOUNT_METADATA = "hjh_jiangtianguang_vulnerability_amount"
+        private const val PANLING_TAG = "panling"
+        private const val MONSTER_TAG = "monster"
+
+        private val listenerRegistered = AtomicBoolean(false)
+        private val activeMarks = ConcurrentHashMap<UUID, ConcurrentHashMap<UUID, MarkState>>()
+        private val internalDamageTargets = ConcurrentHashMap.newKeySet<UUID>()
+
+        private fun vulnerabilityUntil(target: LivingEntity): Long {
+            return target.getMetadata(VULNERABILITY_UNTIL_METADATA)
+                .firstOrNull()
+                ?.asLong()
+                ?: 0L
+        }
+    }
 }

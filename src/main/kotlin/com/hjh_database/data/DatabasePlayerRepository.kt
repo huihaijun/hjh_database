@@ -29,9 +29,9 @@ internal class DatabasePlayerRepository(
             INSERT INTO player_data (
                 uuid, player_name, lv, exp, exp_curve_version, job, race, attack, archer_damage, armor,
                 speed, max_health, current_health, toughness, knock_back_res, attack_speed, crit_chance,
-                zf_str, cool_reduce, lingli, money, total_rarity
+                zf_str, cool_reduce, lingli, money, total_rarity, spirit_siphon
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 player_name=excluded.player_name,
                 lv=excluded.lv,
@@ -53,7 +53,8 @@ internal class DatabasePlayerRepository(
                 cool_reduce=excluded.cool_reduce,
                 lingli=excluded.lingli,
                 money=excluded.money,
-                total_rarity=excluded.total_rarity
+                total_rarity=excluded.total_rarity,
+                spirit_siphon=excluded.spirit_siphon
         """.trimIndent()
 
         val saveBank = """
@@ -140,6 +141,7 @@ internal class DatabasePlayerRepository(
                         ps.setDouble(20, data.lingli)
                         ps.setDouble(21, data.money)
                         ps.setInt(22, data.totalRarity)
+                        ps.setDouble(23, data.spiritSiphon)
                         ps.executeUpdate()
                     }
 
@@ -507,6 +509,9 @@ internal class DatabasePlayerRepository(
                                 } catch (e: Exception) {}
                                 try {
                                     data.totalRarity = rs.getInt("total_rarity")
+                                } catch (e: Exception) {}
+                                try {
+                                    data.spiritSiphon = rs.getDouble("spirit_siphon")
                                 } catch (e: Exception) {}
                             }
                         }

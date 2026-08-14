@@ -1,20 +1,150 @@
 name: "鹊桥星愿"
 world: world
 
+# 七夕限时支线仅限制新接取；截止前已经接取的玩家仍可继续并完成任务。
+event-quest:
+  min-level: 40
+  last-accept-date: "2026-08-31"
+  time-zone: "Asia/Shanghai"
+
+# 内测白名单开启后，仅列表中的玩家可以接取限时任务、前往鹊影桥并进入秘境。
+# 可填写玩家 UUID（推荐，不受改名影响）或玩家名；执行 /hjhadmin reload 后生效。
+internal-test:
+  enabled: true
+  whitelist:
+    - "krisp114514"
+    - "huihaijun"
+    - "huihaijun"
+    - "ai_milook"
+    - "TTwTou"
+    - "_YWYN_"
+    - "qiushuang_bring"
+    # - "PlayerName"
+  denied-message: "&c当前副本处于内测中，暂时无法进入"
+
 entry:
   min-level: 40
   min-total-rarity: 40
   max-players: 5
 
 phase-one:
-  initial-guards: 40
-  guards-per-player: 8
-  replenish-seconds: 10
+  initial-guards: 60
+  guards-per-player: 12
+  replenish-seconds: 5
   timeout-seconds: 600
 
 phase-two:
-  escort-seconds: 180
-  elite-guards-per-player: 6
-  replenish-seconds: 10
-  star-lock-min-seconds: 20
-  star-lock-max-seconds: 30
+  escort-seconds: 120
+  elite-guards-per-player: 12
+  star-commander-chance: 0.20
+  replenish-seconds: 5
+  feather-progress-percent: 5.0
+  star-lock-seconds: 18
+  time-limit-seconds:
+    easy:
+      solo: 1200
+      multiplayer: 600
+    hard:
+      solo: 900
+      multiplayer: 480
+
+phase-three:
+  time-limit-seconds:
+    easy:
+      solo: 1200
+      multiplayer: 1500
+    hard:
+      solo: 1500
+      multiplayer: 1800
+  boss:
+    health: 10000.0
+    armor: 100.0
+    scale: 1.20
+  normal-attacks:
+    lightning-damage: 40.0
+    laser-damage: 30.0
+  golden-boundary:
+    warning-seconds: 2.5
+    duration-seconds: 15
+    damage: 80.0
+  phoenix-pressure:
+    warning-seconds: 2
+    cooldown-seconds: 12
+    radius: 6.0
+    armor-break-seconds: 10
+  main-skill-pool:
+    cooldown-seconds: 25
+  independent-pool:
+    cooldown-seconds: 30
+  jade-order:
+    maximum-active-summons: 24
+  bearer:
+    health: 420.0
+    armor: 70.0
+  heavenly-law:
+    warning-seconds: 2
+    duration-seconds: 10
+    distance: 7.0
+    violation-damage: 20.0
+  inverted-river:
+    trigger-health-ratio: 0.40
+    float-seconds: 15
+    movement-speed-bonus: 0.50
+    mitigation-radius: 7.0
+    maximum-mitigation-ratio: 0.80
+  conserver:
+    health: 160.0
+    armor: 25.0
+  difficulty:
+    easy:
+      boss-speed: 0.40
+      golden-boundary-damage: 60.0
+      armor-break-seconds: 6.0
+      pressure-taken-damage-multiplier: 0.50
+      golden-boundary-weight: 3
+      inverted-river-weight: 1
+      summons-per-cast: 12
+      maximum-active-summons: 24
+      law-damage-interval-seconds: 2.0
+      inverted-river-warning-seconds: 15.0
+      inverted-river-next-wave-seconds: 15.0
+      inverted-river-punishment-damage: 60.0
+      inverted-river-solo-success-damage: 15.0
+      inverted-river-solo-failure-damage: 40.0
+    hard:
+      boss-speed: 0.45
+      golden-boundary-damage: 80.0
+      armor-break-seconds: 10.0
+      pressure-taken-damage-multiplier: 0.20
+      golden-boundary-weight: 1
+      inverted-river-weight: 1
+      summons-per-cast: 24
+      maximum-active-summons: 24
+      law-damage-interval-seconds: 1.0
+      inverted-river-warning-seconds: 10.0
+      inverted-river-next-wave-seconds: 10.0
+      inverted-river-punishment-damage: 100.0
+      inverted-river-solo-success-damage: 25.0
+      inverted-river-solo-failure-damage: 60.0
+
+# 入场前由随机一名队员选择难度；进入后固定，不随人数变化。
+difficulty:
+  easy:
+    attribute-multiplier: 0.75
+    crystal-progress-min: 2
+    crystal-progress-max: 3
+    escort-max-health: 120
+    feather-progress-percent: 10.0
+    other-escort-invulnerable-seconds: 3.0
+    other-escort-invulnerability-cooldown-seconds: 10.0
+  hard:
+    attribute-multiplier: 1.0
+    crystal-progress-min: 1
+    crystal-progress-max: 2
+    escort-max-health: 80
+    feather-progress-percent: 5.0
+
+# 仅降低实体控制与查询频率；粒子特效保持原效果和刷新频率。
+performance:
+  escort-update-ticks: 4
+  spirit-update-ticks: 4

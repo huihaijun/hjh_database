@@ -397,6 +397,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     private fun dealMagicDamage(player: Player, damage: Double) {
         if (damage <= 0.0 || player.isDead || player.health <= 0.0) return
+        // 专用瞬时标记：羽毛只把虎瘴伤害视为环境伤害中的例外，不会误判其他魔法伤害。
+        player.setMetadata(
+            com.hjh_database.feather.FeatherManager.MIASMA_DAMAGE_METADATA,
+            FixedMetadataValue(plugin, true)
+        )
         player.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
         val previousMaximum = player.maximumNoDamageTicks
         player.noDamageTicks = 0
@@ -406,6 +411,9 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         } finally {
             if (player.hasMetadata("HJH_MAGIC_DAMAGE")) {
                 player.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            }
+            if (player.hasMetadata(com.hjh_database.feather.FeatherManager.MIASMA_DAMAGE_METADATA)) {
+                player.removeMetadata(com.hjh_database.feather.FeatherManager.MIASMA_DAMAGE_METADATA, plugin)
             }
             player.noDamageTicks = 0
             player.maximumNoDamageTicks = previousMaximum

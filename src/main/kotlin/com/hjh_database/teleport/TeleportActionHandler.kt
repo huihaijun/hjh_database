@@ -2,10 +2,13 @@ package com.hjh_database.teleport
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
+import com.hjh_database.dungeon.qixi.QixiAccessPolicy
 import com.hjh_database.quest.core.QuestStatus
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
+import org.bukkit.Particle
+import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.potion.PotionEffect
@@ -108,6 +111,22 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 ) {
                     player.sendMessage("§7这树洞到底有啥用，搞不懂，还是离开吧……")
                     player.sendMessage("§c请先完成前置任务")
+                    return false
+                }
+            }
+            "ENTER_QIXI_BRIDGE" -> {
+                if (!QixiAccessPolicy.isAllowed(plugin, player)) {
+                    player.sendMessage(QixiAccessPolicy.deniedMessage(plugin))
+                    player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 0.8f)
+                    return false
+                }
+                val status = data.questStatuses[QIXI_QUEST_ID] ?: QuestStatus.LOCKED
+                val progress = data.questProgress[QIXI_QUEST_ID] ?: 0
+                if (status != QuestStatus.COMPLETED &&
+                    (status != QuestStatus.IN_PROGRESS || progress < 1)
+                ) {
+                    player.sendMessage("§7鹊灵没有回应你的呼唤，或许应该先去问问监星官沈观。")
+                    player.playSound(player.location, Sound.ENTITY_PARROT_AMBIENT, 0.7f, 0.7f)
                     return false
                 }
             }
@@ -232,6 +251,25 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 ) {
                     plugin.questManager.updateProgress(player, "side_strange_tree", 2)
                     player.sendMessage("§e你感到一阵头晕，前方好像有光亮和人声，去找人问问情况吧")
+                }
+                return false
+            }
+            "ENTER_QIXI_BRIDGE" -> {
+                player.world.spawnParticle(
+                    Particle.FIREWORK,
+                    player.location.clone().add(0.0, 1.0, 0.0),
+                    18,
+                    0.4,
+                    0.6,
+                    0.4,
+                    0.03
+                )
+                player.playSound(player.location, Sound.ENTITY_PARROT_FLY, 1.0f, 1.2f)
+                if (data.questStatuses[QIXI_QUEST_ID] == QuestStatus.IN_PROGRESS &&
+                    data.questProgress[QIXI_QUEST_ID] == 1
+                ) {
+                    plugin.questManager.updateProgress(player, QIXI_QUEST_ID, 2)
+                    player.sendMessage("§a[任务] -> 寻找守桥人柳安，询问鹊影桥的异常。")
                 }
                 return false
             }
@@ -526,6 +564,10 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
             Component.text(player.name, NamedTextColor.YELLOW)
                 .append(Component.text("重生了", NamedTextColor.GREEN))
         )
+    }
+
+    private companion object {
+        const val QIXI_QUEST_ID = "side_qixi_starwish"
     }
 
 }
