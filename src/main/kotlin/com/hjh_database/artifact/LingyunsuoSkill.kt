@@ -449,8 +449,7 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
         if (!session.wovenTargets.add(target.uniqueId)) return
         session.nodes += SilkNode(target.uniqueId, target.location.clone())
         val center = entityCenter(target)
-        center.world.spawnParticle(Particle.END_ROD, center, 12, 0.25, 0.35, 0.25, 0.04)
-        center.world.spawnParticle(Particle.DUST, center, 18, 0.32, 0.42, 0.32, 0.0, SILK_DUST)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_ENDPOINT, center, data = 1)
         center.world.playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_PLACE, 0.65f, 1.7f)
     }
 
@@ -534,7 +533,7 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
                 if (isSafePullLocation(next)) {
                     target.teleport(next)
                     target.velocity = Vector(0.0, target.velocity.y.coerceAtMost(0.0), 0.0)
-                    next.world.spawnParticle(Particle.CLOUD, next.clone().add(0.0, target.height * 0.45, 0.0), 3, 0.18, 0.18, 0.18, 0.01)
+                    plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_HELD, next.clone().add(0.0, target.height * 0.45, 0.0))
                 } else {
                     targetState.blocked = true
                 }
@@ -558,8 +557,7 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
             dealAndReward(player, pull.session, target, pull.session.attack * FINAL_DAMAGE_MULTIPLIER)
         }
         val midpoint = pull.lineStart.clone().add(pull.lineEnd).multiply(0.5)
-        midpoint.world.spawnParticle(Particle.FLASH, midpoint, 1)
-        midpoint.world.spawnParticle(Particle.END_ROD, midpoint, 45, 1.4, 0.55, 1.4, 0.1)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_ENDPOINT, midpoint, data = 1)
         midpoint.world.playSound(midpoint, Sound.ITEM_TRIDENT_THUNDER, 1.0f, 1.8f)
         startCooldown(player, pull.session.item)
     }
@@ -574,8 +572,7 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
             true
         )
         val center = entityCenter(target)
-        center.world.spawnParticle(Particle.DUST, center, 14, 0.28, 0.38, 0.28, 0.0, ENDPOINT_DUST)
-        center.world.spawnParticle(Particle.CLOUD, center, 8, 0.3, 0.25, 0.3, 0.02)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_ENDPOINT, center, data = 1)
     }
 
     private fun updateRoots() {
@@ -652,24 +649,12 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
         val step = if (dense) 0.45 else 0.85
         val desiredPoints = min(MAX_SILK_SAMPLES + 1, max(2, ceil(distance / step).toInt() + 1))
         val pointCount = min(budget, desiredPoints)
-        for (index in 0 until pointCount) {
-            val t = if (pointCount == 1) 0.5 else index.toDouble() / (pointCount - 1)
-            val point = start.clone().add(delta.clone().multiply(t))
-            point.world.spawnParticle(Particle.DUST, point.clone().add(0.0, 0.8, 0.0), 1, 0.015, 0.015, 0.015, 0.0, SILK_DUST)
-            if (index % (if (dense) 2 else 4) == 0) {
-                point.world.spawnParticle(Particle.END_ROD, point.clone().add(0.0, 0.8, 0.0), 1, 0.02, 0.02, 0.02, 0.0)
-            }
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_LINE, start, end, if (dense) 1 else 0)
         return pointCount
     }
 
     private fun drawEndpointEffect(location: Location, strong: Boolean) {
-        val center = location.clone().add(0.0, 0.8, 0.0)
-        val count = if (strong) 12 else 5
-        val spread = if (strong) 0.32 else 0.2
-        center.world.spawnParticle(Particle.DUST, center, count, spread, spread, spread, 0.0, ENDPOINT_DUST)
-        center.world.spawnParticle(Particle.END_ROD, center, if (strong) 6 else 2, spread, spread, spread, 0.015)
-        if (strong) center.world.spawnParticle(Particle.ELECTRIC_SPARK, center, 5, 0.25, 0.25, 0.25, 0.03)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_ENDPOINT, location, data = if (strong) 1 else 0)
     }
 
     private fun drawTighteningLine(start: Location, end: Location) {
@@ -677,13 +662,7 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun drawShuttleTrail(start: Location, end: Location) {
-        val delta = end.toVector().subtract(start.toVector())
-        val samples = max(2, ceil(delta.length() / 0.45).toInt())
-        for (index in 0..samples) {
-            val point = start.clone().add(delta.clone().multiply(index.toDouble() / samples))
-            point.world.spawnParticle(Particle.DUST, point, 1, 0.012, 0.012, 0.012, 0.0, SHUTTLE_DUST)
-            if ((tickCounter + index) % 3L == 0L) point.world.spawnParticle(Particle.END_ROD, point, 1, 0.01, 0.01, 0.01, 0.0)
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_TRAIL, start, end)
     }
 
     private fun moveDisplayAlong(session: WeaveSession, destination: Location, drawTrail: Boolean = true) {
@@ -793,24 +772,21 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun playCastEffect(player: Player, location: Location) {
-        location.world.spawnParticle(Particle.CLOUD, location, 24, 0.35, 0.35, 0.35, 0.04)
-        location.world.spawnParticle(Particle.END_ROD, location, 18, 0.28, 0.28, 0.28, 0.06)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_CAST, location)
         player.world.playSound(location, Sound.ENTITY_BREEZE_SHOOT, 1.05f, 1.25f)
     }
 
     private fun playAnchorEffect(location: Location) {
-        location.world.spawnParticle(Particle.CLOUD, location, 18, 0.32, 0.32, 0.32, 0.04)
-        location.world.spawnParticle(Particle.DUST, location, 22, 0.38, 0.38, 0.38, 0.0, SILK_DUST)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_ANCHOR, location)
         location.world.playSound(location, Sound.BLOCK_AMETHYST_BLOCK_PLACE, 0.8f, 1.5f)
     }
 
     private fun spawnAnchorAmbient(location: Location) {
-        location.world.spawnParticle(Particle.DUST, location, 2, 0.18, 0.18, 0.18, 0.0, SHUTTLE_DUST)
-        location.world.spawnParticle(Particle.END_ROD, location, 1, 0.12, 0.12, 0.12, 0.0)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_AMBIENT, location)
     }
 
     private fun spawnHeldEffect(location: Location) {
-        if (tickCounter % 3L == 0L) location.world.spawnParticle(Particle.CLOUD, location, 2, 0.12, 0.12, 0.12, 0.01)
+        if (tickCounter % 3L == 0L) plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.LINGYUN_HELD, location)
     }
 
     private fun startCooldown(player: Player, item: ItemStack) {

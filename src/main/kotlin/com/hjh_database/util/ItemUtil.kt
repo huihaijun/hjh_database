@@ -13,22 +13,22 @@ object ItemUtil {
         val meta = item.itemMeta
         if (meta != null) {
             val plugin = Hjh_database.instance
-            val keyId = NamespacedKey(plugin, "resource_id")
-            val keyBaihuWeapon = NamespacedKey(plugin, "baihu_weapon_id")
-            val keyBaihuArtifact = NamespacedKey(plugin, "baihu_artifact_id")
-            val keyWeapon = NamespacedKey(plugin, "weapon_id")
+            val idKeys = listOf(
+                "artifact_id",
+                "baihu_artifact_id",
+                "baihu_weapon_id",
+                "crystal_id",
+                "weapon_id",
+                "armor_id",
+                "resource_id"
+            )
 
-            if (meta.persistentDataContainer.has(keyId, PersistentDataType.STRING)) {
-                return meta.persistentDataContainer.get(keyId, PersistentDataType.STRING) ?: "AIR"
-            }
-            if (meta.persistentDataContainer.has(keyBaihuWeapon, PersistentDataType.STRING)) {
-                return meta.persistentDataContainer.get(keyBaihuWeapon, PersistentDataType.STRING) ?: "AIR"
-            }
-            if (meta.persistentDataContainer.has(keyBaihuArtifact, PersistentDataType.STRING)) {
-                return meta.persistentDataContainer.get(keyBaihuArtifact, PersistentDataType.STRING) ?: "AIR"
-            }
-            if (meta.persistentDataContainer.has(keyWeapon, PersistentDataType.STRING)) {
-                return meta.persistentDataContainer.get(keyWeapon, PersistentDataType.STRING) ?: "AIR"
+            for (keyName in idKeys) {
+                val id = meta.persistentDataContainer.get(
+                    NamespacedKey(plugin, keyName),
+                    PersistentDataType.STRING
+                )
+                if (!id.isNullOrBlank()) return id
             }
         }
         return item.type.name

@@ -98,8 +98,8 @@ internal class DatabaseSubsystemRepository(
 
     fun saveMedicalData(conn: Connection, data: PlayerData) {
         val sql = """
-            INSERT INTO player_medical (uuid, player_name, medical_skills) VALUES (?, ?, ?) 
-            ON CONFLICT(uuid) DO UPDATE SET player_name=?, medical_skills=?
+            INSERT INTO player_medical (uuid, player_name, medical_skills, learned_skills) VALUES (?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET player_name=?, medical_skills=?, learned_skills=?
         """.trimIndent()
 
         try {
@@ -107,13 +107,16 @@ internal class DatabaseSubsystemRepository(
                 val uuidStr = data.uuid.toString()
                 val name = data.playerName
                 val skillsStr = data.getMedicalSkillsAsString()
+                val learnedSkillsStr = data.getLearnedMedicalSkillsAsString()
 
                 ps.setString(1, uuidStr)
                 ps.setString(2, name)
                 ps.setString(3, skillsStr)
+                ps.setString(4, learnedSkillsStr)
 
-                ps.setString(4, name)
-                ps.setString(5, skillsStr)
+                ps.setString(5, name)
+                ps.setString(6, skillsStr)
+                ps.setString(7, learnedSkillsStr)
 
                 ps.executeUpdate()
             }
@@ -135,13 +138,14 @@ internal class DatabaseSubsystemRepository(
     }
 
     fun loadMedicalData(conn: Connection, data: PlayerData) {
-        val sql = "SELECT medical_skills FROM player_medical WHERE uuid=?"
+        val sql = "SELECT medical_skills, learned_skills FROM player_medical WHERE uuid=?"
         try {
             conn.prepareStatement(sql).use { ps ->
                 ps.setString(1, data.uuid.toString())
                 ps.executeQuery().use { rs ->
                     if (rs.next()) {
                         data.setMedicalSkillsFromString(rs.getString("medical_skills"))
+                        data.setLearnedMedicalSkillsFromString(rs.getString("learned_skills"))
                     }
                 }
             }

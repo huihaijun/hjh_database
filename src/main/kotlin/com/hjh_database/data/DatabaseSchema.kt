@@ -30,7 +30,9 @@ internal class DatabaseSchema(
         createBusuanTable()
         createShenConsciousnessTable()
         createShenTributeTable()
+        createXianTalentTable()
         createTitleTables()
+        createQixiBridgeBuildTable()
         updateTables()
     }
 
@@ -81,6 +83,20 @@ internal class DatabaseSchema(
         )
     }
 
+    private fun createXianTalentTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_xian_talent (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32) NOT NULL,
+                bound_waypoints TEXT NOT NULL DEFAULT '[]',
+                cooldown_until BIGINT NOT NULL DEFAULT 0,
+                updated_at BIGINT NOT NULL DEFAULT 0
+            );
+            """.trimIndent()
+        )
+    }
+
     private fun createTitleTables() {
         executeSql(
             """
@@ -109,6 +125,32 @@ internal class DatabaseSchema(
         )
         executeSql(
             "CREATE INDEX IF NOT EXISTS idx_player_titles_title_id ON player_titles(title_id);"
+        )
+    }
+
+    /**
+     * 共建鹊桥只使用这一张独立表。普通行以玩家 UUID 为主键；全服进度使用保留的
+     * 00000000-0000-0000-0000-000000000000 行，避免把同一个全服值冗余到每个玩家行。
+     */
+    private fun createQixiBridgeBuildTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS qixi_bridge_build (
+                uuid VARCHAR(36) PRIMARY KEY,
+                player_name VARCHAR(32) NOT NULL,
+                global_progress REAL NOT NULL DEFAULT 0,
+                daily_claim_date VARCHAR(10),
+                daily_use_date VARCHAR(10),
+                daily_uses INTEGER NOT NULL DEFAULT 0,
+                dungeon_reward_date VARCHAR(10),
+                dungeon_reward_count INTEGER NOT NULL DEFAULT 0,
+                contribution INTEGER NOT NULL DEFAULT 0,
+                claimed_milestones INTEGER NOT NULL DEFAULT 0,
+                personal_claimed_tiers INTEGER NOT NULL DEFAULT 0,
+                revision BIGINT NOT NULL DEFAULT 0,
+                updated_at BIGINT NOT NULL DEFAULT 0
+            );
+            """.trimIndent()
         )
     }
 
@@ -176,9 +218,16 @@ internal class DatabaseSchema(
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_exp_gained", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_last_level", "INT DEFAULT 1")
 
+                    // 医术灵智与当前启用列表必须分开保存。
+                    safeAddColumn(stmt, "player_medical", "learned_skills", "TEXT DEFAULT ''")
+
                     // 神族贡品：以首次领取为起点的现实时间 24 小时领取窗口。
                     safeAddColumn(stmt, "player_shen_tribute", "claim_window_started_at", "BIGINT NOT NULL DEFAULT 0")
                     safeAddColumn(stmt, "player_shen_tribute", "daily_claim_count", "INTEGER NOT NULL DEFAULT 0")
+
+                    // 七夕共建：每日副本额外烟花的独立计数。
+                    safeAddColumn(stmt, "qixi_bridge_build", "dungeon_reward_date", "VARCHAR(10)")
+                    safeAddColumn(stmt, "qixi_bridge_build", "dungeon_reward_count", "INTEGER NOT NULL DEFAULT 0")
                 }
             }
         } catch (e: SQLException) {
@@ -337,7 +386,8 @@ internal class DatabaseSchema(
             CREATE TABLE IF NOT EXISTS player_medical (
                 uuid VARCHAR(36) PRIMARY KEY, 
                 player_name VARCHAR(32), 
-                medical_skills TEXT
+                medical_skills TEXT,
+                learned_skills TEXT DEFAULT ''
             );
         """.trimIndent()
         try {

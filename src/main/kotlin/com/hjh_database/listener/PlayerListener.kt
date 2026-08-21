@@ -19,7 +19,9 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onJoin(event: PlayerJoinEvent) {
-        plugin.playerManager.loadAndCache(event.player)
+        plugin.playerManager.loadAndCache(event.player) { data ->
+            plugin.qixiDungeonManager.backfillCompletionTitle(event.player, data.dungeonRecords)
+        }
         // 【新增】进服时，异步加载玩家的个人仓库数据
         plugin.warehouseManager.loadAndCache(event.player)
         plugin.elementCrystalManager.loadPlayer(event.player)
@@ -28,6 +30,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         val player = event.player
+        plugin.qixiDungeonManager.clearBossBars(player)
         val data = plugin.playerManager.getData(player.uniqueId)
         if (data != null) {
             data.currentHealth = player.health
@@ -152,6 +155,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     fun onDeath(event: PlayerDeathEvent) {
+        plugin.qixiDungeonManager.clearBossBars(event.entity)
         pendingDeathEffects.add(event.entity.uniqueId)
     }
 

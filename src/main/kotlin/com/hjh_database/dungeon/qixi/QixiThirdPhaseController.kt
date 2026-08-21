@@ -80,6 +80,7 @@ internal class QixiThirdPhaseController(
     private val zhinv: Villager,
     private val config: YamlConfiguration,
     private val difficulty: QixiDifficulty,
+    phaseEntryPlayerCount: Int,
     private val onFinished: () -> Unit
 ) : Listener {
     private enum class Stage { INTRO, COMBAT, TIANHE, ENDING }
@@ -117,7 +118,17 @@ internal class QixiThirdPhaseController(
         "difficulty.${difficulty.configKey}.attribute-multiplier",
         if (difficulty == QixiDifficulty.EASY) 0.75 else 1.0
     ).coerceIn(0.05, 2.0)
-    private val bossHealth = (config.getDouble("phase-three.boss.health", 10000.0) * attributeMultiplier).coerceAtLeast(1.0)
+    private val lockedPhaseEntryPlayerCount = phaseEntryPlayerCount.coerceIn(1, 5)
+    private val bossBaseHealth = config.getDouble(
+        "$difficultyPath.boss-health",
+        config.getDouble("phase-three.boss.health", 10000.0) * attributeMultiplier
+    ).coerceAtLeast(1.0)
+    private val bossHealthPerAdditionalPlayerRatio = config.getDouble(
+        "$difficultyPath.boss-health-per-additional-player-ratio",
+        if (difficulty == QixiDifficulty.EASY) 0.50 else 0.40
+    ).coerceIn(0.0, 3.0)
+    private val bossHealth = bossBaseHealth *
+        (1.0 + bossHealthPerAdditionalPlayerRatio * (lockedPhaseEntryPlayerCount - 1))
     private val bossArmor = (config.getDouble("phase-three.boss.armor", 100.0) * attributeMultiplier).coerceAtLeast(0.0)
     private val bossSpeed = config.getDouble(
         "$difficultyPath.boss-speed",
@@ -219,6 +230,7 @@ internal class QixiThirdPhaseController(
     private var elapsedTicks = 0
     private var stateTicks = 0
     private var basicCastTicks = 0
+    private var basicLockedTargetId: UUID? = null
     private var laserShots = 0
     private var laserLockedTarget: Location? = null
     private var pressureCooldown = pressureCooldownTicks
@@ -244,6 +256,7 @@ internal class QixiThirdPhaseController(
     private var pendingConserverLocation: Location? = null
     private var defeatedConservers = 0
     private var currentFloatingColor: StarColor? = null
+    private var nextFloatingColor: StarColor? = null
     private var thresholdTianheTriggered = false
     private var phaseThreeBgmRemaining = 0
     private var completed = false
@@ -374,6 +387,7 @@ internal class QixiThirdPhaseController(
         currentBoss.isInvulnerable = false
         mainState = MainState.BASIC
         basicState = BasicState.CHASE_NEAREST
+        basicLockedTargetId = null
         laserLockedTarget = null
         pressureCooldown = pressureCooldownTicks
         poolCooldown = poolCooldownTicks
@@ -414,7 +428,7 @@ internal class QixiThirdPhaseController(
             MainState.BOUNDARY_FLIGHT -> tickBoundaryFlight(currentBoss)
             MainState.BOUNDARY_WARNING -> tickBoundaryWarning(currentBoss)
             MainState.BOUNDARY_ACTIVE -> tickBoundaryActive(currentBoss, players)
-            MainState.BOUNDARY_RETURN -> tickBoundaryReturn(currentBoss, players)
+            MainState.BOUNDARY_RETURN -> tickBoundaryReturn(currentBoss)
         }
     }
 
@@ -426,7 +440,10 @@ internal class QixiThirdPhaseController(
         }
         when (basicState) {
             BasicState.CHASE_NEAREST -> {
-                val target = candidates.minByOrNull { it.location.distanceSquared(currentBoss.location) } ?: return
+                val target = lockedBasicTarget(candidates)
+                    ?: candidates.minByOrNull { it.location.distanceSquared(currentBoss.location) }
+                        ?.also { basicLockedTargetId = it.uniqueId }
+                    ?: return
                 if (horizontalDistanceSquared(target.location, currentBoss.location) <= BASIC_CAST_RANGE_SQUARED) {
                     freezeAndFace(currentBoss, target)
                     basicState = BasicState.CAST_LIGHTNING
@@ -441,10 +458,14 @@ internal class QixiThirdPhaseController(
                     castLightning(currentBoss, candidates)
                     currentBoss.spell = Spellcaster.Spell.NONE
                     basicState = BasicState.CHASE_FARTHEST
+                    basicLockedTargetId = null
                 }
             }
             BasicState.CHASE_FARTHEST -> {
-                val target = candidates.maxByOrNull { it.location.distanceSquared(currentBoss.location) } ?: return
+                val target = lockedBasicTarget(candidates)
+                    ?: candidates.maxByOrNull { it.location.distanceSquared(currentBoss.location) }
+                        ?.also { basicLockedTargetId = it.uniqueId }
+                    ?: return
                 if (horizontalDistanceSquared(target.location, currentBoss.location) <= BASIC_CAST_RANGE_SQUARED) {
                     freezeAndFace(currentBoss, target)
                     basicState = BasicState.CAST_LASER
@@ -470,16 +491,25 @@ internal class QixiThirdPhaseController(
                 if (laserShots >= 3) {
                     currentBoss.spell = Spellcaster.Spell.NONE
                     basicState = BasicState.CHASE_NEAREST
+                    basicLockedTargetId = null
                     laserLockedTarget = null
                 } else {
-                    laserLockedTarget = candidates
-                        .maxByOrNull { it.location.distanceSquared(currentBoss.location) }
-                        ?.eyeLocation
-                        ?.clone()
+                    laserLockedTarget = lockedBasicTarget(candidates)?.eyeLocation?.clone()
+                    if (laserLockedTarget == null) {
+                        currentBoss.spell = Spellcaster.Spell.NONE
+                        basicState = BasicState.CHASE_NEAREST
+                        basicLockedTargetId = null
+                        return
+                    }
                     basicCastTicks = LASER_REPEAT_TICKS
                 }
             }
         }
+    }
+
+    private fun lockedBasicTarget(candidates: List<Player>): Player? {
+        val targetId = basicLockedTargetId ?: return null
+        return candidates.firstOrNull { it.uniqueId == targetId }
     }
 
     private fun castLightning(currentBoss: Evoker, players: List<Player>) {
@@ -651,6 +681,8 @@ internal class QixiThirdPhaseController(
         currentBoss.isInvulnerable = true
         currentBoss.setGravity(false)
         currentBoss.spell = Spellcaster.Spell.WOLOLO
+        basicLockedTargetId = null
+        laserLockedTarget = null
         broadcast("§4§n王母娘娘§f: §f天河有界，岂容尔等擅越。")
         broadcastAfter(
             20,
@@ -703,18 +735,19 @@ internal class QixiThirdPhaseController(
         mainState = MainState.BOUNDARY_RETURN
         stateTicks = BOUNDARY_FLIGHT_TICKS
         boundaryFlightStart = currentBoss.location.clone()
-        boundaryReturnTarget = players.minByOrNull { it.location.distanceSquared(currentBoss.location) }
-            ?.location?.clone()?.apply { y = 4.0 }
-            ?: plazaCenter()
+        boundaryReturnTarget = bossSpawnLocation()
     }
 
-    private fun tickBoundaryReturn(currentBoss: Evoker, players: List<Player>) {
+    private fun tickBoundaryReturn(currentBoss: Evoker) {
         val start = boundaryFlightStart ?: currentBoss.location
-        val target = boundaryReturnTarget ?: players.minByOrNull { it.location.distanceSquared(currentBoss.location) }?.location ?: plazaCenter()
+        val target = boundaryReturnTarget ?: bossSpawnLocation()
         stateTicks -= DRIVER_PERIOD_TICKS.toInt()
         currentBoss.teleport(lerp(start, target, 1.0 - stateTicks.toDouble() / BOUNDARY_FLIGHT_TICKS))
         world.spawnParticle(Particle.END_ROD, currentBoss.location, 5, 0.35, 0.3, 0.35, 0.03)
-        if (stateTicks <= 0) finishMainSkill(currentBoss)
+        if (stateTicks <= 0) {
+            currentBoss.teleport(target)
+            finishMainSkill(currentBoss)
+        }
     }
 
     private fun startBoundaryZones(players: List<Player>) {
@@ -836,6 +869,7 @@ internal class QixiThirdPhaseController(
         mainState = MainState.BASIC
         basicState = BasicState.CHASE_NEAREST
         basicCastTicks = 0
+        basicLockedTargetId = null
         laserLockedTarget = null
     }
 
@@ -928,6 +962,7 @@ internal class QixiThirdPhaseController(
         currentBoss.velocity = Vector(0.0, 0.0, 0.0)
         mainState = MainState.BASIC
         basicState = BasicState.CHASE_NEAREST
+        basicLockedTargetId = null
         laserLockedTarget = null
         tianheFlightStart = currentBoss.location.clone()
         tianheFlightRemaining = BOUNDARY_FLIGHT_TICKS
@@ -938,6 +973,7 @@ internal class QixiThirdPhaseController(
         tianheCycleRemaining = 0
         tianheNextWaveRemaining = 0
         assignPlayerColors(players)
+        prepareNextTianheRoles(players, reassignColors = false)
         tianheWarningRemaining = tianheWarningTicks
         broadcast("§4§n王母娘娘：§f天河倒悬，星轨逆行——尔等既敢擅闯，便尝尝这§e天穹颠倒§f的滋味。")
         broadcast("§6红蓝双色的彩带缠绕在你们身上，其中一方将随倒悬的天河§e浮空而起§f")
@@ -967,7 +1003,7 @@ internal class QixiThirdPhaseController(
                     endTianhe(currentBoss)
                     return
                 }
-                beginTianheCycle(players, reassignColors = false)
+                beginTianheCycle(players)
             }
             return
         }
@@ -981,7 +1017,7 @@ internal class QixiThirdPhaseController(
                     endTianhe(currentBoss)
                     return
                 }
-                beginTianheCycle(players, reassignColors = true)
+                beginTianheCycle(players)
             }
             updateTianheBars()
             return
@@ -1002,12 +1038,19 @@ internal class QixiThirdPhaseController(
         syncTianheBarViewers(players)
     }
 
-    private fun beginTianheCycle(players: List<Player>, reassignColors: Boolean) {
-        if (currentConserver() == null) return
+    private fun prepareNextTianheRoles(players: List<Player>, reassignColors: Boolean) {
         if (reassignColors) assignPlayerColors(players)
         val availableColors = players.mapNotNull { playerColors[it.uniqueId] }.distinct()
+        nextFloatingColor = availableColors.randomOrNull()
+        updateTianheBars()
+    }
+
+    private fun beginTianheCycle(players: List<Player>) {
+        if (currentConserver() == null) return
+        val availableColors = players.mapNotNull { playerColors[it.uniqueId] }.distinct()
         if (availableColors.isEmpty()) return
-        currentFloatingColor = availableColors.random()
+        currentFloatingColor = nextFloatingColor?.takeIf { it in availableColors } ?: availableColors.random()
+        nextFloatingColor = null
         floatingPlayers.clear()
         players.filter { playerColors[it.uniqueId] == currentFloatingColor }.forEach { player ->
             floatingPlayers += player.uniqueId
@@ -1045,7 +1088,10 @@ internal class QixiThirdPhaseController(
         floatingPlayers.clear()
         currentFloatingColor = null
         tianheCycleRemaining = 0
-        if (scheduleNext) tianheNextWaveRemaining = tianheNextWaveTicks
+        if (scheduleNext) {
+            tianheNextWaveRemaining = tianheNextWaveTicks
+            prepareNextTianheRoles(players, reassignColors = true)
+        }
     }
 
     private fun endTianhe(currentBoss: Evoker) {
@@ -1055,6 +1101,7 @@ internal class QixiThirdPhaseController(
         }
         floatingPlayers.clear()
         currentFloatingColor = null
+        nextFloatingColor = null
         tianheCycleRemaining = 0
         tianheNextWaveRemaining = 0
         tianheWarningRemaining = 0
@@ -1066,9 +1113,9 @@ internal class QixiThirdPhaseController(
         mainState = MainState.BOUNDARY_RETURN
         stateTicks = BOUNDARY_FLIGHT_TICKS
         boundaryFlightStart = currentBoss.location.clone()
-        boundaryReturnTarget = activePlayers().minByOrNull { it.location.distanceSquared(currentBoss.location) }?.location
-            ?: plazaCenter()
+        boundaryReturnTarget = bossSpawnLocation()
         basicState = BasicState.CHASE_NEAREST
+        basicLockedTargetId = null
         laserLockedTarget = null
         poolCooldown = poolCooldownTicks
         broadcast("§a三名天河守恒者尽数倒下，倒悬的星轨终于恢复正常！")
@@ -1118,7 +1165,13 @@ internal class QixiThirdPhaseController(
         }
         tianheBars.forEach { (color, bar) ->
             val colorText = if (color == StarColor.RED) "§c红色彩带" else "§b蓝色彩带"
-            val role = if (color == currentFloatingColor) "§d浮空" else "§a地面"
+            val preparingNextCycle = tianheWarningRemaining > 0 || tianheNextWaveRemaining > 0
+            val indicatedFloatingColor = if (preparingNextCycle) nextFloatingColor else currentFloatingColor
+            val role = when {
+                color != indicatedFloatingColor -> "§a留在地面"
+                preparingNextCycle -> "§d即将浮空"
+                else -> "§d正在浮空"
+            }
             val conserverText = if (conserver == null) "§f守恒者等待现身" else "§f天河守恒者"
             bar.setTitle("§d§l天河倒悬 §7| $colorText §7| $role §7| $conserverText §7| $stateText")
             bar.progress = if (conserver != null) (health / maximumHealth.coerceAtLeast(1.0)).coerceIn(0.0, 1.0)
@@ -1261,6 +1314,7 @@ internal class QixiThirdPhaseController(
         }
         pendingConserverLocation = takeNextConserverLocation()
         tianheNextWaveRemaining = tianheNextWaveTicks
+        prepareNextTianheRoles(activePlayers(), reassignColors = true)
         updateTianheBars()
     }
 
@@ -1401,6 +1455,7 @@ internal class QixiThirdPhaseController(
     private fun prepareEscorts() {
         niulang.teleport(Location(world, -523.30, 4.00, 2384.30, 357.26f, 2.10f))
         zhinv.teleport(Location(world, -577.44, 4.00, 2384.70, 321.71f, -3.00f))
+        zhinv.villagerType = Villager.Type.SAVANNA
         listOf(niulang, zhinv).forEach { escort ->
             escort.setAI(false)
             escort.isInvulnerable = true
@@ -1412,7 +1467,7 @@ internal class QixiThirdPhaseController(
     private fun spawnBoss() {
         val entity = MobFactory.spawnMob(
             plugin,
-            Location(world, -550.58, 6.0, 2427.82, -179.70f, 0.0f),
+            bossSpawnLocation(),
             BOSS_ID,
             false
         ) as? Evoker
@@ -1615,8 +1670,15 @@ internal class QixiThirdPhaseController(
     }
 
     private fun clearAllBars() {
-        listOf(bossBar, skillBar, orderBar, lawBar).forEach { it?.removeAll() }
-        clearTianheBars()
+        val bars = (listOfNotNull(bossBar, skillBar, orderBar, lawBar) + tianheBars.values).distinct()
+        bars.forEach(BossBar::removeAll)
+        // 通关和传送可能发生在同一 tick；下一 tick 再发一次移除，避免少数客户端残留 BossBar。
+        if (bars.isNotEmpty() && plugin.isEnabled) {
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                bars.forEach(BossBar::removeAll)
+            })
+        }
+        tianheBars.clear()
         bossBar = null
         skillBar = null
         orderBar = null
@@ -1670,6 +1732,8 @@ internal class QixiThirdPhaseController(
     }
 
     private fun plazaCenter() = Location(world, -551.0, 4.0, 2428.0)
+
+    private fun bossSpawnLocation() = Location(world, -550.58, 6.0, 2427.82, -179.70f, 0.0f)
 
     private fun boundaryPerch() = Location(world, -550.46, 15.63, 2421.38, 179.30f, 1.35f)
 

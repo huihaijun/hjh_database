@@ -44,7 +44,7 @@ class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType
 
     override val description = listOf(
         "§7七夕将近，司天监发现天河星轨与鹊桥星光出现异常。",
-        "§7前往皇城寻找监星官沈观，调查这场不同寻常的星象。",
+        "§7前往皇城东门口寻找监星官沈观，调查这场不同寻常的星象。",
         "§8限时接取：${lastAcceptDate}（含当日）前，等级达到${minimumLevel}级"
     )
 

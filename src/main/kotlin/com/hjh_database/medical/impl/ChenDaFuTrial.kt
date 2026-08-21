@@ -305,25 +305,18 @@ class ChenDaFuTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§a陈大夫 §f: §a好手法！这卷杏花雨正适合你，收下吧。")
+        player.sendMessage("§a陈大夫 §f: §a好手法！杏花雨的行气法门已传入你的灵智，且收好了。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
-
-        val book = plugin.medicalManager.getSkillBook("xinghuayu")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("陈大夫医术试炼奖励 xinghuayu 未找到。")
-        }
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 200)
+            data.learnMedicalSkill("xinghuayu")
             data.completedMedicalTrials.add(trialId)
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { connection ->
+                        plugin.databaseManager.saveMedicalData(connection, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
                     }
                 } catch (exception: Exception) {

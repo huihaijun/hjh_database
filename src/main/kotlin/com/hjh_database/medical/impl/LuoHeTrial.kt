@@ -1405,26 +1405,19 @@ class LuoHeTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§b§l水族祭司-洛禾 §f: §a病邪尽散，灵息复归清明。你能在寒热攻补之间守住分寸，这卷§d天佑§a，便交给你了。")
+        player.sendMessage("§b§l水族祭司-洛禾 §f: §a病邪尽散，灵息复归清明。你能在寒热攻补之间守住分寸，§d天佑§a的法门，便交给你了。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         player.world.spawnParticle(Particle.HAPPY_VILLAGER, player.location.clone().add(0.0, 1.0, 0.0), 30, 0.5, 0.7, 0.5, 0.05)
-
-        val book = plugin.medicalManager.getSkillBook("tianyou")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { item -> player.world.dropItemNaturally(player.location, item) }
-        } else {
-            plugin.logger.warning("洛禾医术试炼奖励 tianyou 未找到。")
-        }
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 300)
+            data.learnMedicalSkill("tianyou")
             data.completedMedicalTrials.add(trialId)
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { connection ->
+                        plugin.databaseManager.saveMedicalData(connection, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
                     }
                 } catch (exception: Exception) {

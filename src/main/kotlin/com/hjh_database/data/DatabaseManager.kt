@@ -204,6 +204,7 @@ class DatabaseManager(private val plugin: Hjh_database) {
                 val playerUuidTables = listOf(
                     "player_shen_consciousness",
                     "player_shen_tribute",
+                    "player_xian_talent",
                     "qixiazhen_busuan",
                     "farm_player_plots"
                 )

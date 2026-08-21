@@ -10,7 +10,7 @@ event-quest:
 # 内测白名单开启后，仅列表中的玩家可以接取限时任务、前往鹊影桥并进入秘境。
 # 可填写玩家 UUID（推荐，不受改名影响）或玩家名；执行 /hjhadmin reload 后生效。
 internal-test:
-  enabled: true
+  enabled: false
   whitelist:
     - "krisp114514"
     - "huihaijun"
@@ -36,7 +36,7 @@ phase-one:
 phase-two:
   escort-seconds: 120
   elite-guards-per-player: 12
-  star-commander-chance: 0.20
+  star-commander-chance: 0.10
   replenish-seconds: 5
   feather-progress-percent: 5.0
   star-lock-seconds: 18
@@ -97,6 +97,8 @@ phase-three:
     armor: 25.0
   difficulty:
     easy:
+      boss-health: 7500.0
+      boss-health-per-additional-player-ratio: 0.50
       boss-speed: 0.40
       golden-boundary-damage: 60.0
       armor-break-seconds: 6.0
@@ -112,6 +114,8 @@ phase-three:
       inverted-river-solo-success-damage: 15.0
       inverted-river-solo-failure-damage: 40.0
     hard:
+      boss-health: 10000.0
+      boss-health-per-additional-player-ratio: 0.40
       boss-speed: 0.45
       golden-boundary-damage: 80.0
       armor-break-seconds: 10.0

@@ -19,7 +19,13 @@ class South_01 : QuestBase("main_south_1", "[主线]绿洲传闻", QuestType.MAI
     override val raceLimit = null
 
     // 南方区域主线承接人族与妖族各自完成的四方结界章节。
-    override val requiredCompletedQuestIds = setOf("main_ren_9", "main_yao_9", "main_shen_9")
+    override val requiredCompletedQuestIds = setOf(
+        "main_ren_9",
+        "main_yao_9",
+        "main_shen_9",
+        "main_zhan_9",
+        "main_xian_9"
+    )
 
     // 任务追踪描述
     override fun getProgressText(progress: Int): List<String> {

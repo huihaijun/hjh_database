@@ -24,6 +24,8 @@ class MedicalManager(private val plugin: Hjh_database) {
     private val skillRarityMap: MutableMap<String, Int> = HashMap()
     // 缓存：SkillID -> 技能名
     private val skillNameCache: MutableMap<String, String> = HashMap()
+    // 仅试炼医术配置；一、二、五阶等无 trial_id 的医术不受试炼门槛限制。
+    private val skillTrialMap: MutableMap<String, String> = HashMap()
 
     val keySkillId: NamespacedKey = NamespacedKey(plugin, "med_skill_id")
     val keyIgnoreRefresh: NamespacedKey = NamespacedKey(plugin, "hjh_ignore_refresh")
@@ -39,6 +41,7 @@ class MedicalManager(private val plugin: Hjh_database) {
         skillBooks.clear()
         skillRarityMap.clear()
         skillNameCache.clear()
+        skillTrialMap.clear()
 
         val file = File(plugin.dataFolder, "medical_items.yml")
         if (!file.exists()) plugin.saveResource("medical_items.yml", false)
@@ -53,6 +56,8 @@ class MedicalManager(private val plugin: Hjh_database) {
                 // 【修复】处理名字颜色
                 val name = ChatColor.translateAlternateColorCodes('&', sec.getString("name", "未知医术")!!)
                 val rarity = sec.getInt("rarity", 1)
+                val trialId = sec.getString("trial_id")?.trim()?.lowercase(Locale.ROOT)
+                    ?: DEFAULT_TRIAL_BY_SKILL[skillId]
 
                 // 构建物品
                 val matName = sec.getString("material", "PAPER")!!
@@ -81,7 +86,12 @@ class MedicalManager(private val plugin: Hjh_database) {
 
                 // 2. 【修复】追加配置文件的 Lore (处理颜色)
                 for (line in rawLore) {
-                    finalLore.add(ChatColor.translateAlternateColorCodes('&', line))
+                    val currentLine = if (line.contains("放入绘制台")) {
+                        "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+                    } else {
+                        line
+                    }
+                    finalLore.add(ChatColor.translateAlternateColorCodes('&', currentLine))
                 }
                 meta.lore = finalLore
 
@@ -98,6 +108,7 @@ class MedicalManager(private val plugin: Hjh_database) {
                 skillBooks[skillId] = item
                 skillRarityMap[skillId] = rarity
                 skillNameCache[skillId] = name
+                if (!trialId.isNullOrEmpty()) skillTrialMap[skillId] = trialId
             }
         }
     }
@@ -120,6 +131,50 @@ class MedicalManager(private val plugin: Hjh_database) {
 
     fun getAllSkillIds(): Set<String> {
         return skillNameCache.keys
+    }
+
+    fun getSkillRarity(skillId: String): Int = skillRarityMap[skillId] ?: 1
+
+    fun getSkillIdsByRarity(rarity: Int): List<String> =
+        skillNameCache.keys
+            .filter { getSkillRarity(it) == rarity }
+            .sortedBy { ChatColor.stripColor(getSkillName(it)) }
+
+    fun getRequiredTrial(skillId: String): String? = skillTrialMap[skillId]
+
+    fun getSkillForTrial(trialId: String): String? =
+        skillTrialMap.entries.firstOrNull { it.value == trialId.lowercase(Locale.ROOT) }?.key
+
+    fun hasReleaseQualification(player: Player, skillId: String): Boolean {
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        if (!data.hasLearnedMedicalSkill(skillId)) return false
+        val trialId = getRequiredTrial(skillId) ?: return true
+        return trialId in data.completedMedicalTrials
+    }
+
+    /** 旧服只根据已完成试炼补全永久灵智，当前装配不视为已经领悟。 */
+    fun migrateLegacyKnowledge(data: com.hjh_database.data.PlayerData): Boolean {
+        var changed = false
+        data.completedMedicalTrials.forEach { trialId ->
+            getSkillForTrial(trialId)?.let { skillId ->
+                if (data.learnMedicalSkill(skillId)) changed = true
+            }
+        }
+        return changed
+    }
+
+    fun learnSkill(player: Player, skillId: String): Boolean {
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        if (!skillNameCache.containsKey(skillId)) return false
+        val learned = data.learnMedicalSkill(skillId)
+        if (learned) plugin.databaseManager.savePlayerAsync(data)
+        return learned
+    }
+
+    fun isMedicalFlag(item: ItemStack?): Boolean {
+        if (item == null || !item.type.name.endsWith("_BANNER")) return false
+        val weapon = plugin.playerManager.weaponManager.getWeaponDataFromItem(item) ?: return false
+        return weapon.reqJob == 3
     }
 
     fun getLoomSession(player: Player): Array<ItemStack?>? {
@@ -153,6 +208,126 @@ class MedicalManager(private val plugin: Hjh_database) {
             keySkillId,
             PersistentDataType.STRING
         ) else null
+    }
+
+    fun etchLearnedSkill(player: Player, banner: ItemStack?, skillId: String): ItemStack? {
+        if (!isMedicalFlag(banner)) {
+            player.sendMessage("§c[绘制失败] §7这里只能放入医师职业的医旗。")
+            return null
+        }
+        if (!skillNameCache.containsKey(skillId)) return null
+
+        val data = plugin.playerManager.getPlayerData(player) ?: return null
+        if (!data.hasLearnedMedicalSkill(skillId)) {
+            player.sendMessage("§c[绘制失败] §7你的灵智中尚未领悟这门医术。")
+            return null
+        }
+        val requiredTrial = getRequiredTrial(skillId)
+        if (requiredTrial != null && requiredTrial !in data.completedMedicalTrials) {
+            player.sendMessage("§c[绘制失败] §7你尚未完成这门医术对应的医术试炼。")
+            return null
+        }
+
+        val bannerMeta = banner!!.itemMeta ?: return null
+        val keyRarity = NamespacedKey(plugin, "rarity")
+        val bannerRarity = bannerMeta.persistentDataContainer
+            .get(keyRarity, PersistentDataType.INTEGER) ?: 1
+        val skillRarity = getSkillRarity(skillId)
+        if (skillRarity > bannerRarity) {
+            player.sendMessage("§c[绘制失败] §7${bannerRarity}阶医旗无法承载${skillRarity}阶医术。")
+            return null
+        }
+
+        val oldSkillId = getSkillIdFromBanner(banner)
+        val activeSkills = data.getMedicalLoadout()
+        if (oldSkillId != skillId && skillId !in activeSkills) {
+            val occupiedAfterSwitch = activeSkills.toMutableSet().apply {
+                if (oldSkillId != null) remove(oldSkillId)
+            }.size
+            if (occupiedAfterSwitch >= MAX_ACTIVE_SKILLS) {
+                player.sendMessage("§c[绘制失败] §7你最多只能同时启用五种医术。")
+                return null
+            }
+        }
+
+        if (oldSkillId != null && oldSkillId != skillId) {
+            data.removeMedicalSkillMemory(oldSkillId)
+        }
+        data.addMedicalSkillMemory(skillId)
+
+        // 必须先清除旧医术的全部旗帜图案，再绘制新图案，避免切换时发生叠加。
+        val result = stripSkillMetadata(banner.clone())
+        val resultMeta = result.itemMeta ?: return null
+        val skillDisplayName = getSkillName(skillId)
+        val baseName = if (resultMeta.hasDisplayName()) resultMeta.displayName else "§f医旗"
+        resultMeta.setDisplayName(buildEtchedBannerName(baseName, skillDisplayName))
+        resultMeta.persistentDataContainer.set(keySkillId, PersistentDataType.STRING, skillId)
+        resultMeta.persistentDataContainer.set(keyIgnoreRefresh, PersistentDataType.INTEGER, 1)
+        resultMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ADDITIONAL_TOOLTIP)
+
+        val lore = (resultMeta.lore ?: emptyList()).toMutableList()
+        lore.add("§8----------------")
+        lore.add("§6[医术] §e$skillDisplayName")
+        getSkillBook(skillId)?.itemMeta?.lore?.forEach { line ->
+            if (!line.contains("放入绘制台") && !line.contains("右键领悟")) lore.add(line)
+        }
+        resultMeta.lore = lore
+        if (resultMeta is BannerMeta) {
+            MedicalPatternRegistry.getPatterns(skillId)?.forEach(resultMeta::addPattern)
+        }
+        result.itemMeta = resultMeta
+        result.amount = 1
+
+        plugin.databaseManager.savePlayerAsync(data)
+        player.sendMessage("§a[绘制成功] §7已将 §e$skillDisplayName §7绘制到当前医旗。")
+        player.playSound(player.location, Sound.UI_LOOM_TAKE_RESULT, 1f, 1f)
+        return result
+    }
+
+    fun cleanCurrentBanner(player: Player, banner: ItemStack?): ItemStack? {
+        if (!isMedicalFlag(banner)) return null
+        val skillId = getSkillIdFromBanner(banner) ?: return banner?.clone()
+        val data = plugin.playerManager.getPlayerData(player) ?: return null
+        data.removeMedicalSkillMemory(skillId)
+        plugin.databaseManager.savePlayerAsync(data)
+
+        player.sendMessage("§a[清洗完成] §7当前医旗上的医术已卸下。")
+        player.playSound(player.location, Sound.BLOCK_GRINDSTONE_USE, 1f, 1f)
+        return stripSkillMetadata(banner!!.clone())
+    }
+
+    fun forgetAllActiveSkills(player: Player): Boolean {
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        if (data.getMedicalLoadout().isEmpty()) return false
+        data.clearMedicalSkills()
+        plugin.databaseManager.savePlayerAsync(data)
+        return true
+    }
+
+    private fun stripSkillMetadata(banner: ItemStack): ItemStack {
+        val oldSkillId = getSkillIdFromBanner(banner)
+        val meta = banner.itemMeta ?: return banner
+        if (oldSkillId != null && meta.hasDisplayName()) {
+            val suffix = "§r[${getSkillName(oldSkillId)}§r]"
+            meta.setDisplayName(meta.displayName.replace(suffix, ""))
+        }
+        meta.persistentDataContainer.remove(keySkillId)
+        meta.persistentDataContainer.remove(keyIgnoreRefresh)
+
+        val lore = (meta.lore ?: emptyList()).toMutableList()
+        val skillLine = lore.indexOfFirst { it.startsWith("§6[医术]") }
+        if (skillLine >= 0) {
+            val start = if (skillLine > 0 && lore[skillLine - 1] == "§8----------------") {
+                skillLine - 1
+            } else {
+                skillLine
+            }
+            lore.subList(start, lore.size).clear()
+        }
+        meta.lore = lore
+        if (meta is BannerMeta) meta.patterns = ArrayList()
+        banner.itemMeta = meta
+        return banner
     }
 
     // === 刻印逻辑 ===
@@ -366,5 +541,21 @@ class MedicalManager(private val plugin: Hjh_database) {
         player.playSound(player.location, Sound.BLOCK_GRINDSTONE_USE, 1f, 1f)
 
         return arrayOf(blankBanner, returnBook)
+    }
+
+    companion object {
+        private const val MAX_ACTIVE_SKILLS = 5
+
+        private val DEFAULT_TRIAL_BY_SKILL = mapOf(
+            "dusuzhen" to "shanshenmiao",
+            "mingxiang" to "zhuanyuanshangxian",
+            "bingqingyu" to "wangyuanwai",
+            "huichunyu" to "wenquankezhan",
+            "xinghuayu" to "chendafu",
+            "nianqijin" to "huzhenshangren",
+            "hunlingyou" to "baigujing",
+            "tianyou" to "luohe",
+            "jiangtianguang" to "yuzhu"
+        )
     }
 }

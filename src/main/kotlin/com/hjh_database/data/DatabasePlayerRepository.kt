@@ -590,6 +590,9 @@ internal class DatabasePlayerRepository(
                     manager.loadPlayerStatus(conn, data)
                     manager.loadPlayerGoldenChest(conn, data)
                     manager.loadCompletedMedicalTrials(conn, data)
+                    if (plugin.medicalManager.migrateLegacyKnowledge(data)) {
+                        manager.saveMedicalData(conn, data)
+                    }
 
                     // 7. 加载已完成的任务到缓存 (优化 RaceManager)
                     conn.prepareStatement(sqlCompletedQuests).use { ps ->

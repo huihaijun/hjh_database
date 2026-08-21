@@ -20,7 +20,9 @@ class Side_Ren_01 : QuestBase("side_ren_1", "[支线]重华晶的奥秘", QuestT
                         data.completedQuests.contains("main_ren_6") ||
                                 data.questStatuses["main_ren_6"] == QuestStatus.COMPLETED ||
                                 data.completedQuests.contains("main_yao_7") ||
-                                data.questStatuses["main_yao_7"] == QuestStatus.COMPLETED
+                                data.questStatuses["main_yao_7"] == QuestStatus.COMPLETED ||
+                                data.completedQuests.contains("main_zhan_6") ||
+                                data.questStatuses["main_zhan_6"] == QuestStatus.COMPLETED
                         )
     }
 

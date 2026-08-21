@@ -222,7 +222,7 @@ class PlayerManager(private val plugin: Hjh_database) {
         return data
     }
 
-    fun loadAndCache(player: Player) {
+    fun loadAndCache(player: Player, afterLoad: ((PlayerData) -> Unit)? = null) {
         plugin.databaseManager.loadPlayer(player.uniqueId, player.name)
             .thenAccept { loadedData ->
                 // 如果数据库为空，创建新数据。
@@ -245,6 +245,7 @@ class PlayerManager(private val plugin: Hjh_database) {
                     updateStats(player)
                     syncToVanilla(player, finalData)
                     tryAutoAcceptLevelQuests(player, finalData)
+                    if (player.isOnline) afterLoad?.invoke(finalData)
                     if (migratedExpCurve) {
                         player.sendMessage("§a[经验系统] §7已按新版经验曲线折算你的等级与经验。")
                     }

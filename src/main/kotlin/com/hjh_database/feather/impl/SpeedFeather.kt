@@ -37,6 +37,9 @@ abstract class SpeedFeather(
     private val requiredLevel: Int = 1
 ) : FeatherBase {
 
+    final override val displayName: String
+        get() = featherName
+
     private val activeBonuses = HashMap<UUID, Double>()
     private val damageHits = HashMap<UUID, Int>()
     private val appliedBonuses = HashMap<UUID, Double>()
@@ -44,7 +47,9 @@ abstract class SpeedFeather(
     final override fun canUse(player: Player, data: PlayerData): Boolean {
         val requiredQuestId = when (data.race) {
             0 -> "main_shen_6"
+            1 -> "main_xian_5"
             2 -> "main_ren_5"
+            3 -> "main_zhan_5"
             4 -> "main_yao_5"
             else -> null
         }

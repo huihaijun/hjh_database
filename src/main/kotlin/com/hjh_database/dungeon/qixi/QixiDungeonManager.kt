@@ -61,6 +61,7 @@ import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -78,6 +79,8 @@ internal enum class QixiDifficulty(val displayName: String, val color: String, v
 
 /** 鹊桥星愿副本（当前完成鹊桥唤醒、护送和七夕广场测试落点）。 */
 class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
+    private val pendingCompletionTitleAwards = ConcurrentHashMap.newKeySet<UUID>()
+
     init {
         // 清理服务器异常停止后可能遗留的无推挤队伍；新副本会按需重新创建。
         QixiCollisionSupport.clear()
@@ -220,7 +223,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         escortDurationTicks = secondsToTicks(config.getInt("phase-two.escort-seconds", 120)).toDouble()
         elitePerPlayer = config.getInt("phase-two.elite-guards-per-player", 12).coerceAtLeast(0)
         phaseTwoReplenishTicks = secondsToTicks(config.getInt("phase-two.replenish-seconds", 5))
-        phaseTwoStarCommanderChance = config.getDouble("phase-two.star-commander-chance", 0.20).coerceIn(0.0, 1.0)
+        phaseTwoStarCommanderChance = config.getDouble("phase-two.star-commander-chance", 0.10).coerceIn(0.0, 1.0)
         phaseTwoStarLockTicks = secondsToTicks(config.getInt("phase-two.star-lock-seconds", 18))
         difficultySettings = QixiDifficulty.entries.associateWith { difficulty ->
             val path = "difficulty.${difficulty.configKey}"
@@ -796,7 +799,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             player.sendMessage("§d§l【鹊桥星愿】§f你已踏入星河秘境。")
             player.sendMessage("§f本次难度：${difficulty.color}${difficulty.displayName}")
         }
-        repeating(current, 5L, 5L) { rescueFallenPlayers(current) }
+        repeating(current, FALL_RESCUE_CHECK_TICKS, FALL_RESCUE_CHECK_TICKS) { rescueFallenPlayers(current) }
         repeating(current, 5L, 5L) { maintainFeatherShields(current) }
         repeating(current, MOB_BOUNDARY_CHECK_TICKS, MOB_BOUNDARY_CHECK_TICKS) { monitorKnockedOffMobs(current) }
         current.niulang = spawnEscort(
@@ -809,7 +812,8 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             current,
             "§a§l织女",
             Location(world, -849.58, 77.0, 2412.38, 180.75f, -3.60f),
-            Location(world, -946.5, 105.0, 2404.5, 90.0f, 0.0f)
+            Location(world, -946.5, 105.0, 2404.5, 90.0f, 0.0f),
+            Villager.Type.SAVANNA
         )
         spawnSpirit(current, current.niulang!!.start, "§b§l牛郎的鹊灵", Parrot.Variant.BLUE)
         spawnSpirit(current, current.zhinv!!.start, "§c§l织女的鹊灵", Parrot.Variant.RED)
@@ -829,12 +833,19 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         scheduleDialogue(current, intro, 0L) { beginAwakening(current) }
     }
 
-    private fun spawnEscort(s: Session, name: String, start: Location, target: Location): Escort {
+    private fun spawnEscort(
+        s: Session,
+        name: String,
+        start: Location,
+        target: Location,
+        villagerType: Villager.Type = Villager.Type.PLAINS
+    ): Escort {
         val maxHealth = settings(s).escortMaxHealth
         val villager = start.world.spawn(start, Villager::class.java) { npc ->
             npc.customName = name
             npc.isCustomNameVisible = true
             npc.profession = Villager.Profession.NONE
+            npc.villagerType = villagerType
             npc.setAI(false)
             npc.isInvulnerable = true
             npc.isCollidable = false
@@ -1985,7 +1996,8 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             Location(world, -549.0, 4.0, 2408.5, 180.0f, 0.0f),
             Location(world, -553.0, 4.0, 2408.5, 180.0f, 0.0f)
         )
-        activePlayers(s).forEachIndexed { index, player ->
+        val phaseThreePlayers = activePlayers(s)
+        phaseThreePlayers.forEachIndexed { index, player ->
             player.addPotionEffect(PotionEffect(PotionEffectType.BLINDNESS, 500, 0, false, false, true))
             player.teleport(arrivals[index % arrivals.size])
         }
@@ -2003,6 +2015,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             zhinv,
             config,
             s.difficulty,
+            phaseEntryPlayerCount = phaseThreePlayers.size.coerceAtLeast(1),
             onFinished = { finishThirdPhase(s) }
         )
         s.thirdPhase = controller
@@ -2070,6 +2083,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
                 val record = data.dungeonRecords.getOrPut(chestId) { DungeonRecord() }
                 record.clears++
                 record.availableOpens++
+                grantCompletionTitleIfEligible(player, data.dungeonRecords)
                 plugin.databaseManager.savePlayerAsync(data)
                 player.sendMessage(
                     "§e[秘境] §a${s.difficulty.displayName}通关记录 +1，" +
@@ -2083,6 +2097,30 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
                 }
             }
             player.teleport(destination)
+            plugin.qixiBridgeBuildManager.grantDungeonCompletionReward(player, hardDifficulty = !easy)
+        }
+    }
+
+    private fun grantCompletionTitleIfEligible(player: Player, records: Map<String, DungeonRecord>) {
+        val totalClears = QIXI_CHEST_IDS.sumOf { records[it]?.clears ?: 0 }
+        if (totalClears < QIXI_TITLE_REQUIRED_CLEARS) return
+        if (plugin.titleManager.getProfile(player.uniqueId)?.ownedTitles?.containsKey(QIXI_COMPLETION_TITLE_ID) == true) return
+        if (!pendingCompletionTitleAwards.add(player.uniqueId)) return
+
+        plugin.titleManager.grantMilestoneTitle(
+            player,
+            QIXI_COMPLETION_TITLE_ID,
+            QIXI_COMPLETION_MILESTONE_ID
+        ).whenComplete { _, _ ->
+            pendingCompletionTitleAwards.remove(player.uniqueId)
+        }
+    }
+
+    /** 为历史累计通关已达标、但尚未获得称号的玩家自动补发。 */
+    fun backfillCompletionTitle(player: Player, records: Map<String, DungeonRecord>) {
+        if (QIXI_CHEST_IDS.sumOf { records[it]?.clears ?: 0 } < QIXI_TITLE_REQUIRED_CLEARS) return
+        plugin.titleManager.loadPlayer(player).whenComplete { _, throwable ->
+            if (throwable == null && player.isOnline) grantCompletionTitleIfEligible(player, records)
         }
     }
 
@@ -2179,17 +2217,26 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         stopQixiBgm(player)
         clearFeatherShield(s, player, true)
         removeDungeonItems(player)
+        clearBossBars(player)
         player.removeScoreboardTag(PLAYER_TAG)
         removeAttackBlessing(player)
         player.resetPlayerTime()
         s.playerIds.remove(player.uniqueId)
         s.fallTicks.remove(player.uniqueId)
+        if (!s.ending && activePlayers(s).isEmpty()) failSession(s, "§c所有副本玩家均已离开或阵亡，秘境挑战失败！", false)
+    }
+
+    /**
+     * 幂等移除某名玩家当前可见的全部七夕副本 BossBar。
+     * PlayerListener 会在死亡/退服时先兜底调用，避免会话成员标签先被其他监听器清理后漏掉移除。
+     */
+    fun clearBossBars(player: Player) {
+        val s = session ?: return
         s.thirdPhase?.removePlayer(player)
         listOf(
             s.awakeningBar, s.niulangSpiritBar, s.zhinvSpiritBar,
             s.meetingBar, s.niulangBar, s.zhinvBar, s.starLockBar
         ).forEach { it?.removePlayer(player) }
-        if (!s.ending && activePlayers(s).isEmpty()) failSession(s, "§c所有副本玩家均已离开或阵亡，秘境挑战失败！", false)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -2608,9 +2655,10 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
                 s.fallTicks.remove(player.uniqueId)
                 return@forEach
             }
-            val ticks = (s.fallTicks[player.uniqueId] ?: 0) + 5
+            val ticks = (s.fallTicks[player.uniqueId] ?: 0) + FALL_RESCUE_CHECK_TICKS.toInt()
             s.fallTicks[player.uniqueId] = ticks
-            if (ticks < 40) return@forEach
+            val emergencyFall = player.location.y <= FALL_RESCUE_EMERGENCY_Y
+            if (!emergencyFall && ticks < FALL_RESCUE_DELAY_TICKS) return@forEach
 
             val destination = if (horizontalDistanceSquared(player.location, leftRescue) <=
                 horizontalDistanceSquared(player.location, rightRescue)
@@ -2693,6 +2741,10 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
     private fun secondsToTicks(seconds: Int): Long = seconds.coerceAtLeast(1) * 20L
 
     private companion object {
+        val QIXI_CHEST_IDS = setOf("qixi_easy", "qixi_hard")
+        const val QIXI_TITLE_REQUIRED_CLEARS = 20
+        const val QIXI_COMPLETION_TITLE_ID = "yinchenhuan"
+        const val QIXI_COMPLETION_MILESTONE_ID = "qixi_20_clears"
         const val FEATHER_HEAL_AMOUNT = 10
         const val ZHINV_SPIRIT_PLAYER_HEAL_AMOUNT = 10.0
         const val ZHINV_SPIRIT_HEAL_AMOUNT = 5
@@ -2755,6 +2807,9 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         const val CHAOS_WALKER_FINAL_APPROACH_DISTANCE = 4.0
         const val MAX_ELITES_NEAR_EACH_ESCORT_PER_BATCH = 4
         const val MOB_BOUNDARY_CHECK_TICKS = 10L
+        const val FALL_RESCUE_CHECK_TICKS = 2L
+        const val FALL_RESCUE_DELAY_TICKS = 20
+        const val FALL_RESCUE_EMERGENCY_Y = 68.0
         const val DIFFICULTY_SELECTION_SECONDS = 10
         const val DIFFICULTY_SELECTION_COMMAND = "/qixi-difficulty-select"
         const val MOB_OUT_OF_BOUNDS_KILL_MILLIS = 3_000L

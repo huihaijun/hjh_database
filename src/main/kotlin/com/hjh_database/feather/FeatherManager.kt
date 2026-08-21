@@ -6,6 +6,9 @@ import com.hjh_database.feather.impl.JifengSpeedFeather
 import com.hjh_database.feather.impl.LuoyuXingheSpeedFeather
 import com.hjh_database.feather.impl.QingyingSpeedFeather
 import com.hjh_database.feather.impl.SpeedFeather
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Bukkit
 import org.bukkit.NamespacedKey
 import org.bukkit.Material
@@ -107,8 +110,22 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
 
         // 3. 羽毛使用独立的绝对时间冷却，不读取玩家冷却缩减属性；原版冷却仅负责视觉反馈。
         val remainingCooldownTicks = remainingCooldownTicks(player)
-        if (remainingCooldownTicks > 0 || player.getCooldown(item.type) > 0) {
-            if (remainingCooldownTicks > 0) player.setCooldown(Material.FEATHER, remainingCooldownTicks)
+        val displayedCooldownTicks = maxOf(remainingCooldownTicks, player.getCooldown(item.type))
+        if (displayedCooldownTicks > 0) {
+            val remainingSeconds = (displayedCooldownTicks + 19) / 20
+            showActionBarWarning(player, "羽毛【${feather.displayName}】处于冷却中，剩余${remainingSeconds}秒")
+            return
+        }
+
+        // 羽毛第一次受到有效伤害后才进入冷却。在此之前禁止重复释放或换另一种羽毛，
+        // 避免玩家持续右键刷新完整持续时间、受伤衰减次数和技能表现。
+        val activeInfo = activeEffects[player.uniqueId]
+        val activeSpeedFeather = activeInfo?.feather as? SpeedFeather
+        if (activeInfo != null && activeSpeedFeather != null && !activeSpeedFeather.hasTakenDamage(player)) {
+            showActionBarWarning(
+                player,
+                "羽毛【${activeInfo.feather.displayName}】效果仍在持续，当前尚未进入冷却"
+            )
             return
         }
 
@@ -120,7 +137,7 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
         }
 
         if (feather.canUse(player, data)) {
-            // 5. 静默顶替旧效果；同种羽毛重复释放也会恢复完整初始加成。
+            // 5. 已经受伤并进入过冷却的旧效果可被新羽毛正常顶替。
             stopEffect(player, FeatherEndReason.REPLACED)
 
             // 6. 激活新效果
@@ -201,6 +218,10 @@ class FeatherManager(private val plugin: Hjh_database) : Listener {
     private fun restoreCooldownVisual(player: Player) {
         val ticks = remainingCooldownTicks(player)
         if (ticks > 0) player.setCooldown(Material.FEATHER, ticks)
+    }
+
+    private fun showActionBarWarning(player: Player, message: String) {
+        player.sendActionBar(Component.text(message, NamedTextColor.RED, TextDecoration.BOLD))
     }
 
     // === 3. 退服保存与内存清理逻辑 ===

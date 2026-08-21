@@ -41,6 +41,24 @@ import com.hjh_database.quest.impl.main.west.West_01
 import com.hjh_database.quest.impl.main.west.West_02
 import com.hjh_database.quest.impl.main.west.West_03
 import com.hjh_database.quest.impl.main.west.West_04
+import com.hjh_database.quest.impl.main.xian.Xian_01
+import com.hjh_database.quest.impl.main.xian.Xian_02
+import com.hjh_database.quest.impl.main.xian.Xian_03
+import com.hjh_database.quest.impl.main.xian.Xian_04
+import com.hjh_database.quest.impl.main.xian.Xian_05
+import com.hjh_database.quest.impl.main.xian.Xian_06
+import com.hjh_database.quest.impl.main.xian.Xian_07
+import com.hjh_database.quest.impl.main.xian.Xian_08
+import com.hjh_database.quest.impl.main.xian.Xian_09
+import com.hjh_database.quest.impl.main.zhan.Zhan_01
+import com.hjh_database.quest.impl.main.zhan.Zhan_02
+import com.hjh_database.quest.impl.main.zhan.Zhan_03
+import com.hjh_database.quest.impl.main.zhan.Zhan_04
+import com.hjh_database.quest.impl.main.zhan.Zhan_05
+import com.hjh_database.quest.impl.main.zhan.Zhan_06
+import com.hjh_database.quest.impl.main.zhan.Zhan_07
+import com.hjh_database.quest.impl.main.zhan.Zhan_08
+import com.hjh_database.quest.impl.main.zhan.Zhan_09
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
 import com.hjh_database.quest.impl.side.Side_Qixi_StarWish
@@ -107,8 +125,27 @@ object QuestRegistry {
         manager.register(Shen_08())
         manager.register(Shen_09())
 
+        // === 战神族主线 ===
+        manager.register(Zhan_01())
+        manager.register(Zhan_02())
+        manager.register(Zhan_03())
+        manager.register(Zhan_04())
+        manager.register(Zhan_05())
+        manager.register(Zhan_06())
+        manager.register(Zhan_07())
+        manager.register(Zhan_08())
+        manager.register(Zhan_09())
+
         // === 仙族主线 ===
-        // manager.register(Xian_01_Begin())
+        manager.register(Xian_01())
+        manager.register(Xian_02())
+        manager.register(Xian_03())
+        manager.register(Xian_04())
+        manager.register(Xian_05())
+        manager.register(Xian_06())
+        manager.register(Xian_07())
+        manager.register(Xian_08())
+        manager.register(Xian_09())
 
         // === 支线 ===
         manager.register(Side_Ren_01())

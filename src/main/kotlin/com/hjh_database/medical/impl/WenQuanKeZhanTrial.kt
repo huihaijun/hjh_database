@@ -343,26 +343,19 @@ class WenQuanKeZhanTrial(
         cleanUp()
         removeCaoyaoGuan()
 
-        player.sendMessage("§a温泉客栈老板 §f: §a好！五趟药浴全成了！这本医术宝典归您了！")
+        player.sendMessage("§a温泉客栈老板 §f: §a好！五趟药浴全成了！这门医术归您了！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
-
-        val book = plugin.medicalManager.getSkillBook("huichunyu")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("温泉客栈医术试炼奖励 huichunyu 未找到。")
-        }
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 100)
+            data.learnMedicalSkill("huichunyu")
             data.completedMedicalTrials.add(trialId)
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { conn ->
+                        plugin.databaseManager.saveMedicalData(conn, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
                     }
                 } catch (e: Exception) {

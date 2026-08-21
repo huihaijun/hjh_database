@@ -91,6 +91,28 @@ points:
       custom_action: "CHOOSE_GOD_START"
       message: "&7你选择了[神族]，正在前往新手前置之地"
 
+  选择仙族-前往新手前置:
+    world: "world"
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40
+    pitch: 2.10
+    actions:
+      custom_action: "CHOOSE_IMMORTAL_START"
+      message: "&7你选择了[仙族]，正在前往新手前置之地"
+
+  选择战神族-前往新手前置:
+    world: "world"
+    x: 1248.05
+    y: 35.00
+    z: -364.01
+    yaw: 89.40
+    pitch: 2.10
+    actions:
+      custom_action: "CHOOSE_WAR_GOD_START"
+      message: "&7你选择了[战神族]，正在前往新手前置之地"
+
   新手前置回初始点:
     world: "world"  # 对应 minecraft:overworld，通常服务器文件夹名叫 world
     x: 1248.05
@@ -344,6 +366,30 @@ points:
       completed_quest:
         id: "main_shen_6"
         message: "&c神族守卫提示你，请先对这里多熟悉下再离开吧（请先完成前置主线任务）"
+
+  战神族-人族皇城:
+    world: "world"
+    x: -26.54
+    y: 27.00
+    z: 147.74
+    yaw: -145.33
+    pitch: -19.05
+    conditions:
+      completed_quest:
+        id: "main_zhan_5"
+        message: "&7战神族守卫提醒你，还是先熟悉一下环境再前往皇城吧\n&c（请先完成前置主线任务）"
+
+  仙族-人族皇城:
+    world: "world"
+    x: 220.38
+    y: 48.50
+    z: 41.96
+    yaw: 180.75
+    pitch: 0.60
+    conditions:
+      completed_quest:
+        id: "main_xian_5"
+        message: "&c仙族传送阵尚未与你的仙力共鸣（请先完成前置主线任务）"
 
   皇城-神族:
     world: "world"

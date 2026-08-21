@@ -115,6 +115,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
 
     // ----------------- 医师系统 (Medical) -----------------
     var medicalSkills: MutableList<String> = ArrayList()
+    var learnedMedicalSkills: MutableSet<String> = LinkedHashSet()
     var medicalCooldowns: MutableMap<String, Long> = HashMap()
 
     fun getMedicalLoadout(): MutableList<String> = medicalSkills
@@ -128,6 +129,25 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     }
 
     fun clearMedicalSkills() = medicalSkills.clear()
+
+    fun hasLearnedMedicalSkill(skillId: String): Boolean =
+        learnedMedicalSkills.contains(skillId.lowercase(Locale.ROOT))
+
+    fun learnMedicalSkill(skillId: String): Boolean =
+        learnedMedicalSkills.add(skillId.lowercase(Locale.ROOT))
+
+    fun getLearnedMedicalSkillsAsString(): String =
+        learnedMedicalSkills.joinToString(",")
+
+    fun setLearnedMedicalSkillsFromString(str: String?) {
+        learnedMedicalSkills = LinkedHashSet()
+        if (!str.isNullOrBlank()) {
+            str.split(',')
+                .map { it.trim().lowercase(Locale.ROOT) }
+                .filter { it.isNotEmpty() }
+                .forEach(learnedMedicalSkills::add)
+        }
+    }
 
     fun getMedicalSkillsAsString(): String {
         return if (medicalSkills.isEmpty()) "" else java.lang.String.join(",", medicalSkills)

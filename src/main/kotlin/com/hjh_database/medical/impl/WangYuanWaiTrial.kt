@@ -264,23 +264,16 @@ class WangYuanWaiTrial(
         player.sendMessage("§a大恩不言谢，大侠！这门医术你且收下，我这就回去救我老娘！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
-        val book = plugin.medicalManager.getSkillBook("bingqingyu")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("王员外医术试炼奖励 bingqingyu 未找到。")
-        }
-
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 100)
+            data.learnMedicalSkill("bingqingyu")
             data.completedMedicalTrials.add(trialId)
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { conn ->
+                        plugin.databaseManager.saveMedicalData(conn, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
                     }
                 } catch (e: Exception) {

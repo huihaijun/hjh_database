@@ -248,9 +248,16 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         val pairId = UUID.randomUUID()
         black.pairId = pairId
         white.pairId = pairId
-        val pair = CollisionPair(pairId, cast.id, black.id, white.id)
+        val initialDistance = black.location.distance(white.location)
+        val pair = CollisionPair(
+            id = pairId,
+            castId = cast.id,
+            firstId = black.id,
+            secondId = white.id,
+            initialDistance = initialDistance
+        )
         state.pairs[pairId] = pair
-        if (isExplosionDistance(black.location.distance(white.location))) {
+        if (isExplosionDistance(initialDistance)) {
             explodePair(player, state, pair, black, white)
         }
     }
@@ -295,7 +302,10 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
             return
         }
 
-        val eachMovement = min(MOVE_SPEED_PER_TICK * MOVE_INTERVAL_TICKS, max(0.0, (distance - EXPLODE_DISTANCE) / 2.0))
+        val eachMovement = min(
+            pair.speedPerTick * MOVE_INTERVAL_TICKS,
+            max(0.0, (distance - EXPLODE_DISTANCE) / 2.0)
+        )
         if (eachMovement <= 0.0) {
             explodePair(player, state, pair, first, second)
             return
@@ -313,6 +323,10 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
 
         damagePath(player, pair, firstOld, first.location)
         damagePath(player, pair, secondOld, second.location)
+        pair.speedPerTick = min(
+            MAX_MOVE_SPEED_PER_TICK,
+            pair.speedPerTick + MOVE_ACCELERATION_PER_TICK * MOVE_INTERVAL_TICKS
+        )
         val newDistanceSquared = first.location.distanceSquared(second.location)
         if (newDistanceSquared <= EXPLODE_DISTANCE_WITH_TOLERANCE * EXPLODE_DISTANCE_WITH_TOLERANCE ||
             newDistanceSquared >= distance * distance - MIN_PROGRESS_SQUARED
@@ -351,7 +365,8 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
     private fun explodePair(player: Player, state: PlayerState, pair: CollisionPair, first: Piece, second: Piece) {
         val center = first.location.clone().add(second.location).multiply(0.5)
         val data = plugin.playerManager.getData(player.uniqueId)
-        val damage = data?.zfStr?.times(EXPLOSION_DAMAGE_MULTIPLIER) ?: 0.0
+        val damageMultiplier = explosionDamageMultiplier(pair.initialDistance)
+        val damage = data?.zfStr?.times(damageMultiplier) ?: 0.0
         val slow = PotionEffect(
             PotionEffectType.SLOWNESS,
             EXPLOSION_SLOW_DURATION_TICKS,
@@ -372,6 +387,12 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         center.world.playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 0.65f, 1.35f)
         removePair(state, pair.id)
         state.casts.remove(pair.castId)
+    }
+
+    private fun explosionDamageMultiplier(initialDistance: Double): Double = when {
+        initialDistance <= NEAR_DAMAGE_MAX_DISTANCE -> NEAR_EXPLOSION_DAMAGE_MULTIPLIER
+        initialDistance <= MEDIUM_DAMAGE_MAX_DISTANCE -> MEDIUM_EXPLOSION_DAMAGE_MULTIPLIER
+        else -> FAR_EXPLOSION_DAMAGE_MULTIPLIER
     }
 
     private inline fun forEachTarget(center: Location, radius: Double, action: (LivingEntity) -> Unit) {
@@ -470,93 +491,28 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun spawnLandingEffect(piece: Piece) {
-        val world = piece.location.world
-        val mainDust = if (piece.color == PieceColor.BLACK) BLACK_DUST else WHITE_DUST
-        val oppositeDust = if (piece.color == PieceColor.BLACK) WHITE_DUST else BLACK_DUST
-        world.spawnParticle(Particle.FLASH, piece.location, 1)
-        world.spawnParticle(Particle.END_ROD, piece.location, 18, 0.65, 0.35, 0.65, 0.025)
-        world.spawnParticle(Particle.ENCHANT, piece.location, 28, 0.9, 0.4, 0.9, 0.15)
-        for (ring in doubleArrayOf(0.85, 1.55, LANDING_DAMAGE_RADIUS)) {
-            val points = max(16, (ring * 14.0).toInt())
-            for (i in 0 until points) {
-                val angle = 2.0 * PI * i / points
-                val loc = piece.location.clone().add(cos(angle) * ring, 0.08, sin(angle) * ring)
-                world.spawnParticle(Particle.DUST, loc, 1, 0.0, 0.0, 0.0, 0.0, if (i % 2 == 0) mainDust else oppositeDust)
-            }
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_LANDING, piece.location, data = if (piece.color == PieceColor.BLACK) 0 else 1)
     }
 
     private fun spawnOrbitParticle(piece: Piece) {
-        val angle = tickCounter * 0.25 + (piece.id.leastSignificantBits and 31L)
-        val mainDust = if (piece.color == PieceColor.BLACK) BLACK_DUST else WHITE_DUST
-        val oppositeDust = if (piece.color == PieceColor.BLACK) WHITE_DUST else BLACK_DUST
-        val outer = piece.location.clone().add(cos(angle) * 0.82, 0.24 + sin(angle * 0.5) * 0.18, sin(angle) * 0.82)
-        val middleAngle = angle + 2.0 * PI / 3.0
-        val middle = piece.location.clone().add(cos(middleAngle) * 0.62, 0.52 + sin(angle) * 0.12, sin(middleAngle) * 0.62)
-        val innerAngle = -angle * 1.42
-        val inner = piece.location.clone().add(cos(innerAngle) * 0.4, 0.34 + sin(innerAngle * 0.7) * 0.12, sin(innerAngle) * 0.4)
-        outer.world.spawnParticle(Particle.DUST, outer, 2, 0.025, 0.025, 0.025, 0.0, mainDust)
-        middle.world.spawnParticle(Particle.ELECTRIC_SPARK, middle, 1, 0.025, 0.025, 0.025, 0.01)
-        inner.world.spawnParticle(Particle.DUST, inner, 1, 0.015, 0.015, 0.015, 0.0, oppositeDust)
-        if (tickCounter % 8L == 0L) {
-            outer.world.spawnParticle(Particle.END_ROD, outer, 1, 0.04, 0.04, 0.04, 0.0)
-            outer.world.spawnParticle(Particle.ENCHANT, piece.location, 5, 0.38, 0.28, 0.38, 0.0)
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_ORBIT, piece.location, data = if (piece.color == PieceColor.BLACK) 0 else 1)
     }
 
     private fun spawnTrail(piece: Piece) {
-        val dust = if (piece.color == PieceColor.BLACK) BLACK_DUST else WHITE_DUST
-        piece.location.world.spawnParticle(Particle.DUST, piece.location, 3, 0.14, 0.14, 0.14, 0.0, dust)
-        piece.location.world.spawnParticle(Particle.END_ROD, piece.location, 2, 0.1, 0.1, 0.1, 0.01)
-        piece.location.world.spawnParticle(Particle.ELECTRIC_SPARK, piece.location, 3, 0.14, 0.14, 0.14, 0.025)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_TRAIL, piece.location, data = if (piece.color == PieceColor.BLACK) 0 else 1)
     }
 
     private fun spawnCollisionLink(first: Piece, second: Piece) {
-        val delta = second.location.toVector().subtract(first.location.toVector())
-        val samples = 11
-        for (i in 1 until samples) {
-            val t = i.toDouble() / samples
-            val loc = first.location.clone().add(delta.clone().multiply(t))
-            val dust = if (i % 2 == 0) BLACK_DUST else WHITE_DUST
-            loc.world.spawnParticle(Particle.DUST, loc, 1, 0.025, 0.025, 0.025, 0.0, dust)
-            if (i % 3 == 0) loc.world.spawnParticle(Particle.END_ROD, loc, 1, 0.015, 0.015, 0.015, 0.0)
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_LINK, first.location, second.location)
     }
 
     private fun spawnExplosionEffect(center: Location) {
-        val world = center.world
-        world.spawnParticle(Particle.FLASH, center, 2)
-        world.spawnParticle(Particle.REVERSE_PORTAL, center, 100, 2.0, 1.3, 2.0, 0.13)
-        world.spawnParticle(Particle.ELECTRIC_SPARK, center, 64, 2.5, 1.4, 2.5, 0.18)
-        world.spawnParticle(Particle.FIREWORK, center, 44, 1.7, 1.1, 1.7, 0.14)
-        world.spawnParticle(Particle.WITCH, center, 42, 1.9, 1.2, 1.9, 0.1)
-        world.spawnParticle(Particle.SONIC_BOOM, center, 1)
-        for (i in 0 until 56) {
-            val angle = 2.0 * PI * i / 16.0
-            val height = (i % 14) * 0.24
-            val radius = 0.35 + height * 0.25
-            val blackLoc = center.clone().add(cos(angle) * radius, height, sin(angle) * radius)
-            val whiteLoc = center.clone().add(cos(angle + PI) * radius, height, sin(angle + PI) * radius)
-            world.spawnParticle(Particle.DUST, blackLoc, 1, 0.0, 0.0, 0.0, 0.0, BLACK_DUST)
-            world.spawnParticle(Particle.DUST, whiteLoc, 1, 0.0, 0.0, 0.0, 0.0, WHITE_DUST)
-            if (i % 4 == 0) world.spawnParticle(Particle.END_ROD, whiteLoc, 1, 0.03, 0.03, 0.03, 0.02)
-        }
-        for (ring in doubleArrayOf(2.0, 4.5, 7.0, 10.0)) {
-            val points = max(18, (ring * 5.5).toInt())
-            for (i in 0 until points) {
-                val angle = 2.0 * PI * i / points
-                val loc = center.clone().add(cos(angle) * ring, 0.12 + sin(angle * 2.0) * 0.2, sin(angle) * ring)
-                val dust = if (i % 2 == 0) BLACK_DUST else WHITE_DUST
-                world.spawnParticle(Particle.DUST, loc, 1, 0.0, 0.0, 0.0, 0.0, dust)
-                if (i % 5 == 0) world.spawnParticle(Particle.END_ROD, loc, 1, 0.02, 0.02, 0.02, 0.0)
-            }
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_EXPLOSION, center)
     }
 
     private fun spawnFailureEffect(location: Location?) {
         location ?: return
-        location.world.spawnParticle(Particle.SMOKE, location, 18, 0.55, 0.25, 0.55, 0.025)
-        location.world.spawnParticle(Particle.ENCHANT, location, 15, 0.65, 0.3, 0.65, 0.08)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.TIANHE_FAILURE, location)
         location.world.playSound(location, Sound.BLOCK_AMETHYST_BLOCK_BREAK, 0.55f, 0.72f)
     }
 
@@ -724,6 +680,8 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         val castId: UUID,
         val firstId: UUID,
         val secondId: UUID,
+        val initialDistance: Double,
+        var speedPerTick: Double = INITIAL_MOVE_SPEED_PER_TICK,
         val hitTargets: MutableSet<UUID> = hashSetOf()
     )
 
@@ -744,16 +702,22 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         private const val PIECE_LIFETIME_TICKS = 140L
         private const val LANDING_DAMAGE_RADIUS = 3.0
         private const val LANDING_DAMAGE_MULTIPLIER = 1.20
-        private const val PAIR_DISTANCE_SQUARED = 15.0 * 15.0
+        private const val PAIR_DISTANCE_SQUARED = 20.0 * 20.0
         private const val EXPLODE_DISTANCE = 2.0
         private const val EXPLODE_DISTANCE_WITH_TOLERANCE = 2.05
         private const val MIN_PROGRESS_SQUARED = 1.0E-6
         private const val MOVE_INTERVAL_TICKS = 2L
-        private const val MOVE_SPEED_PER_TICK = 0.35
+        private const val INITIAL_MOVE_SPEED_PER_TICK = 0.35
+        private const val MOVE_ACCELERATION_PER_TICK = 0.04
+        private const val MAX_MOVE_SPEED_PER_TICK = 0.85
         private const val PATH_HIT_RADIUS = 1.25
         private const val PATH_DAMAGE_MULTIPLIER = 1.0
         private const val EXPLOSION_RADIUS = 10.0
-        private const val EXPLOSION_DAMAGE_MULTIPLIER = 4.0
+        private const val NEAR_DAMAGE_MAX_DISTANCE = 8.0
+        private const val MEDIUM_DAMAGE_MAX_DISTANCE = 14.0
+        private const val NEAR_EXPLOSION_DAMAGE_MULTIPLIER = 3.0
+        private const val MEDIUM_EXPLOSION_DAMAGE_MULTIPLIER = 4.0
+        private const val FAR_EXPLOSION_DAMAGE_MULTIPLIER = 5.0
         private const val EXPLOSION_SLOW_DURATION_TICKS = 100
         private const val EXPLOSION_SLOW_AMPLIFIER = 2
         private const val PARTICLE_INTERVAL_TICKS = 3L

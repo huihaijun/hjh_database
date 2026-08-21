@@ -575,25 +575,18 @@ class HuZhenShangRenTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§a虎镇商人 §f: §a五炉丹药皆已炼成，这卷念气劲便赠予你！")
+        player.sendMessage("§a虎镇商人 §f: §a三炉丹药皆已炼成，念气劲的行气法门便赠予你！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
-
-        val book = plugin.medicalManager.getSkillBook("nianqijin")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("虎镇商人医术试炼奖励 nianqijin 未找到。")
-        }
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 200)
+            data.learnMedicalSkill("nianqijin")
             data.completedMedicalTrials.add(trialId)
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { connection ->
+                        plugin.databaseManager.saveMedicalData(connection, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
                     }
                 } catch (exception: Exception) {

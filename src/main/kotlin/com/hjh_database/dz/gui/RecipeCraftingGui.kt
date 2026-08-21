@@ -2,6 +2,7 @@ package com.hjh_database.dz.gui
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzRecipe
+import com.hjh_database.race.impl.XianRace
 import com.hjh_database.util.DzUtil
 import com.hjh_database.util.ItemUtil
 import org.bukkit.Bukkit
@@ -123,6 +124,8 @@ class RecipeCraftingGui(
         if (forgeData.forgeLicense < recipe.reqLicense) {
             errors.add("§c锻造资质不足 (需要: " + recipe.reqLicense + "级)")
         }
+
+        (plugin.raceModule.getRace(1) as? XianRace)?.ensureInitialForgeLevel(player, notify = false)
 
         // 5. 检查材料 (ItemUtil ID对比)
         val required = recipe.ingredients
@@ -362,12 +365,18 @@ class RecipeCraftingGui(
         inventory.setItem(OUTPUT_SLOT, safeRecipe.result.clone())
 
         // 3. 增加经验 (修复为奖励)
-        val forgeData = plugin.playerManager.getDzData(player.uniqueId)
-        if (forgeData != null && safeRecipe.expReward > 0) {
-            // 【修改后】传入 plugin 和 player 以触发升级特效和保存
-            forgeData.addExp(safeRecipe.expReward, plugin, player)
-            // 这一行原本的 sendMessage 可以保留也可以去掉，因为 addExp 里已经有了升级提示
-            player.sendMessage("§a锻造成功！获得 " + safeRecipe.expReward + " 点锻造经验。")
+        if (safeRecipe.expReward > 0) {
+            val xianRace = plugin.raceModule.getRace(1) as? XianRace
+            val reward = xianRace?.grantForgeSuccessRewards(player, safeRecipe.expReward)
+            if (reward != null) {
+                player.sendMessage("§a锻造成功！获得 ${reward.forgeExp} 点锻造经验。")
+                if (reward.playerExp > 0) {
+                    player.sendMessage("§e[百器之智] §f额外获得 §b${reward.playerExp} §f点经验值。")
+                }
+            } else {
+                plugin.playerManager.getDzData(player.uniqueId)?.addExp(safeRecipe.expReward, plugin, player)
+                player.sendMessage("§a锻造成功！获得 ${safeRecipe.expReward} 点锻造经验。")
+            }
         }
 
         player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)

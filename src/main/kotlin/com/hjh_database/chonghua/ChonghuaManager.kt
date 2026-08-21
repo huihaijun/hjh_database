@@ -58,6 +58,10 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
     private val regionKey = NamespacedKey(plugin, "chonghua_region")
     private val waypointKey = NamespacedKey(plugin, "chonghua_waypoint")
 
+    fun getPlacedWaypointId(location: Location): String? = placedCheckins[location]
+
+    fun isPlacedCrystal(location: Location): Boolean = placedCrystals.containsKey(location)
+
     // 监听玩家进服：异步读取数据库，防止卡线程
     @EventHandler
     fun onPlayerJoin(e: org.bukkit.event.player.PlayerJoinEvent) {
@@ -323,6 +327,13 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         if (e.hand != org.bukkit.inventory.EquipmentSlot.HAND) return
         if (e.action != Action.RIGHT_CLICK_BLOCK) return
         val loc = e.clickedBlock?.location ?: return
+
+        // 仙族证明右键打卡点时只进行仙族绑定，不顺带解锁普通重华晶传送点。
+        if (placedCheckins.containsKey(loc) &&
+            plugin.raceModule.getResourceId(e.player.inventory.itemInMainHand) ==
+            com.hjh_database.race.xian.XianTalentManager.PROOF_ITEM_ID &&
+            plugin.raceModule.getRace(1)?.isRaceActive(e.player) == true
+        ) return
 
         // 点击重华晶
         if (placedCrystals.containsKey(loc)) {

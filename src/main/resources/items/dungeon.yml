@@ -115,3 +115,11 @@ xingpei_queqiaoyin:
     - "&f配合其他材料在锻造台使用"
     - "&f锻造医师法器——&e鹊桥引"
     - "&c注意:&f此物一生只可拥有一枚"
+
+xinghegongzhu:
+  material: FIREWORK_ROCKET
+  name: "&5星河共筑"
+  lore:
+    - "&7&o绘着星河鹊影的烟火,点燃后星光与火光交织"
+    - "&7&o每一次绽放，都是凡间对重逢的祝愿"
+    - "&7&o一人一火，万心成桥"

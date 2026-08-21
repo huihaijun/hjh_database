@@ -217,6 +217,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.baihuWeaponSkillManager.reload()
             plugin.chonghuaManager.reload()
             com.hjh_database.dungeon.qixi.QixiAccessPolicy.reload(plugin)
+            plugin.qixiBridgeBuildManager.reload()
             plugin.kaiWuManager.loadConfig()
             plugin.kaiWuManager.loadNodes()
 

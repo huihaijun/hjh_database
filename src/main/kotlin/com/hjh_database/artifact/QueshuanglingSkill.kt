@@ -111,7 +111,7 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
         )
         sendActivationActionBar(player, manaCost)
         player.world.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.9f, 1.65f)
-        player.world.spawnParticle(Particle.END_ROD, player.location.clone().add(0.0, 1.15, 0.0), 24, 0.65, 0.65, 0.65, 0.06)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_MARK, player.location.clone().add(0.0, 1.15, 0.0), data = 1)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -387,48 +387,11 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
         val world = start.world
         world.playSound(start, Sound.BLOCK_BEACON_ACTIVATE, 1.1f, 1.65f)
         world.playSound(end, Sound.ITEM_TRIDENT_THUNDER, 0.75f, 1.8f)
-        world.spawnParticle(Particle.FLASH, start, 1)
-        world.spawnParticle(Particle.FLASH, end, 1)
-
-        for (frame in 0 until WEAVE_EFFECT_FRAMES) {
-            plugin.server.scheduler.runTaskLater(plugin, Runnable {
-                drawWeaveFrame(start, end, frame)
-            }, frame.toLong())
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_WEAVE, start, end)
     }
 
     private fun drawWeaveFrame(start: Location, end: Location, frame: Int) {
-        val delta = end.toVector().subtract(start.toVector())
-        val distance = delta.length()
-        if (distance <= 1.0E-6) {
-            start.world.spawnParticle(Particle.END_ROD, start, 36, 1.1, 1.1, 1.1, 0.08)
-            start.world.spawnParticle(Particle.ELECTRIC_SPARK, start, 44, 1.25, 1.25, 1.25, 0.14)
-            return
-        }
-
-        val direction = delta.clone().normalize()
-        val side = perpendicular(direction)
-        val vertical = direction.clone().crossProduct(side).normalize()
-        val samples = max(12, ceil(distance / WEAVE_PARTICLE_STEP).toInt())
-        for (index in 0..samples) {
-            val t = index.toDouble() / samples
-            val center = start.clone().add(delta.clone().multiply(t))
-            val twist = frame * 0.65 + t * PI * 6.0
-            val ribbonOffset = sin(twist) * WEAVE_VISUAL_HALF_WIDTH
-            val heightOffset = cos(twist) * 0.28
-            val ribbon = center.clone()
-                .add(side.clone().multiply(ribbonOffset))
-                .add(vertical.clone().multiply(heightOffset))
-            val opposite = center.clone()
-                .subtract(side.clone().multiply(ribbonOffset))
-                .subtract(vertical.clone().multiply(heightOffset))
-            val dust = if ((index + frame) % 2 == 0) STAR_CYAN_DUST else STAR_MAGENTA_DUST
-            center.world.spawnParticle(Particle.DUST, ribbon, 1, 0.025, 0.025, 0.025, 0.0, dust)
-            center.world.spawnParticle(Particle.DUST, opposite, 1, 0.025, 0.025, 0.025, 0.0, STAR_GOLD_DUST)
-            if ((index + frame) % 3 == 0) center.world.spawnParticle(Particle.END_ROD, center, 1, 0.04, 0.04, 0.04, 0.0)
-            if ((index + frame) % 5 == 0) center.world.spawnParticle(Particle.ELECTRIC_SPARK, ribbon, 1, 0.05, 0.05, 0.05, 0.02)
-            if (frame == 0 && index % 7 == 0) center.world.spawnParticle(Particle.FIREWORK, center, 1, 0.08, 0.08, 0.08, 0.02)
-        }
+        if (frame == 0) plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_WEAVE, start, end)
     }
 
     private fun perpendicular(direction: Vector): Vector {
@@ -437,29 +400,18 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun spawnArrowMarkedEffect(player: Player, index: Int) {
-        val color = if (index == 1) STAR_CYAN_DUST else STAR_MAGENTA_DUST
         val location = player.eyeLocation.clone().add(player.eyeLocation.direction.normalize().multiply(0.75))
-        player.world.spawnParticle(Particle.DUST, location, 14, 0.25, 0.25, 0.25, 0.0, color)
-        player.world.spawnParticle(Particle.END_ROD, location, 8, 0.2, 0.2, 0.2, 0.04)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_MARK, location, data = index)
         player.world.playSound(player.location, Sound.ENTITY_ARROW_SHOOT, 0.75f, if (index == 1) 1.35f else 1.7f)
     }
 
     private fun spawnFeatherAttachEffect(location: Location, index: Int) {
-        val dust = if (index == 1) STAR_CYAN_DUST else STAR_MAGENTA_DUST
-        location.world.spawnParticle(Particle.FLASH, location, 1)
-        location.world.spawnParticle(Particle.END_ROD, location, 24, 0.55, 0.55, 0.55, 0.07)
-        location.world.spawnParticle(Particle.DUST, location, 28, 0.6, 0.6, 0.6, 0.0, dust)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_ATTACH, location, data = index)
         location.world.playSound(location, Sound.BLOCK_AMETHYST_CLUSTER_PLACE, 0.9f, if (index == 1) 1.25f else 1.65f)
     }
 
     private fun spawnFeatherAmbient(location: Location, index: Int) {
-        val angle = tickCounter * 0.22 + index * PI
-        val dust = if (index == 1) STAR_CYAN_DUST else STAR_MAGENTA_DUST
-        val first = location.clone().add(cos(angle) * 0.5, sin(angle * 0.7) * 0.18, sin(angle) * 0.5)
-        val second = location.clone().add(cos(angle + PI) * 0.5, sin(angle * 0.7 + PI) * 0.18, sin(angle + PI) * 0.5)
-        location.world.spawnParticle(Particle.DUST, first, 1, 0.02, 0.02, 0.02, 0.0, dust)
-        location.world.spawnParticle(Particle.END_ROD, second, 1, 0.025, 0.025, 0.025, 0.0)
-        if (tickCounter % 8L == 0L) location.world.spawnParticle(Particle.ELECTRIC_SPARK, location, 2, 0.25, 0.25, 0.25, 0.02)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_AMBIENT, location, data = index)
     }
 
     private fun startCooldown(player: Player, session: WeaveSession) {
@@ -485,8 +437,7 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun spawnFeatherFadeEffect(location: Location) {
-        location.world.spawnParticle(Particle.END_ROD, location, 14, 0.35, 0.35, 0.35, 0.04)
-        location.world.spawnParticle(Particle.DUST, location, 16, 0.4, 0.4, 0.4, 0.0, STAR_CYAN_DUST)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_FADE, location)
     }
 
     private fun removeFeatherDisplay(display: ItemDisplay) {

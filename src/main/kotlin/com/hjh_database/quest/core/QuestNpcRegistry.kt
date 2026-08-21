@@ -13,7 +13,7 @@ enum class StoryNpcs(
     val displayName: String,  // 默认名字 (支持颜色代码)
     val profession: Villager.Profession, // 职业 (影响外观)
     val type: Villager.Type,             // 种类 (影响外观)
-    val locX: Double, val locY: Double, val locZ: Double, val yaw: Float // 默认坐标
+    val locX: Double, val locY: Double, val locZ: Double, val yaw: Float, val pitch: Float = 0f // 默认坐标
 ) {
 
     // === 在这里定义你的 NPC ===
@@ -333,9 +333,116 @@ enum class StoryNpcs(
         Villager.Profession.NONE,
         Villager.Type.TAIGA,
         1307.5, 37.5, 3014.5, 0f
+    ),
+    QUJING(
+        "qujing",
+        "§a§l曲靖",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        1329.5, 37.5, 2991.5, 0.26f, 13.95f
+    ),
+
+
+    ZHAN_FEIHU(
+        "zhan_feihu",
+        "§a§l新手引导员-飞虎",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        3284.5,20.5,-135.5, 0f
+    ),
+    ZHAN_ZUZHANG(
+        "zhan_zuzhang",
+        "§a§l族长",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        3264.5,20.5,-147.5, 0f
+    ),
+    ZHAN_QILONG(
+        "zhan_qilong",
+        "§a§l祁龙",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        3247.5,30.50,-158.5, 0f
+    ),
+    ZHAN_ZHANBEIZIYUANBUFUZEREN(
+        "zhan_zhanbeiziyuanbufuzeren",
+        "§a§l战备资源部负责人",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        3299.5,23.50,-252.5, 0f
+    ),
+    ZHAN_LIANDAN(
+        "zhan_liandan",
+        "§a§l炼丹室工作人员",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        3240.5,20.50,-249.5, 0f
+    ),
+    ZHAN_SHIRI(
+        "zhan_shiri",
+        "§a§l月老庙管理员-蚀日",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        272.5,45.50,-188.5, 0f
+    ),
+    ZHAN_ZUOYAN1(
+        "zhan_zuoyan1",
+        "§a§l左焰",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        591.5,33.50,46.5, 0f
+    ),
+    ZHAN_ZUOYAN2(
+    "zhan_zuoyan2",
+    "§a§l左焰",
+    Villager.Profession.NONE,
+    Villager.Type.DESERT,
+    1696.5,96.50,745.5, 0f
+    ),
+
+
+    XIAN_XIAOFEI(
+        "xian_xiaofei",
+        "§a§l新手引导员-小飞",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        3190.5,103.50,784.5, 0f
+    ),
+    XIAN_XIANZUMENGZHU(
+        "xian_xianzumengzhu",
+        "§a§l仙族盟主",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        3337.5,109.50,941.5, 0f
+    ),
+    XIAN_XIANQIPUZHANGGUI(
+        "xian_xianqipuzhanggui",
+        "§a§l仙器铺掌柜",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        3235.5,67.50,885.5, 0f
+    ),
+    XIAN_LINGDANPUZHANGGUI(
+        "xian_lingdanpuzhanggui",
+        "§a§l灵丹铺掌柜",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        3207.5,85.50,860.5, 0f
+    ),
+    XIAN_YULUO(
+        "xian_yuluo",
+        "§a§l御前带刀侍卫长——羽罗",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        185.5,66.50,-157.5, 0f
+    ),
+    XIAN_CHULAN(
+        "xian_chulan",
+        "§a§l祭司——楚兰",
+        Villager.Profession.NITWIT,
+        Villager.Type.SAVANNA,
+        562.5,33.50,71.5, 0f
     );
-
-
     // 后续有新 NPC 直接往这里加...
 
     /**
@@ -345,6 +452,6 @@ enum class StoryNpcs(
     fun getLocation(): Location {
         val world = Bukkit.getWorld("world")
             ?: throw IllegalStateException("世界 'world' 不存在！无法获取NPC坐标")
-        return Location(world, locX, locY, locZ, yaw, 0f)
+        return Location(world, locX, locY, locZ, yaw, pitch)
     }
 }

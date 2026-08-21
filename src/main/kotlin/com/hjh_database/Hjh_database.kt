@@ -16,6 +16,7 @@ import com.hjh_database.baihu_dz.BaihuWeaponSkillListener
 import com.hjh_database.baihu_dz.skill.impl.HuzhizhanqiSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.chonghua.ChonghuaManager
+import com.hjh_database.client.ClientBridge
 import com.hjh_database.command.AdminCommand
 import com.hjh_database.command.ResourceReloadCommand
 import com.hjh_database.command.StatsCommand
@@ -29,6 +30,7 @@ import com.hjh_database.qixiazhen.busuan.BusuanManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.qixi.QixiDungeonManager
+import com.hjh_database.event.qixi.QixiBridgeBuildManager
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
 import com.hjh_database.dungeon.xuanwu.trial.XuanwuTrialManager
@@ -105,6 +107,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var raceModule: com.hjh_database.race.RaceManager
     lateinit var shenConsciousnessManager: com.hjh_database.race.shen.ShenConsciousnessManager
     lateinit var shenTributeManager: com.hjh_database.race.shen.ShenTributeManager
+    lateinit var xianTalentManager: com.hjh_database.race.xian.XianTalentManager
     lateinit var spawnerBlockManager: SpawnerBlockManager
     lateinit var baihuMiasmaManager: BaihuMiasmaManager
     lateinit var baihuTownFireManager: BaihuTownFireManager
@@ -127,6 +130,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var xuanwuTrialManager: XuanwuTrialManager
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var qixiDungeonManager: QixiDungeonManager
+    lateinit var qixiBridgeBuildManager: QixiBridgeBuildManager
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var adminWarehouseGui: com.hjh_database.warehouse.admin.AdminWarehouseGui
     lateinit var medicalTrialManager: MedicalTrialManager // 【新增】医术试炼管理器
@@ -146,6 +150,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var featherManager: com.hjh_database.feather.FeatherManager
     lateinit var equipmentActivationManager: EquipmentActivationManager
     lateinit var passiveSubtitleManager: PassiveSubtitleManager
+    lateinit var clientBridge: ClientBridge
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
     }
@@ -159,11 +164,15 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         this.databaseManager = DatabaseManager(this)
         this.playerManager = PlayerManager(this)
+        this.clientBridge = ClientBridge(this)
+        this.clientBridge.start()
         this.passiveSubtitleManager = PassiveSubtitleManager(this)
         // PlayerManager 持有唯一的普通武器管理器，避免重复加载配置和热重载数据分叉。
         this.weaponManager = this.playerManager.weaponManager
         this.menuManager = MenuManager(this)
         this.elementZfManager = ElementZfManager(this)
+        // 配方加载需要先按 artifact_id 构造普通法宝。
+        this.artifactManager = ArtifactManager(this)
         this.resourceManager = ResourceManager(this)
         this.dzLevelManager = DzLevelManager(this)
         this.recipeManager = RecipeManager(this)
@@ -181,7 +190,6 @@ class Hjh_database : JavaPlugin() {
         this.baihuTownFireManager = BaihuTownFireManager(this)
         this.baihuDzManager = BaihuDzManager(this)
         this.baihuWeaponSkillManager = BaihuWeaponSkillManager(this)
-        this.artifactManager = ArtifactManager(this)
         this.tianheyiSkill = TianheyiSkill(this)
         this.queqiaoyinSkill = QueqiaoyinSkill(this)
         this.queshuanglingSkill = QueshuanglingSkill(this)
@@ -199,6 +207,7 @@ class Hjh_database : JavaPlugin() {
         // 重华晶系统初始化
         this.chonghuaManager = ChonghuaManager(this)
         this.chonghuaManager.init()
+        this.xianTalentManager = com.hjh_database.race.xian.XianTalentManager(this)
 
         // 丹药系统初始化及自动注册
         this.alchemyManager = AlchemyManager(this)
@@ -223,6 +232,7 @@ class Hjh_database : JavaPlugin() {
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
         this.qixiDungeonManager = QixiDungeonManager(this)
+        this.qixiBridgeBuildManager = QixiBridgeBuildManager(this)
         // 【新增】初始化个人仓库管理器
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
         this.adminWarehouseGui = com.hjh_database.warehouse.admin.AdminWarehouseGui(this)
@@ -315,6 +325,7 @@ class Hjh_database : JavaPlugin() {
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
         pm.registerEvents(this.qixiDungeonManager, this)
+        pm.registerEvents(this.qixiBridgeBuildManager, this)
         // 【新增】个人仓库系统监听
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
         // 假设你的 GUI 监听器叫 WarehouseGuiListener 并且放在 listener 包下
@@ -360,7 +371,9 @@ class Hjh_database : JavaPlugin() {
         // 热重载加载数据 (确保在所有系统就绪后执行)
         server.scheduler.runTaskLater(this, Runnable {
             for (player in server.onlinePlayers) {
-                playerManager.loadAndCache(player)
+                playerManager.loadAndCache(player) { data ->
+                    qixiDungeonManager.backfillCompletionTitle(player, data.dungeonRecords)
+                }
                 // 【新增】同时加载玩家的仓库数据！
                 warehouseManager.loadAndCache(player)
                 // 【新增】同时加载玩家的元素结晶数据！
@@ -405,6 +418,10 @@ class Hjh_database : JavaPlugin() {
         // 必须在监听器失效前关闭只读快照菜单，杜绝重载期间取走克隆物品。
         // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
         TianjiUtilityMenus.closeOpenMenusForDisable()
+
+        if (::clientBridge.isInitialized) {
+            clientBridge.shutdown()
+        }
 
         if (::tianheyiSkill.isInitialized) {
             tianheyiSkill.shutdown()
@@ -467,6 +484,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::qixiDungeonManager.isInitialized) {
             qixiDungeonManager.shutdown()
+        }
+
+        if (::qixiBridgeBuildManager.isInitialized) {
+            qixiBridgeBuildManager.shutdown()
         }
 
         if (::bgmManager.isInitialized) {

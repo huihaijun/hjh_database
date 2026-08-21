@@ -2,6 +2,7 @@ package com.hjh_database.baihu_dz
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzRecipe
+import com.hjh_database.race.impl.XianRace
 import com.hjh_database.util.DzUtil
 import com.hjh_database.util.ItemUtil
 import org.bukkit.Bukkit
@@ -67,6 +68,7 @@ class BaihuDzCraftingGui(
         val rpgData = plugin.playerManager.getData(player.uniqueId)
         val dzData = plugin.playerManager.getDzData(player.uniqueId)
         if (rpgData == null || dzData == null) return listOf("§c玩家数据尚未加载")
+        (plugin.raceModule.getRace(1) as? XianRace)?.ensureInitialForgeLevel(player, notify = false)
 
         val currentOutput = inv.getItem(outputSlot)
         if (currentOutput != null && currentOutput.type != Material.AIR && !isOutputPlaceholder(currentOutput)) {
@@ -219,8 +221,17 @@ class BaihuDzCraftingGui(
             inv.setItem(inputSlots[i], input)
         }
         inv.setItem(outputSlot, recipe.result.clone())
-        plugin.playerManager.getDzData(player.uniqueId)?.let { dz ->
-            if (recipe.expReward > 0) dz.addExp(recipe.expReward, plugin, player)
+        if (recipe.expReward > 0) {
+            val xianRace = plugin.raceModule.getRace(1) as? XianRace
+            val reward = xianRace?.grantForgeSuccessRewards(player, recipe.expReward)
+            if (reward != null) {
+                player.sendMessage("§a获得 ${reward.forgeExp} 点锻造经验。")
+                if (reward.playerExp > 0) {
+                    player.sendMessage("§e[百器之智] §f额外获得 §b${reward.playerExp} §f点经验值。")
+                }
+            } else {
+                plugin.playerManager.getDzData(player.uniqueId)?.addExp(recipe.expReward, plugin, player)
+            }
         }
         player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
         player.sendMessage("§a虎瘴装锻造成功。")

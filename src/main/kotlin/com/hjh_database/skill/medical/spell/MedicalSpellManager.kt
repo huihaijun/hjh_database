@@ -110,6 +110,12 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         if (spell == null) return
         val data = plugin.playerManager.getPlayerData(player)!!
 
+        // 所有施法入口最终都在这里复核，防止其他监听器或旧代码绕过医旗资格。
+        if (skillId !in data.getMedicalLoadout() || !plugin.medicalManager.hasReleaseQualification(player, skillId)) {
+            player.sendMessage("§c[释放失败] §7你尚未取得并装配这门医术的完整资格！")
+            return
+        }
+
         val skillFullName = plugin.medicalManager.getSkillName(skillId)
 
         // 1. 冷却检查

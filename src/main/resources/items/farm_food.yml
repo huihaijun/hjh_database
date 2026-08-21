@@ -101,3 +101,23 @@ hongshuangjiao:
       chance: 100
       duration_seconds: 5
       level: 2
+
+zhixingguo:
+  material: WHEAT
+  custom_model_data: 1007
+  name: "&5织星果"
+  rarity: 5
+  lore:
+    - "&7&o形如五角银星,果皮覆着细密星纹,夜色中微微泛光"
+    - "&7&o相传是织女掷下的一缕星辉落入凡土所生,只在七夕时节结出"
+    - "&7&o果肉清甜如蜜,入口似有星光在舌尖化开"
+  crop_id: zhixingguo
+  hunger: 3
+  saturation: 6
+  can_always_eat: true
+  eat_seconds: 0.7
+  potion_effects:
+    - type: NIGHT_VISION
+      chance: 100
+      duration_seconds: 15
+      level: 1

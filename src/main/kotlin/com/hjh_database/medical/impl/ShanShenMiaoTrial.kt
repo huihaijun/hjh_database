@@ -178,21 +178,17 @@ class ShanShenMiaoTrial(
         player.teleport(winLoc)
         player.sendMessage("§a恭喜你完成了“山神庙庙公的医术试炼”！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
-        // 【新增】通过 MedicalManager 发放“毒素针”
-        val dusuzhen = plugin.medicalManager.getSkillBook("dusuzhen")
-        if (dusuzhen != null) {
-            player.inventory.addItem(dusuzhen)
-            player.sendMessage("§a[奖励] 恭喜你获得了一本三阶医术：§9毒素针！§a请放在医术绘制台绘制使用！")
-        }
-
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 100)
+            data.learnMedicalSkill("dusuzhen")
             data.completedMedicalTrials.add(trialId)
+            player.sendMessage("§a[奖励] 你已将三阶医术 §9毒素针 §a存入灵智！")
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { conn ->
+                        plugin.databaseManager.saveMedicalData(conn, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
                     }
                 } catch (e: Exception) {

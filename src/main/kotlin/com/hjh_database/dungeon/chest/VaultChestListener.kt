@@ -14,15 +14,29 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
+import org.bukkit.event.entity.ItemMergeEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.persistence.PersistentDataType
 import java.util.concurrent.ThreadLocalRandom
 
 class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
     private val ownerKey = NamespacedKey(plugin, "chest_owner")
+    private val expiresAtKey = NamespacedKey(plugin, "chest_reward_expires_at")
     private val dungeonKey = NamespacedKey(plugin, "vault_dungeon_id")
     private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 对应 ResourceManager 里的 keyId
+
+    init {
+        // 插件重载后，为当前已加载区块中尚未消失的旧奖励恢复清理任务。
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            plugin.server.worlds.forEach { world ->
+                world.loadedChunks.forEach { chunk ->
+                    chunk.entities.filterIsInstance<Item>().forEach(::scheduleRewardCleanup)
+                }
+            }
+        })
+    }
 
     @EventHandler
     fun onVaultInteract(event: PlayerInteractEvent) {
@@ -161,6 +175,12 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
             itemEntity.isCustomNameVisible = true
             itemEntity.customName = itemName
             itemEntity.persistentDataContainer.set(ownerKey, PersistentDataType.STRING, player.uniqueId.toString())
+            itemEntity.persistentDataContainer.set(
+                expiresAtKey,
+                PersistentDataType.LONG,
+                System.currentTimeMillis() + REWARD_LIFETIME_MILLIS
+            )
+            scheduleRewardCleanup(itemEntity)
         }
 
         // 3. 【新增】给玩家发送个人开箱提示
@@ -190,6 +210,42 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
         )
     }
 
+    private fun scheduleRewardCleanup(item: Item) {
+        if (!item.persistentDataContainer.has(ownerKey, PersistentDataType.STRING)) return
+
+        val now = System.currentTimeMillis()
+        val expiresAt = item.persistentDataContainer.get(expiresAtKey, PersistentDataType.LONG)
+            ?: (now + REWARD_LIFETIME_MILLIS).also {
+                // 兼容升级前已经存在、只有 owner 标记的金宝箱奖励。
+                item.persistentDataContainer.set(expiresAtKey, PersistentDataType.LONG, it)
+            }
+        val remainingMillis = expiresAt - now
+        if (remainingMillis <= 0L) {
+            item.remove()
+            return
+        }
+
+        val delayTicks = ((remainingMillis + MILLIS_PER_TICK - 1L) / MILLIS_PER_TICK).coerceAtLeast(1L)
+        plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            // 区块卸载时实体暂不可用；重新加载区块后由 ChunkLoadEvent 接续清理。
+            if (!item.isValid) return@Runnable
+            if (!item.persistentDataContainer.has(ownerKey, PersistentDataType.STRING)) return@Runnable
+
+            val currentExpiresAt = item.persistentDataContainer
+                .get(expiresAtKey, PersistentDataType.LONG) ?: return@Runnable
+            if (System.currentTimeMillis() >= currentExpiresAt) {
+                item.remove()
+            } else {
+                scheduleRewardCleanup(item)
+            }
+        }, delayTicks)
+    }
+
+    @EventHandler
+    fun onChunkLoad(event: ChunkLoadEvent) {
+        event.chunk.entities.filterIsInstance<Item>().forEach(::scheduleRewardCleanup)
+    }
+
     // 专属权保护：别人无法捡起
     @EventHandler
     fun onItemPickup(event: EntityPickupItemEvent) {
@@ -198,6 +254,23 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
         val player = event.entity as? Player ?: return
         if (player.uniqueId.toString() != ownerUuidStr) {
+            event.isCancelled = true
+        }
+    }
+
+    /**
+     * 掉落实体的 PDC 不参与原版物品合并判定。专属奖励一旦合并，只会保留
+     * 一个实体的 owner，且无法再为每份奖励独立计算三分钟存活时间。
+     */
+    @EventHandler(ignoreCancelled = true)
+    fun onChestRewardMerge(event: ItemMergeEvent) {
+        val sourceOwner = event.entity.persistentDataContainer
+            .get(ownerKey, PersistentDataType.STRING)
+        val targetOwner = event.target.persistentDataContainer
+            .get(ownerKey, PersistentDataType.STRING)
+
+        // 所有专属奖励均保持独立，避免归属丢失并确保每份奖励单独计时。
+        if (sourceOwner != null || targetOwner != null) {
             event.isCancelled = true
         }
     }
@@ -259,5 +332,10 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
             }
         }
         return true
+    }
+
+    private companion object {
+        const val REWARD_LIFETIME_MILLIS = 3L * 60L * 1000L
+        const val MILLIS_PER_TICK = 50L
     }
 }

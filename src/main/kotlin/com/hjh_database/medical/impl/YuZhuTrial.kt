@@ -468,22 +468,15 @@ class YuZhuTrial(
         player.sendMessage("§a雨竹 §f: §a愿你往后行医济世，心有清音，手有春风；纵经风雨，也总有天光相随。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
-        val book = plugin.medicalManager.getSkillBook("jiangtianguang")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("雨竹医术试炼奖励 jiangtianguang 未找到。")
-        }
-
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 200)
+            data.learnMedicalSkill("jiangtianguang")
             data.completedMedicalTrials.add(trialId)
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { connection ->
+                        plugin.databaseManager.saveMedicalData(connection, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
                     }
                 } catch (exception: Exception) {

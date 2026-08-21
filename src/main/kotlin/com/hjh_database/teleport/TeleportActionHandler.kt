@@ -142,7 +142,7 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
     fun handle(player: Player, data: PlayerData, actionStr: String): Boolean {
         when (actionStr) {
             // === 新增：选择种族-前往新手前置 ===
-            "CHOOSE_HUMAN_START", "CHOOSE_YAO_START", "CHOOSE_GOD_START" -> {
+            "CHOOSE_HUMAN_START", "CHOOSE_YAO_START", "CHOOSE_GOD_START", "CHOOSE_IMMORTAL_START", "CHOOSE_WAR_GOD_START" -> {
                 // 1. 处理队伍 (关闭友伤)
                 val board = Bukkit.getScoreboardManager().mainScoreboard
                 var team = board.getTeam("player")
@@ -157,9 +157,11 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 }
                 // 2. 修改状态 -> 1
                 data.updateStatus(1) // 这会自动更新 description
-                // 3. 修改种族：0=神族，2=人族，4=妖族
+                // 3. 修改种族：0=神族，1=仙族，2=人族，3=战神族，4=妖族
                 data.race = when (actionStr) {
                     "CHOOSE_GOD_START" -> 0
+                    "CHOOSE_IMMORTAL_START" -> 1
+                    "CHOOSE_WAR_GOD_START" -> 3
                     "CHOOSE_YAO_START" -> 4
                     else -> 2
                 }
@@ -236,7 +238,9 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 // ★★★ 新增：根据种族自动接取第一个主线任务 ★★★
                 when (raceId) {
                     0 -> plugin.questManager.acceptQuest(player, "main_shen_1")
+                    1 -> plugin.questManager.acceptQuest(player, "main_xian_1")
                     2 -> plugin.questManager.acceptQuest(player, "main_ren_1")
+                    3 -> plugin.questManager.acceptQuest(player, "main_zhan_1")
                     4 -> plugin.questManager.acceptQuest(player, "main_yao_1")
                 }
                 // 4. 发送提示消息

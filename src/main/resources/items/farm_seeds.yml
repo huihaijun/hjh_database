@@ -111,3 +111,16 @@ hongshuangjiaozhongzi:
   crop_id: hongshuangjiao
   mature_seconds: 2700
   harvest_amount: [10, 15]
+
+zhixingguozhongzi:
+  material: BEETROOT_SEEDS
+  name: "&5织星果种子"
+  rarity: 5
+  lore:
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+    - "&e成熟时间 &8» &f120分钟"
+    - "&a收获数量 &8» &f20"
+    - "&8━━━━━━━━━━━━━━━━━━━━"
+  crop_id: zhixingguo
+  mature_seconds: 7200
+  harvest_amount: [20,20]

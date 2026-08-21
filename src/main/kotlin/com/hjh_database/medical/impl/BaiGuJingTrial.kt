@@ -412,7 +412,7 @@ class BaiGuJingTrial(
         cleanUp()
         player.teleport(exitLocation)
         player.sendMessage(
-            "§d§l墓园-白骨精 §f: §a呵……二十五盏魂灯尽数归暗，哭声也停了。小医师，你替这些无名亡魂补上了迟来多年的送别。这卷§d魂灵游§a，本座说到做到，拿去吧。"
+            "§d§l墓园-白骨精 §f: §a呵……二十五盏魂灯尽数归暗，哭声也停了。小医师，你替这些无名亡魂补上了迟来多年的送别。§d魂灵游§a的法门，本座说到做到，传你便是。"
         )
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 0.9f)
         player.world.spawnParticle(
@@ -425,22 +425,15 @@ class BaiGuJingTrial(
             0.03
         )
 
-        val book = plugin.medicalManager.getSkillBook("hunlingyou")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { item -> player.world.dropItemNaturally(player.location, item) }
-        } else {
-            plugin.logger.warning("白骨精医术试炼奖励 hunlingyou 未找到。")
-        }
-
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 200)
+            data.learnMedicalSkill("hunlingyou")
             data.completedMedicalTrials.add(trialId)
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { connection ->
+                        plugin.databaseManager.saveMedicalData(connection, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
                     }
                 } catch (exception: Exception) {

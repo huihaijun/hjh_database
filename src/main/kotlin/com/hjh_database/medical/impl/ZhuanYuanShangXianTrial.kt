@@ -306,26 +306,19 @@ class ZhuanYuanShangXianTrial(
         cleanUp()
         removeShuazi()
 
-        player.sendMessage("§a感谢道友相助，这本【冥想】，正适合心细严谨的你！")
+        player.sendMessage("§a感谢道友相助，这门【冥想】，正适合心细严谨的你！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
-
-        val book = plugin.medicalManager.getSkillBook("mingxiang")?.clone()
-        if (book != null) {
-            book.amount = 1
-            val leftovers = player.inventory.addItem(book)
-            leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
-        } else {
-            plugin.logger.warning("篆元上仙医术试炼奖励 mingxiang 未找到。")
-        }
 
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
             plugin.playerManager.giveExp(player, 100)
+            data.learnMedicalSkill("mingxiang")
             data.completedMedicalTrials.add(trialId)
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
                 try {
                     plugin.databaseManager.dataSource?.connection?.use { conn ->
+                        plugin.databaseManager.saveMedicalData(conn, data)
                         plugin.databaseManager.saveCompletedMedicalTrials(conn, data)
                     }
                 } catch (e: Exception) {

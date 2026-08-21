@@ -191,11 +191,8 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
             bridge.leftParrot?.takeIf { it.isValid }?.location,
             bridge.rightParrot?.takeIf { it.isValid }?.location
         )
-        locations.forEachIndexed { index, location ->
-            val dust = if (index == 0) BRIDGE_CYAN_DUST else BRIDGE_MAGENTA_DUST
-            location.world.spawnParticle(Particle.FIREWORK, location, 22, 0.45, 0.45, 0.45, 0.09)
-            location.world.spawnParticle(Particle.END_ROD, location, 18, 0.4, 0.5, 0.4, 0.055)
-            location.world.spawnParticle(Particle.DUST, location, 24, 0.5, 0.45, 0.5, 0.0, dust)
+        locations.forEach { location ->
+            plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_ACCELERATE, location)
         }
         bridge.leftParrot?.takeIf { it.isValid }?.remove()
         bridge.rightParrot?.takeIf { it.isValid }?.remove()
@@ -226,16 +223,8 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
 
             bridge.hitTargets.add(target.uniqueId)
             FormationMagicDamage.deal(plugin, bridge.owner, target, bridge.damage)
-            target.world.spawnParticle(
-                Particle.DUST,
-                target.location.clone().add(0.0, target.height * 0.55, 0.0),
-                14,
-                0.35,
-                0.45,
-                0.35,
-                0.0,
-                STAR_GOLD_DUST
-            )
+            plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_DISMISS,
+                target.location.clone().add(0.0, target.height * 0.55, 0.0))
             hit = true
         }
         return hit
@@ -294,62 +283,27 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
     }
 
     private fun spawnCastEffect(origin: Location) {
-        origin.world.spawnParticle(Particle.END_ROD, origin.clone().add(0.0, 0.45, 0.0), 32, 1.8, 0.35, 1.8, 0.06)
-        origin.world.spawnParticle(Particle.ENCHANT, origin.clone().add(0.0, 0.6, 0.0), 48, 2.2, 0.5, 2.2, 0.18)
-        repeat(36) { index ->
-            val angle = 2.0 * PI * index / 36.0
-            val loc = origin.clone().add(cos(angle) * BRIDGE_HALF_WIDTH, 0.12, sin(angle) * BRIDGE_HALF_WIDTH)
-            origin.world.spawnParticle(Particle.DUST, loc, 1, 0.0, 0.0, 0.0, 0.0, BRIDGE_CYAN_DUST)
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_CAST, origin)
     }
 
     private fun spawnConstructionParticles(bridge: Bridge, oldLength: Double, newLength: Double) {
-        var distance = oldLength
-        while (distance <= newLength + 0.001) {
-            val left = pointOnBridge(bridge, distance, BRIDGE_HALF_WIDTH, BRIDGE_SURFACE_Y)
-            val right = pointOnBridge(bridge, distance, -BRIDGE_HALF_WIDTH, BRIDGE_SURFACE_Y)
-            val center = pointOnBridge(bridge, distance, 0.0, BRIDGE_SURFACE_Y + 0.12)
-            bridge.origin.world.spawnParticle(Particle.DUST, left, 2, 0.04, 0.02, 0.04, 0.0, BRIDGE_CYAN_DUST)
-            bridge.origin.world.spawnParticle(Particle.DUST, right, 2, 0.04, 0.02, 0.04, 0.0, BRIDGE_MAGENTA_DUST)
-            bridge.origin.world.spawnParticle(Particle.END_ROD, center, 1, 0.05, 0.03, 0.05, 0.01)
-            distance += CONSTRUCTION_PARTICLE_STEP
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_CONSTRUCT,
+            pointOnBridge(bridge, oldLength, 0.0, 0.0), pointOnBridge(bridge, newLength, 0.0, 0.0))
     }
 
     private fun spawnBridgeParticles(bridge: Bridge) {
-        var distance = 0.0
-        var index = 0
-        while (distance <= bridge.currentLength + 0.001) {
-            val left = pointOnBridge(bridge, distance, BRIDGE_HALF_WIDTH, BRIDGE_SURFACE_Y)
-            val right = pointOnBridge(bridge, distance, -BRIDGE_HALF_WIDTH, BRIDGE_SURFACE_Y)
-            bridge.origin.world.spawnParticle(Particle.DUST, left, 1, 0.025, 0.015, 0.025, 0.0, BRIDGE_CYAN_DUST)
-            bridge.origin.world.spawnParticle(Particle.DUST, right, 1, 0.025, 0.015, 0.025, 0.0, BRIDGE_MAGENTA_DUST)
-            if (index % 2 == 0) {
-                val wave = sin(elapsedTicks * 0.12 + distance * 0.7) * 0.65
-                val star = pointOnBridge(bridge, distance, wave, BRIDGE_SURFACE_Y + 0.18 + abs(wave) * 0.08)
-                bridge.origin.world.spawnParticle(Particle.END_ROD, star, 1, 0.035, 0.025, 0.035, 0.0)
-                if (index % 4 == 0) bridge.origin.world.spawnParticle(Particle.ELECTRIC_SPARK, star, 1, 0.06, 0.025, 0.06, 0.01)
-            }
-            if (index % 6 == 0) spawnCrossBeam(bridge, distance)
-            distance += EDGE_PARTICLE_STEP
-            index++
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_AMBIENT,
+            bridge.origin, pointOnBridge(bridge, bridge.currentLength, 0.0, 0.0), elapsedTicks.toInt())
     }
 
     private fun spawnCrossBeam(bridge: Bridge, distance: Double) {
-        for (step in -4..4) {
-            val sideOffset = BRIDGE_HALF_WIDTH * step / 4.0
-            val loc = pointOnBridge(bridge, distance, sideOffset, BRIDGE_SURFACE_Y + 0.03)
-            val dust = if (step % 2 == 0) STAR_GOLD_DUST else BRIDGE_CYAN_DUST
-            bridge.origin.world.spawnParticle(Particle.DUST, loc, 1, 0.015, 0.01, 0.015, 0.0, dust)
-        }
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_AMBIENT,
+            pointOnBridge(bridge, distance, 0.0, 0.0), pointOnBridge(bridge, distance + 0.01, 0.0, 0.0), elapsedTicks.toInt())
     }
 
     private fun spawnAccelerationEffect(bridge: Bridge) {
         val front = pointOnBridge(bridge, bridge.currentLength, 0.0, 0.65)
-        bridge.origin.world.spawnParticle(Particle.FLASH, front, 1)
-        bridge.origin.world.spawnParticle(Particle.FIREWORK, front, 32, 1.1, 0.55, 1.1, 0.12)
-        bridge.origin.world.spawnParticle(Particle.END_ROD, front, 24, 1.0, 0.45, 1.0, 0.08)
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_ACCELERATE, front)
         bridge.origin.world.playSound(front, Sound.BLOCK_BEACON_ACTIVATE, 0.9f, 1.65f)
         bridge.origin.world.playSound(front, Sound.ENTITY_PARROT_FLY, 0.9f, 1.7f)
     }
@@ -364,15 +318,9 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
         val bridge = bridges.remove(id) ?: return
         bridge.leftParrot?.takeIf { it.isValid }?.remove()
         bridge.rightParrot?.takeIf { it.isValid }?.remove()
-        bridge.origin.world.spawnParticle(
-            Particle.ENCHANT,
+        plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUEQIAO_DISMISS,
             pointOnBridge(bridge, bridge.currentLength * 0.5, 0.0, 0.45),
-            40,
-            max(1.0, bridge.currentLength * 0.25),
-            0.35,
-            BRIDGE_HALF_WIDTH * 0.55,
-            0.08
-        )
+            pointOnBridge(bridge, bridge.currentLength, 0.0, 0.45))
         bridge.origin.world.playSound(bridge.origin, Sound.BLOCK_AMETHYST_BLOCK_BREAK, 0.7f, 1.2f)
     }
 

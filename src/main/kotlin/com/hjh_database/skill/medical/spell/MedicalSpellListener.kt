@@ -61,12 +61,20 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         }
 
         e.isCancelled = true
-        // 4. 检查是否学会（保持不变）
-        // 【关键】使用 !! 断言
+        // 4. 同时校验灵智、当前装配与试炼资格，借来的医旗不能绕过限制。
         val data = plugin.playerManager.getPlayerData(p)!!
 
+        if (!data.hasLearnedMedicalSkill(skillId)) {
+            p.sendMessage("§c[释放失败] §7你的灵智中并未领悟这门医术！")
+            return
+        }
         if (!data.getMedicalLoadout().contains(skillId)) {
-            p.sendMessage("§c[释放失败] §7你虽然持有此旗，但并未真正掌握其中蕴含的医术！")
+            p.sendMessage("§c[释放失败] §7这门医术并未装配在你当前启用的医旗中！")
+            return
+        }
+        val requiredTrial = plugin.medicalManager.getRequiredTrial(skillId)
+        if (requiredTrial != null && requiredTrial !in data.completedMedicalTrials) {
+            p.sendMessage("§c[释放失败] §7你尚未完成这门医术对应的医术试炼！")
             return
         }
         // 5. 释放技能（保持不变）

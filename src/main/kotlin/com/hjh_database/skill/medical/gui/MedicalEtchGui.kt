@@ -4,7 +4,9 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.skill.medical.MedicalManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Sound
+import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -14,365 +16,341 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryDragEvent
-import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
-import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
-import java.util.*
-import java.util.concurrent.CompletableFuture
+import java.util.UUID
 
 class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
     private val manager: MedicalManager = plugin.medicalManager
-    private val deleteConfirm: MutableMap<UUID, Long> = HashMap()
+    private val forgetConfirm = HashMap<UUID, Long>()
     private val stationFile = File(plugin.dataFolder, "medical_stations.yml")
-    private val stationLocations: MutableSet<String> = HashSet()
+    private val stationLocations = HashSet<String>()
+    private val keyGuiSkillId = NamespacedKey(plugin, "medical_gui_skill_id")
 
-    // 内部 Holder 类
-    class MainMenuHolder : InventoryHolder { override fun getInventory(): Inventory = null!! }
-    class EtchHolder : InventoryHolder { override fun getInventory(): Inventory = null!! }
-    class SeparateHolder : InventoryHolder { override fun getInventory(): Inventory = null!! }
-
-    companion object {
-        private const val TITLE_MAIN = "§0医术台 - 主菜单"
-        private const val TITLE_ETCH = "§0医术绘制"
-        private const val TITLE_SEPARATE = "§0医术分离"
-
-        private const val SLOT_ETCH_BANNER = 10
-        private const val SLOT_ETCH_BOOK = 12
-        private const val SLOT_ETCH_BUTTON = 14
-        private const val SLOT_ETCH_RESULT = 16
-
-        private const val SLOT_SEP_INPUT = 13
-        private const val SLOT_SEP_BUTTON = 22
-        private const val SLOT_SEP_OUT_BANNER = 30
-        private const val SLOT_SEP_OUT_BOOK = 32
+    class EtchHolder(val owner: UUID, var rarity: Int) : InventoryHolder {
+        lateinit var backingInventory: Inventory
+        override fun getInventory(): Inventory = backingInventory
     }
 
-    private val etchInputSlots: Set<Int> = HashSet(Arrays.asList(SLOT_ETCH_BANNER, SLOT_ETCH_BOOK))
-    private val separateInteractiveSlots: Set<Int> = HashSet(Arrays.asList(SLOT_SEP_INPUT, SLOT_SEP_OUT_BANNER, SLOT_SEP_OUT_BOOK))
+    companion object {
+        private const val TITLE = "§d医术绘制台"
+        private const val SLOT_BANNER = 1
+        private const val SLOT_FORGET_ALL = 2
+        private const val SLOT_CLEAN_BANNER = 20
+        private const val SLOT_PREVIOUS = 8
+        private const val SLOT_NEXT = 26
+        private val SKILL_SLOTS = intArrayOf(4, 5, 6, 13, 14, 15, 22, 23, 24)
+    }
 
     init {
         loadStationLocations()
     }
 
-    fun openMainMenu(p: Player) {
-        if (!canUseMedicalStation(p, true)) return
-        val inv = Bukkit.createInventory(MainMenuHolder(), 27, TITLE_MAIN)
-        inv.setItem(11, createItem(Material.LOOM, "§a§l绘制医术", "§7将医术绘制到旗帜上", "§e点击进入"))
-        inv.setItem(13, createItem(Material.GRINDSTONE, "§b§l医术分离", "§7将已绘制的旗帜还原", "§7分为: 空白旗 + 秘籍", "§c需要消耗记忆！", "§e点击进入"))
-        if (!p.isOp) {
-            inv.setItem(
-                15,
-                createItem(
-                    Material.BARRIER,
-                    "§8§l遗忘所有医术",
-                    "§c仅服务器管理员可使用此功能"
-                )
-            )
-        } else {
-            // 仅向管理员展示待清除的医术详情。
-            val lore = mutableListOf("§c管理员功能，慎用！", "§7清空所有已学会的医术记录", "§e双击确认", "§8----------------")
-            val data = plugin.playerManager.getData(p.uniqueId)
+    fun openMainMenu(player: Player) = openEtchGui(player)
 
-            if (data != null && data.medicalSkills.isNotEmpty()) {
-                lore.add("§e当前已掌握的医术:")
-                for (skillId in data.medicalSkills) {
-                    val skillName = manager.getSkillName(skillId)
-                    lore.add("§7- §a$skillName")
-                }
-            } else {
-                lore.add("§7当前未掌握任何医术")
-            }
-
-            inv.setItem(15, createItem(Material.BARRIER, "§c§l遗忘所有医术", *lore.toTypedArray()))
-        }
-        fillGlass(inv, 27)
-        p.openInventory(inv)
-    }
-
-    fun openEtchGui(p: Player) {
-        if (!canUseMedicalStation(p, true)) return
-        val inv = Bukkit.createInventory(EtchHolder(), 27, TITLE_ETCH)
-        fillGlass(inv, 27)
-        inv.setItem(SLOT_ETCH_BANNER, null)
-        inv.setItem(SLOT_ETCH_BOOK, null)
-        inv.setItem(SLOT_ETCH_RESULT, null)
-
-        val session = manager.getLoomSession(p)
-        if (session != null) {
-            if (session[0] != null) inv.setItem(SLOT_ETCH_BANNER, session[0])
-            if (session[1] != null) inv.setItem(SLOT_ETCH_BOOK, session[1])
-        }
-
-        inv.setItem(SLOT_ETCH_BUTTON, createItem(Material.LIME_DYE, "§a§l点击绘制", "§7放入 旗帜 + 秘籍"))
-        inv.setItem(26, createItem(Material.OAK_DOOR, "§7返回主菜单"))
-        p.openInventory(inv)
-    }
-
-    fun openSeparateGui(p: Player) {
-        if (!canUseMedicalStation(p, true)) return
-        val inv = Bukkit.createInventory(SeparateHolder(), 45, TITLE_SEPARATE)
-        fillGlass(inv, 45)
-        inv.setItem(SLOT_SEP_INPUT, null)
-        inv.setItem(SLOT_SEP_OUT_BANNER, null)
-        inv.setItem(SLOT_SEP_OUT_BOOK, null)
-        inv.setItem(SLOT_SEP_BUTTON, createItem(Material.ANVIL, "§e§l点击分离", "§7放入已绘制的旗帜", "§7点击后判断是否拥有此医术"))
-        inv.setItem(44, createItem(Material.OAK_DOOR, "§7返回主菜单"))
-        p.openInventory(inv)
+    fun openEtchGui(player: Player, rarity: Int = 1) {
+        if (!canUseMedicalStation(player, true)) return
+        val holder = EtchHolder(player.uniqueId, rarity.coerceIn(1, 5))
+        val inventory = Bukkit.createInventory(holder, 27, TITLE)
+        holder.backingInventory = inventory
+        render(inventory, holder, player)
+        player.openInventory(inventory)
     }
 
     @EventHandler
-    fun onBlockInteract(e: PlayerInteractEvent) {
-        if (e.hand != EquipmentSlot.HAND) return
-        if (e.action != Action.RIGHT_CLICK_BLOCK) return
-        if (e.clickedBlock == null) return
-        val block = e.clickedBlock!!
+    fun onInteract(event: PlayerInteractEvent) {
+        if (event.hand != EquipmentSlot.HAND) return
+        if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
+
+        val player = event.player
+        val held = player.inventory.itemInMainHand
+        val skillId = held.itemMeta?.persistentDataContainer
+            ?.get(manager.keySkillId, PersistentDataType.STRING)
+        if (skillId != null && !held.type.name.endsWith("_BANNER") && manager.getSkillBook(skillId) != null) {
+            event.isCancelled = true
+            learnFromBook(player, held, skillId)
+            return
+        }
+
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        val block = event.clickedBlock ?: return
         if (block.type != Material.END_PORTAL_FRAME) return
-        if (!stationLocations.contains(locToString(block.location))) return
+        if (locToString(block.location) !in stationLocations) return
 
-        e.isCancelled = true
-        if (!canUseMedicalStation(e.player, true)) return
-        openMainMenu(e.player)
-        e.player.playSound(e.player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
+        event.isCancelled = true
+        if (!canUseMedicalStation(player, true)) return
+        openEtchGui(player)
+        player.playSound(player.location, Sound.BLOCK_ENDER_CHEST_OPEN, 1f, 1f)
     }
 
     @EventHandler
-    fun onStationPlace(e: BlockPlaceEvent) {
-        val item = e.itemInHand
+    fun onStationPlace(event: BlockPlaceEvent) {
+        val item = event.itemInHand
         if (item.type != Material.END_PORTAL_FRAME || !item.hasItemMeta()) return
-        val hasStationKey = item.itemMeta?.persistentDataContainer
+        val isStation = item.itemMeta?.persistentDataContainer
             ?.has(manager.keyMedicalStation, PersistentDataType.STRING) == true
-        if (!hasStationKey) return
-
-        stationLocations.add(locToString(e.blockPlaced.location))
+        if (!isStation) return
+        stationLocations.add(locToString(event.blockPlaced.location))
         saveStationLocations()
-        e.player.sendMessage("§a成功放置医术绘制台。")
+        event.player.sendMessage("§a成功放置医术绘制台。")
     }
 
     @EventHandler
-    fun onStationBreak(e: BlockBreakEvent) {
-        val loc = locToString(e.block.location)
-        if (stationLocations.remove(loc)) {
-            saveStationLocations()
+    fun onStationBreak(event: BlockBreakEvent) {
+        if (stationLocations.remove(locToString(event.block.location))) saveStationLocations()
+    }
+
+    @EventHandler
+    fun onClick(event: InventoryClickEvent) {
+        val holder = event.inventory.holder as? EtchHolder ?: return
+        val player = event.whoClicked as? Player ?: return
+        if (holder.owner != player.uniqueId) {
+            event.isCancelled = true
+            return
         }
-    }
-
-    @EventHandler
-    fun onClose(e: InventoryCloseEvent) {
-        val inv = e.inventory
-        val p = e.player as Player
-
-        if (inv.holder is EtchHolder) {
-            val content = arrayOfNulls<ItemStack>(3)
-            content[0] = inv.getItem(SLOT_ETCH_BANNER)
-            content[1] = inv.getItem(SLOT_ETCH_BOOK)
-            manager.saveLoomSession(p, content)
-            returnItem(p, inv.getItem(SLOT_ETCH_RESULT))
-        } else if (inv.holder is SeparateHolder) {
-            returnItem(p, inv.getItem(SLOT_SEP_INPUT))
-            returnItem(p, inv.getItem(SLOT_SEP_OUT_BANNER))
-            returnItem(p, inv.getItem(SLOT_SEP_OUT_BOOK))
-        }
-    }
-
-    @EventHandler
-    fun onClick(e: InventoryClickEvent) {
-        val inv = e.inventory
-        val holder = inv.holder ?: return
-        if (holder !is MainMenuHolder && holder !is EtchHolder && holder !is SeparateHolder) return
-
-        val p = e.whoClicked as Player
-        val slot = e.rawSlot
-        val isTopInv = (e.clickedInventory == inv)
-
-        // 即使职业在菜单打开后发生变化，也不能继续操作医术台。
-        if (!canUseMedicalStation(p, false)) {
-            e.isCancelled = true
-            p.closeInventory()
-            p.sendMessage("§c只有医师职业可以使用医术绘制台。")
-            p.playSound(p.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1f)
+        if (!canUseMedicalStation(player, false)) {
+            event.isCancelled = true
+            player.closeInventory()
+            player.sendMessage("§c只有医师职业可以使用医术绘制台。")
             return
         }
 
-        if (isTopInv) {
-            e.isCancelled = true
+        val top = event.clickedInventory == event.inventory
+        if (!top) {
+            if (event.isShiftClick) {
+                event.isCancelled = true
+                moveOneBannerIntoInput(player, event.inventory, event.currentItem)
+            }
+            return
+        }
+
+        event.isCancelled = true
+        when (event.rawSlot) {
+            SLOT_BANNER -> handleBannerSlotClick(event, player)
+            SLOT_FORGET_ALL -> handleForgetAll(player, event.inventory, holder)
+            SLOT_CLEAN_BANNER -> handleCleanBanner(player, event.inventory, holder)
+            SLOT_PREVIOUS -> changePage(player, event.inventory, holder, -1)
+            SLOT_NEXT -> changePage(player, event.inventory, holder, 1)
+            in SKILL_SLOTS -> handleSkillClick(player, event.inventory, holder, event.currentItem)
+        }
+    }
+
+    @EventHandler
+    fun onDrag(event: InventoryDragEvent) {
+        if (event.inventory.holder !is EtchHolder) return
+        if (event.rawSlots.any { it < event.inventory.size }) event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onClose(event: InventoryCloseEvent) {
+        val holder = event.inventory.holder as? EtchHolder ?: return
+        val player = event.player as? Player ?: return
+        if (holder.owner != player.uniqueId) return
+        returnItem(player, event.inventory.getItem(SLOT_BANNER))
+        event.inventory.setItem(SLOT_BANNER, null)
+        forgetConfirm.remove(player.uniqueId)
+    }
+
+    private fun render(inventory: Inventory, holder: EtchHolder, player: Player) {
+        val banner = inventory.getItem(SLOT_BANNER)?.clone()
+        val data = plugin.playerManager.getPlayerData(player)
+        val filler = createItem(Material.GRAY_STAINED_GLASS_PANE, "§7")
+        for (slot in 0 until inventory.size) inventory.setItem(slot, filler)
+        inventory.setItem(SLOT_BANNER, banner)
+
+        val activeSkills = data?.getMedicalLoadout().orEmpty()
+        val forgetLore = mutableListOf(
+            "§7清空你当前启用的所有医术",
+            "§7不会遗忘灵智中已领悟的医术",
+            "§8----------------",
+            "§e当前装配（${activeSkills.size}/5）："
+        )
+        if (activeSkills.isEmpty()) {
+            forgetLore.add("§7暂无已装配医术")
         } else {
-            // 防止从玩家背包双击，把只读输出槽内的成品吸入或交换。
-            if (e.click == org.bukkit.event.inventory.ClickType.DOUBLE_CLICK) {
-                e.isCancelled = true
-                return
-            }
-            if (e.isShiftClick) {
-                e.isCancelled = true
-                if (holder is EtchHolder) {
-                    val curr = e.currentItem
-                    if (curr != null) {
-                        if (curr.type.name.endsWith("_BANNER")) tryPut(inv, SLOT_ETCH_BANNER, curr)
-                        else if (curr.type == Material.PAPER || curr.type == Material.BOOK) tryPut(inv, SLOT_ETCH_BOOK, curr)
-                    }
-                } else if (holder is SeparateHolder) {
-                    if (e.currentItem != null && e.currentItem!!.type.name.endsWith("_BANNER")) {
-                        tryPut(inv, SLOT_SEP_INPUT, e.currentItem!!)
-                    }
-                }
-            }
-            return
+            activeSkills.forEach { skillId -> forgetLore.add("§7- ${manager.getSkillName(skillId)}") }
         }
+        forgetLore.add("§c三秒内连续点击两次确认")
+        inventory.setItem(
+            SLOT_FORGET_ALL,
+            createItem(
+                Material.RED_WOOL,
+                "§c§l遗忘全部已装配医术",
+                *forgetLore.toTypedArray()
+            )
+        )
+        inventory.setItem(
+            SLOT_CLEAN_BANNER,
+            createItem(
+                Material.ORANGE_WOOL,
+                "§6§l洗去当前医旗的医术",
+                "§7只清洗左上角放入的这把医旗",
+                "§7同时卸下你当前启用的对应医术",
+                "§e点击立即清洗"
+            )
+        )
+        inventory.setItem(SLOT_PREVIOUS, createItem(Material.ARROW, "§f上一阶", "§7当前：${holder.rarity}阶"))
+        inventory.setItem(SLOT_NEXT, createItem(Material.ARROW, "§f下一阶", "§7当前：${holder.rarity}阶"))
 
-        if (isTopInv) {
-            if (holder is EtchHolder && etchInputSlots.contains(slot)) {
-                e.isCancelled = false
+        manager.getSkillIdsByRarity(holder.rarity).take(SKILL_SLOTS.size).forEachIndexed { index, skillId ->
+            val learned = data?.hasLearnedMedicalSkill(skillId) == true
+            val requiredTrial = manager.getRequiredTrial(skillId)
+            val trialPassed = requiredTrial == null || data?.completedMedicalTrials?.contains(requiredTrial) == true
+            val displayUnlocked = if (requiredTrial != null) trialPassed else learned
+            if (holder.rarity >= 3 && !displayUnlocked) {
+                inventory.setItem(
+                    SKILL_SLOTS[index],
+                    createItem(Material.RED_STAINED_GLASS_PANE, "§c此医术暂未通过医术试炼解锁")
+                )
+                return@forEachIndexed
             }
-            if (holder is EtchHolder && slot == SLOT_ETCH_RESULT) {
-                // 成品槽只能把物品取出，禁止放入、交换、数字键替换或拖入物品。
-                e.isCancelled = !isOutputTakeAction(e.action)
-            }
-            if (holder is SeparateHolder && separateInteractiveSlots.contains(slot)) {
-                e.isCancelled = false
-            }
-        }
 
-        if (isTopInv) {
-            if (holder is MainMenuHolder) {
-                if (slot == 11) openEtchGui(p)
-                else if (slot == 13) openSeparateGui(p)
-                else if (slot == 15) handleForgetButton(p)
-            } else if (holder is EtchHolder) {
-                if (slot == SLOT_ETCH_BUTTON) {
-                    if (!isEmpty(inv.getItem(SLOT_ETCH_RESULT))) {
-                        p.sendMessage("§c请先取走上一把已经绘制完成的医旗，再绘制新的医术。")
-                        p.playSound(p.location, Sound.BLOCK_CHEST_LOCKED, 0.8f, 1f)
-                        return
-                    }
-                    val res = manager.etchSkill(p, inv.getItem(SLOT_ETCH_BANNER), inv.getItem(SLOT_ETCH_BOOK))
-                    if (res != null) {
-                        consumeItem(inv, SLOT_ETCH_BANNER)
-                        consumeItem(inv, SLOT_ETCH_BOOK)
-                        inv.setItem(SLOT_ETCH_RESULT, res)
-                    }
-                } else if (slot == 26) openMainMenu(p)
-            } else if (holder is SeparateHolder) {
-                if (slot == SLOT_SEP_BUTTON) {
-                    if (!isEmpty(inv.getItem(SLOT_SEP_OUT_BANNER)) || !isEmpty(inv.getItem(SLOT_SEP_OUT_BOOK))) {
-                        p.sendMessage("§c请先清空输出槽位！")
-                        return
-                    }
-                    val res = manager.separateSkill(p, inv.getItem(SLOT_SEP_INPUT))
-                    if (res != null) {
-                        consumeItem(inv, SLOT_SEP_INPUT)
-                        inv.setItem(SLOT_SEP_OUT_BANNER, res[0])
-                        inv.setItem(SLOT_SEP_OUT_BOOK, res[1])
-                    }
-                } else if (slot == 44) openMainMenu(p)
-            }
+            val display = manager.getSkillBook(skillId)?.clone() ?: return@forEachIndexed
+            display.amount = 1
+            val meta = display.itemMeta ?: return@forEachIndexed
+            val lore = (meta.lore ?: emptyList()).toMutableList()
+            lore.removeAll { it.contains("右键领悟") || it.contains("放入绘制台") }
+            lore.add("§8----------------")
+            val active = data?.getMedicalLoadout()?.contains(skillId) == true
+            lore.add(if (learned) "§a灵智：已领悟" else "§c灵智：尚未领悟")
+            if (requiredTrial != null) lore.add(if (trialPassed) "§a试炼：已完成" else "§c试炼：尚未完成")
+            lore.add(if (active) "§e状态：当前已启用" else "§7状态：未启用")
+            lore.add(if (learned && trialPassed) "§e点击绘制或切换" else "§8暂不可绘制")
+            meta.lore = lore
+            meta.persistentDataContainer.set(keyGuiSkillId, PersistentDataType.STRING, skillId)
+            meta.persistentDataContainer.set(manager.keyIgnoreRefresh, PersistentDataType.INTEGER, 1)
+            if (active) meta.setEnchantmentGlintOverride(true)
+            display.itemMeta = meta
+            inventory.setItem(SKILL_SLOTS[index], display)
         }
     }
 
-    @EventHandler
-    fun onDrag(e: InventoryDragEvent) {
-        val inv = e.inventory
-        val holder = inv.holder
-        if (holder !is EtchHolder && holder !is SeparateHolder) return
-
-        val slots = e.rawSlots
-        for (slot in slots) {
-            if (slot < inv.size) {
-                var isAllowed = false
-                if (holder is EtchHolder && etchInputSlots.contains(slot)) isAllowed = true
-                if (holder is SeparateHolder && separateInteractiveSlots.contains(slot)) isAllowed = true
-
-                if (!isAllowed) {
-                    e.isCancelled = true
-                    return
-                }
+    private fun handleBannerSlotClick(event: InventoryClickEvent, player: Player) {
+        val inventory = event.inventory
+        val current = inventory.getItem(SLOT_BANNER)
+        val cursor = event.cursor
+        if (isEmpty(cursor)) {
+            if (!isEmpty(current)) {
+                event.setCursor(current!!)
+                inventory.setItem(SLOT_BANNER, null)
+                refresh(player, inventory)
             }
-        }
-    }
-
-    private fun handleForgetButton(p: Player) {
-        val uuid = p.uniqueId
-        // 服务端执行入口再次校验，防止旧界面、权限中途变更等方式绕过 GUI 提示。
-        if (!p.isOp) {
-            deleteConfirm.remove(uuid)
-            p.sendMessage("§c只有服务器管理员可以使用“遗忘所有医术”功能。")
-            p.playSound(p.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1f)
             return
         }
+        if (!manager.isMedicalFlag(cursor)) {
+            player.sendMessage("§c这里只能放入医师职业的医旗。")
+            return
+        }
+        if (!isEmpty(current)) {
+            player.sendMessage("§c请先取走左上角已有的医旗。")
+            return
+        }
+        val placed = cursor.clone()
+        placed.amount = 1
+        inventory.setItem(SLOT_BANNER, placed)
+        cursor.amount -= 1
+        event.setCursor(if (cursor.amount <= 0) ItemStack(Material.AIR) else cursor)
+        refresh(player, inventory)
+    }
 
+    private fun moveOneBannerIntoInput(player: Player, inventory: Inventory, item: ItemStack?) {
+        if (isEmpty(item) || !manager.isMedicalFlag(item)) return
+        if (!isEmpty(inventory.getItem(SLOT_BANNER))) {
+            player.sendMessage("§c请先取走左上角已有的医旗。")
+            return
+        }
+        val placed = item!!.clone()
+        placed.amount = 1
+        inventory.setItem(SLOT_BANNER, placed)
+        item.amount -= 1
+        refresh(player, inventory)
+    }
+
+    private fun handleSkillClick(player: Player, inventory: Inventory, holder: EtchHolder, item: ItemStack?) {
+        val skillId = item?.itemMeta?.persistentDataContainer
+            ?.get(keyGuiSkillId, PersistentDataType.STRING) ?: return
+        val result = manager.etchLearnedSkill(player, inventory.getItem(SLOT_BANNER), skillId) ?: return
+        inventory.setItem(SLOT_BANNER, result)
+        render(inventory, holder, player)
+    }
+
+    private fun handleCleanBanner(player: Player, inventory: Inventory, holder: EtchHolder) {
+        val banner = inventory.getItem(SLOT_BANNER)
+        if (isEmpty(banner)) {
+            player.sendMessage("§c请先在左上角放入需要清洗的医旗。")
+            return
+        }
+        if (manager.getSkillIdFromBanner(banner) == null) {
+            player.sendMessage("§c这把医旗上没有可以洗去的医术。")
+            return
+        }
+        val result = manager.cleanCurrentBanner(player, banner) ?: return
+        inventory.setItem(SLOT_BANNER, result)
+        render(inventory, holder, player)
+    }
+
+    private fun handleForgetAll(player: Player, inventory: Inventory, holder: EtchHolder) {
         val now = System.currentTimeMillis()
-
-        if (deleteConfirm.containsKey(uuid) && (now - deleteConfirm[uuid]!! < 3000)) {
-            val data = plugin.playerManager.getPlayerData(p)
-            if (data == null) {
-                deleteConfirm.remove(uuid)
-                p.sendMessage("§c玩家数据尚未加载完成，请稍后再试。")
-                return
+        val previous = forgetConfirm[player.uniqueId]
+        if (previous != null && now - previous <= 3_000L) {
+            forgetConfirm.remove(player.uniqueId)
+            if (manager.forgetAllActiveSkills(player)) {
+                player.sendMessage("§c你已遗忘医旗上当前启用的全部医术。")
+                player.playSound(player.location, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.2f)
+            } else {
+                player.sendMessage("§7你当前没有启用任何医术。")
             }
-
-            data.clearMedicalSkills()
-
-            // 【核心修复】即时保存到数据库
-            CompletableFuture.runAsync { plugin.databaseManager.saveMedicalData(data) }
-
-            p.sendMessage("§c§l[警告] §7你已遗忘所有医术！")
-            p.playSound(p.location, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f)
-            deleteConfirm.remove(uuid)
-        } else {
-            deleteConfirm[uuid] = now
-            p.sendMessage("§c§l[警告] §7这将清空你所有的医术记忆！")
-            p.sendMessage("§c§l[警告] §7请在3秒内再次点击以确认！")
-            p.playSound(p.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.5f)
+            render(inventory, holder, player)
+            return
         }
+        forgetConfirm[player.uniqueId] = now
+        player.sendMessage("§c三秒内再次点击红色羊毛，确认卸下全部已启用医术。")
+        player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.6f)
     }
 
-    private fun tryPut(inv: Inventory, slot: Int, item: ItemStack) {
-        if (isEmpty(inv.getItem(slot))) {
-            val toPut = item.clone()
-            toPut.amount = 1
-            inv.setItem(slot, toPut)
-            item.amount = item.amount - 1
+    private fun changePage(player: Player, inventory: Inventory, holder: EtchHolder, delta: Int) {
+        val target = (holder.rarity + delta).coerceIn(1, 5)
+        if (target == holder.rarity) {
+            player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_HAT, 0.6f, 0.7f)
+            return
         }
+        holder.rarity = target
+        render(inventory, holder, player)
+        player.playSound(player.location, Sound.ITEM_BOOK_PAGE_TURN, 0.8f, 1.1f)
     }
 
-    private fun consumeItem(inv: Inventory, slot: Int) {
-        val item = inv.getItem(slot)
-        if (item != null) {
-            item.amount = item.amount - 1
-            inv.setItem(slot, item)
+    private fun refresh(player: Player, inventory: Inventory) {
+        val holder = inventory.holder as? EtchHolder ?: return
+        render(inventory, holder, player)
+    }
+
+    private fun learnFromBook(player: Player, book: ItemStack, skillId: String) {
+        val data = plugin.playerManager.getPlayerData(player)
+        if (data == null) {
+            player.sendMessage("§c玩家数据尚未加载完成，请稍后再试。")
+            return
         }
-    }
-
-    private fun isEmpty(item: ItemStack?): Boolean {
-        return item == null || item.type == Material.AIR
-    }
-
-    private fun fillGlass(inv: Inventory, size: Int) {
-        val glass = createItem(Material.GRAY_STAINED_GLASS_PANE, "§7")
-        for (i in 0 until size) {
-            if (inv.getItem(i) == null || inv.getItem(i)!!.type == Material.AIR) {
-                inv.setItem(i, glass)
-            }
+        if (data.job != 3) {
+            player.sendMessage("§c只有医师能够领悟医术。")
+            return
         }
-    }
-
-    private fun returnItem(p: Player, item: ItemStack?) {
-        if (!isEmpty(item)) {
-            p.inventory.addItem(item!!).values.forEach { i -> p.world.dropItem(p.location, i) }
+        if (data.hasLearnedMedicalSkill(skillId)) {
+            player.sendMessage("§7你的灵智中早已领悟了这门医术。")
+            return
         }
-    }
-
-    private fun createItem(mat: Material, name: String, vararg lore: String): ItemStack {
-        val item = ItemStack(mat)
-        val meta = item.itemMeta
-        meta!!.setDisplayName(name)
-        if (lore.isNotEmpty()) meta.lore = Arrays.asList(*lore)
-        item.itemMeta = meta
-        return item
+        if (!manager.learnSkill(player, skillId)) return
+        if (book.amount <= 1) player.inventory.setItemInMainHand(null) else book.amount -= 1
+        player.sendMessage("§a你消耗了一卷秘籍，将 ${manager.getSkillName(skillId)} §a存入灵智。")
+        val requiredTrial = manager.getRequiredTrial(skillId)
+        if (requiredTrial != null && requiredTrial !in data.completedMedicalTrials) {
+            player.sendMessage("§e你尚未通过对应的医术试炼，暂时无法绘制或施展这门医术。")
+        }
+        player.playSound(player.location, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.3f)
     }
 
     private fun canUseMedicalStation(player: Player, notify: Boolean): Boolean {
@@ -389,22 +367,27 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         return false
     }
 
-    private fun isOutputTakeAction(action: InventoryAction): Boolean = when (action) {
-        InventoryAction.PICKUP_ALL,
-        InventoryAction.PICKUP_HALF,
-        InventoryAction.PICKUP_ONE,
-        InventoryAction.PICKUP_SOME,
-        InventoryAction.MOVE_TO_OTHER_INVENTORY,
-        InventoryAction.DROP_ALL_SLOT,
-        InventoryAction.DROP_ONE_SLOT -> true
-        else -> false
+    private fun createItem(material: Material, name: String, vararg lore: String): ItemStack {
+        val item = ItemStack(material)
+        val meta = item.itemMeta ?: return item
+        meta.setDisplayName(name)
+        if (lore.isNotEmpty()) meta.lore = lore.toList()
+        meta.persistentDataContainer.set(manager.keyIgnoreRefresh, PersistentDataType.INTEGER, 1)
+        item.itemMeta = meta
+        return item
     }
+
+    private fun returnItem(player: Player, item: ItemStack?) {
+        if (isEmpty(item)) return
+        player.inventory.addItem(item!!).values.forEach { player.world.dropItemNaturally(player.location, it) }
+    }
+
+    private fun isEmpty(item: ItemStack?): Boolean = item == null || item.type == Material.AIR
 
     private fun loadStationLocations() {
         if (!stationFile.exists()) return
-        val config = YamlConfiguration.loadConfiguration(stationFile)
         stationLocations.clear()
-        stationLocations.addAll(config.getStringList("stations"))
+        stationLocations.addAll(YamlConfiguration.loadConfiguration(stationFile).getStringList("stations"))
     }
 
     private fun saveStationLocations() {
@@ -413,7 +396,6 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         config.save(stationFile)
     }
 
-    private fun locToString(loc: org.bukkit.Location): String {
-        return "${loc.world?.name},${loc.blockX},${loc.blockY},${loc.blockZ}"
-    }
+    private fun locToString(location: org.bukkit.Location): String =
+        "${location.world?.name},${location.blockX},${location.blockY},${location.blockZ}"
 }

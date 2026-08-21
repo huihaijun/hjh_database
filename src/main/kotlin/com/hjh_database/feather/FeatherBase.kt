@@ -13,6 +13,11 @@ interface FeatherBase {
     val id: String
 
     /**
+     * 用于提示玩家的羽毛名称（不包含颜色代码）。
+     */
+    val displayName: String
+
+    /**
      * 冷却时间 (秒)
      */
     val cooldownSeconds: Int

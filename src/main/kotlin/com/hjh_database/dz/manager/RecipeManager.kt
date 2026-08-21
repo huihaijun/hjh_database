@@ -61,17 +61,7 @@ class RecipeManager(private val plugin: Hjh_database) {
                 val resStr = resParts[0]
                 val resAmount = if (resParts.size > 1) resParts[1].toIntOrNull() ?: 1 else 1
 
-                val resultItem: ItemStack = if (plugin.playerManager.weaponManager.loadedWeapons.containsKey(resStr)) {
-                    plugin.playerManager.weaponManager.getItemStack(resStr)!!
-                } else if (plugin.playerManager.armorManager.allIds.contains(resStr)) {
-                    plugin.playerManager.armorManager.getItemStack(resStr)!!
-                } else if (plugin.resourceManager.getItem(resStr) != null) {
-                    // 【新增】向 ResourceManager 获取杂项物品
-                    plugin.resourceManager.getItem(resStr)!!
-                } else {
-                    val mat = Material.getMaterial(resStr.uppercase())
-                    ItemStack(mat ?: Material.STONE)
-                }
+                val resultItem = resolveItem(resStr)
                 resultItem.amount = resAmount
 
                 // 2. 解析材料 List (修复：支持解析数量，并增加 ResourceManager 检查)
@@ -82,19 +72,7 @@ class RecipeManager(private val plugin: Hjh_database) {
                     val ingStr = parts[0]
                     val ingAmount = if (parts.size > 1) parts[1].toIntOrNull() ?: 1 else 1
 
-                    val ingItem: ItemStack = if (ingStr.equals("AIR", ignoreCase = true)) {
-                        ItemStack(Material.AIR)
-                    } else if (plugin.playerManager.weaponManager.loadedWeapons.containsKey(ingStr)) {
-                        plugin.playerManager.weaponManager.getItemStack(ingStr)!!
-                    } else if (plugin.playerManager.armorManager.allIds.contains(ingStr)) {
-                        plugin.playerManager.armorManager.getItemStack(ingStr)!!
-                    } else if (plugin.resourceManager.getItem(ingStr) != null) {
-                        // 【新增】向 ResourceManager 获取杂项材料
-                        plugin.resourceManager.getItem(ingStr)!!
-                    } else {
-                        val mat = Material.getMaterial(ingStr.uppercase())
-                        ItemStack(mat ?: Material.STONE)
-                    }
+                    val ingItem = resolveItem(ingStr)
 
                     if (ingItem.type != Material.AIR) {
                         ingItem.amount = ingAmount
@@ -115,6 +93,18 @@ class RecipeManager(private val plugin: Hjh_database) {
                 plugin.logger.warning("加载配方 $id 失败: ${e.message}")
             }
         }
+    }
+
+    /** 将配方中的公开 ID 还原为对应的自定义物品，最后才按原版材质解析。 */
+    private fun resolveItem(id: String): ItemStack {
+        if (id.equals("AIR", ignoreCase = true)) return ItemStack(Material.AIR)
+
+        plugin.playerManager.weaponManager.getItemStack(id)?.let { return it }
+        plugin.playerManager.armorManager.getItemStack(id)?.let { return it }
+        plugin.artifactManager.getItem(id)?.let { return it }
+        plugin.resourceManager.getItem(id)?.let { return it }
+
+        return ItemStack(Material.matchMaterial(id) ?: Material.STONE)
     }
 
     fun saveRecipe(recipe: DzRecipe) {

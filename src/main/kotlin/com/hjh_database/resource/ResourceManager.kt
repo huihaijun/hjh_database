@@ -203,6 +203,9 @@ class ResourceManager(private val plugin: Hjh_database) {
             return am.getItemStack(id)
         }
 
+        // 普通法宝只保存 artifact_id，不应退化成其原版材质。
+        plugin.artifactManager.getItem(id)?.let { return it }
+
         // 4. 灏濊瘯浠?CrystalManager 鑾峰彇缁撴櫠
         val cm = plugin.playerManager.crystalManager
         if (cm.allIds.contains(id)) {

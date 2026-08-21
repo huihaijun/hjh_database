@@ -49,6 +49,17 @@ hjh_zybj:
     - "&7&o医师就在凤花楼东边的小屋内"
     - "&e[任务物品]"
 
+xian_zybj:
+  material: BOOK
+  name: "&b羽罗的笔记"
+  lore:
+    - "&7&o羽罗交付于你人的笔记"
+    - "&7&o记载了皇宫四大职业导师的具体方位"
+    - "&7&o战士与弓箭手导师位于皇城东门北侧的两栋房内"
+    - "&7&o术士导师位于通往南门干道的东侧四合院内"
+    - "&7&o医师就在凤花楼东边的小屋内"
+    - "&e[任务物品]"
+
 yy_lianxindan:
   material: GOLD_NUGGET
   custom_model_data: 10137
@@ -248,6 +259,23 @@ shen_job_ticket_doctor:
     - ""
     - "&e[主手右键] &f消耗传送至医术导师"
     - "&c仅限神族使用"
+
+
+yindaosuishi:
+  material: COBBLESTONE
+  name: "&b引导碎石"
+  lore:
+    - "&7&o从引导之石开采下来的碎屑,冰冷似铁"
+    - "&7&o传闻族长他们就是用这个勘测气候的"
+    - "&e[任务物品]"
+
+mengzhudechabei:
+  material: MELON_SLICE
+  name: "&b盟主的茶杯"
+  lore:
+    - "&7&o盟主平日用来喝茶的杯子"
+    - "&7&o快递给他让他喝点水吧"
+    - "&e[任务物品]"
 
 laoyushuitong:
   material: WATER_BUCKET

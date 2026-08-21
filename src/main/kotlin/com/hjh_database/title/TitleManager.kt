@@ -222,24 +222,35 @@ class TitleManager(private val plugin: Hjh_database) {
         }
     }
 
-    fun grantQuestCompletionTitle(player: Player, titleId: String, questId: String): CompletableFuture<Boolean> {
+    fun grantQuestCompletionTitle(player: Player, titleId: String, questId: String): CompletableFuture<Boolean> =
+        grantConfiguredTitle(player, titleId, "quest:$questId", "任务 $questId")
+
+    fun grantMilestoneTitle(player: Player, titleId: String, milestoneId: String): CompletableFuture<Boolean> =
+        grantConfiguredTitle(player, titleId, "milestone:$milestoneId", "里程碑 $milestoneId")
+
+    private fun grantConfiguredTitle(
+        player: Player,
+        titleId: String,
+        source: String,
+        sourceDescription: String
+    ): CompletableFuture<Boolean> {
         val completion = CompletableFuture<Boolean>()
         val definition = definition(titleId)
         if (definition == null) {
-            plugin.logger.warning("任务 $questId 完成时无法发放称号：称号 ID $titleId 未配置或未启用。")
+            plugin.logger.warning("$sourceDescription 达成时无法发放称号：称号 ID $titleId 未配置或未启用。")
             completion.complete(false)
             return completion
         }
         val target = ResolvedTitleTarget(player.uniqueId, player.name)
         plugin.databaseManager.submitDatabaseOperation {
-            repository.giveTitle(target, titleId, "quest:$questId", settings())
+            repository.giveTitle(target, titleId, source, settings())
         }.whenComplete { result, throwable ->
             runSync {
                 if (throwable != null || result == null) {
                     plugin.logger.severe(
-                        "发放任务称号 $titleId 给 ${player.name} 失败：${rootMessage(throwable)}"
+                        "发放称号 $titleId 给 ${player.name} 失败（$sourceDescription）：${rootMessage(throwable)}"
                     )
-                    if (player.isOnline) player.sendMessage("§c[称号] 任务称号发放失败，请联系管理员。")
+                    if (player.isOnline) player.sendMessage("§c[称号] 奖励称号发放失败，请联系管理员。")
                     completion.complete(false)
                     return@runSync
                 }
