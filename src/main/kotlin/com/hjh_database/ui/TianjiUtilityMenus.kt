@@ -230,7 +230,8 @@ object TianjiUtilityMenus {
                 lore += "$marker ${resourceDisplayName(plugin, resourceId)} §7- $status"
             }
         } else {
-            lore += "§6终极战利品：§7该秘境暂无"
+            lore += "§6§l终极战利品"
+            lore += "§7该秘境暂无"
         }
 
         return menuItem(
@@ -242,6 +243,7 @@ object TianjiUtilityMenus {
 
     private fun dungeonIcon(group: DungeonStatisticsGroup, displayIndex: Int): Material = when (group.displayName) {
         "鹊桥星愿" -> Material.AMETHYST_BLOCK
+        "圣山" -> Material.END_STONE
         else -> DUNGEON_ICON_PALETTE[displayIndex % DUNGEON_ICON_PALETTE.size]
     }
 

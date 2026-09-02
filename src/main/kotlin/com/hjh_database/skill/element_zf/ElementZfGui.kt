@@ -15,6 +15,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
@@ -57,14 +58,14 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
     // ===================================
 
     private val elements = listOf(
-        ElementInfo("METAL", "金元素 —— 星云术", 10004, "metal"),
-        ElementInfo("WOOD", "木元素 —— 汲魂术", 10005, "wood"),
-        ElementInfo("WATER", "水元素 —— 霜冻术", 10006, "water"),
-        ElementInfo("FIRE", "火元素 —— 流火术", 10007, "fire"),
-        ElementInfo("EARTH", "土元素 —— 裂地术", 10008, "earth")
+        ElementInfo("METAL", "金元素 —— 星云术", 10004),
+        ElementInfo("WOOD", "木元素 —— 汲魂术", 10005),
+        ElementInfo("WATER", "水元素 —— 霜冻术", 10006),
+        ElementInfo("FIRE", "火元素 —— 流火术", 10007),
+        ElementInfo("EARTH", "土元素 —— 裂地术", 10008)
     )
 
-    data class ElementInfo(val type: String, val title: String, val modelData: Int, val resourceId: String)
+    data class ElementInfo(val type: String, val title: String, val modelData: Int)
 
     fun getSpecialAmethystBlock(): ItemStack {
         val item = ItemStack(Material.AMETHYST_BLOCK)
@@ -93,6 +94,8 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
     // 2. 监听玩家右键地上的方块
     @EventHandler
     fun onInteract(e: PlayerInteractEvent) {
+        // Paper 会分别为主手和副手派发一次方块交互事件；阵法台只处理主手。
+        if (e.hand != EquipmentSlot.HAND) return
         if (e.action == Action.RIGHT_CLICK_BLOCK) {
             val block = e.clickedBlock ?: return
 
@@ -222,22 +225,15 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
                 }
             }
 
+            addTierEffectLore(lore, el.type, effectiveLevel)
+
             lore.add("")
             if (currentLevel >= 5) {
                 lore.add("§a§l已满级")
             } else {
                 lore.add("§e§l【左键升级到下一级】")
                 val req = getUpgradeRequirement(currentLevel)
-                lore.add("§7所需等级: §f${req.level}级")
-                lore.add("§7所需元素: §f${req.elementAmount}个")
-
-                val moneyName = when (req.moneyId) {
-                    "hjh_tongqian" -> "铜钱"
-                    "jinyuanbao" -> "金元宝"
-                    "yinpiao" -> "银票"
-                    else -> "货币"
-                }
-                lore.add("§7所需金钱: §f${req.moneyAmount}个 ($moneyName)")
+                lore.add("§7所需材料: §b元素兑换券 §f× ${req.voucherAmount}")
             }
 
             meta.lore = lore
@@ -249,15 +245,52 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
         player.openInventory(inv)
     }
 
-    data class UpgradeRequirement(val level: Int, val elementAmount: Int, val moneyId: String, val moneyAmount: Int)
+    private fun addTierEffectLore(lore: MutableList<String>, type: String, effectiveLevel: Int) {
+        fun prefix(requiredLevel: Int): String = if (effectiveLevel >= requiredLevel) {
+            "§a§l[${requiredLevel}级已生效] §f"
+        } else {
+            "§8§l[${requiredLevel}级未生效] §7"
+        }
+
+        lore.add("")
+        when (type) {
+            "METAL" -> {
+                lore.add(prefix(3) + "星云区域内怪物进攻属性降低§b20%§f，持续§b5秒§f。")
+                lore.add(prefix(5) + "星云沿释放瞬间方向缓慢移动§b3.5秒§f，")
+                lore.add("§7路径上每只怪物至多追加受到一次原阵法§c50%§7的伤害。")
+            }
+            "WOOD" -> {
+                lore.add(prefix(3) + "使目标枯萎§b5秒§f，期间移动速度降低§b10%§f。")
+                lore.add(prefix(5) + "枯萎延长至§b8秒§f；目标死亡后魂灵至多跳跃一次，")
+                lore.add("§7对其§b10格§7内另一只怪物造成§c50%阵法强度§7伤害。")
+            }
+            "WATER" -> {
+                lore.add(prefix(3) + "施加寒气§b5秒§f，使怪物有效普攻频率降低§b30%§f。")
+                lore.add(prefix(5) + "冻结施法路径§b5秒§f，每§b0.5秒§f造成原阵法§c10%§f伤害，")
+                lore.add("§7并使路径内怪物受到独立的小幅减速。")
+            }
+            "FIRE" -> {
+                lore.add(prefix(3) + "施加灼印§b5秒§f；受到你的其他元素伤害时消耗印记，")
+                lore.add("§7对周围§b3格§7其他怪物造成§c100%阵法强度§7伤害。")
+                lore.add(prefix(5) + "分裂§b3枚§f火星，攻击§b10格§f内三个不同目标，")
+                lore.add("§7每枚造成§c125%阵法强度§7伤害；无目标的火星直接消散。")
+            }
+            "EARTH" -> {
+                lore.add(prefix(3) + "阵法存在期间，圈内怪物护甲降低§b20%§f。")
+                lore.add(prefix(5) + "阵法结束时坍缩，将圈内非BOSS怪物定身§b1.5秒§f。")
+            }
+        }
+    }
+
+    data class UpgradeRequirement(val voucherAmount: Int)
 
     private fun getUpgradeRequirement(currentLevel: Int): UpgradeRequirement {
         return when (currentLevel) {
-            1 -> UpgradeRequirement(5, 32, "hjh_tongqian", 30)
-            2 -> UpgradeRequirement(10, 64, "jinyuanbao", 5)
-            3 -> UpgradeRequirement(20, 128, "yinpiao", 2)
-            4 -> UpgradeRequirement(30, 256, "yinpiao", 5)
-            else -> UpgradeRequirement(999, 999, "none", 999)
+            1 -> UpgradeRequirement(12)
+            2 -> UpgradeRequirement(36)
+            3 -> UpgradeRequirement(64)
+            4 -> UpgradeRequirement(128)
+            else -> UpgradeRequirement(Int.MAX_VALUE)
         }
     }
 
@@ -284,33 +317,17 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
 
         val req = getUpgradeRequirement(currentLevel)
 
-        if (data.lv < req.level) {
-            player.sendMessage("§c升级失败！需要玩家等级达到 ${req.level} 级。")
+        val voucherItem = plugin.resourceManager.getItem(ELEMENT_VOUCHER_ID)
+        if (voucherItem == null) {
+            player.sendMessage("§c服务器未配置元素兑换券: $ELEMENT_VOUCHER_ID")
+            return
+        }
+        if (!hasEnoughItem(player.inventory, voucherItem, req.voucherAmount)) {
+            player.sendMessage("§c升级失败！你没有足够的元素兑换券 §c(${req.voucherAmount}张)。")
             return
         }
 
-        val elementItemOpt = plugin.resourceManager.getItem(elInfo.resourceId)
-        if (elementItemOpt == null) {
-            player.sendMessage("§c服务器未配置元素资源物品: ${elInfo.resourceId}")
-            return
-        }
-        if (!hasEnoughItem(player.inventory, elementItemOpt, req.elementAmount)) {
-            player.sendMessage("§c升级失败！你没有足够的 ${elementItemOpt.itemMeta?.displayName ?: elInfo.resourceId} §c(${req.elementAmount}个)。")
-            return
-        }
-
-        val moneyItemOpt = plugin.resourceManager.getItem(req.moneyId)
-        if (moneyItemOpt == null) {
-            player.sendMessage("§c服务器未配置货币物品: ${req.moneyId}")
-            return
-        }
-        if (!hasEnoughItem(player.inventory, moneyItemOpt, req.moneyAmount)) {
-            player.sendMessage("§c升级失败！你没有足够的 ${moneyItemOpt.itemMeta?.displayName ?: req.moneyId} §c(${req.moneyAmount}个)。")
-            return
-        }
-
-        consumeItem(player.inventory, elementItemOpt, req.elementAmount)
-        consumeItem(player.inventory, moneyItemOpt, req.moneyAmount)
+        consumeItem(player.inventory, voucherItem, req.voucherAmount)
 
         data.elementLevels[zfType] = currentLevel + 1
 
@@ -346,5 +363,9 @@ class ElementZfGui(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
+    }
+
+    private companion object {
+        const val ELEMENT_VOUCHER_ID = "yuansuduihuanquan"
     }
 }

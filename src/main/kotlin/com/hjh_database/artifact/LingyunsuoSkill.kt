@@ -114,7 +114,6 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
         data.lingli -= manaCost
         plugin.databaseManager.queuePlayerSave(data)
         playCastEffect(player, start)
-        sendActivationActionBar(player)
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -839,12 +838,6 @@ class LingyunsuoSkill(private val plugin: Hjh_database) : Listener {
         val meta = item.itemMeta ?: return
         meta.persistentDataContainer.set(cooldownEndKey, PersistentDataType.LONG, value)
         item.itemMeta = meta
-    }
-
-    private fun sendActivationActionBar(player: Player) {
-        val data = plugin.playerManager.getData(player.uniqueId) ?: return
-        val message = "&a&l法器技【牵云织锦】发动！ &6☯当前灵力值：&b${String.format(Locale.US, "%.1f", data.lingli)} &6/ &b${String.format(Locale.US, "%.0f", data.maxLingli)} &6☯"
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(ChatColor.translateAlternateColorCodes('&', message)))
     }
 
     private fun sendCooldownActionBar(player: Player, remainingMillis: Long) {

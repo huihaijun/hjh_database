@@ -30,7 +30,6 @@ class RanhuoJiandaiSkill(plugin: Hjh_database) : BaseQuiverSkill(plugin) {
         private const val RANGE = 3.0
     }
 
-    private val cooldowns = HashMap<UUID, Long>()
     private val activeArrowTasks = HashMap<UUID, BukkitTask>()
     private val emberDust = Particle.DustOptions(Color.fromRGB(255, 95, 18), 0.9f)
     private val ranhuoArrowKey = NamespacedKey(plugin, "ranhuo_arrow")
@@ -38,10 +37,10 @@ class RanhuoJiandaiSkill(plugin: Hjh_database) : BaseQuiverSkill(plugin) {
     override fun onShootEffect(event: EntityShootBowEvent, player: Player, data: PlayerData) {
         val arrow = event.projectile as? AbstractArrow ?: return
         val now = System.currentTimeMillis()
-        val cooldownEnd = cooldowns[player.uniqueId] ?: 0L
+        val cooldownEnd = getTrackedCooldownEnd(player)
         if (now < cooldownEnd) return
 
-        cooldowns[player.uniqueId] = now + COOLDOWN_MS
+        startTrackedCooldown(player, COOLDOWN_MS, now)
         val damage = data.archerDamage * 1.5
         arrow.persistentDataContainer.set(ranhuoArrowKey, PersistentDataType.BYTE, 1)
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§a§l饰品技【流火矢】已发动！"))

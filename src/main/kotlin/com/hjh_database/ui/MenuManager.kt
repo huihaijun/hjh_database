@@ -1,6 +1,7 @@
 package com.hjh_database.ui
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import com.hjh_database.data.PlayerData
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -464,7 +465,12 @@ class MenuManager(private val plugin: Hjh_database) {
         result = result.replace("%current_health%", String.format("%.1f", player.health))
         result = result.replace("%attack%", String.format("%.1f", data.attack))
         result = result.replace("%archer_damage%", String.format("%.1f", data.archerDamage))
-        result = result.replace("%armor%", String.format("%.1f", data.armor))
+        if (result.contains("%armor%")) {
+            // 天机令显示与实际受伤结算共用同一条护甲修正链，使临时破甲/护甲失效即时可见。
+            val armorEvent = ElementCrystalArmorCalculationEvent(player, data.armor)
+            plugin.server.pluginManager.callEvent(armorEvent)
+            result = result.replace("%armor%", String.format("%.1f", armorEvent.armor.coerceAtLeast(0.0)))
+        }
         result = result.replace("%money%", String.format("%.1f", data.money))
         val critStatName = if (job == 2 || job == 3) "法穿率" else "暴击率"
         result = result.replace("%crit_stat_name%", critStatName)

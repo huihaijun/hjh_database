@@ -91,7 +91,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
                         }
                     }
 
-                    // 每颗流星 +10% 移速，作为独立来源参与统一属性结算。
+                    // 每颗流星 +5% 移速，作为独立来源参与统一属性结算。
                     updateMeteorSpeedBuff(player, pData, validMeteorsCount)
 
                     // ==========================================
@@ -261,7 +261,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
         if ((appliedSpeedStacks[player.uniqueId] ?: 0) == clampedStacks) return
 
         if (clampedStacks > 0) {
-            data.tempBonuses[METEOR_SPEED_KEY] = clampedStacks * 0.10
+            data.tempBonuses[METEOR_SPEED_KEY] = clampedStacks * 0.05
             appliedSpeedStacks[player.uniqueId] = clampedStacks
         } else {
             data.tempBonuses.remove(METEOR_SPEED_KEY)

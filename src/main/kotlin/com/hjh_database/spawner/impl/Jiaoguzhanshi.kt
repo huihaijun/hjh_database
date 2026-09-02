@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.element_zf.impl.ElementFormationTierEffects
 import org.bukkit.Color
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -185,7 +186,15 @@ class Jiaoguzhanshi(
             val miasmaRatio = plugin.baihuMiasmaManager.getMiasma(player) / 1000.0
             val damage = 40.0 + 20.0 * miasmaRatio
             player.noDamageTicks = 0
-            player.damage(damage, boss)
+            player.setMetadata(
+                ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
+                org.bukkit.metadata.FixedMetadataValue(plugin, true)
+            )
+            try {
+                player.damage(damage, boss)
+            } finally {
+                player.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.hjh_database.skill.element_zf.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.EnhancedElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
@@ -18,8 +19,9 @@ class EnhancedFireSkill(private val plugin: Hjh_database) : EnhancedElementSkill
     override fun cast(player: Player, data: PlayerData): Boolean {
         val targets = findTargets(player)
         if (targets.isEmpty()) return false
-        val initialDamage = data.zfStr * 6.0
-        val tickDamage = data.zfStr * 1.5
+        val damageMultiplier = plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+        val initialDamage = data.zfStr * 6.0 * damageMultiplier
+        val tickDamage = data.zfStr * 1.5 * damageMultiplier
 
         broadcastOriginMessage(player, "§c", "火元素", "炎蝶之舞")
         player.world.playSound(player.location, Sound.ENTITY_BLAZE_SHOOT, 1.0f, 1.2f)
@@ -27,7 +29,7 @@ class EnhancedFireSkill(private val plugin: Hjh_database) : EnhancedElementSkill
 
         val zones = targets.map { it.location.clone() }
         for (target in targets) {
-            enhancedMagicDamage(plugin, player, target, initialDamage)
+            enhancedMagicDamage(plugin, player, target, initialDamage, FormationElement.FIRE)
             target.fireTicks = max(target.fireTicks, 60)
             target.world.spawnParticle(Particle.FLAME, target.location.add(0.0, target.height * 0.5, 0.0), 18, 0.35, 0.45, 0.35, 0.04)
             target.world.spawnParticle(Particle.LAVA, target.location.add(0.0, 0.15, 0.0), 6, 0.35, 0.1, 0.35, 0.0)
@@ -49,7 +51,7 @@ class EnhancedFireSkill(private val plugin: Hjh_database) : EnhancedElementSkill
                         val mob = entity as? LivingEntity ?: continue
                         if (!isEnhancedMonster(mob) || !hitThisTick.add(mob)) continue
                         mob.fireTicks = max(mob.fireTicks, 40)
-                        enhancedMagicDamage(plugin, player, mob, tickDamage)
+                        enhancedMagicDamage(plugin, player, mob, tickDamage, FormationElement.FIRE)
                     }
                 }
                 ticks += 10

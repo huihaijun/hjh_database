@@ -141,6 +141,8 @@ class AccessoryManager(private val plugin: Hjh_database) : Listener {
                 // 鍋囪浣犵殑 PlayerListener 涓湁涓?public 鐨勫埛鏂版柟娉曟垨鑰呯洿鎺ヨ皟鐢?plugin.playerManager 鍒锋柊
                 plugin.playerManager.updateStats(player)
                 plugin.playerManager.crystalManager.refreshPlayerCrystals(player)
+                // 巽离灵枢的卦印不能在饰品卸下后残留。
+                plugin.accessorySkillManager.onAccessoryLoadoutChanged(player)
 
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.element_zf.impl.ElementFormationTierEffects
 import org.bukkit.GameMode
 import org.bukkit.Location
 import org.bukkit.Material
@@ -293,7 +294,15 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                         GRAVITY_FIELD_RADIUS
                     ).filterIsInstance<Player>().forEach { p ->
                         if (!p.isDead && p.gameMode != GameMode.SPECTATOR && p.gameMode != GameMode.CREATIVE) {
-                            p.damage(10.0, boss)
+                            p.setMetadata(
+                                ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
+                                org.bukkit.metadata.FixedMetadataValue(plugin, true)
+                            )
+                            try {
+                                p.damage(10.0, boss)
+                            } finally {
+                                p.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
+                            }
                             val pushDir = p.location.toVector().subtract(boss.location.toVector()).setY(0)
                             p.velocity = if (pushDir.lengthSquared() > 0.0) {
                                 pushDir.normalize().multiply(0.5).setY(1.3)
@@ -414,7 +423,15 @@ class Shamofengbao(private val plugin: Hjh_database, private val boss: LivingEnt
                 .filter { !it.isDead && it.gameMode != GameMode.SPECTATOR && it.gameMode != GameMode.CREATIVE }
                 .filter { hitPlayers.add(it.uniqueId) }
                 .forEach { player ->
-                    player.damage(6.0, boss)
+                    player.setMetadata(
+                        ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
+                        org.bukkit.metadata.FixedMetadataValue(plugin, true)
+                    )
+                    try {
+                        player.damage(6.0, boss)
+                    } finally {
+                        player.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
+                    }
                     player.velocity = Vector(0.0, 1.2, 0.0)
                     player.world.playSound(player.location, Sound.ENTITY_BREEZE_WIND_BURST, 1f, 1f)
                 }

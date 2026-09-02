@@ -166,6 +166,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
 
         if (plugin.questManager.handleNpcDialogue(player, templateId)) return
+        if (plugin.raceModule.getZhanRace().handleIntelligenceDialogue(player, templateId)) return
 
         val dialogues = template.dialogue
         if (dialogues.isEmpty()) {

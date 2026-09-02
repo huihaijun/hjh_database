@@ -3,6 +3,7 @@ package com.hjh_database.skill.element_zf.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.EnhancedElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.Color
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Material
@@ -25,8 +26,9 @@ class EnhancedWaterSkill(private val plugin: Hjh_database) : EnhancedElementSkil
     override fun cast(player: Player, data: PlayerData): Boolean {
         val center = getEnhancedSightLocation(player, 16.0, FluidCollisionMode.ALWAYS)
         val world = center.world ?: return false
-        val damage = data.zfStr * 2.5
-        val extraDamage = data.zfStr
+        val damageMultiplier = plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+        val damage = data.zfStr * 2.5 * damageMultiplier
+        val extraDamage = data.zfStr * damageMultiplier
         val directions = buildXDirections()
         val hit = LinkedHashSet<LivingEntity>()
         val centerTargets = HashSet<LivingEntity>()
@@ -78,7 +80,7 @@ class EnhancedWaterSkill(private val plugin: Hjh_database) : EnhancedElementSkil
 
         for (mob in hit) {
             val isCenter = centerTargets.contains(mob)
-            enhancedMagicDamage(plugin, player, mob, damage + if (isCenter) extraDamage else 0.0)
+            enhancedMagicDamage(plugin, player, mob, damage + if (isCenter) extraDamage else 0.0, FormationElement.WATER)
             applyEnhancedVulnerability(
                 plugin,
                 mob,

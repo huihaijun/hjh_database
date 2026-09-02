@@ -5,6 +5,7 @@ import com.hjh_database.race.impl.HumanRace
 import com.hjh_database.race.impl.YaoRace
 import com.hjh_database.race.impl.ShenRace
 import com.hjh_database.race.impl.XianRace
+import com.hjh_database.race.impl.ZhanRace
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -19,6 +20,7 @@ class RaceManager(val plugin: Hjh_database) : Listener {
         registerRace(0, ShenRace(this))
         registerRace(1, XianRace(this))
         registerRace(2, HumanRace(this))
+        registerRace(3, ZhanRace(this))
         registerRace(4, YaoRace(this))
         plugin.server.pluginManager.registerEvents(this, plugin)
     }
@@ -29,6 +31,8 @@ class RaceManager(val plugin: Hjh_database) : Listener {
     }
 
     fun getRace(id: Int): RaceBase? = races[id]
+
+    fun getZhanRace(): ZhanRace = races.getValue(ZhanRace.RACE_ID) as ZhanRace
 
     // 获取物品的 Resource ID
     fun getResourceId(item: org.bukkit.inventory.ItemStack?): String? {

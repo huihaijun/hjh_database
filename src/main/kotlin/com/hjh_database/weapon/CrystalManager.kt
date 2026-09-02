@@ -52,6 +52,15 @@ class CrystalData(val id: String, sec: ConfigurationSection) : ActivatableEquipm
     val medicalOverflowZfMultiplier: Double = sec.getDouble("taolizhi_data.zf_multiplier", 1.5)
     val medicalOverflowStorageMultiplier: Double = sec.getDouble("taolizhi_data.storage_multiplier", 0.5)
 
+    // 镇岳沉锋状态机配置。保持默认值与旧版硬编码一致，便于以后直接改 crystals.yml。
+    val mountainMaxStacks: Int = sec.getInt("zhenyue_data.max_stacks", 10).coerceAtLeast(1)
+    val mountainInitialDurationMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.initial_duration", 3.0))
+    val mountainStackExtensionMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.stack_duration_extension", 1.5))
+    val mountainDropIntervalMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.stack_drop_interval", 2.0))
+        .coerceAtLeast(50L)
+    val mountainMeleeStackGain: Int = sec.getInt("zhenyue_data.melee_stack_gain", 1).coerceAtLeast(0)
+    val mountainShieldStackGain: Int = sec.getInt("zhenyue_data.shield_stack_gain", 2).coerceAtLeast(0)
+
     // 【核心改动】支持多槽位与多属性映射表
     val activations = mutableMapOf<String, ActivationConfig>()
     override val activationSpec: ActivationSpec
@@ -104,6 +113,9 @@ class CrystalData(val id: String, sec: ConfigurationSection) : ActivatableEquipm
         if (raw.isNullOrBlank()) return fallback
         return runCatching { DyeColor.valueOf(raw.trim().uppercase()) }.getOrDefault(fallback)
     }
+
+    private fun secondsToMillis(seconds: Double): Long =
+        (seconds.coerceAtLeast(0.0) * 1000.0).toLong()
 
     fun isActivated(playerData: PlayerData): Boolean {
         return activationSpec.isEligible(playerData)

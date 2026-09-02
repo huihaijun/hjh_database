@@ -15,13 +15,15 @@ import org.bukkit.metadata.FixedMetadataValue
  */
 object FormationMagicDamage {
     const val METADATA = "HJH_FORMATION_DAMAGE"
+    const val NO_KNOCKBACK_METADATA = "HJH_FORMATION_NO_KNOCKBACK"
     const val BASE_ARMOR_PENETRATION = 0.5
 
     fun deal(
         plugin: Hjh_database,
         attacker: Player,
         target: LivingEntity,
-        amount: Double
+        amount: Double,
+        suppressKnockback: Boolean = false
     ): Double {
         if (amount <= 0.0 || !target.isValid || target.isDead) return 0.0
 
@@ -30,12 +32,19 @@ object FormationMagicDamage {
         target.noDamageTicks = 0
         target.maximumNoDamageTicks = 0
         target.setMetadata(METADATA, FixedMetadataValue(plugin, amount))
+        if (suppressKnockback) {
+            target.setMetadata(NO_KNOCKBACK_METADATA, FixedMetadataValue(plugin, true))
+        }
         try {
             target.damage(amount, attacker)
         } finally {
             if (target.hasMetadata(METADATA)) {
                 target.removeMetadata(METADATA, plugin)
             }
+            if (suppressKnockback && target.hasMetadata(NO_KNOCKBACK_METADATA)) {
+                target.removeMetadata(NO_KNOCKBACK_METADATA, plugin)
+            }
+            // 阵法伤害自身永远不留下无敌帧，避免吞掉随后其他玩家的普攻或箭矢。
             target.noDamageTicks = 0
             target.maximumNoDamageTicks = previousMaximum
         }

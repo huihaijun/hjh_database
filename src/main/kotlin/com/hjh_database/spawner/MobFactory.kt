@@ -48,9 +48,9 @@ object MobFactory {
         if (entity is org.bukkit.entity.Piglin) {
             entity.setBaby(false)
         }
-        // ★★★ 【新增】强制史莱姆与岩浆怪默认生成最大尺寸(4) ★★★
+        // 史莱姆体型会重算原版最大生命，因此必须先定体型，再应用注册表生命值。
         if (entity is org.bukkit.entity.Slime) {
-            entity.size = 4
+            entity.size = (def.slimeSize ?: 4).coerceAtLeast(1)
         }
 
 
@@ -95,6 +95,7 @@ object MobFactory {
         // 3. Tags
         entity.addScoreboardTag("panling")
         entity.addScoreboardTag("monster")
+        def.scoreboardTags.forEach(entity::addScoreboardTag)
         entity.persistentDataContainer.set(KEY_MOB_ID, PersistentDataType.STRING, def.id)
 
         // === 【新增】Boss 技能挂载分配器 ===
@@ -216,10 +217,6 @@ object MobFactory {
         if (entity is org.bukkit.entity.Piglin) {
             entity.setBaby(false)
         }
-        if (entity is org.bukkit.entity.Slime) {
-            entity.size = 4
-        }
-
         entity.vehicle?.let { vehicle ->
             entity.leaveVehicle()
             removeEntityTree(vehicle)

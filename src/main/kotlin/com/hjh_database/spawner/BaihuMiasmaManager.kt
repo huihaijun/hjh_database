@@ -279,7 +279,10 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
         // 20%/40%/80% 三个阶段分别计时，避免绝瘴丹造成阈值反复横跳并重复扣血。
         penaltyTimes[index] = now
-        dealMagicDamage(player, damage)
+        // 战神族只免疫20%/40%/80%三个阶段的直接伤害，阶段异常与满值伤害照常生效。
+        if (!plugin.raceModule.getZhanRace().isRaceActive(player)) {
+            dealMagicDamage(player, damage)
+        }
         player.sendMessage(color(message))
     }
 

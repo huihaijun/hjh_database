@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadLocalRandom
 /**
  * 恶土之炎 技能实现
  * 效果：攻击概率使玩家进入 6s 燃烧，每秒造成 50% 已损生命值的真实伤害。
- * 灭火：入水/药水/下蹲8次。
+ * 灭火：入水/药水/下蹲4次；战神族所需次数和燃烧时间减半。
  */
 object DesertSouthSkill : Listener {
 
@@ -46,16 +46,25 @@ object DesertSouthSkill : Listener {
         // 如果玩家已经在状态中，不重复触发
         if (pdc.has(SNEAKS_KEY, PersistentDataType.INTEGER)) return
 
-        // 1. 设置原版着火 6秒 (120 ticks)
-        player.fireTicks = 120
+        val hasWarIntent = plugin.raceModule.getZhanRace().isRaceActive(player)
 
-        // 2. 写入持久化数据：剩余下蹲次数
-        pdc.set(SNEAKS_KEY, PersistentDataType.INTEGER, 4)
+        // 1. 设置原版着火时间：普通玩家6秒，战神族3秒
+        player.fireTicks = if (hasWarIntent) ZHAN_FIRE_TICKS else NORMAL_FIRE_TICKS
+
+        // 2. 写入持久化数据：普通玩家4次，战神族2次
+        pdc.set(
+            SNEAKS_KEY,
+            PersistentDataType.INTEGER,
+            if (hasWarIntent) ZHAN_SNEAK_COUNT else NORMAL_SNEAK_COUNT
+        )
 
         // 3. 提示
         player.sendMessage("§c你被焱砂之火点燃了……")
         player.playSound(player.location, Sound.ENTITY_BLAZE_SHOOT, 1f, 1f)
     }
+
+    fun isAffected(player: Player): Boolean =
+        player.persistentDataContainer.has(SNEAKS_KEY, PersistentDataType.INTEGER)
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onAffixMobDamagePlayer(event: EntityDamageByEntityEvent) {
@@ -141,4 +150,9 @@ object DesertSouthSkill : Listener {
             player.playSound(player.location, Sound.ITEM_ARMOR_EQUIP_LEATHER, 0.5f, 2.0f)
         }
     }
+
+    private const val NORMAL_FIRE_TICKS = 120
+    private const val ZHAN_FIRE_TICKS = 60
+    private const val NORMAL_SNEAK_COUNT = 4
+    private const val ZHAN_SNEAK_COUNT = 2
 }

@@ -2,6 +2,7 @@ package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.*
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
@@ -42,10 +43,29 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 只在有目标时造成伤害
         if (target != null) {
-            val baseDamage = data.zfStr
+            val baseDamage = data.zfStr * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
             val finalDamage = baseDamage * damagePercent
 
-            formationMagicDamage(plugin, player, target, finalDamage)
+            formationMagicDamage(plugin, player, target, finalDamage, FormationElement.FIRE)
+
+            if (level >= 3 && target.isValid && !target.isDead) {
+                val markDuration = safeConfig.getDouble("tier3.mark_duration", 5.0)
+                plugin.elementZfManager.tierEffects.applyFireMark(
+                    target,
+                    player,
+                    baseDamage,
+                    safeConfig.getDouble("tier3.explosion_radius", 3.0),
+                    safeConfig.getDouble("tier3.explosion_damage_percent", 1.0),
+                    (markDuration * 1000.0).toLong()
+                )
+            }
+
+            if (level >= 5) {
+                val sparkRadius = safeConfig.getDouble("tier5.spark_radius", 10.0)
+                val sparkCount = safeConfig.getInt("tier5.spark_count", 3).coerceAtLeast(0)
+                val sparkDamage = baseDamage * safeConfig.getDouble("tier5.spark_damage_percent", 1.25)
+                launchSparks(player, target, sparkRadius, sparkCount, sparkDamage)
+            }
 
             // 只有打中人才播放特效
             playBurnEffect(target)
@@ -133,5 +153,84 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 angle += 0.5
             }
         }.runTaskTimer(plugin, 0L, 1L)
+    }
+
+    private fun launchSparks(
+        caster: Player,
+        primaryTarget: LivingEntity,
+        radius: Double,
+        count: Int,
+        damage: Double
+    ) {
+        if (count <= 0) return
+        val origin = primaryTarget.location.clone().add(0.0, primaryTarget.height * 0.55, 0.0)
+        val radiusSquared = radius * radius
+        val selected = primaryTarget.world.getNearbyEntities(origin, radius, radius, radius).asSequence()
+            .filterIsInstance<LivingEntity>()
+            .filter { it.uniqueId != primaryTarget.uniqueId && ElementFormationTierEffects.isFormationMonster(it) }
+            .filter { it.location.distanceSquared(origin) <= radiusSquared }
+            .sortedBy { it.location.distanceSquared(origin) }
+            .take(count)
+            .toList()
+
+        for (index in 0 until count) {
+            val target = selected.getOrNull(index)
+            if (target == null) {
+                launchDissipatingSpark(origin, index, count)
+            } else {
+                launchTargetedSpark(caster, origin, target.uniqueId, damage)
+            }
+        }
+    }
+
+    private fun launchTargetedSpark(caster: Player, origin: Location, targetId: java.util.UUID, damage: Double) {
+        object : BukkitRunnable() {
+            var step = 0
+            var current = origin.clone()
+
+            override fun run() {
+                val target = Bukkit.getEntity(targetId) as? LivingEntity
+                if (target == null || !target.isValid || target.isDead || !caster.isOnline || caster.world != target.world) {
+                    current.world?.spawnParticle(Particle.SMOKE, current, 5, 0.12, 0.12, 0.12, 0.02)
+                    cancel()
+                    return
+                }
+
+                val end = target.location.add(0.0, target.height * 0.55, 0.0)
+                val offset = end.toVector().subtract(current.toVector())
+                if (offset.lengthSquared() <= 0.64 || step >= 14) {
+                    target.world.spawnParticle(Particle.FLAME, end, 12, 0.25, 0.35, 0.25, 0.035)
+                    target.world.playSound(end, Sound.ENTITY_BLAZE_SHOOT, 0.55f, 1.7f)
+                    formationMagicDamage(plugin, caster, target, damage, FormationElement.FIRE)
+                    cancel()
+                    return
+                }
+
+                current.add(offset.normalize().multiply(0.9))
+                target.world.spawnParticle(Particle.FLAME, current, 3, 0.06, 0.06, 0.06, 0.01)
+                target.world.spawnParticle(Particle.ELECTRIC_SPARK, current, 1, 0.03, 0.03, 0.03, 0.02)
+                step++
+            }
+        }.runTaskTimer(plugin, 2L, 1L)
+    }
+
+    private fun launchDissipatingSpark(origin: Location, index: Int, total: Int) {
+        val angle = (Math.PI * 2.0 / total.coerceAtLeast(1)) * index + Math.random() * 0.35
+        val direction = org.bukkit.util.Vector(cos(angle), 0.25, sin(angle)).normalize().multiply(0.35)
+        object : BukkitRunnable() {
+            var ticks = 0
+            val current = origin.clone()
+
+            override fun run() {
+                if (ticks >= 8) {
+                    current.world?.spawnParticle(Particle.SMOKE, current, 4, 0.1, 0.1, 0.1, 0.01)
+                    cancel()
+                    return
+                }
+                current.add(direction)
+                current.world?.spawnParticle(Particle.SMALL_FLAME, current, 2, 0.04, 0.04, 0.04, 0.0)
+                ticks++
+            }
+        }.runTaskTimer(plugin, 2L, 1L)
     }
 }

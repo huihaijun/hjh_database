@@ -2,6 +2,8 @@
 package com.hjh_database.accessory.skill.quiver
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.skill.core.AccessoryHudValueKind
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
 import com.hjh_database.data.PlayerData
 import com.hjh_database.weapon.CrystalData
@@ -16,6 +18,16 @@ abstract class BaseQuiverSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
     protected val arrowKey = NamespacedKey(plugin, "quiver_arrows")
 
     abstract fun onShootEffect(event: EntityShootBowEvent, player: Player, data: PlayerData)
+
+    override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState {
+        val arrows = item.itemMeta?.persistentDataContainer
+            ?.get(arrowKey, PersistentDataType.INTEGER) ?: 0
+        return super.getHudState(player, item, crystalData).copy(
+            valueKind = AccessoryHudValueKind.ARROWS,
+            currentValue = arrows.coerceAtLeast(0),
+            maxValue = crystalData.maxArrows.coerceAtLeast(0)
+        )
+    }
 
     override fun handleShiftClick(player: Player, quiverItem: ItemStack, isExtract: Boolean, crystalData: CrystalData): Boolean {
         val meta = quiverItem.itemMeta ?: return false

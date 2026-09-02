@@ -2,6 +2,7 @@
 package com.hjh_database.accessory.skill.warlock
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.NamespacedKey
@@ -48,6 +49,9 @@ abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
      * 【新增】获取触发回流的概率 (0.0 到 1.0，例如 0.35 代表 35%)
      */
     abstract fun getTriggerProbability(crystalData: CrystalData): Double
+
+    override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
+        super.getHudState(player, item, crystalData).copy(refluxEnabled = isRefluxActive(player))
 
 
     // ==========================================

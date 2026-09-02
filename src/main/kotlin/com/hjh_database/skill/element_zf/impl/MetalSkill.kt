@@ -2,6 +2,7 @@ package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.*
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
@@ -24,6 +25,9 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         val maxTargets = safeConfig.getInt("$path.max_targets", 1)
         val effectRadius = safeConfig.getDouble("$path.effect_radius", 2.5 + (level * 0.5))
+        // 五级星云只读取释放瞬间的水平朝向，之后玩家转身不会改变移动方向。
+        val castDirection = player.eyeLocation.direction.clone().apply { y = 0.0 }
+        if (castDirection.lengthSquared() > 0.0001) castDirection.normalize()
 
         // ！！！ 消耗物品逻辑已交由父类处理，此处删除 ！！！
 
@@ -59,7 +63,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         val nearby = cloudCenter.world!!.getNearbyEntities(cloudCenter, effectRadius, effectRadius, effectRadius)
 
         // Kotlin 风格的流式处理
-        val victims = nearby.asSequence()
+        val areaTargets = nearby.asSequence()
             .filterIsInstance<LivingEntity>()
             .filter { it !== player } // 引用比较
             .filter { it.scoreboardTags.contains("panling") && it.scoreboardTags.contains("monster") }
@@ -67,19 +71,46 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             .filter { it.location.y <= cloudCenter.y }
             // 半球限制：距离必须在半径范围内
             .filter { it.location.distance(cloudCenter) <= effectRadius }
+            .toList()
+
+        val victims = areaTargets.asSequence()
             .sortedBy { it.location.distance(player.location) }
             .take(maxTargets)
             .toList()
 
         // 造成伤害
-        val damage = data.zfStr * damagePercent
+        val damage = data.zfStr * damagePercent *
+            plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
 
         for (victim in victims) {
-            formationMagicDamage(plugin, player, victim, damage)
+            formationMagicDamage(plugin, player, victim, damage, FormationElement.METAL)
+        }
+
+        if (level >= 3) {
+            val durationMillis = (safeConfig.getDouble("tier3.offense_reduction_duration", 5.0) * 1000.0).toLong()
+            val reduction = safeConfig.getDouble("tier3.offense_reduction", 0.20)
+            for (target in areaTargets) {
+                plugin.elementZfManager.tierEffects.applyMetalWeakness(target, reduction, durationMillis)
+            }
         }
 
         // 6. 播放星云爆炸特效
         playEffects(cloudCenter, victims, effectRadius)
+
+        if (level >= 5 && castDirection.lengthSquared() > 0.0001) {
+            val moveDuration = safeConfig.getDouble("tier5.move_duration", 3.5)
+            val moveSpeed = safeConfig.getDouble("tier5.move_speed", 2.4)
+            val damageRatio = safeConfig.getDouble("tier5.damage_ratio", 0.5)
+            startMovingCloud(
+                player,
+                cloudCenter.clone(),
+                castDirection,
+                effectRadius,
+                damage * damageRatio,
+                moveDuration,
+                moveSpeed
+            )
+        }
 
         return true
     }
@@ -218,5 +249,59 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 step++
             }
         }.runTaskTimer(plugin, 0L, 1L)
+    }
+
+    private fun startMovingCloud(
+        caster: Player,
+        initialCenter: Location,
+        fixedDirection: Vector,
+        radius: Double,
+        damage: Double,
+        durationSeconds: Double,
+        blocksPerSecond: Double
+    ) {
+        val hitTargets = HashSet<java.util.UUID>()
+        val maxPulses = (durationSeconds.coerceAtLeast(0.0) * 4.0).toInt().coerceAtLeast(1)
+        val step = fixedDirection.clone().multiply(blocksPerSecond.coerceAtLeast(0.0) / 4.0)
+        val radiusSquared = radius * radius
+
+        object : BukkitRunnable() {
+            var pulses = 0
+            val center = initialCenter.clone()
+
+            override fun run() {
+                if (pulses >= maxPulses || !caster.isOnline || caster.world != center.world) {
+                    cancel()
+                    return
+                }
+
+                center.add(step)
+                val world = center.world ?: run {
+                    cancel()
+                    return
+                }
+                world.spawnParticle(Particle.CLOUD, center, 16, radius * 0.55, 0.3, radius * 0.55, 0.015)
+                world.spawnParticle(
+                    Particle.DUST,
+                    center,
+                    10,
+                    radius * 0.45,
+                    0.25,
+                    radius * 0.45,
+                    0.0,
+                    Particle.DustOptions(Color.fromRGB(245, 205, 85), 0.75f)
+                )
+
+                for (entity in world.getNearbyEntities(center, radius, radius, radius)) {
+                    val target = entity as? LivingEntity ?: continue
+                    if (!ElementFormationTierEffects.isFormationMonster(target)) continue
+                    if (target.location.distanceSquared(center) > radiusSquared) continue
+                    if (!hitTargets.add(target.uniqueId)) continue
+                    formationMagicDamage(plugin, caster, target, damage, FormationElement.METAL)
+                    target.world.spawnParticle(Particle.WAX_OFF, target.location.add(0.0, target.height * 0.55, 0.0), 12, 0.25, 0.35, 0.25, 0.02)
+                }
+                pulses++
+            }
+        }.runTaskTimer(plugin, 5L, 5L)
     }
 }

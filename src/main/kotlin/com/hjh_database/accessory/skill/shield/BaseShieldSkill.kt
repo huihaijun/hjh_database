@@ -2,6 +2,7 @@
 package com.hjh_database.accessory.skill.shield
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.Material
@@ -13,11 +14,18 @@ abstract class BaseShieldSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
 
     companion object {
         // 全局共享的盾牌技能CD控制
-        private val sharedCooldowns = HashMap<UUID, Long>()
-        fun getCooldown(player: Player): Long = sharedCooldowns[player.uniqueId] ?: 0L
+        private data class ShieldCooldown(val endMillis: Long, val durationMillis: Long)
+
+        private val sharedCooldowns = HashMap<UUID, ShieldCooldown>()
+        fun getCooldown(player: Player): Long = sharedCooldowns[player.uniqueId]?.endMillis ?: 0L
         fun setCooldown(player: Player, cooldownMillis: Long) {
-            sharedCooldowns[player.uniqueId] = System.currentTimeMillis() + cooldownMillis
+            sharedCooldowns[player.uniqueId] = ShieldCooldown(
+                System.currentTimeMillis() + cooldownMillis,
+                cooldownMillis
+            )
         }
+
+        private fun getCooldownState(player: Player): ShieldCooldown? = sharedCooldowns[player.uniqueId]
     }
 
     /**
@@ -29,6 +37,24 @@ abstract class BaseShieldSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin
      * 子类需实现：当成功抵挡伤害时的特有效果 (例如：发送不同消息、给予特殊Buff、或者反弹伤害等)
      */
     abstract fun onBlockSuccess(player: Player, event: EntityDamageByEntityEvent, crystalData: CrystalData)
+
+    override fun getHudState(player: Player, item: org.bukkit.inventory.ItemStack, crystalData: CrystalData): AccessorySkillHudState {
+        val cooldown = getCooldownState(player)
+        return super.getHudState(player, item, crystalData).copy(
+            cooldownEndMillis = cooldown?.endMillis ?: 0L,
+            cooldownDurationMillis = cooldown?.durationMillis ?: getBlockCooldownMillis(crystalData)
+        )
+    }
+
+    override fun cleanupHudState(player: Player) {
+        super.cleanupHudState(player)
+        sharedCooldowns.remove(player.uniqueId)
+    }
+
+    override fun shutdownHudState() {
+        super.shutdownHudState()
+        sharedCooldowns.clear()
+    }
 
     /**
      * 通用的核心举盾抵挡业务逻辑（已被抽象封装）

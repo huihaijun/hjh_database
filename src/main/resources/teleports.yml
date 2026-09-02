@@ -445,3 +445,14 @@ points:
         id: "main_north_4"
         message: "&7这个门锁似乎没有对你的请求回应（请先完成前置任务再来吧）"
 
+  港口-蓬莱:
+    world: "world"
+    x: 417.50
+    y: 35.00
+    z: -635.50
+    yaw: -177.69
+    pitch: 0.60
+    actions:
+      # 按种族检查 main_shen/xian/ren/zhan/yao_10，并检查四圣兽试炼记录。
+      custom_action: "ENTER_PENGLAI"
+

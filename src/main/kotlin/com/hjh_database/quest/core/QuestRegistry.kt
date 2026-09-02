@@ -14,6 +14,9 @@ import com.hjh_database.quest.impl.main.ren.Ren_06
 import com.hjh_database.quest.impl.main.ren.Ren_07
 import com.hjh_database.quest.impl.main.ren.Ren_08
 import com.hjh_database.quest.impl.main.ren.Ren_09
+import com.hjh_database.quest.impl.main.ren.Ren_10
+import com.hjh_database.quest.impl.main.ren.Ren_11
+import com.hjh_database.quest.impl.main.ren.Ren_12
 import com.hjh_database.quest.impl.main.shen.Shen_01
 import com.hjh_database.quest.impl.main.shen.Shen_02
 import com.hjh_database.quest.impl.main.shen.Shen_03
@@ -81,6 +84,9 @@ object QuestRegistry {
         manager.register(Ren_07())
         manager.register(Ren_08())
         manager.register(Ren_09())
+        manager.register(Ren_10())
+        manager.register(Ren_11())
+        manager.register(Ren_12())
 
         // === 南方主线任务 ===
         manager.register(South_01())

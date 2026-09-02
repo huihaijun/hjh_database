@@ -7,7 +7,6 @@ import com.hjh_database.spawner.impl.NorthWetnessSkill
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
@@ -21,6 +20,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class ElementZfManager(private val plugin: Hjh_database) {
+    val tierEffects = ElementFormationTierEffects(plugin)
     private var config: FileConfiguration? = null
 
     // 存储 元素名 -> 技能逻辑 的映射
@@ -29,7 +29,6 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
     // 系统级冷却记录表: PlayerUUID -> (ElementType -> CooldownEndTime)
     private val internalCooldowns: MutableMap<UUID, MutableMap<String, Long>> = ConcurrentHashMap()
-    private val formationLingliGains: MutableMap<UUID, Double> = HashMap()
 
     // 【新增】定义不同元素的冷却组 Key
     private val groupKeys: Map<String, NamespacedKey> = mapOf(
@@ -133,16 +132,26 @@ class ElementZfManager(private val plugin: Hjh_database) {
             return
         }
 
-        // 3. 执行技能逻辑；阵法自身回灵与回流饰品的灵力消耗分开记录。
-        formationLingliGains.remove(player.uniqueId)
-        val success = skill.cast(player, level, config!!.getConfigurationSection("skills.$type"))
+        // 3. 执行技能逻辑。卦印先生成只读计划，技能成功后才提交状态。
+        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player, type)
+        val success = try {
+            skill.cast(player, level, config!!.getConfigurationSection("skills.$type"))
+        } catch (throwable: Throwable) {
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
+            throw throwable
+        }
+
+        if (!success) {
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
+            return
+        }
 
         if (success) {
             // 4. 计算冷却时间
             val baseCd = config!!.getDouble("skills.$type.levels.$level.cooldown", 5.0)
             var reduce = data.coolReduce
             if (reduce > 0.5) reduce = 0.5
-            val finalCd = baseCd * (1.0 - reduce)
+            val finalCd = baseCd * (1.0 - reduce) * (accessoryPlan?.cooldownMultiplier ?: 1.0)
 
             // 【核心修改】应用两种冷却
             // A. 逻辑冷却 (插件内部判断用)
@@ -154,6 +163,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
             // 水元素 Revelation/启示 触发冷却返还
             plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, true)
             plugin.accessorySkillManager.onElementFormationCast(player, data)
 
             // 5. 发送提示消息
@@ -163,26 +173,8 @@ class ElementZfManager(private val plugin: Hjh_database) {
                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg.replace("%player%", player.name)))
                 }
             }
-            // ==========================================
-            // 1. 构建带颜色代码的字符串 (使用 Kotlin 字符串模板更优雅)
-            val lingliGain = formationLingliGains.remove(player.uniqueId) ?: 0.0
-            val gainText = if (lingliGain > 0.0) " &a(+${formatLingliChange(lingliGain)})" else ""
-            val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)}$gainText &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
-            // 2. 使用 LegacyComponentSerializer 将 & 符号解析为真正的颜色组件
-            val component = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage)
-            // 3. 直接发送给玩家
-            player.sendActionBar(component)
-        } else {
-            formationLingliGains.remove(player.uniqueId)
         }
     }
-
-    internal fun recordFormationLingliGain(playerId: UUID, amount: Double) {
-        formationLingliGains[playerId] = amount.coerceAtLeast(0.0)
-    }
-
-    private fun formatLingliChange(value: Double): String =
-        if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.1f", value)
 
     /**
      * 【新功能】设置视觉冷却组
@@ -264,6 +256,8 @@ class ElementZfManager(private val plugin: Hjh_database) {
         if (internalCooldowns.containsKey(player.uniqueId)) {
             internalCooldowns[player.uniqueId]!!.remove(type)
         }
+        // 逻辑冷却和客户端元素组动画必须同步清除，否则玩家会看到已经可用的阵法仍在转圈。
+        setVisualCooldown(player, type.uppercase(), 0.0)
     }
 
     // 暴露 element_zf.yml 配置文件
@@ -303,10 +297,12 @@ class ElementZfManager(private val plugin: Hjh_database) {
             return
         }
 
-        // 2. 检查并消耗灵力
+        // 2. 先读取卦印计划；同元素必定回流时，本次元素与灵力都免费。
+        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player, type)
         val manaCost = 25.0
-        if (data.lingli < manaCost) {
+        if (accessoryPlan?.freeResourceCost != true && data.lingli < manaCost) {
             player.sendMessage(ChatColor.RED.toString() + "您的灵力不足，需要 ${manaCost.toInt()} 点灵力")
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
             return
         }
 
@@ -315,33 +311,43 @@ class ElementZfManager(private val plugin: Hjh_database) {
                 setVisualCooldown(player, type, 5.0)
             }
         ) {
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
             return
         }
 
         // 3. 执行技能逻辑
-        if (!skill.cast(player, data)) return
+        val success = try {
+            skill.cast(player, data)
+        } catch (throwable: Throwable) {
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
+            throw throwable
+        }
+        if (!success) {
+            plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
+            return
+        }
 
         // 4. 扣除物品与灵力
-        consumeOneElementFromMainHand(player)
-        data.lingli -= manaCost
-        plugin.databaseManager.queuePlayerSave(data)
+        if (accessoryPlan?.freeResourceCost != true) {
+            consumeOneElementFromMainHand(player)
+            data.lingli -= manaCost
+            plugin.databaseManager.queuePlayerSave(data)
+        }
 
         // 5. 应用冷却
         val baseCd = getEnhancedCooldown(type)
         var reduce = data.coolReduce
         if (reduce > 0.5) reduce = 0.5
-        val finalCd = baseCd * (1.0 - reduce)
+        val finalCd = baseCd * (1.0 - reduce) * (accessoryPlan?.cooldownMultiplier ?: 1.0)
 
         setCooldown(player, type, finalCd)
         setVisualCooldown(player, type, finalCd)
 
         // 水元素 Revelation/启示 触发冷却返还
         plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
+        plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, true)
         plugin.accessorySkillManager.onElementFormationCast(player, data)
 
-        // 6. 显示最新灵力
-        val rawMessage = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
-        player.sendActionBar(LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage))
     }
 
     private fun getEnhancedSkillName(type: String): String {
@@ -366,6 +372,10 @@ class ElementZfManager(private val plugin: Hjh_database) {
             else -> 20.0
         }
         return config?.getDouble("skills.$normalizedType.enhanced_cooldown", fallback) ?: fallback
+    }
+
+    fun shutdown() {
+        tierEffects.shutdown()
     }
 
     private fun consumeOneElementFromMainHand(player: Player) {

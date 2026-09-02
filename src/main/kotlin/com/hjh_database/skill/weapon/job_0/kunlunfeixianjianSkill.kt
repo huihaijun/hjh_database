@@ -56,7 +56,8 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         val attackHits: Int,
         val retargetRadius: Double,
         val finishHealPerSword: Double,
-        val finishHealCap: Double
+        val finishHealCap: Double,
+        val finishCooldownReductionPerSword: Double
     )
 
     private data class AttackSwordState(
@@ -130,7 +131,10 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
             attackHits = attackHits,
             retargetRadius = config.getDouble("retarget_radius", 10.0).coerceAtLeast(1.0),
             finishHealPerSword = config.getDouble("finish_heal_amount", 8.0).coerceAtLeast(0.0),
-            finishHealCap = config.getDouble("finish_heal_cap", 24.0).coerceAtLeast(0.0)
+            finishHealCap = config.getDouble("finish_heal_cap", 24.0).coerceAtLeast(0.0),
+            finishCooldownReductionPerSword = config
+                .getDouble("finish_cooldown_reduction_per_sword", 1.0)
+                .coerceAtLeast(0.0)
         )
         reserveStates[player.uniqueId] = state
         updateReserveDisplays(player, state)
@@ -391,6 +395,16 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         if (healOwner && player != null && player.isOnline && !player.isDead) {
             val healAmount = min(state.finishHealCap, remaining * state.finishHealPerSword)
             healPlayer(player, healAmount)
+        }
+
+        if (remaining > 0 && player != null && player.isOnline && state.finishCooldownReductionPerSword > 0.0) {
+            val reduction = remaining * state.finishCooldownReductionPerSword
+            // 延迟到下一 tick：若这是再次释放导致旧飞剑消失，新的15秒冷却会先由管理器写入，
+            // 随后再正确减去未出鞘飞剑对应的秒数，并同步原版物品冷却动画。
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                if (!player.isOnline) return@Runnable
+                mainPlugin.weaponSkillManager.reduceCooldown(player, reduction, Material.DIAMOND_SWORD)
+            })
         }
     }
 

@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.element_zf.impl.ElementFormationTierEffects
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
@@ -186,7 +187,15 @@ class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEn
                             // 【修改】保证爆发的伤害也不会波及到创造/旁观的管理员
                             if (p.isDead || p.gameMode == org.bukkit.GameMode.SPECTATOR || p.gameMode == org.bukkit.GameMode.CREATIVE) continue
 
-                            p.damage(10.0, boss)
+                            p.setMetadata(
+                                ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
+                                org.bukkit.metadata.FixedMetadataValue(plugin, true)
+                            )
+                            try {
+                                p.damage(10.0, boss)
+                            } finally {
+                                p.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
+                            }
                             p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 20, 127))
                             p.sendMessage("§4你被神木守卫的藤蔓禁锢了！")
                         }

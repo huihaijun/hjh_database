@@ -2,6 +2,7 @@ package com.hjh_database.skill.element_zf.impl
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
@@ -9,8 +10,7 @@ import org.bukkit.Sound
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.potion.PotionEffect
-import org.bukkit.potion.PotionEffectType
+import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.Vector
 import kotlin.math.min
 
@@ -27,6 +27,8 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         val slowDurationSeconds = safeConfig.getDouble("$path.slow_duration", 2.0)
         val slowAmplifier = safeConfig.getInt("$path.slow_amplifier", 1)
+        val castOrigin = player.eyeLocation.clone().add(0.0, -0.2, 0.0)
+        val castDirection = castOrigin.direction.normalize()
 
         // ！！！ 消耗物品逻辑已交由父类处理，此处彻底删除 ！！！
 
@@ -48,21 +50,43 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 4. 造成伤害与控制
         // 如果有目标，才循环造成伤害；没有目标就跳过，但不打断流程
         if (targets.isNotEmpty()) {
-            val baseDamage = data.zfStr
+            val baseDamage = data.zfStr * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
             val finalDamage = baseDamage * damagePercent
 
             for (target in targets) {
-                formationMagicDamage(plugin, player, target, finalDamage)
+                formationMagicDamage(plugin, player, target, finalDamage, FormationElement.WATER)
 
-                // 减速
-                target.addPotionEffect(
-                    PotionEffect(
-                        PotionEffectType.SLOWNESS,
-                        (slowDurationSeconds * 20).toInt(),
-                        slowAmplifier
-                    )
+                // 保留原有每级15%的减速幅度，但使用阵法独立属性标签，不再覆盖其他药水减速。
+                plugin.elementZfManager.tierEffects.applyWaterSlow(
+                    target,
+                    -0.15 * (slowAmplifier + 1),
+                    (slowDurationSeconds * 1000.0).toLong()
                 )
+
+                if (level >= 3) {
+                    val coldDuration = safeConfig.getDouble("tier3.cold_duration", 5.0)
+                    val attackReduction = safeConfig.getDouble("tier3.attack_frequency_reduction", 0.30)
+                    plugin.elementZfManager.tierEffects.applyCold(
+                        target,
+                        attackReduction,
+                        (coldDuration * 1000.0).toLong()
+                    )
+                }
             }
+
+            if (level >= 5) {
+                startFrozenPath(player, castOrigin, castDirection, range, finalDamage, safeConfig)
+            }
+        } else if (level >= 5) {
+            // 五级即使空放也会在释放瞬间的固定路径上留下冰径。
+            startFrozenPath(
+                player,
+                castOrigin,
+                castDirection,
+                range,
+                data.zfStr * damagePercent * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player),
+                safeConfig
+            )
         }
 
         // 5. 提示与特效 (空放也会播放扇形特效)
@@ -148,5 +172,87 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 音效
         world.playSound(start, Sound.BLOCK_GLASS_BREAK, 1.0f, 0.5f) // 碎裂声
         world.playSound(start, Sound.ITEM_TRIDENT_RIPTIDE_2, 0.6f, 1.8f) // 呼啸声（高音调模拟寒风）
+    }
+
+    private fun startFrozenPath(
+        caster: Player,
+        origin: Location,
+        direction: Vector,
+        range: Double,
+        originalDamage: Double,
+        config: ConfigurationSection
+    ) {
+        val duration = config.getDouble("tier5.path_duration", 5.0)
+        val pulseInterval = config.getDouble("tier5.path_interval", 0.5).coerceAtLeast(0.05)
+        val damageRatio = config.getDouble("tier5.path_damage_ratio", 0.10)
+        val slowAmount = -config.getDouble("tier5.path_slow_percent", 0.10).coerceIn(0.0, 1.0)
+        val totalPulses = (duration / pulseInterval).toInt().coerceAtLeast(1)
+        val intervalTicks = (pulseInterval * 20.0).toLong().coerceAtLeast(1L)
+        val radiusSquared = range * range
+
+        drawFrozenPath(origin, direction, range)
+        object : BukkitRunnable() {
+            var pulses = 0
+
+            override fun run() {
+                if (pulses >= totalPulses || !caster.isOnline || caster.world != origin.world) {
+                    cancel()
+                    return
+                }
+                val world = origin.world ?: run {
+                    cancel()
+                    return
+                }
+
+                for (entity in world.getNearbyEntities(origin, range, range, range)) {
+                    val target = entity as? LivingEntity ?: continue
+                    if (!ElementFormationTierEffects.isFormationMonster(target)) continue
+                    val targetCenter = target.location.add(0.0, target.height * 0.45, 0.0)
+                    val offset = targetCenter.toVector().subtract(origin.toVector())
+                    if (offset.lengthSquared() <= 0.0001 || offset.lengthSquared() > radiusSquared) continue
+                    if (direction.dot(offset.normalize()) <= 0.5) continue
+
+                    formationMagicDamage(
+                        plugin,
+                        caster,
+                        target,
+                        originalDamage * damageRatio,
+                        FormationElement.WATER,
+                        suppressKnockback = true
+                    )
+                    plugin.elementZfManager.tierEffects.applyFrozenPathSlow(
+                        target,
+                        slowAmount,
+                        intervalTicks * 50L + 300L
+                    )
+                }
+
+                drawFrozenPath(origin, direction, range)
+                pulses++
+            }
+        }.runTaskTimer(plugin, intervalTicks, intervalTicks)
+    }
+
+    private fun drawFrozenPath(origin: Location, direction: Vector, range: Double) {
+        val world = origin.world ?: return
+        var distance = 0.5
+        while (distance <= range) {
+            val center = origin.clone().add(direction.clone().multiply(distance))
+            val spread = distance * 0.20
+            world.spawnParticle(Particle.SNOWFLAKE, center, 2, spread, 0.12 + spread * 0.25, spread, 0.005)
+            if ((distance * 2.0).toInt() % 3 == 0) {
+                world.spawnParticle(
+                    Particle.DUST,
+                    center,
+                    1,
+                    spread,
+                    0.08,
+                    spread,
+                    0.0,
+                    Particle.DustOptions(Color.fromRGB(105, 220, 255), 0.7f)
+                )
+            }
+            distance += 0.75
+        }
     }
 }

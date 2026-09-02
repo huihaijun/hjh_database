@@ -23,6 +23,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityKnockbackEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.ProjectileHitEvent
@@ -35,6 +36,15 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.min
 
 class CombatListener(private val plugin: Hjh_database) : Listener {
+
+    /** 只取消被明确标记的单次阵法击退，不恢复速度，因此不会覆盖同刻其他来源的合法击退。 */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onFormationNoKnockback(event: EntityKnockbackEvent) {
+        val markedByThisPlugin = event.entity
+            .getMetadata(FormationMagicDamage.NO_KNOCKBACK_METADATA)
+            .any { it.owningPlugin == plugin && it.asBoolean() }
+        if (markedByThisPlugin) event.isCancelled = true
+    }
 
     // --- 预缓存所有的 NamespacedKey，避免高频事件中重复创建对象 ---
     private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
@@ -300,7 +310,6 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             // 防御与伤害减免计算
             val isMagic = MAGIC_CAUSES.contains(cause)
             val isTrueDamage = TRUE_DAMAGE_CAUSES.contains(cause)
-
             if (!isMagic && !isTrueDamage) {
                 var armor = 0.0
                 if (entity is Player) {
@@ -308,28 +317,23 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                 } else {
                     armor = entity.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
                 }
-
                 if ((isMagicDamage && !isArmoredMagic && !isFormationDamage) || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
                     armor = 0.0
                     if (ignoreArmor && entity is Player) {
                         entity.sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§d§l警告：受到破甲伤害！"))
                     }
                 }
-
                 val armorEvent = ElementCrystalArmorCalculationEvent(entity, armor)
                 plugin.server.pluginManager.callEvent(armorEvent)
                 armor = armorEvent.armor
-
                 if (physicalArmorPenetration > 0.0) {
                     armor *= 1.0 - physicalArmorPenetration
                 }
-
                 if (isFormationDamage) {
                     val casterData = (damageSource as? Player)?.let(plugin.playerManager::getPlayerData)
                     val penetration = FormationMagicDamage.armorPenetration(casterData)
                     armor *= 1.0 - penetration
                 }
-
                 if (armor < 0) armor = 0.0
                 val multiplier = 50.0 / (50.0 + armor)
                 damage *= multiplier
@@ -465,16 +469,6 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
         spiritSiphonCooldowns[player.uniqueId] = now + SPIRIT_SIPHON_COOLDOWN_MILLIS
         plugin.databaseManager.queuePlayerSave(data)
-        val restoreDisplay = if (actualRestore % 1.0 == 0.0) {
-            actualRestore.toInt().toString()
-        } else {
-            String.format("%.1f", actualRestore)
-        }
-        val message = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &a(+$restoreDisplay) &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
-        player.sendActionBar(
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
-                .deserialize(message)
-        )
     }
 
     @EventHandler
@@ -496,12 +490,14 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
 
                 // === 读取自定义怪物的独立经验 (运用 Kotlin let 防空特性优化) ===
                 val pdc = entity.persistentDataContainer
-                val expAmount = pdc.get(mobIdKey, PersistentDataType.STRING)?.let { mobId ->
+                val baseExpAmount = pdc.get(mobIdKey, PersistentDataType.STRING)?.let { mobId ->
                     MobRegistry.get(mobId)?.exp
                 } ?: plugin.playerManager.getMobExp() // 默认兜底兼容
+                val expAmount = plugin.raceModule.getZhanRace().applyMonsterExpBonus(killer, baseExpAmount)
 
                 plugin.playerManager.giveExp(killer, expAmount)
-                shareExpToNearbyMedicalPlayers(killer, expAmount)
+                // 医术协助经验仍按怪物基础经验计算，不继承击杀者的种族加成。
+                shareExpToNearbyMedicalPlayers(killer, baseExpAmount)
                 killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e+ $expAmount 经验"))
             }
         }

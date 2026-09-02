@@ -24,7 +24,8 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 1. 直接读取配置，不再需要判断路径是否存在
         val range = safeConfig.getDouble("$path.range", 10.0)
         val radius = safeConfig.getDouble("$path.radius", 5.0)
-        val duration = safeConfig.getDouble("$path.duration", 5.0)
+        val duration = safeConfig.getDouble("$path.duration", 5.0) *
+            plugin.accessorySkillManager.getCurrentFormationDurationMultiplier(player)
         val strength = safeConfig.getDouble("$path.pull_strength", 0.08)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
 
@@ -57,6 +58,9 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
             override fun run() {
                 if (ticks >= maxTicks) {
+                    if (level >= 5) {
+                        collapseFormation(player, center, radius, safeConfig)
+                    }
                     this.cancel()
                     return
                 }
@@ -81,6 +85,13 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
                             if (entity.location.distance(center) > radius) continue
 
+                            if (level >= 3) {
+                                // 每秒刷新一次，宽限略大于1秒；阵法结束或目标离圈后会自然恢复。
+                                val refreshMillis = (safeConfig.getDouble("tier3.armor_refresh_grace", 1.1) * 1000.0).toLong()
+                                val reduction = safeConfig.getDouble("tier3.armor_reduction", 0.20)
+                                plugin.elementZfManager.tierEffects.applyEarthArmorBreak(entity, reduction, refreshMillis)
+                            }
+
                             val dir = center.toVector().subtract(entity.location.toVector())
                             dir.setY(0.0)
 
@@ -102,6 +113,38 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         }.runTaskTimer(plugin, 0L, 1L)
 
         return true
+    }
+
+    private fun collapseFormation(
+        caster: Player,
+        center: Location,
+        radius: Double,
+        config: ConfigurationSection
+    ) {
+        val world = center.world ?: return
+        val rootMillis = (config.getDouble("tier5.root_duration", 1.5) * 1000.0).toLong()
+        val radiusSquared = radius * radius
+
+        world.spawnParticle(
+            Particle.BLOCK,
+            center,
+            42,
+            radius * 0.55,
+            0.35,
+            radius * 0.55,
+            0.05,
+            Material.ROOTED_DIRT.createBlockData()
+        )
+        world.spawnParticle(Particle.GUST, center.clone().add(0.0, 0.3, 0.0), 2, 0.3, 0.1, 0.3, 0.0)
+        world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.75f, 0.55f)
+
+        for (entity in world.getNearbyEntities(center, radius, radius, radius)) {
+            val target = entity as? LivingEntity ?: continue
+            if (target === caster || !ElementFormationTierEffects.isFormationMonster(target)) continue
+            if (target.location.distanceSquared(center) > radiusSquared) continue
+            // 管理器内部会单独排除 instance_boss，其他裂地效果仍可作用于BOSS。
+            plugin.elementZfManager.tierEffects.applyRoot(target, rootMillis)
+        }
     }
 
     // ============================================

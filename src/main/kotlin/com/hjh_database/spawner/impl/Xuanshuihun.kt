@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.combat.MonsterDamageClassification
 import org.bukkit.Color
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -85,7 +86,10 @@ class Xuanshuihun(
                     ?: return
 
                 target.noDamageTicks = 0
-                target.damage(1.0, boss)
+                // 插件补足攻击频率，但语义仍是玄水魂的普通近战攻击，允许盾牌抵挡。
+                MonsterDamageClassification.withNormalAttack(plugin, target) {
+                    target.damage(1.0, boss)
+                }
                 boss.swingMainHand()
             }
         }.runTaskTimer(plugin, BONUS_MELEE_INTERVAL_TICKS, BONUS_MELEE_INTERVAL_TICKS)

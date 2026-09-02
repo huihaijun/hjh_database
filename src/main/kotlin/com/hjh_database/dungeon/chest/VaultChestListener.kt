@@ -18,21 +18,31 @@ import org.bukkit.event.entity.ItemMergeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.scheduler.BukkitRunnable
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.max
+import kotlin.math.min
 
 class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
     private val ownerKey = NamespacedKey(plugin, "chest_owner")
     private val expiresAtKey = NamespacedKey(plugin, "chest_reward_expires_at")
+    private val autoCollectAtKey = NamespacedKey(plugin, "chest_reward_auto_collect_at")
     private val dungeonKey = NamespacedKey(plugin, "vault_dungeon_id")
     private val resourceIdKey = NamespacedKey(plugin, "resource_id") // 对应 ResourceManager 里的 keyId
+    private val scheduledAutoCollects = ConcurrentHashMap.newKeySet<UUID>()
 
     init {
         // 插件重载后，为当前已加载区块中尚未消失的旧奖励恢复清理任务。
         plugin.server.scheduler.runTask(plugin, Runnable {
             plugin.server.worlds.forEach { world ->
                 world.loadedChunks.forEach { chunk ->
-                    chunk.entities.filterIsInstance<Item>().forEach(::scheduleRewardCleanup)
+                    chunk.entities.filterIsInstance<Item>().forEach { item ->
+                        scheduleRewardCleanup(item)
+                        scheduleRewardAutoCollect(item)
+                    }
                 }
             }
         })
@@ -180,7 +190,13 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
                 PersistentDataType.LONG,
                 System.currentTimeMillis() + REWARD_LIFETIME_MILLIS
             )
+            itemEntity.persistentDataContainer.set(
+                autoCollectAtKey,
+                PersistentDataType.LONG,
+                System.currentTimeMillis() + AUTO_COLLECT_DELAY_MILLIS
+            )
             scheduleRewardCleanup(itemEntity)
+            scheduleRewardAutoCollect(itemEntity)
         }
 
         // 3. 【新增】给玩家发送个人开箱提示
@@ -241,9 +257,142 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
         }, delayTicks)
     }
 
+    /**
+     * 金宝箱奖励生成2秒后仍未被拾取时，自动飞向原开箱人并进入背包。
+     * 实体 UUID 去重可避免区块加载、插件重载等路径重复创建回收任务。
+     */
+    private fun scheduleRewardAutoCollect(item: Item, retryDelayTicks: Long? = null) {
+        val ownerUuid = readOwnerUuid(item) ?: return
+        val collectAt = item.persistentDataContainer.get(autoCollectAtKey, PersistentDataType.LONG)
+            ?: return // 没有此字段的旧奖励保持旧版行为，避免重载后突然追踪玩家。
+        if (!scheduledAutoCollects.add(item.uniqueId)) return
+
+        val delayTicks = retryDelayTicks ?: run {
+            val remainingMillis = (collectAt - System.currentTimeMillis()).coerceAtLeast(0L)
+            ((remainingMillis + MILLIS_PER_TICK - 1L) / MILLIS_PER_TICK).coerceAtLeast(1L)
+        }
+
+        plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            if (!item.isValid || item.isDead || !item.persistentDataContainer.has(ownerKey, PersistentDataType.STRING)) {
+                scheduledAutoCollects.remove(item.uniqueId)
+                return@Runnable
+            }
+
+            val expiresAt = item.persistentDataContainer.get(expiresAtKey, PersistentDataType.LONG)
+            if (expiresAt != null && System.currentTimeMillis() >= expiresAt) {
+                scheduledAutoCollects.remove(item.uniqueId)
+                return@Runnable
+            }
+
+            val owner = plugin.server.getPlayer(ownerUuid)
+            if (owner == null || !owner.isOnline || owner.isDead) {
+                // 玩家暂时不可接收时低频重试；奖励仍由原有三分钟清理机制保护。
+                scheduledAutoCollects.remove(item.uniqueId)
+                scheduleRewardAutoCollect(item, AUTO_COLLECT_RETRY_TICKS)
+                return@Runnable
+            }
+            startRewardFlight(item, owner)
+        }, delayTicks)
+    }
+
+    private fun startRewardFlight(item: Item, owner: Player) {
+        if (!item.isValid || item.isDead) {
+            scheduledAutoCollects.remove(item.uniqueId)
+            return
+        }
+        item.pickupDelay = Int.MAX_VALUE
+        item.setGravity(false)
+
+        object : BukkitRunnable() {
+            var ticks = 0
+
+            override fun run() {
+                if (!item.isValid || item.isDead) {
+                    scheduledAutoCollects.remove(item.uniqueId)
+                    cancel()
+                    return
+                }
+                if (!owner.isOnline || owner.isDead) {
+                    item.setGravity(true)
+                    item.pickupDelay = 0
+                    scheduledAutoCollects.remove(item.uniqueId)
+                    scheduleRewardAutoCollect(item, AUTO_COLLECT_RETRY_TICKS)
+                    cancel()
+                    return
+                }
+
+                if (item.world != owner.world || ticks++ >= AUTO_COLLECT_FLIGHT_TICKS) {
+                    finishRewardAutoCollect(item, owner)
+                    cancel()
+                    return
+                }
+
+                val target = owner.location.clone().add(0.0, 1.0, 0.0)
+                val delta = target.toVector().subtract(item.location.toVector())
+                if (delta.lengthSquared() <= 0.20) {
+                    finishRewardAutoCollect(item, owner)
+                    cancel()
+                    return
+                }
+
+                val distance = delta.length()
+                val speed = min(0.85, max(0.22, distance * 0.22))
+                item.velocity = delta.normalize().multiply(speed)
+                if (ticks % 2 == 0) {
+                    item.world.spawnParticle(org.bukkit.Particle.END_ROD, item.location, 1, 0.04, 0.04, 0.04, 0.0)
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L)
+    }
+
+    private fun finishRewardAutoCollect(item: Item, owner: Player) {
+        scheduledAutoCollects.remove(item.uniqueId)
+        if (!item.isValid || item.isDead) return
+
+        val reward = item.itemStack.clone()
+        val originalExpiry = item.persistentDataContainer.get(expiresAtKey, PersistentDataType.LONG)
+            ?: (System.currentTimeMillis() + REWARD_LIFETIME_MILLIS)
+        val itemName = item.customName
+        item.remove()
+
+        val leftovers = owner.inventory.addItem(reward)
+        owner.playSound(owner.location, Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.25f)
+        owner.world.spawnParticle(
+            org.bukkit.Particle.WAX_ON,
+            owner.location.clone().add(0.0, 1.0, 0.0),
+            8,
+            0.25,
+            0.35,
+            0.25,
+            0.03
+        )
+
+        if (leftovers.isEmpty()) return
+
+        // 背包满时不删除剩余奖励：放在玩家脚下并保留专属拾取权与原到期时间。
+        leftovers.values.forEach { leftover ->
+            val dropped = owner.world.dropItem(owner.location.clone().add(0.0, 0.35, 0.0), leftover)
+            dropped.pickupDelay = 0
+            dropped.isCustomNameVisible = itemName != null
+            dropped.customName = itemName
+            dropped.persistentDataContainer.set(ownerKey, PersistentDataType.STRING, owner.uniqueId.toString())
+            dropped.persistentDataContainer.set(expiresAtKey, PersistentDataType.LONG, originalExpiry)
+            scheduleRewardCleanup(dropped)
+        }
+        owner.sendActionBar(Component.text("背包空间不足，未装入的宝箱奖励已落在脚下。", NamedTextColor.RED))
+    }
+
+    private fun readOwnerUuid(item: Item): UUID? {
+        val raw = item.persistentDataContainer.get(ownerKey, PersistentDataType.STRING) ?: return null
+        return runCatching { UUID.fromString(raw) }.getOrNull()
+    }
+
     @EventHandler
     fun onChunkLoad(event: ChunkLoadEvent) {
-        event.chunk.entities.filterIsInstance<Item>().forEach(::scheduleRewardCleanup)
+        event.chunk.entities.filterIsInstance<Item>().forEach { item ->
+            scheduleRewardCleanup(item)
+            scheduleRewardAutoCollect(item)
+        }
     }
 
     // 专属权保护：别人无法捡起
@@ -336,6 +485,9 @@ class VaultChestListener(private val plugin: Hjh_database) : Listener {
 
     private companion object {
         const val REWARD_LIFETIME_MILLIS = 3L * 60L * 1000L
+        const val AUTO_COLLECT_DELAY_MILLIS = 2_000L
+        const val AUTO_COLLECT_RETRY_TICKS = 20L
+        const val AUTO_COLLECT_FLIGHT_TICKS = 10
         const val MILLIS_PER_TICK = 50L
     }
 }

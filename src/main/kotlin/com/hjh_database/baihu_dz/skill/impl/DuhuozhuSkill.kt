@@ -7,8 +7,6 @@ import com.hjh_database.baihu_dz.skill.BaihuWeaponSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillResult
 import com.hjh_database.data.PlayerData
 import com.hjh_database.listener.FormationMagicDamage
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
 import org.bukkit.Color
 import org.bukkit.Particle
@@ -50,7 +48,6 @@ class DuhuozhuSkill(
         plugin.databaseManager.queuePlayerSave(data)
         castFireRings(player, data, config)
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&e${player.name}&f凭借&7毒火烛&f ，释放了阵法——&7轮火烬染"))
-        sendLingliActionBar(player, data)
         return BaihuWeaponSkillResult.success(message = "")
     }
 
@@ -218,14 +215,6 @@ class DuhuozhuSkill(
         } finally {
             BaihuEquipmentDamageTag.clearTarget(plugin, target)
         }
-    }
-
-    private fun sendLingliActionBar(player: Player, data: PlayerData) {
-        val message = "&6☯当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)} &6☯"
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent(ChatColor.translateAlternateColorCodes('&', message))
-        )
     }
 
     private fun format(value: Double): String {

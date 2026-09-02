@@ -34,7 +34,7 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
         if (player.hasMetadata("HJH_MAGIC_DAMAGE")) return
 
         val attacker = event.damager as? LivingEntity ?: return
-        if (!isRegisteredMagmaCubeMob(attacker)) return
+        if (!isRegisteredSlimeFamilyMob(attacker)) return
 
         if (player.noDamageTicks > player.maximumNoDamageTicks / 2) {
             event.isCancelled = true
@@ -47,7 +47,7 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
         if (player.hasMetadata("HJH_MAGIC_DAMAGE")) return
 
         val attacker = event.damager as? LivingEntity ?: return
-        if (!isRegisteredMagmaCubeMob(attacker)) return
+        if (!isRegisteredSlimeFamilyMob(attacker)) return
 
         player.noDamageTicks = player.maximumNoDamageTicks
     }
@@ -224,11 +224,13 @@ class CustomMagmaCubeListener(private val plugin: Hjh_database) : Listener {
         pdc.set(splitGenerationKey, PersistentDataType.INTEGER, snapshot.generation)
     }
 
-    private fun isRegisteredMagmaCubeMob(entity: LivingEntity): Boolean {
-        if (entity.type != EntityType.MAGMA_CUBE) return false
+    private fun isRegisteredSlimeFamilyMob(entity: LivingEntity): Boolean {
+        if (entity.type != EntityType.MAGMA_CUBE && entity.type != EntityType.SLIME) return false
 
         if (entity.persistentDataContainer.has(MobFactory.KEY_MOB_ID, PersistentDataType.STRING)) return true
-        return (entity as? Slime)?.let { inferDefinition(it) }?.type == EntityType.MAGMA_CUBE
+        return (entity as? Slime)?.let { slime ->
+            inferDefinition(slime)?.type?.let { it == EntityType.MAGMA_CUBE || it == EntityType.SLIME }
+        } == true
     }
 
     private data class SplitSnapshot(

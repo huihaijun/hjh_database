@@ -6,8 +6,6 @@ import com.hjh_database.baihu_dz.BaihuEquipmentDamageTag
 import com.hjh_database.data.PlayerData
 import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.medical.spell.MedicalCastEvent
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
 import org.bukkit.Color
 import org.bukkit.Material
@@ -81,7 +79,6 @@ class HuzhizhanqiSkill(private val plugin: Hjh_database) : Listener {
         cooldownEnds[player.uniqueId] = now + cooldownMillis
         castFormation(player, data, config)
         player.sendMessage("§e${player.name}§f凭借§7虎志战旗§f，释放了阵法——§7虎志战阵")
-        sendLingliActionBar(player, data)
     }
 
     private fun castFormation(player: Player, data: PlayerData, config: ConfigurationSection) {
@@ -267,11 +264,6 @@ class HuzhizhanqiSkill(private val plugin: Hjh_database) : Listener {
         YamlConfiguration.loadConfiguration(configFile()).getConfigurationSection("active")
 
     private fun configFile() = File(plugin.dataFolder, "baihu_dz/artifact_skills/huzhizhanqi.yml")
-
-    private fun sendLingliActionBar(player: Player, data: PlayerData) {
-        val message = "&6当前灵力值：&b${String.format("%.1f", data.lingli)} &6/ &b${String.format("%.0f", data.maxLingli)}"
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(ChatColor.translateAlternateColorCodes('&', message)))
-    }
 
     private fun format(value: Double): String =
         if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)

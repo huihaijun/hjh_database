@@ -45,6 +45,27 @@ qixi_phase_three_test:
     - "&c仅限管理员使用，不会被消耗。"
     - "&e[右键使用]"
 
+shengshan_current_trigram_test:
+  material: NETHER_STAR
+  name: "&6&l圣山副本·当前卦象测试器"
+  lore:
+    - "&7手持右键，直接将当前正在战斗的"
+    - "&7圣山卦象视为已经通关。"
+    - ""
+    - "&c仅限管理员使用，不会被消耗。"
+    - "&e[右键使用]"
+
+shengshan_loop_test:
+  material: RED_WOOL
+  name: "&c&l圣山副本·循环测试器"
+  lore:
+    - "&7圣山副本开启后手持右键，可跳过前置剧情，"
+    - "&7进入可无限选择、重复挑战卦象的测试模式。"
+    - "&7击败卦象后跳过盘古内核，直接返回选卦。"
+    - ""
+    - "&c仅限管理员使用，不会被消耗。"
+    - "&e[右键使用]"
+
 tongxinsuo:
   material: BRICK
   name: "&e同心锁"
@@ -123,3 +144,11 @@ xinghegongzhu:
     - "&7&o绘着星河鹊影的烟火,点燃后星光与火光交织"
     - "&7&o每一次绽放，都是凡间对重逢的祝愿"
     - "&7&o一人一火，万心成桥"
+
+#============圣山副本相关材料==================
+shengshouhuiji:
+  material: ORANGE_DYE
+  name: "&b圣兽徽记"
+  lore:
+    - "&7&o于圣山中发掘出的宝物"
+    - "&7&o里面似乎刻满了四圣兽的痕迹"

@@ -130,6 +130,21 @@ class GoldenChestManager(private val plugin: Hjh_database) {
                 )
             )
         )
+
+        val shengShanId = "shengshan"
+        chestRegistry[shengShanId] = GoldenChestConfig(
+            dungeonId = shengShanId,
+            displayName = "圣山",
+            keyResourceId = "mijingyaoshi",
+            keyCost = 1,
+            maxDrops = 1,
+            lootTable = listOf(
+                ChestLootItem("shengshouhuiji", 4, 4, 25.0),
+                ChestLootItem("lingyujian", 1, 1, 25.0),
+                ChestLootItem("yy_tongyong2", 4, 4, 25.0),
+                ChestLootItem("mijingyaoshi", 2, 2, 25.0)
+            )
+        )
     }
 
     private fun qixiArtifactCores(

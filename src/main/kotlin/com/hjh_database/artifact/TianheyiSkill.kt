@@ -187,7 +187,6 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         val manaCost = plugin.artifactManager.getDataFromItem(state.item)?.manaCost ?: DEFAULT_MANA_COST
         if (data.lingli < manaCost) {
             player.sendMessage("§c灵力不足，天河弈需要 ${format(manaCost)} 点灵力。")
-            sendManaActionBar(player)
             return
         }
 
@@ -214,7 +213,6 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         player.world.playSound(piece.location, Sound.BLOCK_AMETHYST_BLOCK_PLACE, 0.95f, 0.62f)
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&e${player.name}&f凭借&e天河弈&f，释放了阵法——&b弈定天河"))
         player.sendMessage("§7请在3秒内再次使用天河弈落下白棋。")
-        sendManaActionBar(player, manaCost)
     }
 
     private fun placeWhitePiece(player: Player, state: PlayerState, cast: CastSession) {
@@ -231,7 +229,6 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         player.world.playSound(piece.location, Sound.BLOCK_AMETHYST_BLOCK_PLACE, 0.95f, 1.38f)
         startCooldown(player, state, cast.cooldownDurationMillis)
         pairCastIfInRange(player, state, cast)
-        sendManaActionBar(player)
     }
 
     private fun spawnPiece(location: Location, color: PieceColor, castId: UUID): Piece? {
@@ -435,7 +432,6 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
         state.casts.remove(castId)
         spawnFailureEffect(failureLocation)
         player.sendMessage(message)
-        sendManaActionBar(player)
     }
 
     private fun applyVisualCooldown(player: Player, state: PlayerState) {
@@ -598,18 +594,6 @@ class TianheyiSkill(private val plugin: Hjh_database) : Listener {
             }
         }
         if (changed) item.itemMeta = meta
-    }
-
-    private fun sendManaActionBar(player: Player, manaCost: Double? = null) {
-        val data = plugin.playerManager.getData(player.uniqueId)
-        val mana = data?.lingli ?: 0.0
-        val maxMana = data?.maxLingli ?: 0.0
-        val costText = manaCost?.takeIf { it > 0.0 }?.let { " &c(-${format(it)})" } ?: ""
-        val message = "&6☯当前灵力值：&b${String.format(Locale.US, "%.1f", mana)}$costText &6/ &b${String.format(Locale.US, "%.0f", maxMana)} &6☯"
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent(ChatColor.translateAlternateColorCodes('&', message))
-        )
     }
 
     private fun sendCooldownActionBar(player: Player, state: PlayerState) {

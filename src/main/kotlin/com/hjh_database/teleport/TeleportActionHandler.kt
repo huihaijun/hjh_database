@@ -130,6 +130,33 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                     return false
                 }
             }
+            "ENTER_PENGLAI" -> {
+                val requiredQuestId = when (data.race) {
+                    0 -> "main_shen_10"
+                    1 -> "main_xian_10"
+                    2 -> "main_ren_10"
+                    3 -> "main_zhan_10"
+                    4 -> "main_yao_10"
+                    else -> null
+                }
+                if (requiredQuestId == null ||
+                    data.questStatuses[requiredQuestId] != QuestStatus.COMPLETED
+                ) {
+                    player.sendMessage("§7通往蓬莱的航路似乎被一层结界遮蔽了。")
+                    player.sendMessage("§c请先完成对应种族的前置主线任务。")
+                    player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 0.8f)
+                    return false
+                }
+
+                val missingTrials = SACRED_BEAST_TRIALS.mapNotNull { (recordId, displayName) ->
+                    displayName.takeIf { (data.dungeonRecords[recordId]?.clears ?: 0) <= 0 }
+                }
+                if (missingTrials.isNotEmpty()) {
+                    player.sendMessage("§c蓬莱结界没有认可你，尚未亲手通过：§e${missingTrials.joinToString("、")}试炼§c。")
+                    player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 0.8f)
+                    return false
+                }
+            }
         }
         return true
     }
@@ -572,6 +599,12 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
 
     private companion object {
         const val QIXI_QUEST_ID = "side_qixi_starwish"
+        val SACRED_BEAST_TRIALS = listOf(
+            "dragon_test" to "青龙",
+            "zhuque_test" to "朱雀",
+            "baihu_test" to "白虎",
+            "xuanwu_test" to "玄武"
+        )
     }
 
 }

@@ -2,6 +2,13 @@ skills:
   METAL:
     name: "星云术"
     message: "&e%player% &f炼化了 &e金元素&f，释放了法术 —— &e星云术&f！"
+    tier3:
+      offense_reduction: 0.20
+      offense_reduction_duration: 5.0
+    tier5:
+      move_duration: 3.5
+      move_speed: 2.4
+      damage_ratio: 0.50
     levels:
       1:
         cooldown: 5.5
@@ -43,6 +50,13 @@ skills:
   WOOD:
     name: "汲魂术"
     message: "&e%player% &f炼化了 &a木元素&f，释放了法术 —— &a汲魂术&f！"
+    tier3:
+      wither_duration: 5.0
+      movement_reduction: 0.10
+    tier5:
+      wither_duration: 8.0
+      soul_jump_radius: 10.0
+      soul_jump_damage_percent: 0.50
     levels:
       1:
         cooldown: 9.0
@@ -78,6 +92,14 @@ skills:
   WATER:
     name: "霜冻术"
     message: "&e%player% &f炼化了 &9水元素&f，释放了法术 —— &9霜冻术&f！"
+    tier3:
+      cold_duration: 5.0
+      attack_frequency_reduction: 0.30
+    tier5:
+      path_duration: 5.0
+      path_interval: 0.5
+      path_damage_ratio: 0.10
+      path_slow_percent: 0.10
     levels:
       1:
         cooldown: 8.0         # 冷却 6秒
@@ -118,6 +140,14 @@ skills:
   FIRE:
     name: "流火术"
     message: "&e%player% &f炼化了 &c火元素&f，释放了法术 —— &c流火术&f！"
+    tier3:
+      mark_duration: 5.0
+      explosion_radius: 3.0
+      explosion_damage_percent: 1.00
+    tier5:
+      spark_count: 3
+      spark_radius: 10.0
+      spark_damage_percent: 1.25
     levels:
       1:
         cooldown: 12.0         # 冷却时间
@@ -154,6 +184,11 @@ skills:
   EARTH:
     name: "裂地术"
     message: "&e%player% &f炼化了 &6土元素&f，释放了法术 —— &6裂地术&f！"
+    tier3:
+      armor_reduction: 0.20
+      armor_refresh_grace: 1.1
+    tier5:
+      root_duration: 1.5
     levels:
       1:
         cooldown: 22.0        # 控制技能冷却长一点

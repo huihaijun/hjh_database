@@ -2,17 +2,22 @@
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
+import com.hjh_database.accessory.skill.core.ActiveAccessoryHudState
 import com.hjh_database.accessory.skill.medical.JinshengzhiSkill
+import com.hjh_database.accessory.skill.medical.KanzelingzhiSkill
 import com.hjh_database.accessory.skill.medical.TaolizhiSkill
 import com.hjh_database.accessory.skill.quiver.*
 import com.hjh_database.accessory.skill.shield.*
 import com.hjh_database.accessory.skill.warlock.BaseRefluxSkill
 import com.hjh_database.accessory.skill.warlock.HuiliuyiSkill
+import com.hjh_database.accessory.skill.warlock.XunlilingshuSkill
 import com.hjh_database.accessory.skill.warlock.YanlingSkill
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
+import com.hjh_database.combat.MonsterDamageClassification
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.medical.spell.MedicalHealEvent
 import com.hjh_database.weapon.CrystalData
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
@@ -22,27 +27,41 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityDamageEvent.DamageModifier
 import org.bukkit.event.entity.EntityPotionEffectEvent
+import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
+import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot // 銆愭柊澧炲鍏ャ€戠敤浜庡垽鏂富鍓墜
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.UUID
 
 class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     private val crystalKey = NamespacedKey(plugin, "crystal_id")
+    /** 同一个 Bukkit 伤害事件只在 LOWEST/HIGHEST 两阶段短暂保存，不按玩家长期缓存。 */
+    private val skillEventsBypassingShield = Collections.newSetFromMap(
+        IdentityHashMap<EntityDamageByEntityEvent, Boolean>()
+    )
 
     // 銆愮粺涓€娉ㄥ唽琛ㄣ€?
     private val skills = mapOf<String, BaseAccessorySkill>(
         "jiandai" to JiandaiSkill(plugin),
         "ranhuojiandai" to RanhuoJiandaiSkill(plugin),
+        "qianzhentianji" to QianzhentianjiSkill(plugin),
         "qingshidunpai" to QingshidunpaiSkill(plugin),
         "yanjingdunpai" to YanjingdunpaiSkill(plugin),
+        "zhenyuechenfeng" to ZhenyuechenfengSkill(plugin),
         "huiliuyi" to HuiliuyiSkill(plugin),
         "yanling" to YanlingSkill(plugin),
+        "xunlilingshu" to XunlilingshuSkill(plugin),
         "taolizhi" to TaolizhiSkill(plugin),
-        "jinshengzhi" to JinshengzhiSkill(plugin)
+        "jinshengzhi" to JinshengzhiSkill(plugin),
+        "kanzelingzhi" to KanzelingzhiSkill(plugin)
     )
 
     /**
@@ -121,6 +140,32 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         return list
     }
 
+    /**
+     * 为 Fabric 客户端选出唯一生效的职业饰品。只接受 crystals.yml 中明确列出的职业饰品，
+     * 元素结晶与圣兽饰品即使复用了技能基类也不会进入这个 HUD。
+     */
+    fun getActiveAccessoryHudState(player: Player): ActiveAccessoryHudState? {
+        val playerData = plugin.playerManager.getPlayerData(player) ?: return null
+        for ((item, slotKey) in getActiveAccessories(player)) {
+            val meta = item.itemMeta ?: continue
+            val crystalId = meta.persistentDataContainer
+                .get(crystalKey, PersistentDataType.STRING) ?: continue
+            if (crystalId !in HUD_ACCESSORY_IDS) continue
+            val crystalData = plugin.playerManager.crystalManager.loadedCrystals[crystalId] ?: continue
+            if (!plugin.playerManager.crystalManager.isActive(crystalData, playerData, slotKey, player, item)) continue
+
+            val skillId = crystalData.skillId ?: crystalData.id
+            val skill = skills[skillId] ?: continue
+            return ActiveAccessoryHudState(
+                accessoryId = crystalData.id,
+                materialId = crystalData.material.key.toString(),
+                customModelData = crystalData.customModelData,
+                state = skill.getHudState(player, item, crystalData)
+            )
+        }
+        return null
+    }
+
     @EventHandler(ignoreCancelled = true)
     fun onShoot(event: EntityShootBowEvent) {
         val player = event.entity as? Player ?: return
@@ -160,7 +205,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onDamageBlock(event: EntityDamageByEntityEvent) {
         val player = event.entity as? Player ?: return
         if (!player.isBlocking) return
@@ -184,6 +229,19 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
                 plugin.playerManager.crystalManager.isActive(cData, pData, "offhand", player, offHandItem)
             }
             if (!active) return
+
+            when (MonsterDamageClassification.classify(plugin, event)) {
+                MonsterDamageClassification.Type.NORMAL_ATTACK -> Unit
+                MonsterDamageClassification.Type.SKILL -> {
+                    // 先阻止自定义盾牌效果；再在全部伤害公式结算后移除原版 BLOCKING 减伤。
+                    // 用事件实例作短生命周期标识，避免技能 metadata 被 CombatListener 消费后丢失语义。
+                    skillEventsBypassingShield += event
+                    removeVanillaShieldReduction(event)
+                    return
+                }
+                MonsterDamageClassification.Type.OTHER -> return
+            }
+
             val targetId = cData.skillId ?: cData.id
             val skillClass = skills[targetId]
             // ============================================
@@ -196,6 +254,53 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
                     plugin.baihuDzManager.consumeDurability(player, offHandItem, baihuArtifact)
                 }
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onQianzhentianjiProjectileHit(event: ProjectileHitEvent) {
+        (skills["qianzhentianji"] as? QianzhentianjiSkill)?.onProjectileHit(event)
+    }
+
+    /**
+     * CombatListener 会在 HIGH 阶段重算基础伤害，因此在 HIGHEST 再清一次 BLOCKING 修正。
+     * Boss 技能仍会正常造成完整伤害，也不会触发盾牌冷却、耐久消耗或饰品效果。
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun enforceMonsterSkillShieldBypass(event: EntityDamageByEntityEvent) {
+        if (!skillEventsBypassingShield.remove(event)) return
+        removeVanillaShieldReduction(event)
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onZhenyuePreMeleeAttack(event: PrePlayerAttackEntityEvent) {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.onPreMeleeAttack(event)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onZhenyueMeleeDamageResolved(event: EntityDamageByEntityEvent) {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.onMeleeDamageResolved(event)
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onZhenyueDamageTaken(event: EntityDamageEvent) {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.onDamageTaken(event)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onZhenyueDamageTakenResolved(event: EntityDamageEvent) {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.onDamageTakenResolved(event)
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onZhenyueWeakenedMonsterDamage(event: EntityDamageByEntityEvent) {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.onWeakenedMonsterDamage(event)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun removeVanillaShieldReduction(event: EntityDamageByEntityEvent) {
+        if (event.isApplicable(DamageModifier.BLOCKING)) {
+            event.setDamage(DamageModifier.BLOCKING, 0.0)
         }
     }
 
@@ -214,6 +319,12 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onRanhuoArmorCalculation(event: ElementCrystalArmorCalculationEvent) {
         val skillClass = skills["ranhuojiandai"] as? RanhuoJiandaiSkill ?: return
+        skillClass.onArmorCalculation(event)
+    }
+
+    @EventHandler
+    fun onQianzhentianjiArmorCalculation(event: ElementCrystalArmorCalculationEvent) {
+        val skillClass = skills["qianzhentianji"] as? QianzhentianjiSkill ?: return
         skillClass.onArmorCalculation(event)
     }
 
@@ -247,10 +358,82 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    /**
+     * 元素阵法真正执行前建立一次性饰品计划。计划本身不修改卦印，失败时可以安全丢弃。
+     */
+    private val activeFormationPlans = HashMap<UUID, XunlilingshuSkill.CastPlan>()
+
+    fun prepareElementFormationCast(player: Player, type: String): XunlilingshuSkill.CastPlan? {
+        activeFormationPlans.remove(player.uniqueId)
+        val active = findActiveSkill(player, "xunlilingshu") ?: return null
+        val skill = active.first as? XunlilingshuSkill ?: return null
+        val plan = skill.prepareCast(player, type) ?: return null
+        activeFormationPlans[player.uniqueId] = plan
+        return plan
+    }
+
+    /** 同元素卦印触发时，本次阵法不消耗元素，也不消耗灵力。 */
+    fun isCurrentElementFormationFree(player: Player): Boolean =
+        activeFormationPlans[player.uniqueId]?.freeResourceCost == true
+
+    /** 金、木、水、火只增幅伤害；土元素不从这里取得增幅。 */
+    fun getCurrentFormationDamageMultiplier(player: Player): Double {
+        val plan = activeFormationPlans[player.uniqueId] ?: return 1.0
+        return if (plan.currentElement == "EARTH") 1.0 else plan.effectMultiplier
+    }
+
+    /** 土元素只增幅持续时间，其他元素保持原持续时间。 */
+    fun getCurrentFormationDurationMultiplier(player: Player): Double {
+        val plan = activeFormationPlans[player.uniqueId] ?: return 1.0
+        return if (plan.currentElement == "EARTH") plan.effectMultiplier else 1.0
+    }
+
+    fun completeElementFormationCast(
+        player: Player,
+        plan: XunlilingshuSkill.CastPlan?,
+        success: Boolean
+    ) {
+        if (plan == null) return
+        val current = activeFormationPlans[player.uniqueId]
+        if (current !== plan) return
+        activeFormationPlans.remove(player.uniqueId)
+        if (!success) return
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.commitCast(player, plan)
+    }
+
+    /** 饰品栏保存后调用，卸下巽离灵枢会立即清除卦印。 */
+    fun onAccessoryLoadoutChanged(player: Player) {
+        if (findActiveSkill(player, "xunlilingshu") == null) {
+            (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(player)
+            activeFormationPlans.remove(player.uniqueId)
+        }
+    }
+
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         (skills["yanling"] as? YanlingSkill)?.cleanup(event.player)
         (skills["yanjingdunpai"] as? YanjingdunpaiSkill)?.cleanup(event.player)
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.cleanup(event.player)
+        (skills["qianzhentianji"] as? QianzhentianjiSkill)?.cleanup(event.player)
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(event.player)
+        (skills["kanzelingzhi"] as? KanzelingzhiSkill)?.cleanup(event.player)
+        skills.values.forEach { it.cleanupHudState(event.player) }
+        activeFormationPlans.remove(event.player.uniqueId)
+    }
+
+    @EventHandler
+    fun onDeath(event: PlayerDeathEvent) {
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(event.entity)
+        activeFormationPlans.remove(event.entity.uniqueId)
+    }
+
+    fun shutdown() {
+        (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.shutdown()
+        (skills["qianzhentianji"] as? QianzhentianjiSkill)?.shutdown()
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.shutdown()
+        (skills["kanzelingzhi"] as? KanzelingzhiSkill)?.shutdown()
+        skills.values.forEach(BaseAccessorySkill::shutdownHudState)
+        activeFormationPlans.clear()
     }
 
     @EventHandler
@@ -360,6 +543,46 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
             }
         }
         return null
+    }
+
+    private fun findActiveSkill(player: Player, requestedSkillId: String): Pair<BaseAccessorySkill, CrystalData>? {
+        val pData = plugin.playerManager.getPlayerData(player) ?: return null
+        for ((item, slotKey) in getActiveAccessories(player)) {
+            val meta = item.itemMeta ?: continue
+            val baihuArtifact = plugin.baihuDzManager.getArtifactDataFromItem(item)
+            val cData = if (baihuArtifact != null) {
+                plugin.baihuDzManager.toCrystalData(baihuArtifact)
+            } else {
+                val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING) ?: continue
+                plugin.playerManager.crystalManager.loadedCrystals[cid] ?: continue
+            }
+
+            if ((cData.skillId ?: cData.id) != requestedSkillId) continue
+            val active = if (baihuArtifact != null) {
+                plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
+            } else {
+                plugin.playerManager.crystalManager.isActive(cData, pData, slotKey, player, item)
+            }
+            if (active) return (skills[requestedSkillId] ?: continue) to cData
+        }
+        return null
+    }
+
+    companion object {
+        private val HUD_ACCESSORY_IDS = setOf(
+            "qingshidunpai",
+            "cubujiandai",
+            "huiliuyi",
+            "taolizhi",
+            "yanjingdunpai",
+            "ranhuojiandai",
+            "yanling",
+            "jinshengzhi",
+            "zhenyuechenfeng",
+            "qianzhentianji",
+            "xunlilingshu",
+            "kanzelingzhi"
+        )
     }
 }
 

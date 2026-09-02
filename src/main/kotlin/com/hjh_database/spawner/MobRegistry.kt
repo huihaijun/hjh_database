@@ -36,7 +36,10 @@ data class MobDefinition(
     val leggings: Material? = null,
     val boots: Material? = null,
     val mainHand: Material? = null,
-    val offHand: Material? = null
+    val offHand: Material? = null,
+    // 由 MobFactory 统一应用，副本怪物不应在生成后另走一套标签/体型初始化逻辑。
+    val scoreboardTags: Set<String> = emptySet(),
+    val slimeSize: Int? = null
 )
 
 object MobRegistry {

@@ -46,7 +46,8 @@ object NorthWetnessSkill : Listener {
     private data class WetnessStatus(
         var value: Int,
         var lastIncreaseAt: Long,
-        var lastApplicationAt: Long
+        var lastApplicationAt: Long,
+        var zhanFractionalCarry: Double = 0.0
     )
 
     private lateinit var plugin: Hjh_database
@@ -142,7 +143,16 @@ object NorthWetnessSkill : Listener {
         if (!bypassRateLimit && now - status.lastApplicationAt < APPLICATION_LOCK_MILLIS) return false
         if (status.value >= MAX_WETNESS) return false
 
-        status.value = (status.value + amount).coerceAtMost(MAX_WETNESS)
+        val actualAmount = if (plugin.raceModule.getZhanRace().isRaceActive(player)) {
+            val exactAmount = amount * ZHAN_WETNESS_MULTIPLIER + status.zhanFractionalCarry
+            val wholeAmount = exactAmount.toInt()
+            status.zhanFractionalCarry = exactAmount - wholeAmount
+            wholeAmount
+        } else {
+            status.zhanFractionalCarry = 0.0
+            amount
+        }
+        status.value = (status.value + actualAmount).coerceAtMost(MAX_WETNESS)
         status.lastIncreaseAt = now
         status.lastApplicationAt = now
         updateDisplay(player, status.value)
@@ -158,7 +168,12 @@ object NorthWetnessSkill : Listener {
         if (status.value <= 0) return false
         if (ThreadLocalRandom.current().nextDouble(100.0) >= status.value.toDouble()) return false
 
-        status.value = (status.value - SILENCE_WETNESS_COST).coerceAtLeast(0)
+        val wetnessCost = if (plugin.raceModule.getZhanRace().isRaceActive(player)) {
+            ZHAN_SILENCE_WETNESS_COST
+        } else {
+            SILENCE_WETNESS_COST
+        }
+        status.value = (status.value - wetnessCost).coerceAtLeast(0)
         applyFixedCooldown()
         updateDisplay(player, status.value)
         if (status.value == 0) {
@@ -172,7 +187,7 @@ object NorthWetnessSkill : Listener {
         player.playSound(player.location, Sound.BLOCK_FIRE_EXTINGUISH, 0.9f, 0.75f)
         player.spigot().sendMessage(
             ChatMessageType.ACTION_BAR,
-            TextComponent("§b湿气扰乱了你的技能，释放失败并进入5秒冷却，湿气降低20%！")
+            TextComponent("§b湿气扰乱了你的技能，释放失败并进入5秒冷却，湿气降低$wetnessCost%！")
         )
         return true
     }
@@ -356,5 +371,7 @@ object NorthWetnessSkill : Listener {
 
     private const val MAX_SLOW_PERCENT = 60
     private const val SILENCE_WETNESS_COST = 20
+    private const val ZHAN_SILENCE_WETNESS_COST = 30
+    private const val ZHAN_WETNESS_MULTIPLIER = 0.7
     private const val MAX_TRACKED_ARROW_TICKS = 20 * 120
 }

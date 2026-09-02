@@ -1,6 +1,7 @@
 package com.hjh_database.accessory.skill.warlock
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.data.PlayerData
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.Color
@@ -10,6 +11,7 @@ import org.bukkit.Sound
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
@@ -28,7 +30,7 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
         private const val ZF_BONUS = 0.25
     }
 
-    private val cooldowns = HashMap<UUID, Long>()
+    private val activeUntil = HashMap<UUID, Long>()
     private val activeTasks = HashMap<UUID, BukkitTask>()
     private val buffedPlayers = HashSet<UUID>()
     private val flameDust = Particle.DustOptions(Color.fromRGB(255, 95, 24), 0.85f)
@@ -42,23 +44,31 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
 
     override fun getTriggerProbability(crystalData: CrystalData): Double = 0.5
 
+    override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
+        super.getHudState(player, item, crystalData).copy(
+            effectEndMillis = activeUntil[player.uniqueId] ?: 0L,
+            effectDurationMillis = DURATION_TICKS * 50L
+        )
+
     fun onElementFormationCast(player: Player, data: PlayerData) {
         val now = System.currentTimeMillis()
         val uuid = player.uniqueId
-        if ((cooldowns[uuid] ?: 0L) > now) return
+        if (getTrackedCooldownEnd(player) > now) return
 
-        cooldowns[uuid] = now + COOLDOWN_MS
+        startTrackedCooldown(player, COOLDOWN_MS, now)
         startBlessing(player, data)
     }
 
     fun cleanup(player: Player) {
         activeTasks.remove(player.uniqueId)?.cancel()
+        activeUntil.remove(player.uniqueId)
         removeZfBonus(player, plugin.playerManager.getPlayerData(player))
     }
 
     private fun startBlessing(player: Player, data: PlayerData) {
         val uuid = player.uniqueId
         activeTasks.remove(uuid)?.cancel()
+        activeUntil[uuid] = System.currentTimeMillis() + DURATION_TICKS * 50L
         addZfBonus(player, data)
 
         player.world.playSound(player.location, Sound.ITEM_FIRECHARGE_USE, 0.65f, 1.35f)
@@ -73,6 +83,7 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
                 if (!player.isOnline || player.isDead || lived >= DURATION_TICKS) {
                     removeZfBonus(player, plugin.playerManager.getPlayerData(player))
                     activeTasks.remove(uuid)
+                    activeUntil.remove(uuid)
                     cancel()
                     return
                 }

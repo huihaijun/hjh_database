@@ -109,7 +109,6 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
             archerDamage = data.archerDamage,
             expiresAt = now + TOTAL_TIMEOUT_MILLIS
         )
-        sendActivationActionBar(player, manaCost)
         player.world.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.9f, 1.65f)
         plugin.clientBridge.emitParticle(com.hjh_database.client.ClientParticleEffect.QUESHUANG_MARK, player.location.clone().add(0.0, 1.15, 0.0), data = 1)
     }
@@ -479,15 +478,6 @@ class QueshuanglingSkill(private val plugin: Hjh_database) : Listener {
             changed = true
         }
         if (changed) item.itemMeta = meta
-    }
-
-    private fun sendActivationActionBar(player: Player, manaCost: Double) {
-        val data = plugin.playerManager.getData(player.uniqueId) ?: return
-        val message = "&a&l法器技【星羽织弦】发动！ &6☯当前灵力值：&b${String.format(Locale.US, "%.1f", data.lingli)} &c(-${format(manaCost)}) &6/ &b${String.format(Locale.US, "%.0f", data.maxLingli)} &6☯"
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent(ChatColor.translateAlternateColorCodes('&', message))
-        )
     }
 
     private fun sendCooldownActionBar(player: Player, remainingMillis: Long) {

@@ -22,6 +22,9 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
         val center = getEnhancedSightLocation(player, 13.0, FluidCollisionMode.ALWAYS)
         val world = center.world ?: return false
         val radius = 10.0
+        val durationMultiplier = plugin.accessorySkillManager.getCurrentFormationDurationMultiplier(player)
+        val durationTicks = (300.0 * durationMultiplier).toInt()
+        val durationMillis = (15_000.0 * durationMultiplier).toLong()
         val mobs = world.getNearbyEntities(center, radius, radius, radius).asSequence()
             .filterIsInstance<LivingEntity>()
             .filter { isEnhancedMonster(it) && it.location.distanceSquared(center) <= radius * radius }
@@ -36,7 +39,7 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
             val pull = normalizedFlatVector(mob.location, center).multiply(0.55)
             pull.y = 0.85
             mob.velocity = mob.velocity.add(pull)
-            mob.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 300, 1, false, false, true))
+            mob.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, durationTicks, 1, false, false, true))
             applyEnhancedVulnerability(
                 plugin,
                 mob,
@@ -44,7 +47,7 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
                 META_EARTH_VULN_MULT,
                 META_EARTH_VULN_PARTICLE_TASK,
                 0.25,
-                15000L,
+                durationMillis,
                 Color.fromRGB(180, 135, 70)
             )
         }
@@ -53,7 +56,7 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
             var ticks = 0
 
             override fun run() {
-                if (ticks >= 300) {
+                if (ticks >= durationTicks) {
                     cancel()
                     return
                 }

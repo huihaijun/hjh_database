@@ -207,8 +207,6 @@ crystals:
       - "&7&o用一些石、木左拼右凑锻造出来的盾牌"
       - "&7&o虽然防御不佳,但轻快,不会太过拖累行动"
       - "&8===========&2&n&l饰品属性&8============="
-      - "&e[于&b饰品栏&e激活时]"
-      - "&f护甲 +3    灵力攫取 +8%"
       - "&e[于&b副手&e激活时]"
       - "&f护甲 +6    最大生命 +6    灵力攫取 +8%"
       - "&c移动速度 -5%"
@@ -219,10 +217,6 @@ crystals:
     req_lv: 15
     req_job: 0
     activation:
-      accessory_8: # 饰品栏第9格 (索引8)
-        stats:
-          armor: 3.0
-          spirit_siphon: 0.08 # 5%灵力攫取率
       offhand: # 副手
         stats:
           armor: 6.0
@@ -307,18 +301,16 @@ crystals:
       patterns:
         - pattern: "hjh:yanjingdunpai"
           color: WHITE
-    skill_id: "yanjingdunpai" # 标识激活哪个技能类
+    skill_id: "yanjingdunpai"
     lore:
       - "&6限制职业:[战]  限制等级:&b30"
       - "&7&o取大漠深处的炎火奇石与灼沙熔铸而成"
       - "&7&o盾面温热，隐隐透出如脉搏般的律动"
       - "&7&o愈挫愈坚，生生不息"
       - "&8===========&2&n&l饰品属性&8============="
-      - "&e[于&b饰品栏&e激活时]"
-      - "&f护甲 +9    灵力攫取 +12%"
       - "&e[于&b副手&e激活时]"
       - "&f护甲 +14    最大生命 +25"
-      - "&f灵力攫取 +12%  &c移动速度 -8%"
+      - "&f灵力攫取 +12%"
       - "&8===========&2&n&l饰品技能&8============="
       - "&e[混合] &d[炎盾]"
       - "&e[于&b副手&e时右键] &f冷却:&c3&f秒"
@@ -332,15 +324,10 @@ crystals:
     req_lv: 30
     req_job: 0
     activation:
-      accessory_8: # 饰品栏第9格 (索引8)
-        stats:
-          armor: 6.0
-          spirit_siphon: 0.08 # 8%灵力攫取率
       offhand: # 副手
         stats:
-          armor: 9.0
-          max_health: 16.0
-          speed_percent: -0.08 # -5%移速
+          armor: 14.0
+          max_health: 25.0
           spirit_siphon: 0.08 # 8%灵力攫取率
 
   ranhuojiandai:
@@ -458,3 +445,179 @@ crystals:
         stats:
           zf_str: 3.0
           max_health: 8.0
+
+  #============================四阶===============================
+  zhenyuechenfeng:
+    display: "&e镇岳沉锋[饰品]"
+    material: SHIELD
+    rarity: 5
+    custom_model_data: 6008
+    shield_pattern:
+      base_color: BLACK
+      patterns:
+        - pattern: "hjh:zhenyuechenfeng"
+          color: WHITE
+    skill_id: "zhenyuechenfeng"
+    zhenyue_data:
+      max_stacks: 10
+      initial_duration: 3.0
+      stack_duration_extension: 1.5
+      stack_drop_interval: 2.0
+      melee_stack_gain: 1
+      shield_stack_gain: 2
+    lore:
+      - "&6限制职业:[战]  限制等级:&b40"
+      - "&7&o承艮山不动之势,纳坤地厚载之力重铸而成"
+      - "&7&o盾中可积的山岳之势,雄浑气壮"
+      - "&7&o待山影叠尽,锋芒出现,即可一击撼岳"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b副手&e激活时]"
+      - "&f护甲 +22    最大生命 +38"
+      - "&f灵力攫取 +16%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[混合] &e[负山岳]"
+      - "&e[于&b副手&e时右键] &f冷却:&c3&f秒"
+      - "&f抵挡受到的&b普攻&f伤害,抵挡成功后"
+      - "&f获得一层&b[山势]&f持续&b3&f秒"
+      - "&f拥有&b[山势]&f时,每次近战普攻命中/此盾抵挡"
+      - "&f会再次获得&b1&7/&b2&f层&b[山势]&f"
+      - "&f并增加&b1.5&f秒持续时间,至多&b10&f层"
+      - "&f当&b[山势]&f叠满,每&b2&f秒掉落一层,期间不再叠加"
+      - "&f此期间提升自己&b150%🗡&f且每次受伤会引发周边山动"
+      - "&f令周围&b6&f格怪物缓慢Ⅱ并削弱&b15%&f进攻属性&b3&f秒"
+      - "&b[山势]&f:每层提供&b4%&f的免伤"
+      - "&b叠加&f到&b3&f层后获得&b30&f秒的&b30&f点护盾"
+      - "&f到&b5&f层后获得&b6&f秒的生命恢复Ⅱ效果"
+      - "&f到&b8&f层后升级当前生命恢复效果并刷新时间为&b10&f秒"
+    req_lv: 40
+    req_job: 0
+    activation:
+      offhand: # 副手
+        stats:
+          armor: 22.0
+          max_health: 38.0
+          spirit_siphon: 0.16 #灵力攫取
+
+  qianzhentianji:
+    display: "&e乾震天机[饰品]"
+    material: STICK
+    rarity: 5
+    custom_model_data: 6009
+    activate_slot: 8
+    #    ===========箭袋的设置==========
+    skill_id: "qianzhentianji" # 独立绑定惊雷折翼；箭袋存取逻辑仍复用通用实现
+    quiver_data: # 抽象出的箭袋数值，未来新箭袋可以填不同的值
+      max_arrows: 4096    #放最大量
+      replenish_threshold: 16   #门槛
+      replenish_amount: 32   #每次拿多少
+    lore:
+      - "&6限制职业:[弓]  限制等级:&b40"
+      - "&7&o融乾天之轨与震雷之痕而成"
+      - "&7&o箭出似星辰行空,遗下一线天光"
+      - "&7&o弦落之后,天痕不散,似有雷霆循来"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&f箭矢强度 +9 移动速度 +15%"
+      - "&f灵力攫取 +13%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&e中&b下蹲+右键&e此饰品]"
+      - "&f将背包内的所有箭矢存入箭袋,最多&b{max_arrows}&f支"
+      - "&f射击时若背包箭矢少于&b{threshold}&f支,则补充&b{amount}&f支"
+      - "&e[于&b饰品栏&e中&b下蹲+左键&e此饰品]"
+      - "&f将箭袋中的箭矢&b全部取出&f"
+      - "&e[被动] &e[惊雷折翼]"
+      - "&e[于&b饰品栏&e激活时+射击] &f冷却:&c7&f秒"
+      - "&f箭矢命中目标后,在身旁最左右召唤两根雷矢"
+      - "&f短暂延迟后会向该目标射击并在飞行路径分别留下电流"
+      - "&f每根电流上的怪物会受到&b300%🏹&f的伤害"
+      - "&f并为它们附加&b[雷震]&f效果持续&b5&f秒"
+      - "&b[雷震]&f:护甲和移速降低&b20%&f"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储箭矢: &a{arrows} &f/ &a{max_arrows}"
+    req_lv: 40
+    req_job: 1
+    activation:
+      accessory_8: # 饰品栏第9格 (索引8)
+        stats:
+          archer_damage: 9.0 # 统一的进攻属性
+          speed_percent: 0.15 # 移速
+          spirit_siphon: 0.13 # 灵力攫取率
+
+  xunlilingshu:
+    display: "&e巽离灵枢[饰品]"
+    material: STICK
+    rarity: 5
+    custom_model_data: 6010
+    skill_id: "xunlilingshu"
+    lore:
+      - "&6限制职业:[术] 限制等级:&b40"
+      - "&7&o巽风离火,二象相济,凝于灵枢之中"
+      - "&7&o巽者流转无形,离者变幻无定"
+      - "&7&o风流转,火附新,相生相易,周而复始"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f阵法强度 +10 移动速度 +15%"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[于&b饰品栏&f&e中&b下蹲+右键&e此饰品]"
+      - "&f开启/关闭&b[回流]&f状态"
+      - "&b[回流]&f:若自身灵力大于&b50%&f,释放元素阵法时"
+      - "&f有&b65%&f概率不消耗元素,改为消耗&b(阵法等级*1.5)&f点灵力"
+      - "&e[被动] &e[风火归元]"
+      - "&e[于&b饰品栏&e激活时] &f冷却:&c1.5&f秒"
+      - "&f释放元素阵法后,若当前没有&b[卦印]&f,则为该元素附加&b[卦印]"
+      - "&f下次释放元素阵法时,若与&b[卦印]&f元素:"
+      - "&f相同:触发&b[回流]&f且不消耗灵力并清除&b[卦印]"
+      - "&f并增幅本次阵法&b35%&f的效果"
+      - "&f不同:立即结束原&b[卦印]&f元素的冷却,并将&b[卦印]&f转移至当前元素"
+      - "&f同时令当前元素本次冷却&b翻倍&f,饰品延长&b6&f秒冷却"
+      - "&f冷却期间释放阵法不会触发或转移&b[卦印]&f"
+    req_lv: 40
+    req_job: 2
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 10.0
+          speed_percent: 0.15 # 10%移速
+
+  kanzelingzhi:
+    display: "&e坎泽灵枝[饰品]"
+    material: STICK
+    rarity: 5
+    custom_model_data: 6011
+    skill_id: "kanzelingzhi"
+    taolizhi_data:
+      max_storage: 300.0
+      trigger_storage: 25.0
+      cooldown: 5.0
+      range: 16.0
+      zf_multiplier: 1.0
+      storage_multiplier: 0.50
+    lore:
+      - "&6限制职业:[医] 限制等级:&b40"
+      - "&7&o坎水兑泽之精交汇,凝于枯枝,复抽新芽"
+      - "&7&o余烬不灭,生机内藏"
+      - "&7&o润物无声,枯荣往复,生生不息"
+      - "&8===========&2&n&l饰品属性&8============="
+      - "&e[于&b饰品栏&e激活时]"
+      - "&f最大生命 +15  阵法强度 +6"
+      - "&8===========&2&n&l饰品技能&8============="
+      - "&e[被动] &e[生灵润泽]"
+      - "&e[于&b饰品栏&e激活时] &f冷却:&c5&f秒"
+      - "&f医术回复生命时,将&b溢出&f的回复存入(最多&b300&f点)"
+      - "&f超过&b25&f点时,消耗全部存储值召唤&b1&f只&b[生灵鸟]&f"
+      - "&f飞向&b16&f格范围内受伤的友军,为其回复&b50%存储值&f的生命"
+      - "&f溢出时,&b[生灵鸟]&f会带着剩余治疗量继续寻找其他友军"
+      - "&f若周围不存在受伤的友军,则随机飞向同范围内的怪物"
+      - "&f造成(&b100%⚡&f+&b50%存储值&f)的伤害"
+      - "&f若击杀目标后仍有剩余伤害,&b[生灵鸟]&f最多追击&b3&f次"
+      - "&b[生灵鸟]&f消失后,会在上空展开&b6&f格的&b生灵域&f持续&b5&f秒"
+      - "&f展开瞬间移除范围内友军的&c负面&f效果"
+      - "&f并为领域内友军持续提供&b15%&f进攻属性"
+      - "&8===========&2&n&l当前状态&8============="
+      - "&f存储生命: &a{stored} &f/ &a{max_storage}"
+    req_lv: 40
+    req_job: 3
+    activation:
+      accessory_8:
+        stats:
+          zf_str: 6.0
+          max_health: 15.0

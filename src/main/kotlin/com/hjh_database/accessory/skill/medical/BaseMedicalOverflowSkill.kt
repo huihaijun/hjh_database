@@ -1,6 +1,8 @@
 package com.hjh_database.accessory.skill.medical
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.skill.core.AccessoryHudValueKind
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
 import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.medical.spell.MedicalHealEvent
@@ -22,6 +24,7 @@ import org.bukkit.util.Vector
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import kotlin.math.PI
+import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random
 import java.util.UUID
@@ -29,6 +32,19 @@ import java.util.UUID
 abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
     private val storedKey = NamespacedKey(plugin, "medical_overflow_stored")
     private val cooldownKey = NamespacedKey(plugin, "medical_overflow_cooldown")
+
+    override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState {
+        val pdc = item.itemMeta?.persistentDataContainer
+        val stored = pdc?.get(storedKey, PersistentDataType.DOUBLE) ?: 0.0
+        val cooldownEnd = pdc?.get(cooldownKey, PersistentDataType.LONG) ?: 0L
+        return super.getHudState(player, item, crystalData).copy(
+            cooldownEndMillis = cooldownEnd,
+            cooldownDurationMillis = (getCooldownSeconds(crystalData) * 1000.0).toLong().coerceAtLeast(0L),
+            valueKind = AccessoryHudValueKind.STORED_HEALTH,
+            currentValue = floor(stored.coerceAtLeast(0.0)).toInt(),
+            maxValue = floor(getMaxStorage(crystalData).coerceAtLeast(0.0)).toInt()
+        )
+    }
 
     override fun onMedicalHeal(event: MedicalHealEvent, item: ItemStack, slotKey: String, crystalData: CrystalData): Boolean {
         val overflow = event.overflowHeal
@@ -88,6 +104,11 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
     protected open fun getMaxDamageRetargets(): Int = 0
     protected open fun getOverflowRetargetRange(): Double = 8.0
     protected open fun canKnockback(target: LivingEntity): Boolean = true
+    /**
+     * 生灵鸟完成最后一次治疗/攻击后、实体移除前触发。
+     * 追击或溢出治疗转移途中不会调用；异常中止也不会误触发。
+     */
+    protected open fun onSpiritBirdResolved(owner: Player, location: Location) {}
 
     private fun sendSkillActionBar(player: Player) {
         player.spigot().sendMessage(
@@ -250,6 +271,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
                                     healedTargetIds
                                 )
                             } else {
+                                onSpiritBirdResolved(player, bird.location.clone())
                                 bird.remove()
                             }
                         }
@@ -283,6 +305,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
                                     healedTargetIds
                                 )
                             } else {
+                                onSpiritBirdResolved(player, bird.location.clone())
                                 bird.remove()
                             }
                         }

@@ -80,8 +80,8 @@ class JianghuXindeManager(private val plugin: Hjh_database) {
     }
 
     fun consumeXindeItem(player: Player, item: ItemStack): Boolean {
-        val value = getXindeValue(item)
-        if (value <= 0) return false
+        val baseValue = getXindeValue(item)
+        if (baseValue <= 0) return false
 
         val data = plugin.playerManager.getData(player.uniqueId)
         if (data == null) {
@@ -89,6 +89,7 @@ class JianghuXindeManager(private val plugin: Hjh_database) {
             return true
         }
 
+        val value = plugin.raceModule.getZhanRace().applyJianghuXindeBonus(player, baseValue)
         data.jianghuXinde += value
         if (item.amount <= 1) {
             player.inventory.setItemInMainHand(null)

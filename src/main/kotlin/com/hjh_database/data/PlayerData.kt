@@ -310,6 +310,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     var dungeonRecords: MutableMap<String, DungeonRecord> = HashMap()
 
     fun getDungeonRecordsAsJson(): String {
+        dungeonRecords.remove(DEPRECATED_SHENGSHAN_RECORD_ID)
         return if (dungeonRecords.isEmpty()) "{}" else Gson().toJson(dungeonRecords)
     }
 
@@ -321,10 +322,15 @@ class PlayerData(val uuid: UUID, val playerName: String) {
         try {
             val type = object : TypeToken<Map<String, DungeonRecord>>() {}.type
             this.dungeonRecords = Gson().fromJson(json, type)
+            this.dungeonRecords.remove(DEPRECATED_SHENGSHAN_RECORD_ID)
         } catch (e: Exception) {
             this.dungeonRecords = HashMap()
             e.printStackTrace()
         }
+    }
+
+    private companion object {
+        const val DEPRECATED_SHENGSHAN_RECORD_ID = "shengshan_test"
     }
 
 

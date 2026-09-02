@@ -39,7 +39,11 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
         // ==========================================
         var willConsumeItem = true // 默认扣除物品
 
-        if (isFabao(handItem)) {
+        // 巽离灵枢的同元素卦印属于“必定回流”：元素和灵力均不消耗，
+        // 同时跳过普通回流仪的随机判定，避免一场施法被重复结算资源。
+        if (plugin.accessorySkillManager.isCurrentElementFormationFree(player)) {
+            willConsumeItem = false
+        } else if (isFabao(handItem)) {
             willConsumeItem = false // 【修复】如果是法宝，绝对不扣除物品！
         } else {
             // 如果不是法宝，判断是否触发了回流仪
@@ -74,15 +78,6 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
             handItem.amount = handItem.amount - 1
         }
 
-        // 4. 单独记录阵法本身增加的灵力，避免把回流饰品的扣费算进绿色增量。
-        val lingliBeforeFormation = data.lingli
-        val success = onCast(player, level, safeConfig, path)
-        if (success) {
-            plugin.elementZfManager.recordFormationLingliGain(
-                player.uniqueId,
-                data.lingli - lingliBeforeFormation
-            )
-        }
-        return success
+        return onCast(player, level, safeConfig, path)
     }
 }

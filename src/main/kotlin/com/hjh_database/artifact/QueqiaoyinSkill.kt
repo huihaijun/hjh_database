@@ -78,7 +78,6 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
         val manaCost = artifact.manaCost
         if (data.lingli < manaCost) {
             player.sendMessage("§c灵力不足，鹊桥引需要 ${format(manaCost)} 点灵力。")
-            sendManaActionBar(player)
             return
         }
 
@@ -94,7 +93,6 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
         player.setCooldown(item, (cooldownDuration / 50L).toInt().coerceAtLeast(1))
 
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&e${player.name}&f凭借&e鹊桥引&f，释放了阵法——&b渡星河"))
-        sendManaActionBar(player, manaCost)
         player.world.playSound(player.location, Sound.ENTITY_PARROT_FLY, 0.85f, 1.35f)
         player.world.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 0.82f)
         spawnCastEffect(bridge.origin)
@@ -366,16 +364,6 @@ class QueqiaoyinSkill(private val plugin: Hjh_database) : Listener {
     private fun sendCooldownActionBar(player: Player, remainingMillis: Long) {
         val seconds = String.format(Locale.US, "%.1f", remainingMillis.coerceAtLeast(0L) / 1000.0)
         val message = "&c&l渡星河 阵法冷却中，剩余 $seconds 秒"
-        player.spigot().sendMessage(
-            ChatMessageType.ACTION_BAR,
-            TextComponent(ChatColor.translateAlternateColorCodes('&', message))
-        )
-    }
-
-    private fun sendManaActionBar(player: Player, manaCost: Double? = null) {
-        val data = plugin.playerManager.getData(player.uniqueId) ?: return
-        val costText = manaCost?.takeIf { it > 0.0 }?.let { " &c(-${format(it)})" } ?: ""
-        val message = "&6☯当前灵力值：&b${String.format(Locale.US, "%.1f", data.lingli)}$costText &6/ &b${String.format(Locale.US, "%.0f", data.maxLingli)} &6☯"
         player.spigot().sendMessage(
             ChatMessageType.ACTION_BAR,
             TextComponent(ChatColor.translateAlternateColorCodes('&', message))

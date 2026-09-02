@@ -3,6 +3,7 @@ package com.hjh_database.skill.element_zf.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.element_zf.FormationDamageEvent
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.Color
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Location
@@ -29,15 +30,28 @@ internal fun isEnhancedMonster(entity: LivingEntity): Boolean {
     return tags.contains("panling") && tags.contains("monster")
 }
 
-internal fun enhancedMagicDamage(plugin: Hjh_database, attacker: Player, target: LivingEntity, damage: Double) {
-    formationMagicDamage(plugin, attacker, target, damage)
+internal fun enhancedMagicDamage(
+    plugin: Hjh_database,
+    attacker: Player,
+    target: LivingEntity,
+    damage: Double,
+    element: FormationElement? = null
+) {
+    formationMagicDamage(plugin, attacker, target, damage, element)
 }
 
 /** 统一的阵法伤害入口：标记伤害来源，并彻底取消本次伤害的无敌帧。 */
-internal fun formationMagicDamage(plugin: Hjh_database, attacker: Player, target: LivingEntity, damage: Double) {
-    val actualDamage = FormationMagicDamage.deal(plugin, attacker, target, damage)
+internal fun formationMagicDamage(
+    plugin: Hjh_database,
+    attacker: Player,
+    target: LivingEntity,
+    damage: Double,
+    element: FormationElement? = null,
+    suppressKnockback: Boolean = false
+) {
+    val actualDamage = FormationMagicDamage.deal(plugin, attacker, target, damage, suppressKnockback)
     if (actualDamage > 0.0) {
-        plugin.server.pluginManager.callEvent(FormationDamageEvent(attacker, target, damage, actualDamage))
+        plugin.server.pluginManager.callEvent(FormationDamageEvent(attacker, target, damage, actualDamage, element))
     }
 }
 

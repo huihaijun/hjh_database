@@ -3,14 +3,17 @@ package com.hjh_database.skill.weapon.job_0
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.weapon.WeaponSkill
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.attribute.Attribute
+import org.bukkit.attribute.AttributeModifier
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
@@ -21,15 +24,18 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
-import org.bukkit.event.entity.EntityDeathEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.metadata.FixedMetadataValue
+import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
+import kotlin.math.min
 
 class sanbaoyuruyiSkill : WeaponSkill, Listener {
 
@@ -48,24 +54,48 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         val targetId: UUID,
         val expiresAt: Long,
         val damageMultiplier: Double,
-        val chargedAttackMultiplier: Double,
+        val splashDamageRatio: Double,
+        val splashRadius: Double,
+        val splashMaxTargets: Int,
+        val cooldownReductionPerChargedHitSeconds: Double,
+        val maxChargedHitCooldownReductionSeconds: Double,
+        var appliedChargedHitCooldownReductionSeconds: Double,
         val executePercent: Double,
         val shieldAmount: Double,
         val shieldDurationTicks: Int
     )
 
+    private data class AttackSpeedBuffState(val expiresAt: Long)
+
     private val plugin = JavaPlugin.getProvidingPlugin(this::class.java)
     private val mainPlugin = plugin as Hjh_database
     private val markedTargets = ConcurrentHashMap<UUID, MarkState>()
+    private val attackSpeedBuffs = ConcurrentHashMap<UUID, AttackSpeedBuffState>()
+    private val attackSpeedModifierKey = NamespacedKey(plugin, "sanbaoyuruyi_attack_speed")
+    private val noDamageOriginalMaximumKey = NamespacedKey(plugin, "sanbaoyuruyi_original_max_no_damage_ticks")
+    private val noDamageRestoreTokenKey = NamespacedKey(plugin, "sanbaoyuruyi_no_damage_restore_token")
+    private val noDamageRestoreSequence = AtomicLong()
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
+        // 兼容热重载：新实例启动时清理由旧实例遗留在在线玩家身上的瞬时修饰器。
+        Bukkit.getOnlinePlayers().forEach(::removeAttackSpeedModifier)
+        restoreInterruptedNoDamageFrameOverrides()
 
-        // 一个共享低频任务同时负责标记特效、过期清理和斩杀检测。
+        // 一个共享低频任务同时负责标记特效、攻速增益过期、状态清理和斩杀检测。
         object : BukkitRunnable() {
             override fun run() {
-                if (markedTargets.isEmpty()) return
+                if (markedTargets.isEmpty() && attackSpeedBuffs.isEmpty()) return
                 val now = System.currentTimeMillis()
+
+                for ((playerId, buff) in attackSpeedBuffs) {
+                    val player = Bukkit.getPlayer(playerId)
+                    if (now >= buff.expiresAt || player == null || !player.isOnline) {
+                        if (attackSpeedBuffs.remove(playerId, buff) && player != null) {
+                            removeAttackSpeedModifier(player)
+                        }
+                    }
+                }
 
                 for ((playerId, state) in markedTargets) {
                     val player = Bukkit.getPlayer(playerId)
@@ -110,12 +140,23 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         }
 
         val durationSeconds = config.getDouble("duration", 7.0).coerceAtLeast(0.1)
+        val cooldownReduction = data?.coolReduce?.coerceIn(0.0, 0.5) ?: 0.0
+        val actualCooldown = config.getDouble("cooldown", 12.0).coerceAtLeast(0.0) * (1.0 - cooldownReduction)
+        val cooldownReductionPerHitRatio = config.getDouble("charged_hit_cooldown_reduction", 0.10)
+            .coerceIn(0.0, 1.0)
+        val maxCooldownReductionRatio = config.getDouble("max_charged_hit_cooldown_reduction", 0.60)
+            .coerceIn(0.0, 1.0)
         val state = MarkState(
             token = UUID.randomUUID(),
             targetId = target.uniqueId,
             expiresAt = System.currentTimeMillis() + (durationSeconds * 1000.0).toLong(),
-            damageMultiplier = config.getDouble("damage_boost", 1.5).coerceAtLeast(0.0),
-            chargedAttackMultiplier = config.getDouble("charged_attack_multiplier", 1.2).coerceAtLeast(0.0),
+            damageMultiplier = config.getDouble("damage_boost", 2.5).coerceAtLeast(0.0),
+            splashDamageRatio = config.getDouble("splash_damage_ratio", 0.80).coerceAtLeast(0.0),
+            splashRadius = config.getDouble("splash_radius", 3.0).coerceAtLeast(0.0),
+            splashMaxTargets = config.getInt("splash_max_targets", 3).coerceAtLeast(0),
+            cooldownReductionPerChargedHitSeconds = actualCooldown * cooldownReductionPerHitRatio,
+            maxChargedHitCooldownReductionSeconds = actualCooldown * maxCooldownReductionRatio,
+            appliedChargedHitCooldownReductionSeconds = 0.0,
             executePercent = config.getDouble("execute_percent", 0.20).coerceIn(0.0, 1.0),
             shieldAmount = config.getDouble("execute_shield_amount", 20.0).coerceAtLeast(0.0),
             shieldDurationTicks = (config.getDouble("execute_shield_duration", 30.0) * 20.0)
@@ -123,6 +164,11 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
                 .coerceAtLeast(1)
         )
         markedTargets[player.uniqueId] = state
+        applyAttackSpeedBuff(
+            player,
+            config.getDouble("attack_speed_bonus", 0.50),
+            durationSeconds
+        )
 
         player.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 0.75f)
         target.world.playSound(target.location, Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 1.65f)
@@ -138,6 +184,24 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
             0.08
         )
         return true
+    }
+
+    /**
+     * Paper 的预攻击事件发生在原版无敌帧裁剪伤害之前。
+     * 仅对“标记有效 + 玉如意仍激活 + 完全蓄力”的直接普攻临时关闭目标无敌帧；
+     * 连点器产生的未蓄满攻击不会进入这里，避免把普通攻击全局改成无无敌帧。
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onFullyChargedMarkedAttackPre(event: PrePlayerAttackEntityEvent) {
+        val attacker = event.player
+        val victim = event.attacked as? LivingEntity ?: return
+        if (isFullyChargedMarkedAttack(attacker, victim)) {
+            temporarilyDisableNoDamageFrames(victim)
+        } else if (victim.persistentDataContainer.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+            // 同一 tick 内若紧跟着连点器产生的未蓄满普攻，先恢复原版设置再让该攻击继续。
+            // 因此未蓄满攻击仍会受无敌帧限制，并在命中后正常留下新的无敌帧。
+            restoreNoDamageFrameOverride(victim)
+        }
     }
 
     /**
@@ -170,51 +234,41 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         if (!mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(attacker, "sanbaoyuruyi")) return
 
         event.damage *= state.damageMultiplier
-
-        // 只有直接、完全蓄力的普通攻击会追加120%近战强度伤害；横扫副目标不会重复触发。
-        if (event.damager === attacker &&
-            event.cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK &&
-            attacker.attackCooldown >= 0.9f &&
-            state.chargedAttackMultiplier > 0.0
-        ) {
-            val attack = mainPlugin.playerManager.getData(attacker.uniqueId)?.attack ?: return
-            val extraDamage = attack * state.chargedAttackMultiplier
-            Bukkit.getScheduler().runTask(plugin, Runnable {
-                if (!attacker.isOnline || !victim.isValid || victim.isDead || !isMonster(victim)) return@Runnable
-                dealExactPiercingDamage(attacker, victim, extraDamage)
-            })
-        }
     }
 
     /**
-     * 标记目标以斩杀以外的方式死亡时，立即清空镇邪的武器技能冷却。
-     * 技能斩杀会在造成致死伤害前移除标记，因此不会进入这里刷新冷却。
+     * 等所有伤害监听器完成结算后再读取 finalDamage，确保镇压伤害真正跟随该次普攻的最终伤害，
+     * 包括暴击、易伤、标记增伤及其他独立效果，而不是重新读取近战强度。
      */
-    @EventHandler(priority = EventPriority.MONITOR)
-    fun onMarkedTargetDeath(event: EntityDeathEvent) {
-        val targetId = event.entity.uniqueId
-        val now = System.currentTimeMillis()
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onFullyChargedAttackResolved(event: EntityDamageByEntityEvent) {
+        val attacker = event.damager as? Player ?: return
+        val victim = event.entity as? LivingEntity ?: return
+        if (victim.hasMetadata(INTERNAL_DAMAGE_METADATA)) return
 
-        for ((playerId, state) in markedTargets) {
-            if (state.targetId != targetId || !markedTargets.remove(playerId, state)) continue
-            if (now >= state.expiresAt) continue
+        val state = getActiveMark(attacker.uniqueId, victim.uniqueId) ?: return
+        if (!mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(attacker, "sanbaoyuruyi")) return
 
-            val player = Bukkit.getPlayer(playerId) ?: continue
-            mainPlugin.weaponSkillManager.resetCooldown(player, Material.DIAMOND_AXE)
-            player.spigot().sendMessage(
-                ChatMessageType.ACTION_BAR,
-                TextComponent("§e§l[镇邪] §f标记目标已死亡，技能冷却已刷新！")
-            )
-            player.playSound(player.location, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.75f, 1.75f)
-            player.world.spawnParticle(
-                Particle.WAX_ON,
-                player.location.clone().add(0.0, 1.0, 0.0),
-                22,
-                0.55,
-                0.75,
-                0.55,
-                0.08
-            )
+        // 只有直接、完全蓄力的普通攻击触发镇压溅射与冷却缩减；横扫不会重复触发。
+        // 这里不再额外补一段近战强度伤害，避免以后仅删 lore 却遗漏实际结算。
+        if (isFullyChargedMarkedAttack(attacker, victim) && event.finalDamage > 0.0) {
+            reduceCooldownForChargedHit(attacker, state)
+            val splashDamage = event.finalDamage * state.splashDamageRatio
+            val impactLocation = victim.location.clone().add(0.0, victim.height * 0.45, 0.0)
+            val primaryTargetId = victim.uniqueId
+            if (splashDamage > 0.0 && state.splashRadius > 0.0 && state.splashMaxTargets > 0) {
+                Bukkit.getScheduler().runTask(plugin, Runnable {
+                    if (!attacker.isOnline) return@Runnable
+                    suppressNearbyTargets(
+                        attacker,
+                        impactLocation,
+                        primaryTargetId,
+                        state.splashRadius,
+                        state.splashMaxTargets,
+                        splashDamage
+                    )
+                })
+            }
         }
     }
 
@@ -228,14 +282,14 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         return state
     }
 
-    private fun executeTarget(player: Player, target: LivingEntity, state: MarkState) {
-        if (!target.isValid || target.isDead || target.scoreboardTags.contains(BOSS_TAG)) return
+    private fun executeTarget(player: Player, target: LivingEntity, state: MarkState): Boolean {
+        if (!target.isValid || target.isDead || target.scoreboardTags.contains(BOSS_TAG)) return false
 
         val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: target.health
         val lethalDamage = (maxHealth + target.health + target.absorptionAmount + 100.0) * 100.0
         dealExactPiercingDamage(player, target, lethalDamage)
 
-        if (!target.isDead) return
+        if (!target.isDead) return false
         grantAbsorptionShield(player, state.shieldAmount, state.shieldDurationTicks)
 
         val effectLocation = target.location.clone().add(0.0, target.height * 0.55, 0.0)
@@ -243,6 +297,138 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
         target.world.spawnParticle(Particle.TOTEM_OF_UNDYING, effectLocation, 32, 0.7, 0.8, 0.7, 0.08)
         target.world.playSound(target.location, Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 1.0f, 1.55f)
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e§l[镇邪] §f斩杀成功，获得 §b20 §f点护盾！"))
+        return true
+    }
+
+    private fun applyAttackSpeedBuff(player: Player, rawBonus: Double, durationSeconds: Double) {
+        val bonus = rawBonus.coerceAtLeast(0.0)
+        val expiresAt = System.currentTimeMillis() + (durationSeconds * 1000.0).toLong()
+        attackSpeedBuffs[player.uniqueId] = AttackSpeedBuffState(expiresAt)
+
+        val attribute = player.getAttribute(Attribute.ATTACK_SPEED) ?: return
+        attribute.getModifier(attackSpeedModifierKey)?.let(attribute::removeModifier)
+        if (bonus > 0.0) {
+            attribute.addTransientModifier(
+                AttributeModifier(
+                    attackSpeedModifierKey,
+                    bonus,
+                    AttributeModifier.Operation.ADD_SCALAR
+                )
+            )
+        }
+    }
+
+    private fun removeAttackSpeedModifier(player: Player) {
+        val attribute = player.getAttribute(Attribute.ATTACK_SPEED) ?: return
+        attribute.getModifier(attackSpeedModifierKey)?.let(attribute::removeModifier)
+    }
+
+    private fun reduceCooldownForChargedHit(player: Player, state: MarkState) {
+        val remainingAllowance = state.maxChargedHitCooldownReductionSeconds -
+            state.appliedChargedHitCooldownReductionSeconds
+        val reduction = min(state.cooldownReductionPerChargedHitSeconds, remainingAllowance)
+        if (!player.isOnline || reduction <= 0.0001) return
+
+        state.appliedChargedHitCooldownReductionSeconds += reduction
+        mainPlugin.weaponSkillManager.reduceCooldown(
+            player,
+            reduction,
+            Material.DIAMOND_AXE
+        )
+        player.world.spawnParticle(
+            Particle.WAX_ON,
+            player.location.clone().add(0.0, 1.0, 0.0),
+            5,
+            0.28,
+            0.4,
+            0.28,
+            0.02
+        )
+    }
+
+    private fun isFullyChargedMarkedAttack(attacker: Player, victim: LivingEntity): Boolean {
+        if (attacker.attackCooldown < 0.9f) return false
+        if (getActiveMark(attacker.uniqueId, victim.uniqueId) == null) return false
+        return mainPlugin.equipmentActivationManager.isHoldingActiveWeapon(attacker, "sanbaoyuruyi")
+    }
+
+    private fun temporarilyDisableNoDamageFrames(target: LivingEntity) {
+        val pdc = target.persistentDataContainer
+        if (!pdc.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+            pdc.set(noDamageOriginalMaximumKey, PersistentDataType.INTEGER, target.maximumNoDamageTicks)
+        }
+        val token = noDamageRestoreSequence.incrementAndGet()
+        pdc.set(noDamageRestoreTokenKey, PersistentDataType.LONG, token)
+        target.maximumNoDamageTicks = 0
+        target.noDamageTicks = 0
+
+        val targetId = target.uniqueId
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            val current = Bukkit.getEntity(targetId) as? LivingEntity ?: return@Runnable
+            val currentToken = current.persistentDataContainer
+                .get(noDamageRestoreTokenKey, PersistentDataType.LONG)
+            if (currentToken == token) restoreNoDamageFrameOverride(current)
+        })
+    }
+
+    private fun restoreNoDamageFrameOverride(target: LivingEntity) {
+        val pdc = target.persistentDataContainer
+        val originalMaximum = pdc.get(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)
+        if (originalMaximum != null) target.maximumNoDamageTicks = originalMaximum.coerceAtLeast(0)
+        target.noDamageTicks = 0
+        pdc.remove(noDamageOriginalMaximumKey)
+        pdc.remove(noDamageRestoreTokenKey)
+    }
+
+    /** 防止恰好在这一 tick 热重载时，把怪物的 maximumNoDamageTicks 永久留在0。 */
+    private fun restoreInterruptedNoDamageFrameOverrides() {
+        Bukkit.getWorlds().forEach { world ->
+            world.loadedChunks.forEach { chunk ->
+                chunk.entities.filterIsInstance<LivingEntity>().forEach { entity ->
+                    if (entity.persistentDataContainer.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+                        restoreNoDamageFrameOverride(entity)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun suppressNearbyTargets(
+        attacker: Player,
+        center: org.bukkit.Location,
+        primaryTargetId: UUID,
+        radius: Double,
+        maxTargets: Int,
+        damage: Double
+    ) {
+        if (damage <= 0.0 || center.world != attacker.world) return
+        val radiusSquared = radius * radius
+        val targets = center.world!!.getNearbyEntities(center, radius, radius, radius).asSequence()
+            .filterIsInstance<LivingEntity>()
+            .filter { it.uniqueId != primaryTargetId && isMonster(it) }
+            .filter { it.location.distanceSquared(center) <= radiusSquared }
+            .sortedBy { it.location.distanceSquared(center) }
+            .take(maxTargets)
+            .toList()
+
+        for (target in targets) {
+            dealExactPiercingDamage(attacker, target, damage)
+            val effect = target.location.clone().add(0.0, target.height + 0.2, 0.0)
+            target.world.spawnParticle(
+                Particle.DUST,
+                effect,
+                5,
+                0.25,
+                0.08,
+                0.25,
+                0.0,
+                Particle.DustOptions(Color.fromRGB(235, 205, 90), 0.85f)
+            )
+            target.world.spawnParticle(Particle.ENCHANTED_HIT, effect, 3, 0.2, 0.12, 0.2, 0.0)
+        }
+        if (targets.isNotEmpty()) {
+            center.world!!.playSound(center, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.45f, 0.65f)
+        }
     }
 
     private fun dealExactPiercingDamage(attacker: Player, target: LivingEntity, amount: Double) {
@@ -361,6 +547,13 @@ class sanbaoyuruyiSkill : WeaponSkill, Listener {
             )
             travelled += 0.35
         }
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        markedTargets.remove(event.player.uniqueId)
+        attackSpeedBuffs.remove(event.player.uniqueId)
+        removeAttackSpeedModifier(event.player)
     }
 
     override fun deactivate(player: Player) {

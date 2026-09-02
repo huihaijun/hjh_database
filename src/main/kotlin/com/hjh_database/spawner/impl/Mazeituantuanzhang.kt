@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.skill.element_zf.impl.ElementFormationTierEffects
 import com.hjh_database.spawner.MobFactory
 import org.bukkit.Color
 import org.bukkit.GameMode
@@ -226,7 +227,15 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                         .filter { boss.hasLineOfSight(it) }
 
                     for (p in aoePlayers) {
-                        p.damage(20.0, boss)
+                        p.setMetadata(
+                            ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
+                            org.bukkit.metadata.FixedMetadataValue(plugin, true)
+                        )
+                        try {
+                            p.damage(20.0, boss)
+                        } finally {
+                            p.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
+                        }
                     }
 
                     // 撞到人提前停止，进入常规 CD

@@ -30,6 +30,7 @@ import com.hjh_database.qixiazhen.busuan.BusuanManager
 import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.qixi.QixiDungeonManager
+import com.hjh_database.dungeon.shengshan.ShengShanDungeonManager
 import com.hjh_database.event.qixi.QixiBridgeBuildManager
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
@@ -130,6 +131,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var xuanwuTrialManager: XuanwuTrialManager
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var qixiDungeonManager: QixiDungeonManager
+    lateinit var shengShanDungeonManager: ShengShanDungeonManager
     lateinit var qixiBridgeBuildManager: QixiBridgeBuildManager
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var adminWarehouseGui: com.hjh_database.warehouse.admin.AdminWarehouseGui
@@ -232,6 +234,7 @@ class Hjh_database : JavaPlugin() {
         // 初始化金宝箱管理器
         this.goldenChestManager = GoldenChestManager(this)
         this.qixiDungeonManager = QixiDungeonManager(this)
+        this.shengShanDungeonManager = ShengShanDungeonManager(this)
         this.qixiBridgeBuildManager = QixiBridgeBuildManager(this)
         // 【新增】初始化个人仓库管理器
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
@@ -325,6 +328,7 @@ class Hjh_database : JavaPlugin() {
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
         pm.registerEvents(this.qixiDungeonManager, this)
+        pm.registerEvents(this.shengShanDungeonManager, this)
         pm.registerEvents(this.qixiBridgeBuildManager, this)
         // 【新增】个人仓库系统监听
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
@@ -419,6 +423,9 @@ class Hjh_database : JavaPlugin() {
         // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
         TianjiUtilityMenus.closeOpenMenusForDisable()
 
+        // 清理镇岳沉锋等饰品的临时属性，避免热重载后残留进攻属性加成。
+        accessorySkillManager.shutdown()
+
         if (::clientBridge.isInitialized) {
             clientBridge.shutdown()
         }
@@ -450,6 +457,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::featherManager.isInitialized) {
             featherManager.shutdown()
+        }
+
+        if (::elementZfManager.isInitialized) {
+            elementZfManager.shutdown()
         }
 
         if (::shenTributeManager.isInitialized) {
@@ -484,6 +495,10 @@ class Hjh_database : JavaPlugin() {
 
         if (::qixiDungeonManager.isInitialized) {
             qixiDungeonManager.shutdown()
+        }
+
+        if (::shengShanDungeonManager.isInitialized) {
+            shengShanDungeonManager.shutdown()
         }
 
         if (::qixiBridgeBuildManager.isInitialized) {

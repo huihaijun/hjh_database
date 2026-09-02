@@ -36,7 +36,6 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import java.io.File
-import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -151,18 +150,6 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
         // 3. 释放
         if (spell.cast(player, data, config)) {
             data.lingli = data.lingli - manaCost
-            if (manaCost > 0.0) {
-                val costText = if (manaCost % 1.0 == 0.0) {
-                    manaCost.toInt().toString()
-                } else {
-                    String.format(Locale.US, "%.1f", manaCost)
-                }
-                val manaMessage = "&6☯当前灵力值：&b${String.format(Locale.US, "%.1f", data.lingli)} &c(-$costText) &6/ &b${String.format(Locale.US, "%.0f", data.maxLingli)} &6☯"
-                player.spigot().sendMessage(
-                    ChatMessageType.ACTION_BAR,
-                    TextComponent(ChatColor.translateAlternateColorCodes('&', manaMessage))
-                )
-            }
 
             // A. 设置逻辑冷却 (插件内部判断用)
             setCooldown(player, skillId, cdMillis)

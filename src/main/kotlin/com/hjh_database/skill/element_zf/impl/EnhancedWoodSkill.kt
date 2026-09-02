@@ -3,6 +3,7 @@ package com.hjh_database.skill.element_zf.impl
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.EnhancedElementSkill
+import com.hjh_database.skill.element_zf.FormationElement
 import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.Particle
@@ -19,7 +20,8 @@ import kotlin.math.sin
 class EnhancedWoodSkill(private val plugin: Hjh_database) : EnhancedElementSkill {
     override fun cast(player: Player, data: PlayerData): Boolean {
         val target = findTarget(player, 10.0) ?: return false
-        val damage = data.zfStr * 2.25
+        val baseDamage = data.zfStr * 2.25
+        val damage = baseDamage * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
         val startedAt = System.currentTimeMillis()
 
         broadcastOriginMessage(player, "§a", "木元素", "魂灵契约")
@@ -42,9 +44,10 @@ class EnhancedWoodSkill(private val plugin: Hjh_database) : EnhancedElementSkill
                 }
 
                 target.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 30, 1, false, false, true))
-                enhancedMagicDamage(plugin, player, target, damage)
+                enhancedMagicDamage(plugin, player, target, damage, FormationElement.WOOD)
                 val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
-                player.health = min(maxHealth, player.health + damage * 0.05)
+                // 木阵回流只增幅伤害，持续回血仍使用未增幅的原始伤害快照。
+                player.health = min(maxHealth, player.health + baseDamage * 0.05)
                 playSoulLink(player, target)
                 playContractHalo(target)
                 seconds++

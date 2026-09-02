@@ -10,7 +10,9 @@ class FormationDamageEvent(
     val caster: Player,
     val target: LivingEntity,
     val requestedDamage: Double,
-    val actualDamage: Double
+    val actualDamage: Double,
+    /** 仅元素阵法伤害会携带类型；医术、饰品等共用伤害入口时保持 null。 */
+    val element: FormationElement? = null
 ) : Event() {
     override fun getHandlers(): HandlerList = HANDLERS
 
@@ -18,4 +20,12 @@ class FormationDamageEvent(
         @JvmStatic val HANDLERS = HandlerList()
         @JvmStatic fun getHandlerList(): HandlerList = HANDLERS
     }
+}
+
+enum class FormationElement {
+    METAL,
+    WOOD,
+    WATER,
+    FIRE,
+    EARTH
 }

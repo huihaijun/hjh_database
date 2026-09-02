@@ -399,6 +399,27 @@ enum class StoryNpcs(
     Villager.Type.DESERT,
     1696.5,96.50,745.5, 0f
     ),
+    ZHAN_YANXIAN_CHIFENG(
+        "zhan_yanxian_chifeng",
+        "§a§l战神族眼线-赤锋",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        -319.5, 58.5, 599.5, 0f
+    ),
+    ZHAN_YANXIAN_ZHENYUE(
+        "zhan_yanxian_zhenyue",
+        "§a§l战神族眼线-镇岳",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        -416.5, 111.5, 142.5, 0f
+    ),
+    ZHAN_YANXIAN_HANJIANG(
+        "zhan_yanxian_hanjiang",
+        "§a§l战神族眼线-寒江",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        -276.5, 28.5, -642.5, 0f
+    ),
 
 
     XIAN_XIAOFEI(
@@ -442,6 +463,13 @@ enum class StoryNpcs(
         Villager.Profession.NITWIT,
         Villager.Type.SAVANNA,
         562.5,33.50,71.5, 0f
+    ),
+    KAIGE(
+        "kaige",
+        "§a§l凯歌",
+        Villager.Profession.NONE,
+        Villager.Type.TAIGA,
+        347.5,44.50,-652.5, 0f
     );
     // 后续有新 NPC 直接往这里加...
 

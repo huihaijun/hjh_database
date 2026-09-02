@@ -1,6 +1,7 @@
 package com.hjh_database.dungeon.qixi
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.combat.MonsterDamageClassification
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import com.hjh_database.listener.CombatListener
 import com.hjh_database.spawner.MobFactory
@@ -545,7 +546,7 @@ internal class QixiThirdPhaseController(
             world.spawnParticle(Particle.FLASH, impact.clone().add(0.0, 1.0, 0.0), 1, 0.0, 0.0, 0.0, 0.0)
         }
         world.playSound(currentBoss.location, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.55f, 1.05f)
-        targets.forEach { dealPhysicalDamage(it, lightningDamage, currentBoss) }
+        targets.forEach { dealPhysicalDamage(it, lightningDamage, currentBoss, normalAttack = true) }
     }
 
     private fun castGoldenLaser(currentBoss: Evoker, targetLocation: Location, players: List<Player>) {
@@ -560,7 +561,7 @@ internal class QixiThirdPhaseController(
         }
         world.playSound(start, Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 1.65f)
         players.filter { distanceToSegmentSquared(it.location.clone().add(0.0, 1.0, 0.0), start, end) <= LASER_HIT_WIDTH_SQUARED }
-            .forEach { dealPhysicalDamage(it, laserDamage, currentBoss) }
+            .forEach { dealPhysicalDamage(it, laserDamage, currentBoss, normalAttack = true) }
     }
 
     /** 低刷新率、低采样点的红线预警；每条线每 0.5 秒仅发送 8 个粒子点。 */
@@ -1614,7 +1615,8 @@ internal class QixiThirdPhaseController(
         target: LivingEntity,
         amount: Double,
         source: LivingEntity?,
-        armorPenetration: Double = 0.0
+        armorPenetration: Double = 0.0,
+        normalAttack: Boolean = false
     ) {
         if (!target.isValid || target.isDead || amount <= 0.0) return
         target.setMetadata(PHYSICAL_SKILL_METADATA, FixedMetadataValue(plugin, true))
@@ -1625,7 +1627,14 @@ internal class QixiThirdPhaseController(
             )
         }
         target.noDamageTicks = 0
-        if (source != null && source.isValid) target.damage(amount, source) else target.damage(amount)
+        val damageAction = {
+            if (source != null && source.isValid) target.damage(amount, source) else target.damage(amount)
+        }
+        if (normalAttack) {
+            MonsterDamageClassification.withNormalAttack(plugin, target, damageAction)
+        } else {
+            damageAction()
+        }
     }
 
     private fun activePlayers(): List<Player> = playerIds.mapNotNull(Bukkit::getPlayer).filter { player ->

@@ -31,6 +31,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
     fun onQuit(event: PlayerQuitEvent) {
         val player = event.player
         plugin.qixiDungeonManager.clearBossBars(player)
+        plugin.shengShanDungeonManager.clearBossBars(player)
         val data = plugin.playerManager.getData(player.uniqueId)
         if (data != null) {
             data.currentHealth = player.health
@@ -156,6 +157,7 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     fun onDeath(event: PlayerDeathEvent) {
         plugin.qixiDungeonManager.clearBossBars(event.entity)
+        plugin.shengShanDungeonManager.clearBossBars(event.entity)
         pendingDeathEffects.add(event.entity.uniqueId)
     }
 
