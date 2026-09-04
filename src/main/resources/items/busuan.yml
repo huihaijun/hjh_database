@@ -1,0 +1,82 @@
+# 栖霞镇 · 卜算系统 Resource 物品。
+# 支持 ResourceItem 的通用字段，例如 material、name、lore、rarity、custom_model_data 等。
+busuanqian:
+  material: PAPER
+  custom_model_data: 61001
+  name: "&f卜算签（空）"
+  lore:
+    - "&7&o一张空空如也的卜算签"
+    - "&7&o去卜天居去求一下签运吧！"
+
+xiemanqianwendesuanqian:
+  material: PAPER
+  custom_model_data: 61002
+  name: "&b写满签文的算签"
+  lore:
+    - "&7&o写满了密密麻麻的签文"
+    - "&7&o去找采心的瓦罐去解签吧"
+
+shangshangqian:
+  material: PAPER
+  custom_model_data: 61003
+  name: "&e上上签"
+  rarity: 5
+  lore:
+    - "&7&o诸事顺遂，吉星高照"
+    - "&7&o今日运势大吉"
+    - "&8======================="
+    - "&e[使用说明]"
+    - "&f请在获得的一天内,右键使用"
+    - "&8======================="
+
+shangqian:
+  material: PAPER
+  custom_model_data: 61004
+  name: "&d上签"
+  rarity: 4
+  lore:
+    - "&7&o顺水行舟，小有收获"
+    - "&7&o宜稳步前行"
+    - "&8======================="
+    - "&e[使用说明]"
+    - "&f请在获得的一天内,右键使用"
+    - "&8======================="
+
+zhongqian:
+  material: PAPER
+  custom_model_data: 61005
+  name: "&9中签"
+  rarity: 3
+  lore:
+    - "&7&o平平淡淡，无惊无喜"
+    - "&7&o守常即可"
+    - "&8======================="
+    - "&e[使用说明]"
+    - "&f请在获得的一天内,右键使用"
+    - "&8======================="
+
+xiaqian:
+  material: PAPER
+  custom_model_data: 61006
+  name: "&f下签"
+  rarity: 1
+  lore:
+    - "&7&o稍有波折，但无大碍"
+    - "&7&o凡事三思"
+    - "&8======================="
+    - "&e[使用说明]"
+    - "&f请在获得的一天内,右键使用"
+    - "&8======================="
+
+xiaxiaqian:
+  material: PAPER
+  custom_model_data: 61007
+  name: "&7下下签"
+  lore:
+    - "&7&o凶星照临，诸事不宜"
+    - "&7&o今日多加小心"
+    - "&8======================="
+    - "&e[使用说明]"
+    - "&f请在获得的一天内,右键使用"
+    - "&8======================="
+

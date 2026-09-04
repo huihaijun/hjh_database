@@ -1,0 +1,12 @@
+active:
+  enable: true
+  cooldown: 10.0
+  ignore_cool_reduce: true
+  message: ""
+  mana_cost: 20.0
+  radius: 15.0
+  duration_ticks: 160
+  damage_multiplier: 1.25
+  miasma_increase_multiplier: 0.5
+  offense_bonus_percent: 0.20
+  mana_regen_per_second: 5.0

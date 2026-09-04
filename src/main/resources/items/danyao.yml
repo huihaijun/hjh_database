@@ -1,0 +1,601 @@
+# 全丹药
+NoviceHealingPill:
+  material: POTION
+  category: CHUKUI
+  name: "&b新手疗愈丹[初窥]"
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 1           # 需要的冶药等级
+  base_exp: 5           # 炼制成功给的经验
+  sickness_time: 3     #药毒时间 单位秒
+  max_stack_size: 64  # 该物品现在最多只能堆叠16个
+  #  rarity: 2
+  lore:
+    - "&7&o最基础的治愈丹药"
+    - "&7&o能帮助新手快速简单的愈合伤势"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b3&f秒"
+    - "&f瞬间恢复自身&b4&f点生命值"
+
+yuhedan0:
+  material: POTION
+  name: "&b愈合丹[归元][初级]"
+  category: GUIYUAN
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 1           # 需要的冶药等级
+  base_exp: 5           # 炼制成功给的经验
+  sickness_time: 3     #药毒时间 单位秒
+  max_stack_size: 64  # 该物品现在最多只能堆叠16个
+  #  rarity: 2
+  lore:
+    - "&7&o常用的治愈型丹药"
+    - "&7&o服下后可以短暂愈合伤口"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b3&f秒"
+    - "&f瞬间恢复自身&b8&f点生命值"
+
+yuhedan1:
+  material: POTION
+  name: "&b愈合丹[归元][中级]"
+  category: GUIYUAN
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 2           # 需要的冶药等级
+  base_exp: 10           # 炼制成功给的经验
+  sickness_time: 6    #药毒时间 单位秒
+  max_stack_size: 64
+  #  rarity: 2
+  lore:
+    - "&7&o常用的治愈型丹药"
+    - "&7&o服下后可以短暂愈合伤口"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b6&f秒"
+    - "&f瞬间恢复自身&b16&f点生命值"
+
+yuhedan2:
+  material: POTION
+  name: "&b愈合丹[归元][高级]"
+  category: GUIYUAN
+  color: "#FF5555" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 3           # 需要的冶药等级
+  base_exp: 15           # 炼制成功给的经验
+  sickness_time: 10
+  max_stack_size: 64
+  #  rarity: 2
+  lore:
+    - "&7&o常用的治愈型丹药"
+    - "&7&o服下后可以短暂愈合伤口"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b10&f秒"
+    - "&f瞬间恢复自身&b24&f点生命值"
+
+lianxindan:
+  material: POTION
+  name: "&6莲心丹[助势]"
+  category: ZHUSHI
+  color: "#BC9200" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 1           # 需要的冶药等级
+  base_exp: 5           # 炼制成功给的经验
+  sickness_time: 2     #药毒时间 单位秒
+  max_stack_size: 99  # 该物品现在最多只能堆叠16个
+  #  rarity: 2
+  lore:
+    - "&7&o少女莲心研发的丹药"
+    - "&7&o服下后可以短暂抗击高温的冲击"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b2&f秒"
+    - "&f获得持续&b15&f秒的火焰抗性"
+    - "&e[任务物品]"
+
+huilingdan0:
+  material: POTION
+  name: "&b回灵丹[归元][初级]"
+  category: GUIYUAN
+  color: "#5555FF"
+  only_doctor: false
+  req_level: 1
+  base_exp: 5
+  sickness_time: 3
+  max_stack_size: 64
+  lore:
+    - "&7&o凝聚天地灵气的恢复型丹药"
+    - "&7&o服下后可徐徐滋养神识，补充灵力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b3&f秒"
+    - "&f瞬间恢复自身&b12&f点灵力值"
+
+huilingdan1:
+  material: POTION
+  name: "&b回灵丹[归元][中级]"
+  category: GUIYUAN
+  color: "#5555FF"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 6
+  max_stack_size: 64
+  lore:
+    - "&7&o精炼提纯后的灵力丹药"
+    - "&7&o药力更为醇厚，入口即化"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b6&f秒"
+    - "&f瞬间恢复自身&b24&f点灵力值"
+
+huilingdan2:
+  material: POTION
+  name: "&b回灵丹[归元][高级]"
+  category: GUIYUAN
+  color: "#5555FF"
+  only_doctor: false
+  req_level: 3
+  base_exp: 15
+  sickness_time: 10
+  max_stack_size: 64
+  lore:
+    - "&7&o集天地灵气于方寸之间的珍品丹药"
+    - "&7&o灵台清明,气海翻涌,瞬息间灵力充盈"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b10&f秒"
+    - "&f瞬间恢复自身&b36&f点灵力值"
+
+qinglingdan:
+  material: POTION
+  name: "&b清灵丹[助势]"
+  category: ZHUSHI
+  color: "#4169E1"
+  only_doctor: false
+  req_level: 1
+  base_exp: 5
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o一尘不染,丹心如镜"
+    - "&7&o似有微风自丹内流转,轻拂过处,滞涩全无"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f清除自身所有的&b异常BUFF&f状态"
+    - "&f并获得持续&b30&f秒的&b抗火&f效果"
+
+zhuangyangdan0:
+  material: POTION
+  name: "&b壮阳丹[助势][初级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 1
+  base_exp: 5
+  sickness_time: 8
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色淡赤,入手微温,一缕浅薄的阳气游走于丹纹之间"
+    - "&7&o吞服后体内隐约凝成一层气盾,虽不厚重,聊胜于无"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b8&f秒"
+    - "&f获得基于自身&b20%最大生命&f的护盾"
+    - "&f护盾持续&b15&f秒,且至多&b40&f点"
+
+zhuangyangdan1:
+  material: POTION
+  name: "&b壮阳丹[助势][中级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色转深,温热如握暖石,醇厚的阳元之力于掌心久久不散"
+    - "&7&o入腹便化作一道坚实气障,与经脉气血同频共振,稳若磐石"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f获得基于自身&b25%最大生命&f的护盾"
+    - "&f护盾持续&b20&f秒,且至多&b50&f点"
+
+zhuangyangdan2:
+  material: POTION
+  name: "&b壮阳丹[助势][高级]"
+  category: ZHUSHI
+  color: "#CD853F"
+  only_doctor: false
+  req_level: 3
+  base_exp: 15
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色赤金,灼灼生辉,丹纹密布如龙鳞层叠,阳气充盈欲出"
+    - "&7&o服后体内宛若铸起一道无形铁壁,气血愈旺,护盾愈坚,万钧之势亦难撼动"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f获得基于自身&b30%最大生命&f的护盾"
+    - "&f护盾持续&b30&f秒,且至多&b60&f点"
+
+fenghou0:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][初级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 1
+  base_exp: 10
+  sickness_time: 6
+  max_stack_size: 64
+  lore:
+    - "&7&o隐隐透出一丝寒芒,触之指尖微麻"
+    - "&7&o掷出散作毒雾,如毒蛇吐信,直取咽喉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b6&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b150%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"
+
+fenghou1:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][中级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 2
+  base_exp: 20
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o丹体漆黑如墨,握于掌心竟生出几分刺骨凉意"
+    - "&7&o破空而出,气血翻涌不止"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b250%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"
+
+fenghou2:
+  material: SPLASH_POTION
+  name: "&c封喉[飞丹][高级]"
+  category: FEIDAN
+  color: "#4B0082"
+  only_doctor: true
+  req_level: 3
+  base_exp: 30
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o丹心一点殷红似血,周遭黑气缭绕"
+    - "&7&o所过之处,生机断绝,一击封喉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b350%&f阵法强度的伤害"
+    - "&c非医师职业使用,将毫无作用"
+
+juezhangdan:
+  material: POTION
+  name: "&b绝瘴丹[归元]"
+  category: GUIYUAN
+  color: "#D08BA9" # 【新增】在这里直接写 Hex 颜色代码
+  only_doctor: false     # 是否仅限医师
+  req_level: 2           # 需要的冶药等级
+  base_exp: 10           # 炼制成功给的经验
+  sickness_time: 5     #药毒时间 单位秒
+  max_stack_size: 64
+  #  rarity: 2
+  lore:
+    - "&7&o旧时虎镇居民常常使用的丹药"
+    - "&7&o能够瞬间散出体内的部分瘴气"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药丹疾病：&b5&f秒"
+    - "&f瞬间移除自身&b8%&f的&7虎瘴"
+    - "&f然后若自身&7虎瘴&f大于&b40%&f"
+    - "&f获得一个&b15点&f的护盾持续&b30&f秒"
+
+juliwan0:
+  material: POTION
+  name: "&b巨力丸[助势][初级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 8
+  max_stack_size: 64
+  lore:
+    - "&7&o药性初显,气力渐生"
+    - "&7&o服后短暂激起体内潜能,力贯双臂"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b8&f秒"
+    - "&f接下来&b10&f秒内.提升自己&b25%&f进攻属性"
+    - "&f至多以此法提升&b20&f点"
+
+juliwan1:
+  material: POTION
+  name: "&b巨力丸[助势][中级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 16
+  max_stack_size: 64
+  lore:
+    - "&7&o丹体饱满,握于掌心竟生出几分沉坠之感"
+    - "&7&o一股蛮横力道自丹田涌起,拳脚之间虎虎生风"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b16&f秒"
+    - "&f接下来&b12&f秒内.提升自己&b30%&f进攻属性"
+    - "&f至多以此法提升&b30&f点"
+
+juliwan2:
+  material: POTION
+  name: "&b巨力丸[助势][高级]"
+  category: ZHUSHI
+  color: "#D66207"
+  only_doctor: false
+  req_level: 4
+  base_exp: 30
+  sickness_time: 32
+  max_stack_size: 64
+  lore:
+    - "&7&o丹纹层叠,药力内敛却难掩霸道之气"
+    - "&7&o服之双臂有千钧之力,开碑裂石不过等闲"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b32&f秒"
+    - "&f接下来&b15&f秒内.提升自己&b50%&f进攻属性"
+    - "&f至多以此法提升&b50&f点"
+
+duohun0:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][初级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 2
+  base_exp: 10
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o丹气幽微,凝而不散"
+    - "&7&o触及目标的瞬间,似有一缕寒意渗入骨髓"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b0.8秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b20%"
+    - "&c非医师职业使用,将毫无作用"
+
+duohun1:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][中级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 3
+  base_exp: 20
+  sickness_time: 6
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色阴沉,冷意逼人"
+    - "&7&o药力如暗流涌动,悄无声息地侵蚀着防御"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b6&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b1秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b30%"
+    - "&c非医师职业使用,将毫无作用"
+
+duohun2:
+  material: SPLASH_POTION
+  name: "&c夺魂[飞丹][高级]"
+  category: FEIDAN
+  color: "#D2D518"
+  only_doctor: true
+  req_level: 4
+  base_exp: 30
+  sickness_time: 7
+  max_stack_size: 64
+  lore:
+    - "&7&o丹心一墨,周遭灵息为之凝滞"
+    - "&7&o所过之处,坚甲如纸,护体之力尽数瓦解"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b7&f秒"
+    - "&f向准心方向掷出,对范围内怪物造成&b1秒&f的禁锢"
+    - "&f并在&b8秒&f内削弱怪物护甲&b40%"
+    - "&c非医师职业使用,将毫无作用"
+
+fengmuhuichun0:
+  material: POTION
+  name: "&b逢木回春[归元][初级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 2
+  base_exp: 10
+  sickness_time: 7
+  max_stack_size: 64
+  lore:
+    - "&7&o丹色青翠,草木气息隐约流转"
+    - "&7&o入口清润,一缕温和生机徐徐浸润经脉"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b7&f秒"
+    - "&f瞬间恢复&b8点&f生命"
+    - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅰ&f效果"
+
+fengmuhuichun1:
+  material: POTION
+  name: "&b逢木回春[归元][中级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 9
+  max_stack_size: 64
+  lore:
+    - "&7&o通透如碧玉,萦绕着淡淡的甘润之气"
+    - "&7&o暖意如春日溪流,绵绵不绝地滋养周身"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b9&f秒"
+    - "&f瞬间恢复&b16点&f生命"
+    - "&f并获得持续持续&b10&f秒的&b生命恢复Ⅱ&f效果"
+
+fengmuhuichun2:
+  material: POTION
+  name: "&b逢木回春[归元][高级]"
+  category: GUIYUAN
+  color: "#DC143C"
+  only_doctor: false
+  req_level: 4
+  base_exp: 30
+  sickness_time: 12
+  max_stack_size: 64
+  lore:
+    - "&7&o翠色欲滴,丹纹如新叶脉络般细密繁复"
+    - "&7&o仿若枯木逢雨,生机自内而外层层涌出"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b12&f秒"
+    - "&f瞬间恢复&b24点&f生命"
+    - "&f并获得持续持续&b15&f秒的&b生命恢复Ⅱ&f效果"
+
+luoshuidan:
+  material: POTION
+  name: "&b洛水丹[助势]"
+  category: ZHUSHI
+  color: "#1E90FF"
+  only_doctor: false
+  req_level: 5
+  base_exp: 15
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o通透如水,入手微凉,似有清流于掌心流转"
+    - "&7&o服后灵息自生,入水不溺,如游鱼般自在穿行"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f获得持续时间为&b60&f秒的&b水下呼吸&f效果"
+    - "&f同时持续时间内在水下行动更加敏捷"
+
+qushidan:
+  material: POTION
+  name: "&b祛湿丹[助势]"
+  category: ZHUSHI
+  color: "#3445D6"
+  only_doctor: false
+  req_level: 1
+  base_exp: 1
+  sickness_time: 5
+  max_stack_size: 64
+  lore:
+    - "&7&o水族村民常用的祛湿丹药"
+    - "&7&o可以驱散身上的部分湿气"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b5&f秒"
+    - "&f立即清除自身&b25%&f的湿气"
+    - "&c此丹药不与其他丹药共享药毒时间"
+
+shuangshengdan0:
+  material: POTION
+  name: "&b双生丹[归元][初级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 10
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b10&f秒"
+    - "&f在接下来的&b8&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b5&f点"
+
+shuangshengdan1:
+  material: POTION
+  name: "&b双生丹[归元][中级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 5
+  base_exp: 40
+  sickness_time: 15
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b15&f秒"
+    - "&f在接下来的&b8&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b7&f点"
+
+shuangshengdan2:
+  material: POTION
+  name: "&b双生丹[归元][高级]"
+  category: GUIYUAN
+  color: "#D3BFD6"
+  only_doctor: false
+  req_level: 7
+  base_exp: 60
+  sickness_time: 20
+  max_stack_size: 64
+  lore:
+    - "&7&o采用极其诡异的材料炼制而成"
+    - "&7&o拥有着双重生长的力量"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b20&f秒"
+    - "&f在接下来的&b10&f秒内恢复自身"
+    - "&f灵力和生命值中&b百分比&f最小的其中一个"
+    - "&f每秒恢复其&b8&f点"
+
+jieduwan0:
+  material: POTION
+  name: "&b解毒丸[归元][初级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 3
+  base_exp: 20
+  sickness_time: 60
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b60&f秒"
+    - "&f立即减少其他丹药&b50%&f的药毒时间"
+    - "&f同时在&b45&f秒内免疫&c中毒&f效果"
+
+jieduwan1:
+  material: POTION
+  name: "&b解毒丸[归元][中级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 5
+  base_exp: 40
+  sickness_time: 80
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b80&f秒"
+    - "&f立即减少其他丹药&b80%&f的药毒时间"
+    - "&f同时在&b120&f秒内免疫&c中毒&f效果"
+
+jieduwan2:
+  material: POTION
+  name: "&b解毒丸[归元][高级]"
+  category: GUIYUAN
+  color: "#26D6AC"
+  only_doctor: false
+  req_level: 7
+  base_exp: 60
+  sickness_time: 120
+  max_stack_size: 64
+  lore:
+    - "&7&o青翠欲滴,可解世间毒素"
+    - "&7&o也能够驱散药物的毒力"
+    - "&8===========&2&l丹药效果&8============"
+    - "&e[右键] &f药毒时间：&b120&f秒"
+    - "&f立即减少其他丹药&b100%&f的药毒时间"
+    - "&f同时在&b180&f秒内免疫&c中毒&f效果"
+    - "&c此丹药不与其他丹药共享药毒时间"

@@ -1,0 +1,75 @@
+gui:
+  title: "&0玩家财产 &8- &7第 {page}/{pages} 页"
+  loading-title: "&0正在读取财产数据..."
+
+messages:
+  load-failed: "&c财产数据读取失败，请查看控制台。"
+
+items:
+  loading:
+    material: CLOCK
+    name: "&e正在异步读取数据库..."
+    lore:
+      - "&7查询不会阻塞服务器主线程"
+
+  player:
+    material: PLAYER_HEAD
+    name: "&e{name}"
+    lore:
+      - "&7财产：&6{money}"
+      - "&7状态：{online}"
+      - "&8UUID: {uuid}"
+
+  refresh:
+    material: SUNFLOWER
+    name: "&a刷新本页"
+    lore:
+      - "&7重新从数据库异步读取"
+
+  previous:
+    material: ARROW
+    name: "&e上一页"
+  previous-disabled:
+    material: GRAY_DYE
+    name: "&8没有上一页"
+
+  name-asc:
+    material: NAME_TAG
+    name: "&b玩家名升序"
+    lore:
+      - "&7点击按 A → Z 排列"
+  name-desc:
+    material: NAME_TAG
+    name: "&b玩家名降序"
+    lore:
+      - "&7点击按 Z → A 排列"
+
+  info:
+    material: BOOK
+    name: "&6财产数据库"
+    lore:
+      - "&7玩家总数：&f{total}"
+      - "&7当前页：&f{page}/{pages}"
+      - "&7当前排序：&f{sort}"
+
+  money-asc:
+    material: GOLD_NUGGET
+    name: "&6财产升序"
+    lore:
+      - "&7点击从少到多排列"
+  money-desc:
+    material: GOLD_INGOT
+    name: "&6财产降序"
+    lore:
+      - "&7点击从多到少排列"
+
+  next:
+    material: ARROW
+    name: "&e下一页"
+  next-disabled:
+    material: GRAY_DYE
+    name: "&8没有下一页"
+
+  close:
+    material: BARRIER
+    name: "&c关闭"

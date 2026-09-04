@@ -1,0 +1,142 @@
+# 路径: resources/items/materials.yml
+
+
+yuansuduihuanquan:
+  material: PAPER
+  name: "&b元素兑换券"
+  lore:
+    - "&7&o用来兑换元素的凭证"
+    - "&7&o可以找到元素兑换师兑换"
+
+yuansuzhuanhuaquan:
+  material: PAPER
+  name: "&b元素转化券"
+  lore:
+    - "&7&o用来转化元素的凭证"
+    - "&7&o可以请元素转化师协助转化元素"
+
+
+longlinmu:
+  material: OAK_LOG
+  name: "&b龙鳞木"
+  lore:
+    - "&7&o龙鳞之森开采的木头"
+    - "&7&o是用来锻造武器的好材料"
+
+cucaoshi:
+  material: STICK
+  custom_model_data: 7008
+  name: "&b粗糙石头"
+  lore:
+    - "&7&o非常粗糙的石头"
+    - "&7&o制作出来的武器也还说得过去"
+
+cutong:
+  material: RAW_COPPER
+  name: "&b粗铜"
+  rarity: 2
+  lore:
+    - "&7&o比较稀奇的金属材料"
+    - "&7&o可以锻造不错的武器"
+
+bupi:
+  material: STICK
+  custom_model_data: 7009
+  name: "&b布匹"
+#  rarity: 2
+  lore:
+    - "&7&o开物术可将杂草中的纤维制成布匹"
+    - "&7&o可以制作比较低阶的防具"
+
+gushashi:
+  material: STICK
+  custom_model_data: 7010
+  name: "&9古沙石"
+  rarity: 3
+  lore:
+    - "&7&o上古遗存于大漠深处的奇石"
+    - "&7&o历经千年风沙,内里坚不可摧"
+    - "&7&o仍是锻造武器的不二选择"
+
+huoshanshi:
+  material: STICK
+  custom_model_data: 7011
+  name: "&d火山石"
+  rarity: 4
+  lore:
+    - "&7&o火山怒吼后的凝固遗骸"
+    - "&7&o于山口与山脚沉睡百年,余温不散"
+    - "&7&o锻造成器,可迸发极强的能力"
+
+taoyuansichou:
+  material: nether_wart
+  name: "&9桃源丝绸"
+  rarity: 3
+  lore:
+    - "&7&o蕴藏于传说中世外桃源的奇珍丝绸"
+    - "&7&o质地光滑如玉,丝缕坚韧不断,寻常刀剑亦难伤其分毫"
+    - "&7&o因其珍贵至极,唯有封存于此木匣之中,方可长久留存"
+
+shenjingshui:
+  material: WET_SPONGE
+  name: "&b深井水"
+  lore:
+    - "&7&o白虎镇仅存的少数纯净之物"
+    - "&7&o入口甘甜，作药引也是绝佳"
+
+ruoshuimian:
+  material: STICK
+  custom_model_data: 7012
+  name: "&d若水棉"
+  rarity: 4
+  lore:
+    - "&7&o轻柔似水，触之若无物，洁如初雪"
+    - "&7&o看似柔弱不堪，却能融入坚钢重甲之中"
+    - "&7&o赋予铠甲以流水般的韧性，守护更胜从前"
+
+zhangqi_hujin:
+  material: STICK
+  custom_model_data: 7013
+  name: "&7附满瘴气的虎金"
+  rarity: 4
+  lore:
+    - "&7&o白虎洞内蕴藏的稀世奇金"
+    - "&7&o历代矿夫魂牵梦萦之物因百年滥采，几近绝迹"
+    - "&7&o此物已被瘴气侵入，需至纯之物，散其恶瘴"
+
+zhangqi_hupo:
+  material: STICK
+  custom_model_data: 7014
+  name: "&7附满瘴气的虎魄"
+  rarity: 4
+  lore:
+    - "&7&o一缕携有白虎神威的残魂"
+    - "&7&o灵气暴动后散入山野，寄于魔物体内"
+    - "&7&o此物已被瘴气侵入，需至纯之物，散其恶瘴"
+
+huzhuayan:
+  material: MOSSY_COBBLESTONE
+  name: "&d虎爪岩"
+  rarity: 4
+  lore:
+    - "&7&o白虎洞内独特的岩石"
+    - "&7&o石上的花纹似有虎爪痕迹"
+    - "&7&o寒气逼人,充满攻击性"
+
+xuanjingshi:
+  material: STICK
+  custom_model_data: 7020
+  name: "&e玄晶石"
+  rarity: 5
+  lore:
+    - "&7&o玄水湾沿岸冲刷而出的晶石,经年浪打,棱角尽去而光泽不灭"
+    - "&7&o石质细腻如玉,扣之有声如磬,水蚀不腐,愈淬愈坚"
+
+baigumu:
+  material: STICK
+  custom_model_data: 7015
+  name: "&e白骨木"
+  rarity: 5
+  lore:
+    - "&7&o乱葬岗中破土而出的苍白枯木,形如白骨破土,寒瘆逼人"
+    - "&7&o汲尽地底尸骸怨气而生,纹理间似有幽魂低语,阴气不散"

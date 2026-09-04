@@ -1,0 +1,20 @@
+titles:
+  custom_1:
+    material: NAME_TAG
+    name: "&f自定义称号·壹"
+    lore:
+      - "&7&o这是一个自定义称号"
+      - "&7&o购买后可在称号库中右键改名"
+  custom_2:
+    material: NAME_TAG
+    name: "&f自定义称号·贰"
+    lore:
+      - "&7&o这是一个自定义称号"
+      - "&7&o购买后可在称号库中右键改名"
+  custom_3:
+    material: NAME_TAG
+    name: "&f自定义称号·叁"
+    lore:
+      - "&7&o这是一个自定义称号"
+      - "&7&o购买后可在称号库中右键改名"
+

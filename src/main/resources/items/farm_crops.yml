@@ -1,0 +1,18 @@
+# 灵田成熟作物。
+farm_crop_xiaomai:
+  material: WHEAT
+  name: "&b小麦"
+  rarity: 1
+  lore:
+    - "&7&o普普通通的小麦"
+    - "&7&o可以磨粉做粮食"
+  crop_id: xiaomai
+
+mogu:
+  material: BROWN_MUSHROOM
+  name: "&b蘑菇"
+  rarity: 1
+  lore:
+    - "&7&o看起来并不算普通蘑菇"
+    - "&7&o毕竟能匪夷所思地在田里长出来"
+  crop_id: mogu

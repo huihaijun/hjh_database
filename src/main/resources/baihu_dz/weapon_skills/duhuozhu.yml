@@ -1,0 +1,18 @@
+active:
+  enable: true
+  cooldown: 5.0
+  ignore_cool_reduce: true
+  message: ""
+  mana_cost: 20.0
+  total_damage_multiplier: 3.3
+  round_damage_multipliers:
+    - 0.8
+    - 1.1
+    - 1.4
+  radius: 8.0
+  rounds: 3
+  interval_ticks: 15
+  impact_delay_ticks: 8
+  particle_steps: 8
+  particle_step_interval_ticks: 1
+  vulnerable_seconds: 5.0

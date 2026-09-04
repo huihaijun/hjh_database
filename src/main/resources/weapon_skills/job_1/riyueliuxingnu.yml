@@ -1,0 +1,4 @@
+active:
+  enable: true
+  message: "&a&l武器技【繁星落】发动！"
+  cooldown: 10.0

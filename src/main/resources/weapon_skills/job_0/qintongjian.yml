@@ -1,0 +1,12 @@
+active:
+  enable: true
+  # 留空 message，因为我们在代码里处理了开关两种不同的提示
+  message: ""
+  cooldown: 3
+  # === 技能参数 ===
+  # 提升护甲的具体数值 25
+  armor_bonus: 25.0
+  # 降低移速的百分比 (0.25 = 25%)
+  speed_malus_percent: 0.50
+  # 开启时的提示
+  message_on: "&a&l武器技【御守】发动！"

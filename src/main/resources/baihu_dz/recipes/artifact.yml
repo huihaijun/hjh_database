@@ -1,0 +1,25 @@
+baihu_huiliuyi:
+  result_id: baihu_huiliuyi:1
+  ingredients:
+    - huiliuyi:1
+    - huishi:1
+    - cutong:6
+    - gushashi:6
+    - AMETHYST_SHARD:16
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+
+baihu_taolizhi:
+  result_id: baihu_taolizhi:1
+  ingredients:
+    - taolizhi:1
+    - huishi:1
+    - cutong:6
+    - gushashi:6
+    - AMETHYST_SHARD:16
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 80

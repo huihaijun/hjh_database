@@ -1,0 +1,479 @@
+# medical_items.yml
+# 定义医术秘籍，玩家右键消耗秘籍后将医术存入灵智
+# id对应代码中的 skillId
+
+items:
+  yuhehua:
+    name: "&f愈合花"
+    material: PAPER
+    rarity: 1 # 自定义字段，代码里读取
+    skill_id: "yuhehua"
+    # === 新增配置 (代码会自动读取这里) ===
+    mana_cost: 3.0       # 灵力消耗
+    cooldown: 7.0        # 冷却时间 (秒)
+    duration: 10         # 自定义参数：持续时间 (YuHeHuaSpell 里用的)
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &f愈合花&f！"
+    lore:
+      - "&7&o医师的初始医术,能够催动灵力在身边绽开花朵"
+      - "&7&o拾起花朵的人身心大悦,心身治愈"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b7&f秒 消耗灵力：&b3&f点"
+      - "&f释放后，在身旁生成三朵花朵持续&b10&f秒"
+      - "&f每朵花将恢复拾起者基于你&b80%⚡&f的生命"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+      -
+  tuidi:
+    name: "&f退敌"
+    material: PAPER
+    rarity: 1
+    skill_id: "tuidi"
+    # === 技能参数 ===
+    mana_cost: 1.0          # 灵力消耗
+    cooldown: 3.0          # 冷却时间：3秒
+    range: 4.0              # 范围：半径4
+    damage_ratio: 1.0       # 伤害倍率：100% 阵法强度
+    knockback_strength: 0.4 # 击退力度 (1.5 已经挺大了)
+    # 释放消消息
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &f退敌&f！"
+    lore:
+      - "&7&o医师的基础护身术，能够将周边冒犯之人击退"
+      - "&7&o虽然威力不大，但足以起到震慑之用"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b3&f秒 消耗灵力：&b1&f点"
+      - "&f对周围&b4格&f内的怪物造成&b100%⚡&f的伤害"
+      - "&f并同时对它们施加小幅度的击退效果"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  muchunyu:
+    name: "&a沐春雨"
+    material: PAPER
+    rarity: 2            # 设定为二阶
+    skill_id: "muchunyu"
+    # === 可调节参数区 ===
+    mana_cost: 5.0       # 灵力消耗
+    cooldown: 10.0       # 冷却时间：10秒
+    radius: 5.0          # 作用范围：5格
+    duration: 5          # 持续时间：5秒
+    heal_multiplier: 0.8 # 阵法强度治疗比例：80%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &a沐春雨&f！"
+    lore:
+      - "&7&o能够催动雨水降下的神奇医术"
+      - "&7&o淋雨之人身心愉悦,伤口也得到愈合"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b10&f秒 消耗灵力：&b5&f点"
+      - "&f在身旁&b5&f格范围内降下春雨持续&b5&f秒"
+      - "&f每秒恢复队友&b80%⚡&f的生命"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  lingcaojue:
+    name: "&a灵草诀"
+    material: PAPER
+    rarity: 2            # 设定为二阶
+    skill_id: "lingcaojue"
+    # === 可调节参数区 ===
+    mana_cost: 5.0       # 阵法灵力消耗：5点
+    cooldown: 10.0       # 冷却时间：10秒
+    taunt_radius: 5.0    # 瞬间嘲讽范围：5格
+    radius: 5.0          # 爆炸伤害范围：5格
+    duration: 4          # 爆炸倒计时：4秒
+    damage_multiplier: 2.0 # 伤害比例：阵法强度的 200%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &a灵草诀&f！"
+    lore:
+      - "&7&o充盈着自然之力的医术,能够催生小草生长"
+      - "&7&o可这可爱的小草,也并非安全之物……"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b10&f秒 消耗灵力：&b5&f点"
+      - "&f在原地生成灵草,瞬间吸引&b5&f格内怪物仇恨"
+      - "&f&b4&f秒后自爆,对其&b5&f格内怪物造成&b200%⚡&f的伤害"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  hushenzhou:
+    name: "&a护身咒"
+    material: PAPER
+    rarity: 2            # 设定为二阶
+    skill_id: "hushenzhou"
+    # === 可调节参数区 ===
+    mana_cost: 9.0       # 阵法灵力消耗：9点
+    cooldown: 15.0       # 冷却时间：15秒
+    duration: 20         # 持续时间：20秒
+    absorption_multiplier: 3.0 # 护盾吸收比例：阵法强度的 300%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &a护身咒&f！"
+    lore:
+      - "&7&o引动天地灵气，在周身凝聚出护体金光"
+      - "&7&o此咒可保使用者一时平安……"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b15&f秒 消耗灵力：&b9&f点"
+      - "&f释放后获得&b300%⚡&f的护盾"
+      - "&f并获得一个可&b完全抵挡一次伤害&f的免伤光罩持续&b20&f秒"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  dusuzhen:
+    name: "&9毒素针"
+    material: PAPER
+    rarity: 3            # 设定为三阶
+    skill_id: "dusuzhen"
+    trial_id: "shanshenmiao"
+    # === 可调节参数区 ===
+    mana_cost: 10.0      # 灵力消耗：10点
+    cooldown: 6.0        # 冷却时间：6秒
+    range: 10.0          # 最远飞行距离：10格
+    slow_duration: 3     # 减速持续时间：3秒
+    damage_multiplier: 1.0 # 伤害比例：阵法强度的 100%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &9毒素针&f！"
+    lore:
+      - "&7&o医师用来保命的手段"
+      - "&7&o遇到危险时,甩出飞针,毒素便会蔓延全身"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b6&f秒 消耗灵力：&b10&f点"
+      - "&f向准心方向散射&b3&f(每&b5&f点⚡增加&b2&f根,上限&b10&f)根毒针"
+      - "&f每根毒针造成&b100%⚡&f的伤害"
+      - "&f多根毒针命中同一目标时,后续伤害衰减至&b50%&f"
+      - "&f被命中的怪物将被轻微减速&b3&f秒"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  mingxiang:
+    name: "&9冥想"
+    material: PAPER
+    rarity: 3            # 设定为三阶
+    skill_id: "mingxiang"
+    trial_id: "zhuanyuanshangxian"
+    # === 可调节参数区 ===
+    mana_cost: 16.0      # 初始灵力消耗：16点
+    cooldown: 30.0       # 冷却时间：30秒
+    duration: 10         # 持续时间：10秒
+    regen_multiplier: 0.2 # 恢复倍率：阵法强度的 20%
+    speed_reduction: 0.7 # 冥想期间移速降低 70%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &9冥想&f！"
+    lore:
+      - "&7&o放空心智,与周围的天地灵气共鸣"
+      - "&7&o医师常常能在这过程探究天地医术的奥秘"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b30&f秒 消耗灵力：&b16&f点"
+      - "&f进入&b[冥想]&f持续&b10&f秒,受到伤害将被打断"
+      - "&f&b[冥想]&f:每&b0.5&f秒恢复&b20%⚡&f的生命与灵力"
+      - "&f同时自身移速降低&c70%&f"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  bingqingyu:
+    name: "&9冰清域"
+    material: PAPER
+    rarity: 3            # 设定为三阶
+    skill_id: "bingqingyu"
+    trial_id: "wangyuanwai"
+    # === 可调节参数区 ===
+    mana_cost: 8.0       # 灵力消耗：8点
+    cooldown: 16.0       # 冷却时间：16秒
+    radius: 12.0         # 作用范围：12格
+    speed_duration: 32   # 速度持续时间：32秒
+    vulnerability: 0.15  # 范围内怪物受到伤害增加 15%
+    vulnerability_duration: 8 # 易伤持续时间：8秒
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &9冰清域&f！"
+    lore:
+      - "&7&o从冰天雪地中,老一辈医师悟出了世间纯粹的力量"
+      - "&7&o此术寒气涤荡,让人感到一阵神清气爽"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b16&f秒 消耗灵力：&b8&f点"
+      - "&f驱散自身及&b12&f格内所有友军身上的&c负面效果&f"
+      - "&f并为领域内的友军加速持续&b32&f秒"
+      - "&f且范围内怪物获得&b15%&f的&b易伤&f效果持续&b8&f秒"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  huichunyu:
+    name: "&9回春域"
+    material: PAPER
+    rarity: 3            # 设定为三阶
+    skill_id: "huichunyu"
+    trial_id: "wenquankezhan"
+    # === 可调节参数区 ===
+    mana_cost: 8.0       # 灵力消耗：8点
+    cooldown: 12.0       # 冷却时间：12秒
+    radius: 8.0          # 作用范围：8格
+    heal_multiplier: 2.8 # 群体恢复比例：阵法强度的 280%
+    shield_multiplier: 0.5 # 护盾厚度：自身最大生命值的 50%
+    shield_duration: 30  # 护盾持续时间：30秒
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &9回春域&f！"
+    lore:
+      - "&7&o能够唤醒周围沉睡的生机"
+      - "&7&o其勃发的生命力甚至可以挥手成林"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b12&f秒 消耗灵力：&b8&f点"
+      - "&f恢复周围&b8&f格内友军&b280%⚡&f的生命"
+      - "&f其中自己和范围内一名生命值最低的友军获得一个"
+      - "&f基于自身&b50%❤&f的护盾,持续&b30&f秒"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  xinghuayu:
+    name: "&d杏花雨"
+    material: PAPER
+    rarity: 4            # 设定为四阶
+    skill_id: "xinghuayu"
+    trial_id: "chendafu"
+    # === 可调节参数区 ===
+    mana_cost: 24.0      # 灵力消耗：24点
+    cooldown: 24.0       # 冷却时间：24秒
+    range: 16.0          # 花种最远飞行距离：16格
+    damage_multiplier: 1.2 # 命中怪物伤害：120%阵法强度
+    shield_ratio: 0.3    # 命中友军护盾：目标最大生命的30%
+    shield_duration: 8.0 # 护盾持续时间：8秒
+    plant_delay: 4.0     # 命中实体后的埋种时间：4秒
+    rain_radius: 8.0     # 杏花雨水平半径：8格
+    rain_center_height: 4.0 # 雨区中心相对埋种点抬高4格
+    duration: 10.0       # 杏花雨持续时间：10秒
+    heal_multiplier: 1.0 # 每秒治疗：100%阵法强度
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &d杏花雨&f！"
+    lore:
+      - "&7&o将一粒蕴含纯粹生机的杏花种掷出"
+      - "&7&o落地之处,春意盎然,花雨纷飞"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b24&f秒 消耗灵力：&b24&f点"
+      - "&f向准心掷出花种,最远飞行&b16&f格"
+      - "&f命中怪物造成&b120%⚡&f伤害"
+      - "&f命中友军使其获得&b30%最大生命&f护盾,持续&b8&f秒"
+      - "&f命中实体后埋种,&b4&f秒后爆炸并形成&b8&f格杏花雨"
+      - "&f未命中实体时,会在方块或最远点直接形成杏花雨"
+      - "&f每秒治疗雨内玩家&b100%⚡&f生命并恢复&b饱和&f"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  nianqijin:
+    name: "&d念气劲"
+    material: PAPER
+    rarity: 4            # 设定为四阶
+    skill_id: "nianqijin"
+    trial_id: "huzhenshangren"
+    # === 可调节参数区 ===
+    mana_cost: 16.0      # 灵力消耗：16点
+    cooldown: 10.0       # 冷却时间：10秒
+    range: 16.0          # 气波距离：16格
+    beam_width: 3.0      # 气波总宽度：3格
+    full_effect_distance: 2.0 # 0—2格内保持满额效果
+    max_damage_multiplier: 4.8 # 最近伤害：阵法强度的 480%
+    min_damage_multiplier: 3.2 # 第16格伤害：阵法强度的 320%
+    max_stun_ticks: 48   # 最近眩晕：2.4秒
+    min_stun_ticks: 16   # 第16格眩晕：0.8秒
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &d念气劲&f！"
+    lore:
+      - "&7&o将精纯的灵力逆转,化为极具破坏性的贯穿气流"
+      - "&7&o意念所至,气劲即达,能瞬间震慑宵小"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b10&f秒 消耗灵力：&b16&f点"
+      - "&f向准心方向释放&b16&f格的气波"
+      - "&f对路径上怪物造成伤害和眩晕(遇到墙体停止)"
+      - "&f距离越近效果越强,最多造成&b480%⚡&f伤害"
+      - "&f并附带最长&b2.4秒&f的眩晕效果"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  hunlingyou:
+    name: "&d魂灵游"
+    material: PAPER
+    rarity: 4            # 设定为四阶
+    skill_id: "hunlingyou"
+    trial_id: "baigujing"
+    # === 可调节参数区 ===
+    mana_cost: 20.0      # 灵力消耗：20点
+    cooldown: 15.0       # 冷却时间：15秒
+    duration_ticks: 70   # 持续时间：70 ticks (3.5秒)
+    speed_bonus: 0.5     # 移速增加：50%
+    damage_multiplier: 1.5 # 碰撞伤害：阵法强度的 150%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &d魂灵游&f！"
+    lore:
+      - "&7&o秘传的禁忌医术,将灵魂短暂抽离肉身"
+      - "&7&o化作游魂穿梭于敌阵,万军丛中过,片叶不沾身"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b15&f秒 消耗灵力：&b20&f点"
+      - "&f在原地留下&c肉身&f,自身进入&b灵魂出窍&f状态持续&b3.5&f秒"
+      - "&b[灵魂出窍]&f:移速增加&b50%&f且不被怪物索敌"
+      - "&f期间穿过怪物时对其造成&b150%⚡&f的伤害"
+      - "&f且持续将周遭怪物仇恨吸引至&c肉身&f处"
+      - "&f持续时间结束时,肉身将被瞬间拉回至灵魂位置"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  tianyou:
+    name: "&d天佑"
+    material: PAPER
+    rarity: 4            # 设定为四阶
+    skill_id: "tianyou"
+    trial_id: "luohe"
+    # === 可调节参数区 ===
+    mana_cost: 15.0      # 灵力消耗：15点
+    cooldown: 20.0       # 冷却时间：20秒
+    radius: 10.0         # 护盾施加范围：10格
+    duration: 10        # 护盾持续时间：10秒
+    shield_multiplier: 3.0 # 护盾厚度：阵法强度的 300%
+    offense_percent_per_shield: 0.01 # 每1点剩余护盾转化为1%进攻属性
+    offense_boost_cap: 0.3 # 进攻属性提升上限：30%
+    offense_boost_duration: 5 # 进攻属性提升持续时间：5秒
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &d天佑&f！"
+    lore:
+      - "&7&o接引天地祥瑞之气,化作最坚固的壁垒"
+      - "&7&o壁垒消散之时,余下的祥瑞将反哺自身"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b20&f秒 消耗灵力：&b15&f点"
+      - "&f为&b10&f格内队友叠加&b300%⚡&f护盾持续&b10&f秒"
+      - "&f时间结束后,若该护盾未被打破,则会立刻消散"
+      - "&f每&b1&f点剩余护盾令该玩家提升&b1%&f进攻属性"
+      - "&f至多提升&b30%&f,持续&b5&f秒"
+      - "&f该医术不会对已有更高护盾值的队友生效"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  jiangtianguang:
+    name: "&d降天光"
+    material: PAPER
+    rarity: 4            # 设定为四阶
+    skill_id: "jiangtianguang"
+    trial_id: "yuzhu"
+    # === 可调节参数区 ===
+    mana_cost: 32.0      # 灵力消耗：32点
+    cooldown: 32.0       # 冷却时间：32秒
+    radius: 12.0         # 索敌范围：12格
+    duration: 24.0       # 标记持续时间：24秒
+    pulse_interval: 4.0  # 每4秒进入一次发光期
+    glow_duration: 1.0   # 每次发光持续1秒
+    vulnerability: 0.5  # 发光期间获得50%易伤
+    bonus_damage_multiplier: 1.6 # 发光期受伤追加160%阵法强度伤害
+    source_heal_ratio: 0.04 # 标记期间攻击者回复施法者4%最大生命
+    trigger_cooldown: 1.0 # 追加伤害与回复各自独立的内置CD
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &d降天光&f！"
+    lore:
+      - "&7&o以虔诚之心,呼唤苍天以降下圣光"
+      - "&7&o击碎来犯之敌,也可庇佑子民沐浴恩典"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b32&f秒 消耗灵力：&b32&f点"
+      - "&f标记周围&b12&f格内生命值最高的怪物,持续&b24&f秒"
+      - "&f目标每&b4&f秒发光&b1&f秒,发光时获得&b50%&f易伤"
+      - "&f发光期间受伤时,追加&b160%⚡&f伤害"
+      - "&f标记期间受到玩家伤害时,使伤害来源恢复"
+      - "&f基于施法者&b4%❤&f的生命"
+      - "&f追加伤害与恢复效果各有&b1&f秒独立内置冷却"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  wanxiangsu:
+    name: "&e万象苏"
+    material: PAPER
+    rarity: 5            # 设定为五阶
+    skill_id: "wanxiangsu"
+    # === 可调节参数区 ===
+    mana_cost: 18.0      # 灵力消耗：18点
+    cooldown: 22.0       # 冷却时间：22秒
+    radius: 15.0         # 作用范围：15格
+    heal_multiplier: 5.0 # 瞬间恢复：阵法强度的 500%
+    buff_duration: 10    # 生命恢复与进攻属性增益持续时间：10秒
+    stat_boost: 0.3      # 进攻属性提升比例：30%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &e万象苏&f！"
+    lore:
+      - "&7&o唤醒沉睡的生机,令枯木逢春,万象复苏"
+      - "&7&o极致的治愈不仅能挽救生命,更能激发潜能"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b22&f秒 消耗灵力：&b18&f点"
+      - "&f恢复&b15&f格内友军&b500%⚡&f的生命"
+      - "&f并使友军获得持续&b10&f秒的&d生命恢复Ⅱ"
+      - "&f同时提升友军&b30%&f的进攻属性,持续&b10&f秒"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  huanshengyu:
+    name: "&e唤圣羽"
+    material: PAPER
+    rarity: 5            # 设定为五阶
+    skill_id: "huanshengyu"
+    # === 可调节参数区 ===
+    mana_cost: 30.0      # 灵力消耗：30点
+    cooldown: 90.0       # 冷却时间：90秒
+    radius: 8.0          # 作用范围：8格
+    shield_multiplier: 2.0 # 触发护盾厚度：阵法强度的 200%
+    buff_duration: 5   # 庇护状态存在时间：5秒
+    trigger_duration: 10 # 触发后的药水持续时间：10秒
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &e唤圣羽&f！"
+    lore:
+      - "&7&o唤来纯洁无暇的圣羽,可以庇护免受死亡之苦"
+      - "&7&o此乃起死回生,逆转大局之术"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b90&f秒 消耗灵力：&b30&f点"
+      - "&f为周围&b8&f格内友军施加圣羽庇护,持续&b5&f秒"
+      - "&f若目标在庇护期间受到&c致命伤害&f,将直接免疫该次死亡"
+      - "&f并在随后的&b10&f秒内,获得&b200%阵法强度&f的护盾"
+      - "&f同时获得&b抗性提升与&b速度提升&f一段时间"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  bazhenjue:
+    name: "&e八阵诀"
+    material: PAPER
+    rarity: 5            # 设定为五阶
+    skill_id: "bazhenjue"
+    # === 可调节参数区 ===
+    mana_cost: 20.0      # 灵力消耗：20点
+    cooldown: 18.0       # 冷却时间：18秒
+    cast_distance: 12.0  # 施法距离：12格
+    radius: 6.0          # 阵法半径：6格
+    formation_ticks: 20  # 成阵耗时：20 tick（1秒）
+    pulse_interval: 4    # 成阵伤害间隔：4 tick（0.2秒）
+    formation_damage_multiplier: 0.5 # 每段成阵伤害：阵法强度的 50%
+    burst_damage_multiplier: 6.0 # 成阵终击伤害：阵法强度的 600%
+    slow_duration: 3.0   # 减速持续时间：3秒
+    slow_amplifier: 0    # 减速 I（0开始计算）
+    knockup_velocity: 1.0 # 仅Y轴击飞，约5格高度
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &e八阵诀&f！"
+    lore:
+      - "&7&o以天地为局，化灵力为阵"
+      - "&7&o八方阵纹依次点亮，镇退阵中外魔"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b18&f秒 消耗灵力：&b20&f点"
+      - "&f以准心所指位置为阵眼,最远距离&b12&f格"
+      - "&f在&b1&f秒内沿边缘顺时针形成半径&b6&f格的八阵"
+      - "&f期间每&b0.2&f秒对阵内怪物造成&b50%⚡&f的伤害"
+      - "&f形成后仅向上击飞怪物并造成&b600%⚡&f的伤害"
+      - "&f同时使其获得&b3&f秒的减速Ⅰ效果"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  ningqibao:
+    name: "&e凝气爆"
+    material: PAPER
+    rarity: 5            # 设定为五阶
+    skill_id: "ningqibao"
+    # === 可调节参数区 ===
+    mana_cost: 20.0      # 灵力消耗：20点
+    cooldown: 20.0       # 冷却时间：20秒
+    max_range: 15.0      # 施法距离：15格
+    radius: 5.0          # 爆炸半径：5格
+    base_damage_multiplier: 2.0      # 初始伤害：阵法强度的 200%
+    damage_increase_multiplier: 1.0  # 每次递增：阵法强度的 100%
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &e凝气爆&f！"
+    lore:
+      - "&7&o将纯粹的灵力极度压缩后引爆"
+      - "&7&o此乃医师究极的杀招"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b20&f秒 消耗灵力：&b20&f点"
+      - "&f向准心方向&b15&f格发射凝气核"
+      - "&f对中心&b5&f格内的怪物造成&b200%阵法强度&f的伤害"
+      - "&f并在随后的&b第1秒&f和&b第2秒&f再次引发爆破"
+      - "&f后续每次爆破伤害将提升&b100%&f的伤害比例"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+  zhangqisan:
+    name: "&e瘴气散"
+    material: PAPER
+    rarity: 5            # 设定为四阶（可按需更改）
+    skill_id: "zhangqisan"
+    # === 可调节参数区 ===
+    mana_cost: 15.0      # 灵力消耗：15点
+    cooldown: 20.0       # 冷却时间：20秒
+    radius: 6.0          # 作用范围：6格
+    speed_duration: 10   # 友军加速持续时间：10秒
+    lose_target_duration: 2 # 怪物丢失索敌持续时间：2秒
+    poison_duration: 5   # 中毒持续时间：5秒
+    poison_ratio: 0.2    # 每次中毒扣血比例：20%
+    poison_max_damage: 150.0 # 每次中毒扣血上限：150点
+    cast_message: "&e%player% &f凭借医旗施法医术 —— &e瘴气散&f！"
+    lore:
+      - "&7&o医师常用的防身特制药粉"
+      - "&7&o挥洒出去,便能让敌人方寸大乱"
+      - "&8==============&2&l&n医术详情&8==============="
+      - "&e[右键释放] &f冷却：&b20&f秒 消耗灵力：&b15&f点"
+      - "&f令周围&b6&f格的友军获得持续&b10&f秒的&b速度提升&f"
+      - "&f同时让范围内所有怪物暂时&c丢失索敌&f持续&b2&f秒"
+      - "&f并让他们进入持续5秒的&b中毒&f状态"
+      - "&b[中毒]&f:每秒损失当前生命值的&b20%&f(上限&b150&f点)"
+      - "&e[右键领悟] &f消耗此医术秘籍，将医术存入灵智"
+
+
+
+
+

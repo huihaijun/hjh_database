@@ -1,0 +1,3 @@
+# 赏金称号。管理员可用 /hjhadmin title give <玩家> <称号ID> 直接给予。
+titles: {}
+

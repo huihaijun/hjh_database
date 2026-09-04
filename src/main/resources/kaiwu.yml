@@ -2,8 +2,7 @@
 
 # 精力系统
 energy:
-  regen_interval_min: 10   # 自动恢复间隔 (分钟)
-  regen_amount: 20.0       # 每次恢复数值
+  regen_interval_min: 10   # 精力首次不满后，经过该时间直接回满；期间不会重复累计
   base_max: 100.0          # 基础精力上限
   level_bonus: 10.0        # 每级增加的上限 (总上限 = 基础 + 等级 * 此值)
 
@@ -13,7 +12,10 @@ level_exp_base: 100
 
 # 采集设置
 mining:
-  interrupt_distance: 5.0  # 允许的最大移动距离 (超过则打断)
+  interrupt_distance: 4.0  # 允许的最大移动距离 (超过则打断)
+  # 开物术从 2 级起，每级增加 10% 开采速度；累计加成至多 50%
+  level_speed_bonus_per_level: 0.10
+  max_level_speed_bonus: 0.50
   # 枯竭状态下的掉落倍率 (0.5 表示 50%)
   depleted_multiplier: 0.5
   # 枯竭状态下是否延长采集时间 (倍率, 1.0为不变, 2.0为双倍时间)

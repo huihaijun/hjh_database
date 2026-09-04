@@ -1,0 +1,624 @@
+package com.hjh_database.listener
+
+import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.element.ElementCrystalDamageDealtEvent
+import com.hjh_database.accessory.element.ElementCrystalDamageTakenEvent
+import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
+import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
+import com.hjh_database.command.TestMobCommand
+import com.hjh_database.spawner.MobFactory
+import com.hjh_database.spawner.MobRegistry
+import com.hjh_database.skill.medical.spell.impl.BingQingYuSpell
+import com.hjh_database.skill.medical.spell.impl.JiangTianGuangSpell
+import com.hjh_database.skill.weapon.job_0.pokongfuSkill
+import net.md_5.bungee.api.ChatMessageType
+import net.md_5.bungee.api.chat.TextComponent
+import org.bukkit.*
+import org.bukkit.attribute.Attribute
+import org.bukkit.command.CommandSender
+import org.bukkit.enchantments.Enchantment
+import org.bukkit.entity.*
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityKnockbackEvent
+import org.bukkit.event.entity.EntityDeathEvent
+import org.bukkit.event.entity.EntityShootBowEvent
+import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.persistence.PersistentDataType
+import java.util.ArrayDeque
+import java.util.EnumSet
+import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.min
+
+class CombatListener(private val plugin: Hjh_database) : Listener {
+
+    /** 只取消被明确标记的单次阵法击退，不恢复速度，因此不会覆盖同刻其他来源的合法击退。 */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onFormationNoKnockback(event: EntityKnockbackEvent) {
+        val markedByThisPlugin = event.entity
+            .getMetadata(FormationMagicDamage.NO_KNOCKBACK_METADATA)
+            .any { it.owningPlugin == plugin && it.asBoolean() }
+        if (markedByThisPlugin) event.isCancelled = true
+    }
+
+    // --- 预缓存所有的 NamespacedKey，避免高频事件中重复创建对象 ---
+    private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
+    private val multishotSideKey = NamespacedKey(plugin, "multishot_side")
+    private val isBowKey = NamespacedKey(plugin, "is_bow_shot") // [新增] 用于弓箭2.5倍伤害判断
+    private val mobIdKey = MobFactory.KEY_MOB_ID
+    // [新增] 用于存储箭矢射出瞬间的属性快照
+    private val storedDamageKey = NamespacedKey(plugin, "stored_arrow_damage")
+    private val storedCritKey = NamespacedKey(plugin, "stored_arrow_crit")
+    private val rpgCrossbowArrowKey = NamespacedKey(plugin, "rpg_crossbow_arrow")
+    private val spiritSiphonChanceKey = NamespacedKey(plugin, "spirit_siphon_chance")
+    private val spiritSiphonRarityKey = NamespacedKey(plugin, "spirit_siphon_rarity")
+    private val spiritSiphonShotKey = NamespacedKey(plugin, "spirit_siphon_shot")
+    private val spiritSiphonCooldowns = HashMap<UUID, Long>()
+    private val lastMeleeAttackTick = HashMap<UUID, Int>()
+    private val processedBowShots = HashMap<UUID, ArrayDeque<Long>>()
+
+    companion object {
+        private const val TEST_DUMMY_TAG = "hjh_test_dummy"
+        const val PHYSICAL_ARMOR_PENETRATION_METADATA = "hjh_physical_armor_penetration"
+        private const val SPIRIT_SIPHON_COOLDOWN_MILLIS = 1_500L
+        private const val MAX_TRACKED_BOW_SHOTS = 64
+
+        // --- 使用 EnumSet (位图向量) 提升高频事件中的判断速度，替代低效的 when 遍历 ---
+        private val IGNORED_DAMAGE_CAUSES = EnumSet.of(
+            EntityDamageEvent.DamageCause.CONTACT, EntityDamageEvent.DamageCause.SUFFOCATION,
+            EntityDamageEvent.DamageCause.FALL, EntityDamageEvent.DamageCause.FIRE,
+            EntityDamageEvent.DamageCause.FIRE_TICK, EntityDamageEvent.DamageCause.LAVA,
+            EntityDamageEvent.DamageCause.DROWNING, EntityDamageEvent.DamageCause.STARVATION,
+            EntityDamageEvent.DamageCause.CRAMMING, EntityDamageEvent.DamageCause.HOT_FLOOR
+        )
+
+        private val MAGIC_CAUSES = EnumSet.of(
+            EntityDamageEvent.DamageCause.MAGIC, EntityDamageEvent.DamageCause.DRAGON_BREATH,
+            EntityDamageEvent.DamageCause.WITHER, EntityDamageEvent.DamageCause.POISON
+        )
+
+        private val TRUE_DAMAGE_CAUSES = EnumSet.of(
+            EntityDamageEvent.DamageCause.VOID, EntityDamageEvent.DamageCause.SUICIDE,
+            EntityDamageEvent.DamageCause.STARVATION
+        )
+    }
+
+    // === 主伤害处理逻辑 ===
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onDamage(event: EntityDamageEvent) {
+        val cause = event.cause
+        // 1. 高效的环境伤害过滤
+        if (IGNORED_DAMAGE_CAUSES.contains(cause)) return
+
+        val entity = event.entity
+        var damage = event.damage
+        var isMagicDamage = false
+        var magicBaseDamage = 0.0
+        var ignoreArmor = false
+        var isArmoredMagic = false
+        var isFormationDamage = false
+        var physicalArmorPenetration = 0.0
+        var activeWeaponId: String? = null
+
+        // 2. 检测法术伤害标记
+        if (entity.hasMetadata(FormationMagicDamage.METADATA)) {
+            isMagicDamage = true
+            isFormationDamage = true
+            entity.getMetadata(FormationMagicDamage.METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.let { magicBaseDamage = it.asDouble() }
+            entity.removeMetadata(FormationMagicDamage.METADATA, plugin)
+        }
+
+        if (entity.hasMetadata("HJH_MAGIC_DAMAGE")) {
+            isMagicDamage = true
+            entity.getMetadata("HJH_MAGIC_DAMAGE").firstOrNull()?.let {
+                magicBaseDamage = it.asDouble()
+            }
+            entity.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+        }
+
+        if (entity.hasMetadata("HJH_ARMORED_MAGIC_DAMAGE")) {
+            isMagicDamage = true
+            isArmoredMagic = true
+            entity.getMetadata("HJH_ARMORED_MAGIC_DAMAGE").firstOrNull()?.let {
+                magicBaseDamage = it.asDouble()
+            }
+            entity.removeMetadata("HJH_ARMORED_MAGIC_DAMAGE", plugin)
+        }
+
+        // 3. 物理技能标记清理
+        val isPhysicalSkill = entity.hasMetadata("hjh_physical_skill")
+        if (isPhysicalSkill) {
+            entity.removeMetadata("hjh_physical_skill", plugin)
+        }
+        entity.getMetadata(PHYSICAL_ARMOR_PENETRATION_METADATA)
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.let { physicalArmorPenetration = it.asDouble().coerceIn(0.0, 1.0) }
+        entity.removeMetadata(PHYSICAL_ARMOR_PENETRATION_METADATA, plugin)
+
+        if (isMagicDamage) damage = magicBaseDamage
+
+        // 5. 攻击者逻辑 (玩家属性 & 怪物词缀)
+        if (!isMagicDamage && !isPhysicalSkill && event is EntityDamageByEntityEvent) {
+            // ================= 【新增：自定义怪物伤害覆写】 =================
+            // 获取真正的攻击者 (兼容近战和远程投射物，比如骷髅的箭、烈焰人的火球)
+            val realAttacker: LivingEntity? = when (val damager = event.damager) {
+                is LivingEntity -> damager // 近战攻击
+                is org.bukkit.entity.Projectile -> damager.shooter as? LivingEntity // 远程投射物攻击
+                else -> null
+            }
+
+            // 如果真正的攻击者不是玩家，检查它是不是我们的自定义怪物
+            if (realAttacker != null && realAttacker !is Player) {
+                val pdc = realAttacker.persistentDataContainer
+                // 读取 NBT (请确保类文件顶部引入了 com.hjh_database.spawner.MobFactory 和 MobRegistry)
+                val mobId = pdc.get(MobFactory.KEY_MOB_ID, PersistentDataType.STRING)
+                if (mobId != null) {
+                    val def = MobRegistry.get(mobId)
+                    if (def != null) {
+                        // ★ 核心：无论原版怎么算，直接把基础伤害覆写为 MobRegistry 配置的数值
+                        damage = pdc.get(MobFactory.KEY_CUSTOM_DAMAGE, PersistentDataType.DOUBLE) ?: def.damage
+                    }
+                }
+            }
+            // =============================================================
+            if (!isMagicDamage) {
+                when (val attacker = event.damager) {
+                    // --- A. 玩家 ---
+                    is Player -> {
+                        val hand = attacker.inventory.itemInMainHand
+                        val data = plugin.playerManager.getPlayerData(attacker) ?: return
+                        val activeWeapon = plugin.equipmentActivationManager.resolveWeapon(
+                            attacker,
+                            data,
+                            hand,
+                            attacker.inventory.heldItemSlot
+                        )
+
+                        // 空手、普通物品或不满足槽位/职业/等级等条件的武器完全走原版伤害链。
+                        // 不进入 RPG 护甲、暴击、饰品和技能事件，也不取消本次攻击。
+                        if (activeWeapon == null) return
+                        activeWeaponId = activeWeapon.id
+
+                        if (cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK && data.job != 0) {
+                            // 保留合法激活 RPG 武器原有的职业横扫限制。
+                            event.isCancelled = true
+                            return
+                        }
+
+                        if (data.job == 0) {
+                            val typeName = hand.type.name
+                            if (typeName.endsWith("_SWORD") || typeName.endsWith("_AXE")) {
+                                damage = data.attack * attacker.attackCooldown.toDouble()
+                            }
+                        } else {
+                            damage = 1.0
+                        }
+
+                        val forceRiftCrit = data.tempBonuses.containsKey(pokongfuSkill.CRIT_OVERRIDE_KEY)
+                        val critChance = if (forceRiftCrit) 1.0 else min(0.8, data.critChance)
+                        val canCrit = data.job != 2 && data.job != 3
+                        if (canCrit && (forceRiftCrit || attacker.attackCooldown > 0.9f) &&
+                            ThreadLocalRandom.current().nextDouble() < critChance
+                        ) {
+                            damage *= 1.5
+                            attacker.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, 1.0, 0.0), 15)
+                            attacker.playSound(attacker.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                        }
+                    }
+
+                    // --- B. 箭矢 ---
+                    is AbstractArrow -> {
+                        val shooter = attacker.shooter
+                        if (shooter is Player) {
+                            val pdc = attacker.persistentDataContainer
+                            val archerDmg = pdc.get(storedDamageKey, PersistentDataType.DOUBLE) ?: return
+                            val critChance = pdc.get(storedCritKey, PersistentDataType.DOUBLE) ?: 0.0
+                            val velocity = attacker.velocity.length()
+                            var arrowDamage = archerDmg * (min(3.0, velocity) / 3.0)
+
+                            arrowDamage *= when {
+                                pdc.has(isBowKey, PersistentDataType.BYTE) -> 2.5
+                                pdc.has(multishotSideKey, PersistentDataType.BYTE) -> 0.2
+                                pdc.has(rpgCrossbowArrowKey, PersistentDataType.BYTE) -> 2.0
+                                else -> 1.0
+                            }
+
+                            damage = arrowDamage
+                            val finalCritChance = min(0.8, critChance)
+                            if (ThreadLocalRandom.current().nextDouble() < finalCritChance) {
+                                damage *= 1.5
+                                attacker.isCritical = true
+                                shooter.playSound(shooter.location, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val damageSource = (event as? EntityDamageByEntityEvent)?.let { damageEvent ->
+            when (val damager = damageEvent.damager) {
+                is LivingEntity -> damager
+                is Projectile -> damager.shooter as? LivingEntity
+                else -> null
+            }
+        }
+
+        if (entity is LivingEntity) {
+            val calculationEvent = CombatDamageCalculationEvent(damageSource, entity, damage)
+            plugin.server.pluginManager.callEvent(calculationEvent)
+            damage = calculationEvent.damage
+            val vulnerableUntil = entity.getMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (vulnerableUntil != null) {
+                if (vulnerableUntil > System.currentTimeMillis()) {
+                    damage *= DuhuozhuSkill.VULNERABLE_MULTIPLIER
+                } else {
+                    entity.removeMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA, plugin)
+                }
+            }
+
+            val bingQingUntil = entity.getMetadata(BingQingYuSpell.VULNERABILITY_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (bingQingUntil != null) {
+                if (bingQingUntil > System.currentTimeMillis()) {
+                    val vulnerability = entity.getMetadata(BingQingYuSpell.VULNERABILITY_AMOUNT_METADATA)
+                        .firstOrNull { it.owningPlugin == plugin }
+                        ?.asDouble()
+                        ?.coerceAtLeast(0.0) ?: 0.0
+                    damage *= 1.0 + vulnerability
+                } else {
+                    entity.removeMetadata(BingQingYuSpell.VULNERABILITY_UNTIL_METADATA, plugin)
+                    entity.removeMetadata(BingQingYuSpell.VULNERABILITY_AMOUNT_METADATA, plugin)
+                }
+            }
+
+            val jiangTianGuangUntil = entity.getMetadata(JiangTianGuangSpell.VULNERABILITY_UNTIL_METADATA)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.asLong()
+            if (jiangTianGuangUntil != null) {
+                if (jiangTianGuangUntil > System.currentTimeMillis()) {
+                    val vulnerability = entity.getMetadata(JiangTianGuangSpell.VULNERABILITY_AMOUNT_METADATA)
+                        .firstOrNull { it.owningPlugin == plugin }
+                        ?.asDouble()
+                        ?.coerceAtLeast(0.0) ?: 0.0
+                    // 降天光使用单一 metadata，多名施法者的同名易伤只结算一次。
+                    damage *= 1.0 + vulnerability
+                } else {
+                    entity.removeMetadata(JiangTianGuangSpell.VULNERABILITY_UNTIL_METADATA, plugin)
+                    entity.removeMetadata(JiangTianGuangSpell.VULNERABILITY_AMOUNT_METADATA, plugin)
+                }
+            }
+
+        }
+
+        // 受伤测试仪以此值作为进入自定义护甲公式前的原伤害。
+        val damageBeforeArmor = damage
+
+        // 6. 受击者逻辑 (护甲计算)
+        if (entity is LivingEntity) {
+            entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
+            // 防御与伤害减免计算
+            val isMagic = MAGIC_CAUSES.contains(cause)
+            val isTrueDamage = TRUE_DAMAGE_CAUSES.contains(cause)
+            if (!isMagic && !isTrueDamage) {
+                var armor = 0.0
+                if (entity is Player) {
+                    armor = plugin.playerManager.getPlayerData(entity)?.armor ?: 0.0
+                } else {
+                    armor = entity.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
+                }
+                if ((isMagicDamage && !isArmoredMagic && !isFormationDamage) || entity.hasMetadata("hjh_magic_damage") || ignoreArmor) {
+                    armor = 0.0
+                    if (ignoreArmor && entity is Player) {
+                        entity.sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§d§l警告：受到破甲伤害！"))
+                    }
+                }
+                val armorEvent = ElementCrystalArmorCalculationEvent(entity, armor)
+                plugin.server.pluginManager.callEvent(armorEvent)
+                armor = armorEvent.armor
+                if (physicalArmorPenetration > 0.0) {
+                    armor *= 1.0 - physicalArmorPenetration
+                }
+                if (isFormationDamage) {
+                    val casterData = (damageSource as? Player)?.let(plugin.playerManager::getPlayerData)
+                    val penetration = FormationMagicDamage.armorPenetration(casterData)
+                    armor *= 1.0 - penetration
+                }
+                if (armor < 0) armor = 0.0
+                val multiplier = 50.0 / (50.0 + armor)
+                damage *= multiplier
+            }
+        }
+        plugin.damageTestManager.recordArmorCalculation(event, damageBeforeArmor, damage)
+
+        // === 【元素结晶·启示 触发】 ===
+        val attackerPlayer = if (event is EntityDamageByEntityEvent) {
+            when (val d = event.damager) {
+                is Player -> d
+                is Projectile -> d.shooter as? Player
+                else -> null
+            }
+        } else null
+
+        if (attackerPlayer != null) {
+            if (entity is LivingEntity) {
+                val isNormalAttack = activeWeaponId != null &&
+                    damage > 0.0 &&
+                    !isMagicDamage &&
+                    (cause == EntityDamageEvent.DamageCause.ENTITY_ATTACK ||
+                        cause == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)
+                val damager = (event as? EntityDamageByEntityEvent)?.damager
+                val isArrowHit = damager is AbstractArrow
+                val crystalEvent = ElementCrystalDamageDealtEvent(
+                    attackerPlayer,
+                    entity,
+                    isNormalAttack,
+                    isArrowHit,
+                    damager as? AbstractArrow,
+                    damage
+                )
+                plugin.server.pluginManager.callEvent(crystalEvent)
+                damage = crystalEvent.damage
+            }
+        }
+
+        // 应用伤害修改
+        if (damage != event.damage) {
+            event.damage = damage
+        }
+
+        if (entity is Player) {
+            plugin.server.pluginManager.callEvent(ElementCrystalDamageTakenEvent(entity, event))
+        }
+        // ============================
+    }
+
+    // === 【测伤玩偶】专用监控逻辑 ===
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onDamageMonitor(event: EntityDamageEvent) {
+        val victim = event.entity
+        if (!victim.scoreboardTags.contains(TEST_DUMMY_TAG)) return
+
+        val damageEvent = event as? EntityDamageByEntityEvent ?: return
+
+        val msgTarget: CommandSender? = when (val damager = damageEvent.damager) {
+            is Player -> damager
+            is Projectile -> damager.shooter as? Player
+            else -> null
+        }
+
+        msgTarget?.sendMessage("§e[测试] §f造成伤害: §c%.2f".format(event.finalDamage))
+    }
+
+    /**
+     * 只在最终未取消且确实造成伤害的普攻上判定灵力攫取。
+     * 近战按游戏刻去重横扫的多目标事件；弓箭按射击编号去重穿透和散射命中。
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onSpiritSiphonHit(event: EntityDamageByEntityEvent) {
+        if (event.finalDamage <= 0.0) return
+
+        when (val damager = event.damager) {
+            is Player -> {
+                if (event.cause != EntityDamageEvent.DamageCause.ENTITY_ATTACK &&
+                    event.cause != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK
+                ) return
+                val data = plugin.playerManager.getData(damager.uniqueId) ?: return
+                if (data.job != 0) return
+                val activeWeapon = plugin.equipmentActivationManager.resolveHeldWeapon(damager, data) ?: return
+                val currentTick = Bukkit.getCurrentTick()
+                if (lastMeleeAttackTick.put(damager.uniqueId, currentTick) == currentTick) return
+                attemptSpiritSiphon(damager, data.spiritSiphon, activeWeapon.rarity)
+            }
+
+            is AbstractArrow -> {
+                val shooter = damager.shooter as? Player ?: return
+                val data = plugin.playerManager.getData(shooter.uniqueId) ?: return
+                if (data.job != 1) return
+                val pdc = damager.persistentDataContainer
+                val shotId = pdc.get(spiritSiphonShotKey, PersistentDataType.LONG) ?: return
+                if (!markBowShotProcessed(shooter.uniqueId, shotId)) return
+                val chance = pdc.get(spiritSiphonChanceKey, PersistentDataType.DOUBLE) ?: return
+                val rarity = pdc.get(spiritSiphonRarityKey, PersistentDataType.INTEGER) ?: return
+                attemptSpiritSiphon(shooter, chance, rarity)
+            }
+        }
+    }
+
+    private fun markBowShotProcessed(uuid: UUID, shotId: Long): Boolean {
+        val recent = processedBowShots.getOrPut(uuid) { ArrayDeque() }
+        if (recent.contains(shotId)) return false
+        recent.addLast(shotId)
+        while (recent.size > MAX_TRACKED_BOW_SHOTS) recent.removeFirst()
+        return true
+    }
+
+    private fun attemptSpiritSiphon(player: Player, rawChance: Double, weaponRarity: Int) {
+        val chance = rawChance.coerceIn(0.0, 1.0)
+        if (chance <= 0.0 || weaponRarity <= 0) return
+
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        if (data.lingli >= data.maxLingli) return
+
+        val now = System.currentTimeMillis()
+        if (now < (spiritSiphonCooldowns[player.uniqueId] ?: 0L)) return
+        if (ThreadLocalRandom.current().nextDouble() >= chance) return
+
+        val restoreAmount = when (weaponRarity.coerceAtMost(5)) {
+            1 -> 3.0
+            2 -> 4.0
+            3 -> 6.0
+            4 -> 8.0
+            5 -> 10.0
+            else -> return
+        }
+        val lingliBefore = data.lingli
+        data.addLingli(restoreAmount)
+        val actualRestore = data.lingli - lingliBefore
+        if (actualRestore <= 0.0) return
+
+        spiritSiphonCooldowns[player.uniqueId] = now + SPIRIT_SIPHON_COOLDOWN_MILLIS
+        plugin.databaseManager.queuePlayerSave(data)
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        val uuid = event.player.uniqueId
+        spiritSiphonCooldowns.remove(uuid)
+        lastMeleeAttackTick.remove(uuid)
+        processedBowShots.remove(uuid)
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    fun onDeath(event: EntityDeathEvent) {
+        val entity = event.entity
+        val killer = entity.killer
+
+        // 1. 给击杀者发放经验
+        if (killer != null && !entity.scoreboardTags.contains(TEST_DUMMY_TAG)) {
+            if (entity.scoreboardTags.contains("panling") && entity.scoreboardTags.contains("monster")) {
+
+                // === 读取自定义怪物的独立经验 (运用 Kotlin let 防空特性优化) ===
+                val pdc = entity.persistentDataContainer
+                val baseExpAmount = pdc.get(mobIdKey, PersistentDataType.STRING)?.let { mobId ->
+                    MobRegistry.get(mobId)?.exp
+                } ?: plugin.playerManager.getMobExp() // 默认兜底兼容
+                val expAmount = plugin.raceModule.getZhanRace().applyMonsterExpBonus(killer, baseExpAmount)
+
+                plugin.playerManager.giveExp(killer, expAmount)
+                // 医术协助经验仍按怪物基础经验计算，不继承击杀者的种族加成。
+                shareExpToNearbyMedicalPlayers(killer, baseExpAmount)
+                killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent("§e+ $expAmount 经验"))
+            }
+        }
+
+        // 2. 测伤玩偶专属：死亡后重生逻辑
+        if (entity.scoreboardTags.contains(TEST_DUMMY_TAG)) {
+            event.drops.clear()
+            event.droppedExp = 0
+            val loc = entity.location
+
+            val maxHealth = entity.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
+            val finalArmor = entity.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
+
+            // 延迟一秒在原地重新生成测伤玩偶
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+                TestMobCommand.spawnDummy(plugin, loc, maxHealth, finalArmor)
+            }, 20L)
+        }
+    }
+
+    private fun shareExpToNearbyMedicalPlayers(killer: Player, expAmount: Int) {
+        if (expAmount <= 0) return
+        val killerData = plugin.playerManager.getData(killer.uniqueId) ?: return
+        if (killerData.job == 3) return
+
+        val sharedExp = expAmount / 2
+        if (sharedExp <= 0) return
+
+        val radius = 12.0
+        val radiusSquared = radius * radius
+        val center = killer.location
+
+        for (entity in killer.world.getNearbyEntities(center, radius, radius, radius)) {
+            val medicalPlayer = entity as? Player ?: continue
+            if (medicalPlayer.uniqueId == killer.uniqueId) continue
+            if (medicalPlayer.location.distanceSquared(center) > radiusSquared) continue
+
+            val medicalData = plugin.playerManager.getData(medicalPlayer.uniqueId) ?: continue
+            if (medicalData.job != 3 || medicalData.lv >= 30) continue
+
+            plugin.playerManager.giveExp(medicalPlayer, sharedExp)
+            medicalPlayer.spigot().sendMessage(
+                ChatMessageType.ACTION_BAR,
+                TextComponent("§a医师协助 §e+ $sharedExp 经验")
+            )
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onShoot(event: EntityShootBowEvent) {
+        val player = event.entity as? Player ?: return
+        val bow = event.bow ?: return
+
+        val data = plugin.playerManager.getData(player.uniqueId)
+        if (data == null || data.job != 1) { // 必须是弓箭手(1)
+            event.isCancelled = true
+            player.sendMessage("§c只有 [弓箭手] 才能使用弓弩！")
+            return
+        }
+
+        val activeWeapon = plugin.equipmentActivationManager.resolveWeapon(
+            player,
+            data,
+            bow,
+            player.inventory.heldItemSlot
+        )
+        if (activeWeapon == null) {
+            // 未激活或普通弓弩保留原版射击，不写入 RPG 伤害快照。
+            return
+        }
+
+        val proj = event.projectile
+        if (proj is AbstractArrow) {
+            val pdc = proj.persistentDataContainer
+            // ⭐ 【关键修复】将射出瞬间的面板伤害和暴击率死死地绑定在箭矢上！
+            pdc.set(storedDamageKey, PersistentDataType.DOUBLE, data.archerDamage)
+            pdc.set(storedCritKey, PersistentDataType.DOUBLE, data.critChance)
+            pdc.set(spiritSiphonChanceKey, PersistentDataType.DOUBLE, data.spiritSiphon)
+            pdc.set(spiritSiphonRarityKey, PersistentDataType.INTEGER, activeWeapon.rarity)
+            // 同一游戏刻产生的多重箭共享编号，整次射击只进行一次概率判定。
+            pdc.set(spiritSiphonShotKey, PersistentDataType.LONG, Bukkit.getCurrentTick().toLong())
+            // ⭐ 判断武器材质并写入 PDC 供子弹命中间判断
+            if (bow.type == Material.BOW) {
+                // 打上专属标记，用于在伤害判定时实现 250% 缩放
+                proj.persistentDataContainer.set(isBowKey, PersistentDataType.BYTE, 1)
+            } else if (bow.type == Material.CROSSBOW) {
+                // 标记整组RPG弩箭，供贴脸散射命中时在碰撞前清除怪物的原版受伤间隔。
+                pdc.set(rpgCrossbowArrowKey, PersistentDataType.BYTE, 1)
+
+                // 配置值表示整支箭最多命中的实体总数，而非原版附魔等级。
+                // 原版 pierceLevel=N 最多命中 N+1 个实体，因此这里需要减1。
+                val piercingEntities = activeWeapon.standardData?.piercingEntities
+                    ?: activeWeapon.baihuData?.piercingEntities
+                    ?: 1
+                val vanillaPierceLevel = (piercingEntities - 1).coerceIn(0, 127)
+                proj.pierceLevel = maxOf(proj.pierceLevel, vanillaPierceLevel)
+
+                if (bow.containsEnchantment(Enchantment.MULTISHOT)) {
+                    // 原有多重射击副箭倍率标记。
+                    val dir = player.eyeLocation.direction.normalize()
+                    val projDir = proj.velocity.normalize()
+                    if (dir.dot(projDir) < 0.99) {
+                        proj.persistentDataContainer.set(multishotSideKey, PersistentDataType.BYTE, 1)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 原版受伤间隔会拒绝同一散射齐射中稍晚碰撞的副箭，并让箭矢反弹。
+     * ProjectileHitEvent 发生在箭矢实际伤害结算前；只对本插件激活弩射出的箭及合法怪物
+     * 清除当前无敌帧，使三支箭在贴脸时仍按主箭200%、副箭各20%的倍率正常结算。
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onRpgCrossbowProjectileHit(event: ProjectileHitEvent) {
+        val arrow = event.entity as? AbstractArrow ?: return
+        if (!arrow.persistentDataContainer.has(rpgCrossbowArrowKey, PersistentDataType.BYTE)) return
+
+        val target = event.hitEntity as? LivingEntity ?: return
+        if (!target.scoreboardTags.contains("panling") || !target.scoreboardTags.contains("monster")) return
+        target.noDamageTicks = 0
+    }
+}

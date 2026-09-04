@@ -1,0 +1,21 @@
+active:
+  enable: true
+  cooldown: 5.0
+  ignore_cool_reduce: true
+  message: "&a可在3秒内再次释放"
+  actionbar_message: "&a&l武器技【开锋】已发动"
+  second_message: "&a&l武器技【开锋】已发动"
+  sweep_damage_multiplier: 3.3
+  dash_damage_multiplier: 3.5
+  sweep_range: 6.0
+  second_window: 3.0
+  dash_distance: 7.0
+  dash_ticks: 8
+  dash_speed: 1.18
+  step_up_velocity: 0.42
+  sweep_shield_per_target: 10.0
+  sweep_shield_max: 50.0
+  sweep_shield_duration: 20.0
+  dash_heal_per_target: 5.0
+  dash_heal_max: 20.0
+  kill_durability_restore: 15

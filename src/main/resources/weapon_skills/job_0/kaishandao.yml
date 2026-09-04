@@ -1,0 +1,9 @@
+active:
+  enable: true
+  message: "&a&l武器技【追击】发动！"
+  # ★★★ 冷却时间 10秒 (由 Manager 控制) ★★★
+  cooldown: 15.0
+  # === 技能逻辑参数 (由 Skill 类读取) ===
+  duration: 10.0             # 效果持续时间
+  damage_step: 0.2          # 每次攻击叠加20%
+  max_bonus: 1.0            # 上限 100%

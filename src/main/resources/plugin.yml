@@ -1,5 +1,5 @@
 name: hjh_database
-version: '${project.version}'
+version: '${version}'
 main: com.hjh_database.Hjh_database
 api-version: '1.21'
 commands:
@@ -28,15 +28,7 @@ commands:
     usage: /hjh <subcommand>
     permission:
       hjh.admin
-  # === 【新增】锻造系统指令 ===
-  hjhdz:
-    description: 锻造系统核心指令
-    usage: /hjhdz <station|player|edit|reload>
-    permission: hjh.admin
-    permission-message: §c你没有权限执行此操作。
-
-  # 在 commands: 下面添加
-  hjhkw:
-    description: 开物术系统指令 (OP)
-    usage: /hjhkw <reload|save>
-    permission: hjh.op
+libraries:
+  - org.jetbrains.kotlin:kotlin-stdlib:2.0.21
+  - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0
+  - com.zaxxer:HikariCP:5.1.0

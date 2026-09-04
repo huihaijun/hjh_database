@@ -1,0 +1,14 @@
+# 武器ID: 桃木剑 的技能配置
+active:
+  enable: true
+  # === 需求1：自定义发动消息 ===
+  message: "&a&l武器技【驱邪】发动！"
+  cooldown: 8.0
+  # === 技能参数 ===
+  radius: 5.0          # 范围半径
+  duration: 5.0        # 减速总持续时间
+  stun_duration: 1.0   # 亡灵生物晕眩时间 (包含在总时间及内)
+  slowness_level: 2    # 减速等级 (2代表缓慢II)
+
+passive:
+  enable: false

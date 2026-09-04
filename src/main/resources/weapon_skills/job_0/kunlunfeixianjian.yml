@@ -1,0 +1,14 @@
+active:
+  enable: true
+  message: "&e&l武器技【诛邪飞剑】发动！"
+  cooldown: 15.0
+
+  sword_count: 6
+  summon_duration: 10.0
+  attack_duration: 5.0
+  attack_interval_ticks: 10
+  damage_max_health_percent: 0.25
+  retarget_radius: 10.0
+  finish_heal_amount: 8.0
+  finish_heal_cap: 24.0
+  finish_cooldown_reduction_per_sword: 1.0

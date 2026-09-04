@@ -1,0 +1,284 @@
+#炼丹所用材料
+yy_tongyong0:
+  material: GOLD_NUGGET
+  custom_model_data: 10032
+  name: "&6[药引]通用药引(初级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+
+yy_tongyong1:
+  material: GOLD_NUGGET
+  custom_model_data: 10032
+  name: "&6[药引]通用药引(中级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级:&b中级&7&o"
+
+yy_tongyong2:
+  material: GOLD_NUGGET
+  custom_model_data: 10032
+  name: "&6[药引]通用药引(高级)"
+  lore:
+    - "&f▶ &6通用 &f药引"
+    - "&8  | &7&o神奇的药引,理论上可以冶炼所有丹药"
+    - "&8  | &7&o是所有炼丹师傅梦寐以求追寻的药底,极为珍贵"
+    - ""
+    - "&f▶ &f可炼制等级:&e高级"
+
+yy_yuhedan:
+  material: GOLD_NUGGET
+  name: "&b[药引]愈合丹"
+  lore:
+    - "&f▶ &b愈合丹 &f药引"
+    - "&8  | &7&o常用的治愈型丹药"
+    - "&8  | &7&o服下后可以短暂愈合伤口"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_qinglingdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]清灵丹"
+  lore:
+    - "&f▶ &b清灵丹 &f药引"
+    - "&8  | &7&o一尘不染,丹心如镜"
+    - "&8  | &7&o似有微风自丹内流转,轻拂过处,滞涩全无"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+  custom_model_data: 10137
+
+yy_huilingdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]回灵丹"
+  lore:
+    - "&f▶ &b回灵丹 &f药引"
+    - "&8  | &7&o凝聚天地灵气的恢复型丹药"
+    - "&8  | &7&o服下后可徐徐滋养神识，补充灵力"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_zhuangyangdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]壮阳丹"
+  lore:
+    - "&f▶ &b壮阳丹 &f药引"
+    - "&8  | &7&o丹色淡赤,入手微温,一缕浅薄的阳气游走于丹纹之间"
+    - "&8  | &7&o吞服后体内隐约凝成一层气盾,虽不厚重,聊胜于无"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_fenghou:
+  material: GOLD_NUGGET
+  name: "&c[药引]封喉"
+  lore:
+    - "&6限制职业:[医]"
+    - "&f▶ &c封喉 &f药引"
+    - "&8  | &7&o隐隐透出一丝寒芒,触之指尖微麻"
+    - "&8  | &7&o掷出散作毒雾,如毒蛇吐信,直取咽喉"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_juliwan:
+  material: GOLD_NUGGET
+  name: "&b[药引]巨力丸"
+  lore:
+    - "&f▶ &b巨力丸 &f药引"
+    - "&8  | &7&o药性初显,气力渐生"
+    - "&8  | &7&o服后短暂激起体内潜能,力贯双臂"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_duohun:
+  material: GOLD_NUGGET
+  name: "&c[药引]夺魂"
+  lore:
+    - "&6限制职业:[医]"
+    - "&f▶ &c夺魂 &f药引"
+    - "&8  | &7&o丹气幽微,凝而不散"
+    - "&8  | &7&o及目标的瞬间,似有一缕寒意渗入骨髓"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_fengmuhuichun:
+  material: GOLD_NUGGET
+  name: "&b[药引]逢木回春"
+  lore:
+    - "&f▶ &b逢木回春 &f药引"
+    - "&8  | &7&o丹色青翠,草木气息隐约流转"
+    - "&8  | &7&o入口清润,一缕温和生机徐徐浸润经脉"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_luoshuidan:
+  material: GOLD_NUGGET
+  name: "&b[药引]洛水丹"
+  lore:
+    - "&f▶ &b洛水丹 &f药引"
+    - "&8  | &7&o通透如水,入手微凉,似有清流于掌心流转"
+    - "&8  | &7&o服后灵息自生,入水不溺,如游鱼般自在穿行"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o"
+  custom_model_data: 10137
+
+yy_shuangshengdan:
+  material: GOLD_NUGGET
+  name: "&b[药引]双生丹"
+  lore:
+    - "&f▶ &b双生丹 &f药引"
+    - "&8  | &7&o采用极其诡异的材料炼制而成"
+    - "&8  | &7&o拥有着双重生长的力量"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+yy_jieduwan:
+  material: GOLD_NUGGET
+  name: "&b[药引]解毒丸"
+  lore:
+    - "&f▶ &b解毒丸 &f药引"
+    - "&8  | &7&o青翠欲滴,可解世间毒素"
+    - "&8  | &7&o也能够驱散药物的毒力"
+    - ""
+    - "&f▶ &f可炼制等级: &f初级&7&o, &b中级&7&o, &e高级"
+  custom_model_data: 10137
+
+dengxincao:
+  material: SEA_PICKLE
+  name: "&b灯心草"
+  #  rarity: 2
+  lore:
+    - "&7&o常见的杂草"
+    - "&7&o晒干后可作药引炼丹"
+    - "&e[炼丹用品]"
+
+zhixueye:
+  material: SMALL_DRIPLEAF
+  name: "&b止血叶"
+  #  rarity: 2
+  lore:
+    - "&7&o叶片肥厚,养分充足"
+    - "&7&o可止轻伤出血"
+    - "&e[炼丹用品]"
+
+qingxinhua:
+  material: OXEYE_DAISY
+  name: "&b清心花"
+  #  rarity: 2
+  lore:
+    - "&7&o花瓣散发清新香气"
+    - "&7&o可以沁人心脾"
+    - "&e[炼丹用品]"
+
+zhizhuyan:
+  material: SPIDER_EYE
+  name: "&b蜘蛛眼"
+  lore:
+    - "&7&o蜘蛛身上的重要器官"
+    - "&7&o拿来炼药说不定也不错"
+
+
+shengjihua:
+  material: dandelion
+  name: "&b生机花"
+  lore:
+    - "&7&o绽放在绝望沙漠的奇迹之花"
+    - "&7&o于此地唯一的绿洲处汲取生机"
+    - "&7&o入药可强韧气血,是这片大地人民的希望"
+    - "&e[炼丹用品]"
+
+heihuotu:
+  material: mud
+  name: "&b黑火土"
+  lore:
+    - "&7&o饱饮地脉热毒而成的焦黑砂土"
+    - "&7&o遍布焱砂大漠,燥性极烈却暗藏生机"
+    - "&7&o乃是炼制丹药的基础辅材"
+    - "&e[炼丹用品]"
+
+jinzhanling:
+  material: WHEAT
+  custom_model_data: 1001
+  name: "&b金盏铃"
+  rarity: 2
+  lore:
+    - "&7&o花开双色，初开如银铃，盛放时转为金黄"
+    - "&7&o摘下晒干炼药，消暑解毒，如清风徐来"
+  crop_id: jinzhanling
+
+qilingzi:
+  material: WHEAT
+  custom_model_data: 1002
+  name: "&b杞灵子"
+  rarity: 3
+  lore:
+    - "&7&o粒粒殷红如玛瑙，垂挂于矮枝之上"
+    - "&7&o甘甜微酸，日日服之可明目养神"
+  crop_id: qilingzi
+
+yunfu:
+  material: WHEAT
+  custom_model_data: 1005
+  name: "&b云茯"
+  rarity: 3
+  lore:
+    - "&7&o状如浮云，质轻而酥，偏爱生长于阴湿处"
+    - "&7&o晨间采撷时表面凝一层薄露，入药可涤荡体内浊气"
+  crop_id: yunfu
+
+xianrenzhang:
+  material: cactus
+  name: "&b仙人掌"
+  lore:
+    - "&7&o傲立沙海的翠绿坚兵"
+    - "&7&o身披尖刺却饱含清冽浆液"
+    - "&7&o一可中和燥气,二可化解火毒"
+    - "&e[炼丹用品]"
+
+shuiwan:
+  material: VINE
+  name: "&b水蔓"
+  lore:
+    - "&7&o生于湖岸浅水处的细长藤蔓,随波摇曳,沾而不湿"
+    - "&7&o水气充沛,质地柔韧,入药可调和诸味"
+    - "&e[炼丹用品]"
+
+yugukuai:
+  material: STICK
+  custom_model_data: 7019
+  name: "&b鱼骨块"
+  lore:
+    - "&7&o玄水湾死去的鱼儿所遗之骨,森白如霜,散落于湖畔"
+    - "&7&o骨中残留着一缕微弱的灵力,可入药炼丹"
+    - "&e[炼丹用品]"
+
+gaoshanetu:
+  material: STICK
+  custom_model_data: 7016
+  name: "&b高山恶土"
+  lore:
+    - "&7&o高山庙宇墙根下剥落的腐朽残土,山魅啃噬建筑后所遗"
+    - "&7&o饱含朽木碎屑与山魅孽气,可镇惊安神"
+    - "&e[炼丹用品]"
+
+shuilanhua:
+  material: BLUE_ORCHID
+  name: "&b水蓝花"
+  lore:
+    - "&7&o玄水湾畔悄然绽开的蓝瓣小花,沾着晨露,秀丽而清冷"
+    - "&7&o花瓣入药可清心降火,是湖畔渔人常用的退热良方"
+    - "&e[炼丹用品]"
+
+

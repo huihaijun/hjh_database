@@ -1,0 +1,25 @@
+baihu_kaishandao:
+  result_id: baihu_kaishandao:1
+  ingredients:
+    - kaishandao:1
+    - huishi:1
+    - cutong:8
+    - gushashi:8
+    - AMETHYST_SHARD:16
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 80
+
+baihu_honglingnu:
+  result_id: baihu_honglingnu:1
+  ingredients:
+    - honglingnu:1
+    - huishi:1
+    - cutong:8
+    - gushashi:8
+    - AMETHYST_SHARD:16
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 80

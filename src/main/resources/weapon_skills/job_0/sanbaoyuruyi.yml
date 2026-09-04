@@ -1,0 +1,17 @@
+active:
+  enable: true
+  message: "&e&l武器技【镇邪】发动！"
+  cooldown: 12.0
+
+  target_range: 10.0
+  duration: 7.0
+  damage_boost: 2.5
+  attack_speed_bonus: 0.50
+  splash_damage_ratio: 0.80
+  splash_radius: 3.0
+  splash_max_targets: 3
+  charged_hit_cooldown_reduction: 0.10
+  max_charged_hit_cooldown_reduction: 0.60
+  execute_percent: 0.20
+  execute_shield_amount: 20.0
+  execute_shield_duration: 30.0

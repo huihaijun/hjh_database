@@ -1,0 +1,280 @@
+# 路径: resources/items/drops.yml
+# rarity: 3 配置稀有度
+metal:
+  material: GOLD_NUGGET
+  name: "&f金元素"
+  custom_model_data: 10004
+
+wood:
+  material: GOLD_NUGGET
+  name: "&f木元素"
+  custom_model_data: 10005
+
+water:
+  material: GOLD_NUGGET
+  name: "&f水元素"
+  custom_model_data: 10006
+
+fire:
+  material: GOLD_NUGGET
+  name: "&f火元素"
+  custom_model_data: 10007
+
+earth:
+  material: GOLD_NUGGET
+  name: "&f土元素"
+  custom_model_data: 10008
+
+jl_metal:
+  material: GOLD_NUGGET
+  name: "&b精炼金元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的金元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10004
+
+jl_wood:
+  material: GOLD_NUGGET
+  name: "&b精炼木元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的木元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10005
+
+jl_water:
+  material: GOLD_NUGGET
+  name: "&b精炼水元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的水元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10006
+
+jl_fire:
+  material: GOLD_NUGGET
+  name: "&b精炼火元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的火元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10007
+
+jl_earth:
+  material: GOLD_NUGGET
+  name: "&b精炼土元素"
+  lore:
+    - "&7&o经过元素精炼师精炼的土元素"
+    - "&7&o可以用来锻造更好的装备"
+  custom_model_data: 10008
+
+relive_stone:
+  material: GOLD_NUGGET
+  name: "&9重生石"
+  custom_model_data: 10019
+
+pojiupige:
+  material: GLOWSTONE_DUST
+  name: "&7破旧皮革"
+  lore:
+    - "&7&o从魔物身上掉落的皮革"
+    - "&7&o只能拿去卖点小钱了"
+
+renshen:
+  material: GLISTERING_MELON_SLICE
+  name: "&f人参"
+  lore:
+    - "&7&o大补的药材,炼药的好引子"
+    - "&7&o皇城也有人专门高价收购"
+
+shanshengongpin:
+  material: ORANGE_DYE
+  name: "&b山神庙的贡品"
+  lore:
+    - "&7&o怪物抢走的山神庙贡品"
+    - "&7&o收集一些交给庙公吧"
+
+longlinshenmu:
+  material: STICK
+  custom_model_data: 7000
+  name: "&b龙鳞神木"
+  rarity: 2
+  lore:
+    - "&7&o赤木如鳞,断而不枯,殷红汁液自木心渗出,似有脉搏"
+    - "&7&o生于龙陨之地,浸染龙血,历经万载仍温润如初"
+
+meitan:
+  material: COAL
+  name: "&7煤炭"
+  lore:
+    - "&7&o从南方魔物身上抢来的黑炭"
+    - "&7&o摸起来还有点烫手"
+    - "&7&o估计能买个说得过去的价钱"
+
+wangyuanwaibeiqiangzoudehuowu:
+  material: ORANGE_DYE
+  name: "&b王员外被抢走的货物"
+  lore:
+    - "&7&o王员外被马贼抢走的货物"
+    - "&7&o收集一些交给他吧"
+
+shangxianwenxian:
+  material: ORANGE_DYE
+  name: "&b上仙被抢走的文献"
+  lore:
+    - "&7&o篆元上仙被怪物偷走的研究文献"
+    - "&7&o收集一些一起还给他吧"
+
+yanshazhixin:
+  material: STICK
+  custom_model_data: 7001
+  name: "&b焱砂之心"
+  rarity: 3
+  lore:
+    - "&7&o从南方怪物身上掉落的奇怪物品"
+    - "&7&o似乎能感受到流淌着的火焰"
+    - "&7&o这东西在南方的商人那好像还是硬通货"
+    - "&7&o估计能换到一些好东西"
+
+yanjingshi:
+  material: STICK
+  custom_model_data: 7002
+  name: "&9炎晶石"
+  rarity: 3
+  lore:
+    - "&7&o黑里透红的神奇晶石"
+    - "&7&o石头里的熔岩似乎总想奔涌而出"
+    - "&7&o此物在锻造中能够赋予武器熊熊的火焰"
+
+huangfengyan:
+  material: STICK
+  custom_model_data: 7003
+  name: "&9黄风眼"
+  rarity: 3
+  lore:
+    - "&7&o相传是南方魔物沙漠风暴的栖息之所"
+    - "&7&o小小一块风眼,竟可容纳如此风力"
+    - "&7&o锻造时将其融入,能让铠甲更加坚固"
+
+ehundan:
+  material: STICK
+  custom_model_data: 7004
+  name: "&d恶魂丹"
+  rarity: 4
+  lore:
+    - "&7&o从沙漠魔兽凶神太岁体内取出的恶丹"
+    - "&7&o浑身散发着污秽的气息"
+    - "&7&o取其魔力注入饰品,可以带给佩戴者强大的力量"
+
+wenquankezhanbujipin:
+  material: ORANGE_DYE
+  name: "&b温泉客栈需要的补给品"
+  lore:
+    - "&7&o从怪物身上找到的补给品"
+    - "&7&o收集一些给温泉客栈吧"
+
+fumanzhangqidemeitan:
+  material: COAL
+  name: "&7附满瘴气的煤炭"
+  lore:
+    - "&7&o圣虎迷阵的魔物所掉落"
+    - "&7&o受虎瘴影响,表面覆满了瘴气"
+    - "&7&o估计没多少人稀罕这玩意"
+
+hujin:
+  material: STICK
+  custom_model_data: 7005
+  name: "&d虎金"
+  rarity: 4
+  lore:
+    - "&7&o白虎洞内蕴藏的稀世奇金"
+    - "&7&o历代矿夫魂牵梦萦之物，然因百年滥采，几近绝迹"
+    - "&7&o铸为兵刃则锋芒毕露，有吹毛断发之利"
+
+hupo:
+  material: STICK
+  custom_model_data: 7006
+  name: "&d虎魄"
+  rarity: 4
+  lore:
+    - "&7&o一缕携有白虎神威的残魂"
+    - "&7&o灵气暴动后散入山野，寄于魔物体内"
+    - "&7&o融入甲胄之中，可令其坚不可摧，万钧难破"
+
+fumanzhangqidezhuangbeihexin:
+  material: GOLD_NUGGET
+  custom_model_data: 10106
+  rarity: 4
+  name: "&7附满瘴气的装备核心"
+  lore:
+    - "&7&o被虎瘴侵蚀殆尽的装备核心，灵气尽失"
+    - "&7&o若强行以此为胚锻造，所出之物必受瘴毒反噬"
+
+fumanzhangqidexuantieding:
+  material: GOLD_NUGGET
+  custom_model_data: 10056
+  rarity: 4
+  name: "&7附满瘴气的玄铁锭"
+  lore:
+    - "&7&o被虎瘴侵蚀殆尽的玄铁锭，灵光不再"
+    - "&7&o若强行以此为材锻造，所出之物必受瘴毒反噬"
+
+zhichunzhixin:
+  material: STICK
+  custom_model_data: 7007
+  rarity: 4
+  name: "&d至纯之心"
+  lore:
+    - "&7&o澄澈如冰，莹润似玉，不染一丝尘埃"
+    - "&7&o蕴藏着涤荡万物的纯净之力"
+
+huzhenshangrenshouju:
+  material: ORANGE_DYE
+  name: "&b商人被抢走的收据"
+  lore:
+    - "&7&o虎镇商人被怪物偷走的收据"
+    - "&7&o收集一些一起还给他吧"
+
+chendafudecaoyaoshu:
+  material: ORANGE_DYE
+  name: "&b陈大夫的草药束"
+  lore:
+    - "&7&o陈大夫被魔物被抢走的草药束"
+    - "&7&o收集一些交给他吧"
+
+shanmei:
+  material: ORANGE_DYE
+  name: "&b山魅"
+  lore:
+    - "&7&o被封印的山魅"
+    - "&7&o收集一些交给雨竹吧"
+
+shuizudegongpin:
+  material: ORANGE_DYE
+  name: "&b水族的贡品"
+  lore:
+    - "&7&o水族留给玄武的贡品被抢走了"
+    - "&7&o收集一些交给水族的大祭司吧"
+
+yuanqidejiejing:
+  material: ORANGE_DYE
+  name: "&b怨气的结晶"
+  lore:
+    - "&7&o不甘与怨恨聚集而成的结晶"
+    - "&7&o收集一些给白骨精吧"
+
+shuihunlinpian:
+  material: STICK
+  custom_model_data: 7018
+  name: "&e水魂鳞片"
+  rarity: 5
+  lore:
+    - "&7&o玄水魂身上剥落的鳞甲,通体幽蓝,触之冰凉刺骨"
+    - "&7&o鳞面隐有暗纹流转,似藏着一缕不散的水灵之气"
+
+qianligongtanmu:
+  material: STICK
+  custom_model_data: 7017
+  name: "&e千里弓檀木"
+  rarity: 5
+  lore:
+    - "&7&o千里神射手所遗的良木,纹理细密如丝,韧而不折"
+    - "&7&o历经千箭万矢而不损,寻常兵刃难伤其分毫"
+    - "&7&o以此木制器,可承千钧之力,锋芒更盛"

@@ -1,0 +1,48 @@
+qingshidunpai:
+  result_id: qingshidunpai:1
+  ingredients:
+  - qingshidunpai_chuxing:1
+  - chitongding:1
+  - cutong:3
+  - wood:20
+  - AIR:1
+  req_job: 0
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+cubujiandai:
+  result_id: cubujiandai:1
+  ingredients:
+  - cubujiandai_chuxing:1
+  - chitongding:1
+  - cutong:3
+  - wood:20
+  - AIR:1
+  req_job: 1
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+huiliuyi:
+  result_id: huiliuyi:1
+  ingredients:
+  - huiliuyi_chuxing:1
+  - chitongding:1
+  - cutong:3
+  - wood:20
+  - AIR:1
+  req_job: 2
+  req_level: 1
+  req_license: 0
+  exp_reward: 30
+taolizhi:
+  result_id: taolizhi:1
+  ingredients:
+  - taolizhi_chuxing:1
+  - chitongding:1
+  - cutong:3
+  - wood:20
+  - AIR:1
+  req_job: 3
+  req_level: 1
+  req_license: 0
+  exp_reward: 50

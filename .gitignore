@@ -2,6 +2,9 @@
 /target/
 /build/
 /out/
+/.gradle/
+/.gradle-sandbox/
+/.kotlin/
 *.jar
 *.class
 

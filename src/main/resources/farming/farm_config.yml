@@ -1,0 +1,26 @@
+display:
+  duration_seconds: 10
+  update_interval_ticks: 20
+  crop_duration_seconds: 300
+  controller_radius: 16.0
+  text_height: 1.65
+  crop_height: 1.02
+
+events:
+  check_interval_seconds: 10
+
+messages:
+  plot_bound: "&a已将这块灵田绑定为你的专属田位。"
+  plot_already_bound: "&e你已经绑定过这块灵田。"
+  deed_required: "&c这块灵田尚未对你开放，需要使用灵田契绑定。"
+  planted: "&a已种下 {crop}。"
+  occupied: "&c这块灵田已经种植了 {crop}。"
+  harvested: "&a收获 {crop} x{amount}。"
+  crop_remove_confirm: "&e确定要铲除 {crop} 吗？&c请在3秒内再次左键这块灵田确认。"
+  crop_removed: "&7已铲除 {crop}，没有获得任何物品。"
+  not_seed: "&c主手物品不是可识别的灵田种子。"
+  accelerated: "&b生机涌动，成熟时间缩短了30秒。"
+  insect_protected: "&a防虫符生效，当前虫害防护还剩 {seconds} 秒。"
+  insect_protection_full: "&e这株作物在成熟前已全程受到防虫保护。"
+  no_crop: "&7这块灵田目前空置。"
+  reloaded: "&a灵田配置已重新加载。"

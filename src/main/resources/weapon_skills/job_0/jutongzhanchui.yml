@@ -1,0 +1,13 @@
+active:
+  enable: true
+  message: "&a&l武器技【撼地破】发动！"
+  cooldown: 6.0
+
+  # === 技能参数 ===
+  radius: 5.0              # 范围
+  damage_multiplier: 0.5   # 伤害倍率 (1.5 = 150%)
+  stun_duration: 0.5       # 晕眩时间 (秒)
+
+  # 护盾设置
+  shield_hearts: 6         # 给予几颗心的护盾 (6颗心 = 12血)
+  shield_duration: 20.0    # 护盾持续时间 (秒)
