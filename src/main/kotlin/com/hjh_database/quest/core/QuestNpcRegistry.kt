@@ -470,7 +470,30 @@ enum class StoryNpcs(
         Villager.Profession.NONE,
         Villager.Type.TAIGA,
         347.5,44.50,-652.5, 0f
+    ),
+    PENGLAI_ZHANGLAO(
+        "penglai_zhanglao",
+        "§a§l长老",
+        Villager.Profession.NONE,
+        Villager.Type.SWAMP,
+        312.5,45.50,-684.5, 0f
+    ),
+    PENGLAI_MOYU(
+        "penglai_moyu",
+        "§a§l墨雨",
+        Villager.Profession.NONE,
+        Villager.Type.JUNGLE,
+        327.5,45.50,-661.5, 0f
+    ),
+    PENGLAI_ZUOYAN(
+        "penglai_zuoyan",
+        "§a§l左焰",
+        Villager.Profession.NONE,
+        Villager.Type.DESERT,
+        317.5,45.50,-690.5, 0f
     );
+
+
     // 后续有新 NPC 直接往这里加...
 
     /**

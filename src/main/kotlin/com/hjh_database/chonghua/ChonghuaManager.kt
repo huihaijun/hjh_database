@@ -17,6 +17,9 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.io.File
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 // 定义四大区域
 enum class Region(val displayName: String) {
@@ -47,7 +50,9 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
     // 静态存储：所有的打卡点注册
     val waypoints = mutableMapOf<String, Waypoint>()
     // 在 ChonghuaManager 类中添加缓存 Map:
-    val playerCache = java.util.concurrent.ConcurrentHashMap<java.util.UUID, ChonghuaData>()
+    val playerCache = ConcurrentHashMap<UUID, ChonghuaData>()
+    private val sessionTokens = ConcurrentHashMap<UUID, AtomicLong>()
+    private val resettingPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
     // 运行时存储管理员放置的方块 (保存至本地 yml 以防重启丢失)
     private val placedCrystals = mutableMapOf<Location, Region>()
@@ -66,18 +71,26 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
     @EventHandler
     fun onPlayerJoin(e: org.bukkit.event.player.PlayerJoinEvent) {
         val player = e.player
+        val token = nextSessionToken(player.uniqueId)
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             val data = plugin.databaseManager.loadChonghuaData(player.uniqueId, player.name)
-            playerCache[player.uniqueId] = data
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (player.isOnline && !resettingPlayers.contains(player.uniqueId) &&
+                    sessionTokens[player.uniqueId]?.get() == token
+                ) {
+                    playerCache[player.uniqueId] = data
+                }
+            })
         })
     }
 
     // 监听玩家退服：保存数据并移出内存
     @EventHandler
     fun onPlayerQuit(e: org.bukkit.event.player.PlayerQuitEvent) {
+        val token = nextSessionToken(e.player.uniqueId)
         val data = playerCache.remove(e.player.uniqueId)
         if (data != null) {
-            plugin.databaseManager.saveChonghuaData(data)
+            saveDataAsync(data, token)
         }
     }
 
@@ -87,13 +100,53 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         if (data == null) {
             player.sendMessage("§c[系统] 正在紧急同步您的重华晶数据，请稍后重试...")
             // 异步加载避免卡服
+            val token = nextSessionToken(player.uniqueId)
             plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                 val loaded = plugin.databaseManager.loadChonghuaData(player.uniqueId, player.name)
-                playerCache[player.uniqueId] = loaded
-                player.sendMessage("§a[系统] 数据同步完成！请再次右键点击方块。")
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (player.isOnline && !resettingPlayers.contains(player.uniqueId) &&
+                        sessionTokens[player.uniqueId]?.get() == token
+                    ) {
+                        playerCache[player.uniqueId] = loaded
+                        player.sendMessage("§a[系统] 数据同步完成！请再次右键点击方块。")
+                    }
+                })
             })
         }
         return data
+    }
+
+    fun preparePlayerReset(playerId: UUID) {
+        resettingPlayers.add(playerId)
+        nextSessionToken(playerId)
+    }
+
+    fun cancelPlayerReset(playerId: UUID) {
+        resettingPlayers.remove(playerId)
+    }
+
+    fun resetPlayerData(player: Player): ChonghuaData {
+        nextSessionToken(player.uniqueId)
+        val data = ChonghuaData(player.uniqueId, player.name)
+        playerCache[player.uniqueId] = data
+        resettingPlayers.remove(player.uniqueId)
+        return data
+    }
+
+    private fun nextSessionToken(playerId: UUID): Long =
+        sessionTokens.computeIfAbsent(playerId) { AtomicLong() }.incrementAndGet()
+
+    private fun saveDataAsync(data: ChonghuaData, token: Long = sessionTokens[data.uuid]?.get() ?: 0L) {
+        if (resettingPlayers.contains(data.uuid)) return
+        val snapshot = ChonghuaData(data.uuid, data.playerName).apply {
+            unlockedWaypoints.addAll(data.unlockedWaypoints)
+            waypointCooldowns.putAll(data.waypointCooldowns)
+        }
+        plugin.databaseManager.submitDatabaseOperation {
+            if (!resettingPlayers.contains(data.uuid) && sessionTokens[data.uuid]?.get() == token) {
+                plugin.databaseManager.saveChonghuaData(snapshot)
+            }
+        }
     }
 
     fun init() {
@@ -250,6 +303,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         add("north_xuanwudongkou_xuanshuiwan", "NORTH", "玄武洞口 & 玄水湾", -80.71, 35.00, -529.11, -91.05f, 3.30f)
         add("north_luanzanggang", "NORTH", "乱葬岗", 105.34, 49.00, -513.91, -90.74f, 1.95f)
         add("north_penglaidukou", "NORTH", "蓬莱渡口", 346.81, 34.00, -523.68, 179.82f, 1.20f)
+        add("north_penglai", "NORTH", "蓬莱", 418.14, 35.00, -642.57, 901.95f, 6.00f)
+        add("north_shengshan", "NORTH", "圣山", -25.25, 47.00, -913.96, 810.75f, 7.20f)
 
         // --- 皇城中心：四方重华晶，无需打卡解锁，独立 2 分钟冷却 ---
         add("huangchengzhongxin_longlinzhisen", "HUANGCHENGZHONGXIN", "龙鳞之森-重华晶", 399.29, 47.00, 14.68, 9629.82f, -10.95f, true, 120L)
@@ -362,7 +417,7 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                     15, // 粒子数量，15个适中不晃眼
                     0.3, 0.3, 0.3, 0.1
                 )
-                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable { plugin.databaseManager.saveChonghuaData(chonghuaData) })
+                saveDataAsync(chonghuaData)
             } else {
                 e.player.sendMessage("§e[系统] 你已经解锁过此地点了。")
             }
@@ -492,9 +547,7 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
 
                         // 扣除冷却时间 (在真正传送成功后才进入冷却)
                         chonghuaData.waypointCooldowns[wpId] = System.currentTimeMillis()
-                        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                            plugin.databaseManager.saveChonghuaData(chonghuaData)
-                        })
+                        saveDataAsync(chonghuaData)
                     }
                 }
             }.runTaskTimer(plugin, 0L, 10L) // 0秒延迟，每 0.5 秒(10 tick) 运行一次

@@ -504,3 +504,43 @@ jinshengzhi_chuxing:
     - "&7&o用来制作医师饰品——&d烬生枝&7&o的雏形"
     - "&7&o将其放置在锻造台上,根据配方加入其他材料"
     - "&7&o就能锻造出医师饰品——&d烬生枝"
+
+zhenyuechenfeng_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e镇岳沉锋雏形[饰品]"
+  lore:
+    - "&7&o用来制作战士饰品——&e镇岳沉锋&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出战士饰品——&e镇岳沉锋"
+
+qianzhentianji_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e乾震天机雏形[饰品]"
+  lore:
+    - "&7&o用来制作弓箭手饰品——&e乾震天机&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出弓箭手饰品——&e乾震天机"
+
+xunlilingshu_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e巽离灵枢雏形[饰品]"
+  lore:
+    - "&7&o用来制作术士饰品——&e巽离灵枢&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出术士饰品——&e巽离灵枢"
+
+kanzelingzhi_chuxing:
+  material: GOLD_NUGGET
+  custom_model_data: 10081
+  rarity: 5
+  name: "&e坎泽灵枝雏形[饰品]"
+  lore:
+    - "&7&o用来制作医师饰品——&e坎泽灵枝&7&o的雏形"
+    - "&7&o将其放置在锻造台上,根据配方加入其他材料"
+    - "&7&o就能锻造出医师饰品——&e坎泽灵枝"

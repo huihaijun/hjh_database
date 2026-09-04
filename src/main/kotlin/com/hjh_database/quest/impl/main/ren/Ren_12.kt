@@ -52,7 +52,7 @@ class Ren_12 : QuestBase("main_ren_12", "[人族主线]尘封旧案", QuestType.
             "§7§o四圣兽的谜团暂时结束了",
             "§7§o可你总觉得事情的并非如此简单",
             "§7§o仿冒品?大灾难?到底是怎么一回事?",
-            "§7§o那份带着&b&o草药味&7&o的档案又是谁人之手?",
+            "§7§o那份带着§b§o草药味§7§o的档案又经了谁人之手?",
             "§7§o或许是知道的§6§l§o真相§7§o还不够多的缘故……"
         )
     }
@@ -94,8 +94,8 @@ class Ren_12 : QuestBase("main_ren_12", "[人族主线]尘封旧案", QuestType.
         addReward(rewards, "yinpiao", 15, "银票")
         addReward(rewards, "mijingyaoshi", 5, "秘境之钥")
         addReward(rewards, "yuansuduihuanquan", 64, "元素兑换券")
-        addReward(rewards, "juliwan2", 25, "巨力丸（高级）")
-        addReward(rewards, "jieduwan2", 5, "解毒丸（高级）")
+        addReward(rewards, "access_book_5", 1, "五阶饰品制作书")
+        addReward(rewards, "lingyujian", 1, "灵玉简")
 
         val leftovers = player.inventory.addItem(*rewards.toTypedArray())
         leftovers.values.forEach { player.world.dropItem(player.location, it) }
@@ -112,8 +112,8 @@ class Ren_12 : QuestBase("main_ren_12", "[人族主线]尘封旧案", QuestType.
         player.sendMessage("  §e[奖励] §f银票 x15")
         player.sendMessage("  §e[奖励] §f秘境之钥 x5")
         player.sendMessage("  §e[奖励] §f元素兑换券 x64")
-        player.sendMessage("  §e[奖励] §f巨力丸（高级）x25")
-        player.sendMessage("  §e[奖励] §f解毒丸（高级）x5")
+        player.sendMessage("  §e[奖励] §f五阶饰品制作书 x1")
+        player.sendMessage("  §e[奖励] §f灵玉简 x1")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

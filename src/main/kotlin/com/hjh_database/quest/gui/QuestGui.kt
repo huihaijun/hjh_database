@@ -34,9 +34,7 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
     }
 
     // === 2. 二级菜单：具体任务列表 ===
-    fun openQuestListMenu(player: Player, type: QuestType) {
-        val inv = Bukkit.createInventory(ListHolder(type), 54, "§8${type.displayName} - 进度查询")
-
+    fun openQuestListMenu(player: Player, type: QuestType, requestedPage: Int = 0) {
         val data = plugin.playerManager.getPlayerData(player) ?: return
 
         // 获取所有任务并筛选
@@ -58,9 +56,16 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
             status == QuestStatus.COMPLETED || quest.canAccept(player, data)
         }.sortedBy { it.order }
 
-        // 遍历任务并生成图标
-        for ((index, quest) in quests.withIndex()) {
-            if (index >= 45) break // 防止溢出 (留最后一行给返回按钮)
+        val totalPages = maxOf(1, (quests.size + TASKS_PER_PAGE - 1) / TASKS_PER_PAGE)
+        val page = requestedPage.coerceIn(0, totalPages - 1)
+        val inv = Bukkit.createInventory(
+            ListHolder(type, page),
+            54,
+            "§8${type.displayName} - 进度查询 §7(${page + 1}/$totalPages)"
+        )
+
+        // 遍历当前页任务并生成图标
+        for ((index, quest) in quests.drop(page * TASKS_PER_PAGE).take(TASKS_PER_PAGE).withIndex()) {
 
             val status = data.questStatuses[quest.id] ?: QuestStatus.LOCKED
             val progress = data.questProgress[quest.id] ?: 0
@@ -94,6 +99,14 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
                 "",
                 "§b▶ 点击检测并接取新任务"
             )))
+        }
+
+        if (page > 0) {
+            inv.setItem(45, createIcon(Material.ARROW, "§e§l上一页", listOf("§7前往第 $page 页")))
+        }
+        inv.setItem(47, createIcon(Material.MAP, "§f§l第 ${page + 1} / $totalPages 页", listOf("§7共 ${quests.size} 个任务")))
+        if (page + 1 < totalPages) {
+            inv.setItem(53, createIcon(Material.ARROW, "§e§l下一页", listOf("§7前往第 ${page + 2} 页")))
         }
 
         // 底部返回按钮
@@ -135,12 +148,25 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
         else if (holder is ListHolder) {
             e.isCancelled = true
 
-            val type = holder.type // 确保你的 ListHolder 构造函数里保存了 type
+            val type = holder.type
+            val page = holder.page
+
+            if (e.rawSlot == 45 && page > 0) {
+                openQuestListMenu(player, type, page - 1)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                return
+            }
+
+            if (e.rawSlot == 53) {
+                openQuestListMenu(player, type, page + 1)
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
+                return
+            }
 
             if (e.rawSlot == 48 && canRefresh(type)) {
                 refreshQuests(player, type)
                 player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f)
-                openQuestListMenu(player, type)
+                openQuestListMenu(player, type, page)
                 return
             }
 
@@ -168,5 +194,9 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
 
     // 占位符类，用于识别 GUI
     class CategoryHolder : InventoryHolder { override fun getInventory(): Inventory = Bukkit.createInventory(null, 9) }
-    class ListHolder(val type: QuestType) : InventoryHolder { override fun getInventory(): Inventory = Bukkit.createInventory(null, 9) }
+    class ListHolder(val type: QuestType, val page: Int) : InventoryHolder { override fun getInventory(): Inventory = Bukkit.createInventory(null, 9) }
+
+    private companion object {
+        const val TASKS_PER_PAGE = 45
+    }
 }

@@ -7,10 +7,17 @@ import kotlin.random.Random
 class FarmInsectDisasterEffect : FarmDisasterEffect {
     override val eventId: String = "farm_disaster_insects"
 
-    // 事件概率和效果属于代码行为，不从 YAML 读取。
-    override fun shouldTrigger(): Boolean = Random.nextDouble() < 0.10
+    override fun shouldTrigger(): Boolean = Random.nextDouble() < TRIGGER_CHANCE
 
     override fun apply(state: PlayerFarmState) {
-        state.yieldMultiplier = (state.yieldMultiplier * 0.8).coerceAtLeast(0.1)
+        state.yieldMultiplier *= YIELD_MULTIPLIER
+        state.insectDisasterCount++
+    }
+
+    companion object {
+        const val GROWTH_CHECKPOINTS = 9
+        const val MAX_OCCURRENCES = 3
+        const val TRIGGER_CHANCE = 0.50
+        const val YIELD_MULTIPLIER = 0.80
     }
 }

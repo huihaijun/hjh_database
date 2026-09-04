@@ -4,6 +4,7 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import com.hjh_database.skill.element_zf.FormationDamageEvent
 import com.hjh_database.skill.element_zf.FormationElement
+import com.hjh_database.skill.element_zf.FormationCast
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.NamespacedKey
@@ -42,14 +43,16 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
         val zfSnapshot: Double,
         val jumpRadius: Double,
         val jumpDamageMultiplier: Double,
-        var until: Long
+        var until: Long,
+        val cast: FormationCast
     )
     private data class FireMark(
         val owner: UUID,
         val zfSnapshot: Double,
         val explosionRadius: Double,
         val explosionDamageMultiplier: Double,
-        var until: Long
+        var until: Long,
+        val cast: FormationCast
     )
     private data class SpeedState(var until: Long, var amount: Double)
     private data class TimedMultiplier(var until: Long, var multiplier: Double)
@@ -99,7 +102,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
         movementReduction: Double,
         jumpRadius: Double,
         jumpDamageMultiplier: Double,
-        durationMillis: Long
+        durationMillis: Long,
+        cast: FormationCast
     ) {
         if (!isFormationMonster(target)) return
         withers[target.uniqueId] = WitherState(
@@ -107,7 +111,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
             zfSnapshot.coerceAtLeast(0.0),
             jumpRadius.coerceAtLeast(0.0),
             jumpDamageMultiplier.coerceAtLeast(0.0),
-            System.currentTimeMillis() + durationMillis
+            System.currentTimeMillis() + durationMillis,
+            cast
         )
         applySpeedModifier(target, witherSpeedKey, -movementReduction.coerceIn(0.0, 1.0))
     }
@@ -136,7 +141,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
         zfSnapshot: Double,
         explosionRadius: Double,
         explosionDamageMultiplier: Double,
-        durationMillis: Long
+        durationMillis: Long,
+        cast: FormationCast
     ) {
         if (!isFormationMonster(target)) return
         fireMarks[target.uniqueId] = FireMark(
@@ -144,7 +150,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
             zfSnapshot.coerceAtLeast(0.0),
             explosionRadius.coerceAtLeast(0.0),
             explosionDamageMultiplier.coerceAtLeast(0.0),
-            System.currentTimeMillis() + durationMillis
+            System.currentTimeMillis() + durationMillis,
+            cast
         )
         target.world.spawnParticle(
             Particle.SMALL_FLAME,
@@ -244,7 +251,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
             event.caster,
             mark.zfSnapshot,
             mark.explosionRadius,
-            mark.explosionDamageMultiplier
+            mark.explosionDamageMultiplier,
+            mark.cast
         )
     }
 
@@ -263,7 +271,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
                     entity,
                     wither.zfSnapshot,
                     wither.jumpRadius,
-                    wither.jumpDamageMultiplier
+                    wither.jumpDamageMultiplier,
+                    wither.cast
                 )
             }
         }
@@ -275,7 +284,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
         caster: Player,
         zfSnapshot: Double,
         radius: Double,
-        damageMultiplier: Double
+        damageMultiplier: Double,
+        formationCast: FormationCast
     ) {
         val center = marked.location.clone().add(0.0, marked.height * 0.45, 0.0)
         val radiusSquared = radius * radius
@@ -287,7 +297,7 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
             val target = entity as? LivingEntity ?: continue
             if (target.uniqueId == marked.uniqueId || !isFormationMonster(target)) continue
             if (target.location.distanceSquared(center) > radiusSquared) continue
-            formationMagicDamage(plugin, caster, target, zfSnapshot * damageMultiplier, FormationElement.FIRE)
+            formationMagicDamage(plugin, caster, target, zfSnapshot * damageMultiplier, FormationElement.FIRE, cast = formationCast)
         }
     }
 
@@ -296,7 +306,8 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
         deadTarget: LivingEntity,
         zfSnapshot: Double,
         radius: Double,
-        damageMultiplier: Double
+        damageMultiplier: Double,
+        formationCast: FormationCast
     ) {
         val start = deadTarget.location.clone().add(0.0, deadTarget.height * 0.55, 0.0)
         val radiusSquared = radius * radius
@@ -325,7 +336,7 @@ class ElementFormationTierEffects(private val plugin: Hjh_database) : Listener {
                 if (delta.lengthSquared() <= 0.64 || step >= 12) {
                     target.world.spawnParticle(Particle.SOUL, end, 14, 0.3, 0.4, 0.3, 0.03)
                     target.world.playSound(end, Sound.ENTITY_ALLAY_ITEM_GIVEN, 0.9f, 0.65f)
-                    formationMagicDamage(plugin, caster, target, zfSnapshot * damageMultiplier, FormationElement.WOOD)
+                    formationMagicDamage(plugin, caster, target, zfSnapshot * damageMultiplier, FormationElement.WOOD, cast = formationCast)
                     cancel()
                     return
                 }

@@ -65,6 +65,12 @@ class Shen_07 : QuestBase("main_shen_7", "[神族主线]圣山受阻", QuestType
         else -> false
     }
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean = when (npcId) {
+        StoryNpcs.RENHUANGXUANYUANSHI.id -> currentProgress == 0
+        StoryNpcs.REN_FAHAI.id -> currentProgress in 1..3
+        else -> false
+    }
+
     private fun handleEmperorDialogue(player: Player, currentProgress: Int): Boolean {
         if (currentProgress != 0) return false
         playDialogue(player, emperorScript) {

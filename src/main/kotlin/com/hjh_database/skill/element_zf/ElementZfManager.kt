@@ -132,8 +132,8 @@ class ElementZfManager(private val plugin: Hjh_database) {
             return
         }
 
-        // 3. 执行技能逻辑。卦印先生成只读计划，技能成功后才提交状态。
-        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player, type)
+        // 3. 执行技能逻辑。风场先生成只读计划，技能成功后才提交状态。
+        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player)
         val success = try {
             skill.cast(player, level, config!!.getConfigurationSection("skills.$type"))
         } catch (throwable: Throwable) {
@@ -151,7 +151,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
             val baseCd = config!!.getDouble("skills.$type.levels.$level.cooldown", 5.0)
             var reduce = data.coolReduce
             if (reduce > 0.5) reduce = 0.5
-            val finalCd = baseCd * (1.0 - reduce) * (accessoryPlan?.cooldownMultiplier ?: 1.0)
+            val finalCd = baseCd * (1.0 - reduce)
 
             // 【核心修改】应用两种冷却
             // A. 逻辑冷却 (插件内部判断用)
@@ -297,10 +297,10 @@ class ElementZfManager(private val plugin: Hjh_database) {
             return
         }
 
-        // 2. 先读取卦印计划；同元素必定回流时，本次元素与灵力都免费。
-        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player, type)
+        // 2. 先建立风场计划，资源消耗维持原始阵法规则。
+        val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player)
         val manaCost = 25.0
-        if (accessoryPlan?.freeResourceCost != true && data.lingli < manaCost) {
+        if (data.lingli < manaCost) {
             player.sendMessage(ChatColor.RED.toString() + "您的灵力不足，需要 ${manaCost.toInt()} 点灵力")
             plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
             return
@@ -328,17 +328,15 @@ class ElementZfManager(private val plugin: Hjh_database) {
         }
 
         // 4. 扣除物品与灵力
-        if (accessoryPlan?.freeResourceCost != true) {
-            consumeOneElementFromMainHand(player)
-            data.lingli -= manaCost
-            plugin.databaseManager.queuePlayerSave(data)
-        }
+        consumeOneElementFromMainHand(player)
+        data.lingli -= manaCost
+        plugin.databaseManager.queuePlayerSave(data)
 
         // 5. 应用冷却
         val baseCd = getEnhancedCooldown(type)
         var reduce = data.coolReduce
         if (reduce > 0.5) reduce = 0.5
-        val finalCd = baseCd * (1.0 - reduce) * (accessoryPlan?.cooldownMultiplier ?: 1.0)
+        val finalCd = baseCd * (1.0 - reduce)
 
         setCooldown(player, type, finalCd)
         setVisualCooldown(player, type, finalCd)

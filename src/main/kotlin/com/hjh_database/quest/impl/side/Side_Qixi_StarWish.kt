@@ -2,21 +2,16 @@ package com.hjh_database.quest.impl.side
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
-import com.hjh_database.dungeon.qixi.QixiAccessPolicy
 import com.hjh_database.quest.core.QuestBase
 import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.quest.core.QuestType
 import com.hjh_database.quest.core.StoryNpcs
 import org.bukkit.Bukkit
 import org.bukkit.Sound
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
-import java.io.File
-import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 
 class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType.SIDE, 1), Listener {
@@ -25,10 +20,6 @@ class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType
 
     private val plugin get() = Hjh_database.instance
     private val dialogueStates = HashMap<UUID, DialogueState>()
-    private val eventConfig = loadEventConfig()
-    private val minimumLevel = eventConfig.getInt("event-quest.min-level", DEFAULT_MINIMUM_LEVEL).coerceAtLeast(1)
-    private val lastAcceptDate = parseLastAcceptDate()
-    private val eventZone = parseEventZone()
 
     init {
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -37,15 +28,14 @@ class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType
     override val raceLimit: Int? = null
 
     override fun canAccept(player: Player, data: PlayerData): Boolean {
-        return QixiAccessPolicy.isAllowed(plugin, player) &&
-            data.lv >= minimumLevel &&
-            !LocalDate.now(eventZone).isAfter(lastAcceptDate)
+        // 活动结束后不再派发新任务，但任务界面仍须显示已接取的任务。
+        return data.questStatuses[id] == QuestStatus.IN_PROGRESS
     }
 
     override val description = listOf(
         "§7七夕将近，司天监发现天河星轨与鹊桥星光出现异常。",
         "§7前往皇城东门口寻找监星官沈观，调查这场不同寻常的星象。",
-        "§8限时接取：${lastAcceptDate}（含当日）前，等级达到${minimumLevel}级"
+        "§8活动已结束，不再接取；已接取的任务仍可继续完成。"
     )
 
     override fun getProgressText(progress: Int): List<String> = when (progress) {
@@ -146,32 +136,6 @@ class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType
         }
     }
 
-    private fun loadEventConfig(): YamlConfiguration {
-        val file = File(plugin.dataFolder, "dungeon/qixi.yml")
-        if (!file.exists()) {
-            file.parentFile.mkdirs()
-            plugin.saveResource("dungeon/qixi.yml", false)
-        }
-        return YamlConfiguration.loadConfiguration(file)
-    }
-
-    private fun parseLastAcceptDate(): LocalDate {
-        val raw = eventConfig.getString("event-quest.last-accept-date", DEFAULT_LAST_ACCEPT_DATE)
-            ?: DEFAULT_LAST_ACCEPT_DATE
-        return runCatching { LocalDate.parse(raw) }.getOrElse {
-            plugin.logger.warning("dungeon/qixi.yml 的 event-quest.last-accept-date 无效：$raw，已使用默认日期 $DEFAULT_LAST_ACCEPT_DATE")
-            LocalDate.parse(DEFAULT_LAST_ACCEPT_DATE)
-        }
-    }
-
-    private fun parseEventZone(): ZoneId {
-        val raw = eventConfig.getString("event-quest.time-zone", DEFAULT_TIME_ZONE) ?: DEFAULT_TIME_ZONE
-        return runCatching { ZoneId.of(raw) }.getOrElse {
-            plugin.logger.warning("dungeon/qixi.yml 的 event-quest.time-zone 无效：$raw，已使用 $DEFAULT_TIME_ZONE")
-            ZoneId.of(DEFAULT_TIME_ZONE)
-        }
-    }
-
     private val shenGuanScript = listOf(
         "§e[${StoryNpcs.SHENGUAN.displayName}§e] §f你也是来看七夕星象的？",
         "§e[${StoryNpcs.SHENGUAN.displayName}§e] §f我是皇城司天监的星官，沈观。",
@@ -214,8 +178,5 @@ class Side_Qixi_StarWish : QuestBase(ID, "[限时支线]鹊桥星愿", QuestType
 
     companion object {
         const val ID = "side_qixi_starwish"
-        private const val DEFAULT_MINIMUM_LEVEL = 40
-        private const val DEFAULT_LAST_ACCEPT_DATE = "2026-08-31"
-        private const val DEFAULT_TIME_ZONE = "Asia/Shanghai"
     }
 }

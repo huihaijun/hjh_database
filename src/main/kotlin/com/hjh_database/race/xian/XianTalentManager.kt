@@ -57,6 +57,8 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
 
     init {
         plugin.server.pluginManager.registerEvents(this, plugin)
+        // 仿照天机令：每秒只刷新正在查看仙风道骨菜单的玩家，不修改玩家的真实物品。
+        plugin.server.scheduler.runTaskTimer(plugin, Runnable { updateCooldownDisplays() }, 20L, 20L)
     }
 
     fun bind(player: Player, waypointId: String) {
@@ -351,6 +353,50 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
         return if (remaining <= 0L) 0L else ceil(remaining / 1000.0).toLong()
     }
 
+    private fun updateCooldownDisplays() {
+        for (player in Bukkit.getOnlinePlayers()) {
+            val holder = player.openInventory.topInventory.holder as? TeleportMenuHolder ?: continue
+            if (holder.ownerId != player.uniqueId) continue
+            val data = dataByPlayer[player.uniqueId] ?: continue
+            refreshOpenMenuCooldown(player, data, remainingCooldownSeconds(data))
+        }
+    }
+
+    private fun refreshOpenMenuCooldown(player: Player, data: TalentData, remaining: Long) {
+        val inventory = player.openInventory.topInventory
+        val holder = inventory.holder as? TeleportMenuHolder ?: return
+        if (holder.ownerId != player.uniqueId) return
+
+        for ((slot, waypointId) in holder.waypointBySlot) {
+            if (waypointId !in data.boundWaypointIds || plugin.chonghuaManager.waypoints[waypointId] == null) continue
+            val item = inventory.getItem(slot) ?: continue
+            val meta = item.itemMeta ?: continue
+            val updatedLore = buildList {
+                if (remaining > 0L) add("§c共享冷却剩余: ${remaining}秒")
+                else add("§a左键: 静止吟唱3秒后传送")
+                add("§7右键: §c解除绑定")
+                add("§8此冷却独立于普通重华晶")
+            }
+            if (meta.lore != updatedLore) {
+                meta.lore = updatedLore
+                item.itemMeta = meta
+            }
+        }
+
+        val clock = inventory.getItem(22) ?: return
+        val clockMeta = clock.itemMeta ?: return
+        val desiredType = if (remaining > 0L) Material.CLOCK else Material.ENDER_EYE
+        val desiredName = if (remaining > 0L) "§c仙力调息中" else "§a仙力充盈"
+        val desiredLore = if (remaining > 0L) listOf("§7共享冷却剩余: §c${remaining}秒")
+        else listOf("§7当前可以发动仙风道骨")
+        if (clock.type != desiredType || clockMeta.displayName != desiredName || clockMeta.lore != desiredLore) {
+            clock.type = desiredType
+            clockMeta.setDisplayName(desiredName)
+            clockMeta.lore = desiredLore
+            clock.itemMeta = clockMeta
+        }
+    }
+
     private fun ensureLoaded(player: Player, sendMessage: Boolean = true): Boolean {
         if (loadedPlayers.contains(player.uniqueId)) return true
         if (pendingLoads.add(player.uniqueId)) {
@@ -455,9 +501,10 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
         private const val MAX_BINDINGS = 4
         private const val MENU_SIZE = 27
         private const val CHANNEL_DURATION_TICKS = 60
-        private const val CHANNEL_INTERVAL_TICKS = 5
-        private const val MOVE_TOLERANCE_SQUARED = 0.01
-        private const val COOLDOWN_MILLIS = 240_000L
+        private const val CHANNEL_INTERVAL_TICKS = 10
+        private const val MOVE_TOLERANCE_SQUARED = 0.25
+        private const val COOLDOWN_SECONDS = 180L
+        private const val COOLDOWN_MILLIS = COOLDOWN_SECONDS * 1_000L
         private val BINDING_SLOTS = intArrayOf(10, 12, 14, 16)
     }
 }

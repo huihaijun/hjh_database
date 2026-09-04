@@ -123,6 +123,7 @@ class Hjh_database : JavaPlugin() {
     lateinit var bgmManager: com.hjh_database.bgm.BgmManager
     lateinit var jobTrialManager: JobTrialManager
     lateinit var elementZfGui: ElementZfGui
+    lateinit var adminInteractionBlocks: com.hjh_database.admin.AdminInteractionBlocks
     lateinit var chonghuaManager: ChonghuaManager
     lateinit var accessoryManager: AccessoryManager // 饰品栏管理器
     lateinit var qingLongManager: QingLongManager// 青龙试炼管理器
@@ -255,7 +256,8 @@ class Hjh_database : JavaPlugin() {
         this.elementZfGui = ElementZfGui(this)
         
         this.elementCrystalManager = ElementCrystalManager(this)
-        this.elementCrystalManager.initBlock()
+        this.adminInteractionBlocks = com.hjh_database.admin.AdminInteractionBlocks(this)
+        server.pluginManager.registerEvents(this.adminInteractionBlocks, this)
         server.pluginManager.registerEvents(this.elementCrystalManager, this)
         server.pluginManager.registerEvents(this.elementCrystalManager.warriorMastery, this)
         server.pluginManager.registerEvents(this.elementCrystalManager.archerMastery, this)
@@ -271,7 +273,6 @@ class Hjh_database : JavaPlugin() {
         // ==========================================
         val pm = server.pluginManager
         val rebirthListener = RebirthListener(this)
-        rebirthListener.initAltar()
 
         // 1. 基础系统监听
         // 必须早于其他伤害监听器注册，以便测试仪在LOWEST阶段拿到未经插件修改的事件。

@@ -228,6 +228,11 @@ internal class DatabaseSchema(
                     // 七夕共建：每日副本额外烟花的独立计数。
                     safeAddColumn(stmt, "qixi_bridge_build", "dungeon_reward_date", "VARCHAR(10)")
                     safeAddColumn(stmt, "qixi_bridge_build", "dungeon_reward_count", "INTEGER NOT NULL DEFAULT 0")
+
+                    // 灵田虫害进度必须持久化，才能在离线期间按生长节点补算。
+                    safeAddColumn(stmt, "farm_player_plots", "insect_checked_stage", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "farm_player_plots", "insect_disaster_count", "INT DEFAULT 0")
+                    safeAddColumn(stmt, "farm_player_plots", "insect_protected_until", "BIGINT DEFAULT 0")
                 }
             }
         } catch (e: SQLException) {
@@ -525,6 +530,9 @@ internal class DatabaseSchema(
                 planted_at BIGINT DEFAULT 0,
                 matures_at BIGINT DEFAULT 0,
                 yield_multiplier DOUBLE DEFAULT 1.0,
+                insect_checked_stage INT DEFAULT 0,
+                insect_disaster_count INT DEFAULT 0,
+                insect_protected_until BIGINT DEFAULT 0,
                 updated_at BIGINT DEFAULT 0,
                 PRIMARY KEY (player_uuid, plot_id)
             );

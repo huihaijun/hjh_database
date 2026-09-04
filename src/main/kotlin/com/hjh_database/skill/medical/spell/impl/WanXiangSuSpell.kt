@@ -16,11 +16,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
-    // 内部数据类：只需记录一个统一的百分比值 boostPct 即可
-    data class WanXiangBuff(var task: BukkitTask, val boostPct: Double)
+    private data class WanXiangBuff(var task: BukkitTask)
 
     companion object {
-        val activeBuffs = ConcurrentHashMap<UUID, WanXiangBuff>()
+        private val activeBuffs = ConcurrentHashMap<UUID, WanXiangBuff>()
         private const val ATTACK_KEY = "wanxiangsu::attack_percent"
         private const val ARCHER_KEY = "wanxiangsu::archer_damage_percent"
         private const val ZF_KEY = "wanxiangsu::zf_str_percent"
@@ -30,10 +29,10 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
         val zfStr = data.zfStr
 
         // 读取配置参数
-        val radius = config?.getDouble("radius", 10.0) ?: 10.0
-        val healMultiplier = config?.getDouble("heal_multiplier", 4.0) ?: 4.0
-        val buffDuration = config?.getInt("buff_duration", 15) ?: 15
-        val statBoost = config?.getDouble("stat_boost", 0.2) ?: 0.2 // 20%
+        val radius = config?.getDouble("radius", 15.0) ?: 15.0
+        val healMultiplier = config?.getDouble("heal_multiplier", 5.0) ?: 5.0
+        val buffDuration = config?.getInt("buff_duration", 10) ?: 10
+        val statBoost = config?.getDouble("stat_boost", 0.3) ?: 0.3
 
         val healAmount = zfStr * healMultiplier
         val durationTicks = buffDuration * 20L
@@ -67,23 +66,16 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
             // 3. 进攻属性增益逻辑 (完全采用百分比)
             val targetData = plugin.playerManager.getData(target.uniqueId) ?: continue
-            val existingBuff = activeBuffs[target.uniqueId]
+            // 同一医术始终覆盖自己的三个独立属性键，不与自身叠加。
+            targetData.tempBonuses[ATTACK_KEY] = statBoost
+            targetData.tempBonuses[ARCHER_KEY] = statBoost
+            targetData.tempBonuses[ZF_KEY] = statBoost
+            plugin.playerManager.updateStats(target)
 
-            if (existingBuff != null) {
-                // 已有增益：仅重置定时器，绝不叠加
-                existingBuff.task.cancel()
-                existingBuff.task = createRemoveTask(target.uniqueId, durationTicks)
-            } else {
-                // 没有增益：精准赋予三个流派的百分比加成
-                targetData.tempBonuses[ATTACK_KEY] = statBoost
-                targetData.tempBonuses[ARCHER_KEY] = statBoost
-                targetData.tempBonuses[ZF_KEY] = statBoost
-
-                plugin.playerManager.updateStats(target)
-
-                val task = createRemoveTask(target.uniqueId, durationTicks)
-                activeBuffs[target.uniqueId] = WanXiangBuff(task, statBoost)
-            }
+            // 重复命中只取消旧清理任务并重新计时，不累加持续时间。
+            activeBuffs.remove(target.uniqueId)?.task?.cancel()
+            val task = createRemoveTask(target.uniqueId, durationTicks)
+            activeBuffs[target.uniqueId] = WanXiangBuff(task)
         }
 
         return true

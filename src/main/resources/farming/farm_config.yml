@@ -7,7 +7,7 @@ display:
   crop_height: 1.02
 
 events:
-  check_interval_seconds: 300
+  check_interval_seconds: 10
 
 messages:
   plot_bound: "&a已将这块灵田绑定为你的专属田位。"
@@ -20,5 +20,7 @@ messages:
   crop_removed: "&7已铲除 {crop}，没有获得任何物品。"
   not_seed: "&c主手物品不是可识别的灵田种子。"
   accelerated: "&b生机涌动，成熟时间缩短了30秒。"
+  insect_protected: "&a防虫符生效，当前虫害防护还剩 {seconds} 秒。"
+  insect_protection_full: "&e这株作物在成熟前已全程受到防虫保护。"
   no_crop: "&7这块灵田目前空置。"
   reloaded: "&a灵田配置已重新加载。"

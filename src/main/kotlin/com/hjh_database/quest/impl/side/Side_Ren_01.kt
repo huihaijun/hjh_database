@@ -76,6 +76,9 @@ class Side_Ren_01 : QuestBase("side_ren_1", "[支线]重华晶的奥秘", QuestT
         return false
     }
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        npcId == "ren_fahai" && currentProgress == 0
+
     // ==========================================
     // 辅助方法
     // ==========================================

@@ -142,7 +142,7 @@ class WaterMasteryWarrior(private val plugin: Hjh_database) {
                         // 判定是否在水波扩散的当前边缘
                         if (distance >= r - 1.2 && distance <= r + 0.5) {
                             hitMonsters.add(entity.uniqueId)
-                            magicDamage(player, entity, damage)
+                            physicalDamage(player, entity, damage)
 
                             if (isThird) {
                                 // 第三道水波：小幅击飞 (约 0.5 格高)
@@ -162,15 +162,16 @@ class WaterMasteryWarrior(private val plugin: Hjh_database) {
         }.runTaskTimer(plugin, 0L, 1L)
     }
 
-    private fun magicDamage(attacker: Player, target: LivingEntity, damage: Double) {
+    /** 潮返水波是普通物理技能伤害：参与完整护甲减伤，不附带任何穿甲。 */
+    private fun physicalDamage(attacker: Player, target: LivingEntity, damage: Double) {
         if (damage <= 0.0 || !target.isValid || target.isDead) return
-        target.setMetadata("HJH_MAGIC_DAMAGE", FixedMetadataValue(plugin, damage))
+        target.setMetadata("hjh_physical_skill", FixedMetadataValue(plugin, true))
         target.noDamageTicks = 0
         try {
             target.damage(damage, attacker)
         } finally {
-            if (target.hasMetadata("HJH_MAGIC_DAMAGE")) {
-                target.removeMetadata("HJH_MAGIC_DAMAGE", plugin)
+            if (target.hasMetadata("hjh_physical_skill")) {
+                target.removeMetadata("hjh_physical_skill", plugin)
             }
             target.noDamageTicks = 0
         }

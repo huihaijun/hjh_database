@@ -12,7 +12,9 @@ class FormationDamageEvent(
     val requestedDamage: Double,
     val actualDamage: Double,
     /** 仅元素阵法伤害会携带类型；医术、饰品等共用伤害入口时保持 null。 */
-    val element: FormationElement? = null
+    val element: FormationElement? = null,
+    /** 同一次施法的即时、延迟与持续命中共用此对象；纯控制命中的伤害为0。 */
+    val cast: FormationCast? = null
 ) : Event() {
     override fun getHandlers(): HandlerList = HANDLERS
 

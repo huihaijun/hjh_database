@@ -37,7 +37,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("com.zaxxer:HikariCP:5.1.0")
+    testImplementation(kotlin("test-junit"))
 }
+
+tasks.register("verifyXunlilingshu") { dependsOn(tasks.named("test")) }
 
 tasks {
     // 替代 pom.xml 中的 <filtering>true</filtering>
@@ -61,6 +64,9 @@ tasks {
         from("src/main/resources/artifacts.yml") {
             into("hjh_database")
         }
+        from("src/main/resources/medical_items.yml") {
+            into("hjh_database")
+        }
         from("src/main/resources/chonghua_waypoints.yml") {
             into("hjh_database")
         }
@@ -77,6 +83,9 @@ tasks {
             into("hjh_database/dungeon")
         }
         from("src/main/resources/titles/encounter.yml") {
+            into("hjh_database/titles")
+        }
+        from("src/main/resources/titles/dungeon.yml") {
             into("hjh_database/titles")
         }
         from("src/main/resources/admin_money.yml") {

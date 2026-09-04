@@ -60,6 +60,9 @@ class Ren_10 : QuestBase("main_ren_10", "[人族主线]圣兽踪迹", QuestType.
         return true
     }
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        npcId == StoryNpcs.REN_FAHAI.id && currentProgress == 0
+
     override fun giveReward(player: Player) {
         plugin.playerManager.giveExp(player, 400)
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)

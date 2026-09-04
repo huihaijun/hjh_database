@@ -41,6 +41,7 @@ import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -58,6 +59,8 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
     private val resourceIdKey = NamespacedKey(plugin, "resource_id")
     private val celebrationFireworkKey = NamespacedKey(plugin, "qixi_bridge_celebration")
     private val menuOpenTimes = HashMap<UUID, Long>()
+    private val fireworkUseTimes = HashMap<UUID, Long>()
+    private val resettingPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
     private var globalState = QixiBridgeGlobalState()
     private var storageReady = false
@@ -76,7 +79,7 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
 
     init {
         reload()
-        initializeStorage()
+        if (isEventActive()) initializeStorage()
     }
 
     fun reload() {
@@ -107,6 +110,7 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
         playerStates.clear()
         loadingPlayers.clear()
         menuOpenTimes.clear()
+        fireworkUseTimes.clear()
     }
 
     private fun initializeStorage() {
@@ -165,6 +169,27 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
         playerStates.remove(event.player.uniqueId)
         loadingPlayers.remove(event.player.uniqueId)
         menuOpenTimes.remove(event.player.uniqueId)
+        fireworkUseTimes.remove(event.player.uniqueId)
+    }
+
+    fun preparePlayerReset(playerId: UUID) {
+        resettingPlayers.add(playerId)
+        loadingPlayers.remove(playerId)?.cancel(false)
+    }
+
+    fun cancelPlayerReset(playerId: UUID) {
+        resettingPlayers.remove(playerId)
+    }
+
+    fun resetPlayerData(player: Player) {
+        loadingPlayers.remove(player.uniqueId)?.cancel(false)
+        menuOpenTimes.remove(player.uniqueId)
+        playerStates[player.uniqueId] = QixiBridgePlayerState(
+            uuid = player.uniqueId,
+            playerName = player.name,
+            revision = System.currentTimeMillis()
+        )
+        resettingPlayers.remove(player.uniqueId)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -176,62 +201,19 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
 
         event.isCancelled = true
         val player = event.player
-        if (!isEventActive()) {
-            player.sendMessage("§c七夕限时活动【共建鹊桥】已经结束。")
-            return
-        }
         if (!isOnMagpieBridge(player.location)) {
             player.sendMessage("§c星河共筑只能在鹊影桥上释放。")
             player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1.1f)
             return
         }
 
-        val state = playerStates[player.uniqueId]
-        if (!storageReady || state == null) {
-            player.sendMessage("§e活动数据正在从数据库加载，请稍后再次释放。")
-            if (storageReady) loadPlayerState(player)
-            return
-        }
-
-        val today = currentDate().toString()
-        val used = dailyUses(state, today)
-        if (used >= DAILY_USE_LIMIT) {
-            player.sendMessage("§c你今天已经释放过${DAILY_USE_LIMIT}次星河共筑了，明日再来吧。")
-            player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 1.0f)
-            return
-        }
-
+        // 不限每日释放次数；每次消耗一支，不累计贡献、不访问数据库。
+        // 仅合并双手事件/极短时间连点，避免同次右键重复创建烟花。
+        val now = System.currentTimeMillis()
+        if (now - (fireworkUseTimes[player.uniqueId] ?: 0L) < 300L) return
+        fireworkUseTimes[player.uniqueId] = now
         consumeOne(player, hand)
-        val contribution = state.contribution + 1
-        val updatedPlayer = state.copy(
-            playerName = player.name,
-            dailyUseDate = today,
-            dailyUses = used + 1,
-            contribution = contribution,
-            revision = nextRevision(state.revision)
-        )
-        val oldProgress = globalProgress()
-        val newProgress = (oldProgress + GLOBAL_PROGRESS_PER_USE).coerceAtMost(100.0)
-        val updatedGlobal = globalState.copy(
-            progress = newProgress,
-            revision = nextRevision(globalState.revision)
-        )
-        playerStates[player.uniqueId] = updatedPlayer
-        globalState = updatedGlobal
-        persistUse(updatedGlobal, updatedPlayer)
-
         launchCelebration(player)
-        player.sendMessage("§5§l[共建鹊桥] §f你的愿力已汇入天河！ §d全服进度 ${formatProgress(newProgress)}% §7| §e个人贡献 $contribution%")
-        player.sendMessage("§7今日还可释放 §f${DAILY_USE_LIMIT - used - 1} §7次星河共筑。")
-
-        milestones.firstOrNull {
-            oldProgress < it.progress.toDouble() && newProgress >= it.progress.toDouble()
-        }?.let { reached ->
-            Bukkit.broadcastMessage("§5§l[共建鹊桥] §f全服进度已达到 §d§l${reached.progress}%§f，新的共建奖励已经解锁！")
-            Bukkit.getOnlinePlayers().forEach {
-                it.playSound(it.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.9f, 1.15f)
-            }
-        }
     }
 
     /** 活动烟花只承担展示作用，不让原版烟花爆炸误伤桥上的玩家或怪物。 */
@@ -711,7 +693,8 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
 
     private fun currentDate(): LocalDate = LocalDate.now(eventZone)
 
-    private fun isEventActive(): Boolean = !currentDate().isAfter(lastEventDate)
+    // 共建活动永久结算，不因修改旧截止日期再次发放烟花或贡献奖励。
+    private fun isEventActive(): Boolean = false
 
     private fun isOnMagpieBridge(location: Location): Boolean {
         return location.world?.name == BRIDGE_WORLD &&
@@ -733,7 +716,7 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun loadPlayerState(player: Player, onLoaded: (() -> Unit)? = null) {
-        if (!storageReady || stopping) return
+        if (!storageReady || stopping || resettingPlayers.contains(player.uniqueId)) return
         playerStates[player.uniqueId]?.let {
             onLoaded?.invoke()
             return
@@ -746,7 +729,8 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
 
         future.whenComplete { loaded, error ->
             runOnMain {
-                if (loadingPlayers[uuid] === future) loadingPlayers.remove(uuid)
+                if (loadingPlayers[uuid] !== future || resettingPlayers.contains(uuid)) return@runOnMain
+                loadingPlayers.remove(uuid)
                 if (error != null || loaded == null) {
                     if (player.isOnline) player.sendMessage("§c共建鹊桥活动数据读取失败，请稍后重试。")
                     plugin.logger.severe("读取 ${player.name} 的共建鹊桥数据失败：${rootMessage(error)}")
@@ -760,7 +744,10 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
     }
 
     private fun persistPlayer(state: QixiBridgePlayerState, attemptsLeft: Int = 3) {
-        plugin.databaseManager.submitDatabaseOperation { repository.savePlayer(state) }
+        if (resettingPlayers.contains(state.uuid)) return
+        plugin.databaseManager.submitDatabaseOperation {
+            if (!resettingPlayers.contains(state.uuid)) repository.savePlayer(state)
+        }
             .whenComplete { _, error ->
                 if (error == null) return@whenComplete
                 plugin.logger.warning("保存 ${state.playerName} 的共建鹊桥数据失败：${rootMessage(error)}")
@@ -781,7 +768,10 @@ class QixiBridgeBuildManager(private val plugin: Hjh_database) : Listener {
         state: QixiBridgePlayerState,
         attemptsLeft: Int = 3
     ) {
-        plugin.databaseManager.submitDatabaseOperation { repository.saveUse(global, state) }
+        if (resettingPlayers.contains(state.uuid)) return
+        plugin.databaseManager.submitDatabaseOperation {
+            if (!resettingPlayers.contains(state.uuid)) repository.saveUse(global, state)
+        }
             .whenComplete { _, error ->
                 if (error == null) return@whenComplete
                 plugin.logger.warning("保存 ${state.playerName} 的共建进度失败：${rootMessage(error)}")

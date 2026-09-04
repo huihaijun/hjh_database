@@ -15,6 +15,7 @@ import com.hjh_database.accessory.skill.warlock.YanlingSkill
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import com.hjh_database.combat.MonsterDamageClassification
 import com.hjh_database.data.PlayerData
+import com.hjh_database.skill.element_zf.FormationDamageEvent
 import com.hjh_database.skill.medical.spell.MedicalHealEvent
 import com.hjh_database.weapon.CrystalData
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
@@ -63,6 +64,12 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         "jinshengzhi" to JinshengzhiSkill(plugin),
         "kanzelingzhi" to KanzelingzhiSkill(plugin)
     )
+
+    // 技能实例在插件构造阶段创建；事件统一由 onEnable 注册的管理器转发。
+    @EventHandler(priority = EventPriority.MONITOR)
+    fun onElementFormationHit(event: FormationDamageEvent) {
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.onFormationHit(event)
+    }
 
     /**
      * 銆愭牳蹇冧慨鏀癸細閫氱敤婵€娲荤姸鎬佹嫤鎴€?
@@ -359,34 +366,20 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     }
 
     /**
-     * 元素阵法真正执行前建立一次性饰品计划。计划本身不修改卦印，失败时可以安全丢弃。
+     * 元素阵法真正执行前建立风场计划，失败时可以安全丢弃。
      */
     private val activeFormationPlans = HashMap<UUID, XunlilingshuSkill.CastPlan>()
 
-    fun prepareElementFormationCast(player: Player, type: String): XunlilingshuSkill.CastPlan? {
+    fun prepareElementFormationCast(player: Player): XunlilingshuSkill.CastPlan? {
         activeFormationPlans.remove(player.uniqueId)
         val active = findActiveSkill(player, "xunlilingshu") ?: return null
         val skill = active.first as? XunlilingshuSkill ?: return null
-        val plan = skill.prepareCast(player, type) ?: return null
+        val plan = skill.prepareCast(player) ?: return null
         activeFormationPlans[player.uniqueId] = plan
         return plan
     }
 
-    /** 同元素卦印触发时，本次阵法不消耗元素，也不消耗灵力。 */
-    fun isCurrentElementFormationFree(player: Player): Boolean =
-        activeFormationPlans[player.uniqueId]?.freeResourceCost == true
-
-    /** 金、木、水、火只增幅伤害；土元素不从这里取得增幅。 */
-    fun getCurrentFormationDamageMultiplier(player: Player): Double {
-        val plan = activeFormationPlans[player.uniqueId] ?: return 1.0
-        return if (plan.currentElement == "EARTH") 1.0 else plan.effectMultiplier
-    }
-
-    /** 土元素只增幅持续时间，其他元素保持原持续时间。 */
-    fun getCurrentFormationDurationMultiplier(player: Player): Double {
-        val plan = activeFormationPlans[player.uniqueId] ?: return 1.0
-        return if (plan.currentElement == "EARTH") plan.effectMultiplier else 1.0
-    }
+    fun isXunlilingshuActive(player: Player): Boolean = findActiveSkill(player, "xunlilingshu") != null
 
     fun completeElementFormationCast(
         player: Player,
@@ -397,14 +390,13 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         val current = activeFormationPlans[player.uniqueId]
         if (current !== plan) return
         activeFormationPlans.remove(player.uniqueId)
-        if (!success) return
-        (skills["xunlilingshu"] as? XunlilingshuSkill)?.commitCast(player, plan)
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.completeCast(player, plan, success)
     }
 
-    /** 饰品栏保存后调用，卸下巽离灵枢会立即清除卦印。 */
+    /** 饰品栏保存后调用，卸下巽离灵枢会立即清除风场、加成和火种。 */
     fun onAccessoryLoadoutChanged(player: Player) {
         if (findActiveSkill(player, "xunlilingshu") == null) {
-            (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(player)
+            (skills["xunlilingshu"] as? XunlilingshuSkill)?.cleanup(player)
             activeFormationPlans.remove(player.uniqueId)
         }
     }
@@ -415,7 +407,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         (skills["yanjingdunpai"] as? YanjingdunpaiSkill)?.cleanup(event.player)
         (skills["zhenyuechenfeng"] as? ZhenyuechenfengSkill)?.cleanup(event.player)
         (skills["qianzhentianji"] as? QianzhentianjiSkill)?.cleanup(event.player)
-        (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(event.player)
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.cleanup(event.player)
         (skills["kanzelingzhi"] as? KanzelingzhiSkill)?.cleanup(event.player)
         skills.values.forEach { it.cleanupHudState(event.player) }
         activeFormationPlans.remove(event.player.uniqueId)
@@ -423,7 +415,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onDeath(event: PlayerDeathEvent) {
-        (skills["xunlilingshu"] as? XunlilingshuSkill)?.clearMark(event.entity)
+        (skills["xunlilingshu"] as? XunlilingshuSkill)?.cleanup(event.entity)
         activeFormationPlans.remove(event.entity.uniqueId)
     }
 

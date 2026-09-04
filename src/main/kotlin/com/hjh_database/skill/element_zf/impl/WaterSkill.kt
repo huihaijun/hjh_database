@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
 import com.hjh_database.skill.element_zf.FormationElement
@@ -19,6 +20,7 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
     // 【改动2】将 cast 改为 onCast
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
+        val formationCast = FormationCast()
 
         // 1. 读取配置 (父类已处理好了非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 1.0)
@@ -50,11 +52,11 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 4. 造成伤害与控制
         // 如果有目标，才循环造成伤害；没有目标就跳过，但不打断流程
         if (targets.isNotEmpty()) {
-            val baseDamage = data.zfStr * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+            val baseDamage = data.zfStr
             val finalDamage = baseDamage * damagePercent
 
             for (target in targets) {
-                formationMagicDamage(plugin, player, target, finalDamage, FormationElement.WATER)
+                formationMagicDamage(plugin, player, target, finalDamage, FormationElement.WATER, cast = formationCast)
 
                 // 保留原有每级15%的减速幅度，但使用阵法独立属性标签，不再覆盖其他药水减速。
                 plugin.elementZfManager.tierEffects.applyWaterSlow(
@@ -75,7 +77,7 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             }
 
             if (level >= 5) {
-                startFrozenPath(player, castOrigin, castDirection, range, finalDamage, safeConfig)
+                startFrozenPath(player, castOrigin, castDirection, range, finalDamage, safeConfig, formationCast)
             }
         } else if (level >= 5) {
             // 五级即使空放也会在释放瞬间的固定路径上留下冰径。
@@ -84,8 +86,9 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 castOrigin,
                 castDirection,
                 range,
-                data.zfStr * damagePercent * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player),
-                safeConfig
+                data.zfStr * damagePercent,
+                safeConfig,
+                formationCast
             )
         }
 
@@ -180,7 +183,8 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         direction: Vector,
         range: Double,
         originalDamage: Double,
-        config: ConfigurationSection
+        config: ConfigurationSection,
+        formationCast: FormationCast
     ) {
         val duration = config.getDouble("tier5.path_duration", 5.0)
         val pulseInterval = config.getDouble("tier5.path_interval", 0.5).coerceAtLeast(0.05)
@@ -218,7 +222,8 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                         target,
                         originalDamage * damageRatio,
                         FormationElement.WATER,
-                        suppressKnockback = true
+                        suppressKnockback = true,
+                        cast = formationCast
                     )
                     plugin.elementZfManager.tierEffects.applyFrozenPathSlow(
                         target,

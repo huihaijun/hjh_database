@@ -324,22 +324,20 @@ internal class DatabaseSubsystemRepository(
         """.trimIndent()
 
         try {
-            plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                manager.dataSource?.connection?.use { conn ->
-                    conn.prepareStatement(sql).use { ps ->
-                        ps.setString(1, data.uuid.toString())
-                        ps.setString(2, data.playerName)
-                        ps.setString(3, data.getUnlockedAsJson())
-                        ps.setString(4, data.getCooldownsAsJson())
+            manager.dataSource?.connection?.use { conn ->
+                conn.prepareStatement(sql).use { ps ->
+                    ps.setString(1, data.uuid.toString())
+                    ps.setString(2, data.playerName)
+                    ps.setString(3, data.getUnlockedAsJson())
+                    ps.setString(4, data.getCooldownsAsJson())
 
-                        ps.setString(5, data.playerName)
-                        ps.setString(6, data.getUnlockedAsJson())
-                        ps.setString(7, data.getCooldownsAsJson())
+                    ps.setString(5, data.playerName)
+                    ps.setString(6, data.getUnlockedAsJson())
+                    ps.setString(7, data.getCooldownsAsJson())
 
-                        ps.executeUpdate()
-                    }
+                    ps.executeUpdate()
                 }
-            })
+            }
         } catch (e: Exception) {
             plugin.logger.severe("保存重华晶数据失败: ${e.message}")
         }

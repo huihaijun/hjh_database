@@ -79,7 +79,7 @@ class Xian_09 : QuestBase("main_xian_9", "[仙族主线]四方祝福", QuestType
                     when {
                         queryFailed -> player.sendMessage("§c[系统] 无法读取青龙试炼状态，请稍后重试或联系管理员。")
                         !trialPassed -> {
-                            player.sendMessage("§e[${StoryNpcs.XIAN_YULUO.displayName}§e] §f上仙可曾通过青龙试炼？取得祝福之后，再来将结果告知我吧。")
+                            player.sendMessage("§e[${StoryNpcs.XIAN_YULUO.displayName}§e] §f上仙,可曾探明东方森林魔物暴动之因?")
                             player.sendMessage("§c（尚未通过青龙试炼，请完成试炼后再与羽罗交谈）")
                             player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
                         }
@@ -129,7 +129,6 @@ class Xian_09 : QuestBase("main_xian_9", "[仙族主线]四方祝福", QuestType
             player.sendMessage("  §d[额外] §f赤铜锭 x1")
         }
         player.sendMessage("")
-        player.sendMessage("  §e[提示] §f下一站：南方沙漠的朱雀祭坛")
         player.sendMessage("§8§m========================================")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         talkProgress.remove(player.uniqueId)

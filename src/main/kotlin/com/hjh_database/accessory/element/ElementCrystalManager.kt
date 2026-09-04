@@ -25,19 +25,6 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
     /** 医师精进技能管理器 */
     val medicalMastery = MedicalMasterySkills(plugin)
 
-    fun initBlock() {
-        plugin.server.scheduler.runTask(plugin, Runnable {
-            val world = org.bukkit.Bukkit.getWorld("world")
-            if (world != null) {
-                val loc = org.bukkit.Location(world, 124.0, 60.0, -19.0)
-                val block = loc.block
-                if (block.type != org.bukkit.Material.RESPAWN_ANCHOR) {
-                    block.type = org.bukkit.Material.RESPAWN_ANCHOR
-                }
-            }
-        })
-    }
-
     fun loadPlayer(player: Player) {
         dbRepo.loadData(player.uniqueId, player.name).thenAccept { data ->
             cache[player.uniqueId] = data

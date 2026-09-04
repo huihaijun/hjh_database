@@ -54,6 +54,7 @@ import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Transformation
 import org.bukkit.util.Vector
+import org.bukkit.util.BoundingBox
 import org.joml.AxisAngle4f
 import org.joml.Vector3f
 import java.net.URI
@@ -104,7 +105,7 @@ internal class QixiThirdPhaseController(
 
     private data class BoundaryCell(val x: Int, val y: Int, val z: Int)
 
-    private data class TimedDialogue(val deliverAtTick: Int, val message: String)
+    private data class TimedDialogue(val deliverAtTick: Int, val message: String, val heavenlyLaw: Boolean = false)
 
     private val entityTag = "qixi_queqiao_entity"
     private val playerTag = "qixi_queqiao_player"
@@ -210,6 +211,7 @@ internal class QixiThirdPhaseController(
 
     private val trackedEntities = HashSet<UUID>()
     private val summonedIds = HashSet<UUID>()
+    private val replacedSummonIds = HashSet<UUID>()
     private val summonHalves = HashMap<UUID, Half>()
     private val bearerHalves = HashMap<UUID, Half>()
     private val bearersKilledByOrder = HashSet<UUID>()
@@ -259,6 +261,7 @@ internal class QixiThirdPhaseController(
     private var currentFloatingColor: StarColor? = null
     private var nextFloatingColor: StarColor? = null
     private var thresholdTianheTriggered = false
+    private var hardModeEmpowered = false
     private var phaseThreeBgmRemaining = 0
     private var completed = false
 
@@ -302,6 +305,7 @@ internal class QixiThirdPhaseController(
         trackedEntities.mapNotNull(Bukkit::getEntity).forEach(Entity::remove)
         trackedEntities.clear()
         summonedIds.clear()
+        replacedSummonIds.clear()
         summonHalves.clear()
         bearerHalves.clear()
         bearersKilledByOrder.clear()
@@ -579,7 +583,8 @@ internal class QixiThirdPhaseController(
 
     private fun tickIndependentSkills(currentBoss: Evoker, players: List<Player>) {
         tickJadeOrder(currentBoss)
-        if (stage == Stage.TIANHE) {
+        val suppressLaw = stage == Stage.TIANHE || isBoundaryChanneling()
+        if (suppressLaw) {
             if (currentLaw != null) clearHeavenlyLaw()
         } else {
             tickHeavenlyLaw(players)
@@ -587,12 +592,16 @@ internal class QixiThirdPhaseController(
         supportCooldown -= DRIVER_PERIOD_TICKS.toInt()
         if (supportCooldown > 0) return
         supportCooldown = supportCooldownTicks
-        if (stage == Stage.TIANHE || ThreadLocalRandom.current().nextBoolean()) {
+        if (suppressLaw || ThreadLocalRandom.current().nextBoolean()) {
             startJadeOrder(currentBoss)
         } else {
             startHeavenlyLaw()
         }
     }
+
+    private fun isBoundaryChanneling(): Boolean = mainState == MainState.BOUNDARY_FLIGHT ||
+        mainState == MainState.BOUNDARY_WARNING || mainState == MainState.BOUNDARY_ACTIVE ||
+        mainState == MainState.BOUNDARY_RETURN
 
     private fun startPressure(currentBoss: Evoker) {
         pressureCooldown = pressureCooldownTicks
@@ -643,6 +652,7 @@ internal class QixiThirdPhaseController(
     }
 
     private fun startJadeOrder(currentBoss: Evoker) {
+        clearJadeOrders()
         orderCastRemaining = ORDER_CHANNEL_TICKS
         orderBar?.removeAll()
         orderBar = createBar("§e§l瑶池玉令·天兵即将降临", BarColor.YELLOW, BarStyle.SOLID).also { it.progress = 0.0 }
@@ -667,6 +677,8 @@ internal class QixiThirdPhaseController(
             world.spawnParticle(Particle.END_ROD, base.clone().add(0.0, index * 2.5, 0.0), 5, 0.25, 1.0, 0.25, 0.03)
         }
         if (orderCastRemaining > 0) return
+        // 预警期间也可能有持令者死亡；在真正出兵前再次清除旧令。
+        clearJadeOrders()
         summonHeavenlySoldiers()
         spawnBearer(Half.FRONT)
         spawnBearer(Half.BACK)
@@ -674,6 +686,7 @@ internal class QixiThirdPhaseController(
     }
 
     private fun startBoundary(currentBoss: Evoker) {
+        clearHeavenlyLaw()
         poolCooldown = poolCooldownTicks
         mainState = MainState.BOUNDARY_FLIGHT
         stateTicks = max(boundaryWarningTicks, BOUNDARY_FLIGHT_TICKS)
@@ -688,7 +701,8 @@ internal class QixiThirdPhaseController(
         broadcastAfter(
             20,
             "§b牛郎：§f那是王母的金簪！快看地上——金光会追随目标走过的路径，速速离开铺开的金阵！",
-            "§d织女：§f离她最远之人与最近之人，皆是她出手的首选目标。莫要心存侥幸！"
+            if (hardModeEmpowered) "§d织女：§f金簪已锁定所有人！可将金光引向天兵，但一定要及时离开金阵！"
+            else "§d织女：§f离她最远之人与最近之人，皆是她出手的首选目标。莫要心存侥幸！"
         )
         skillBar = createBar("§6§l金簪立界即将发动", BarColor.YELLOW, BarStyle.SOLID).also { it.progress = 0.0 }
         world.playSound(currentBoss.location, Sound.ITEM_TRIDENT_RETURN, 1.1f, 1.45f)
@@ -755,7 +769,8 @@ internal class QixiThirdPhaseController(
         if (players.isEmpty()) return
         val nearest = players.minByOrNull { it.location.distanceSquared(boundaryPerch()) }
         val farthest = players.maxByOrNull { it.location.distanceSquared(boundaryPerch()) }
-        listOfNotNull(nearest, farthest).distinctBy(Player::getUniqueId).forEach { player ->
+        val targets = if (hardModeEmpowered) players else listOfNotNull(nearest, farthest).distinctBy(Player::getUniqueId)
+        targets.forEach { player ->
             val zone = BoundaryZone(player.uniqueId)
             sampleBoundaryPath(zone, player.location)
             boundaryZones += zone
@@ -853,12 +868,18 @@ internal class QixiThirdPhaseController(
             ?: boundaryPerch()
         world.playSound(soundCenter, Sound.ITEM_TRIDENT_THUNDER, 1.45f, 1.15f)
         world.playSound(soundCenter, Sound.BLOCK_BEACON_POWER_SELECT, 1.2f, 1.65f)
-        players.filter { player ->
-            zone.markedCells.any { cell ->
-                abs(player.location.x - (cell.x + 0.5)) <= 0.75 &&
-                    abs(player.location.z - (cell.z + 0.5)) <= 0.75
+        fun isInside(entity: LivingEntity): Boolean {
+            val location = entity.location
+            return zone.markedCells.any { cell ->
+                abs(location.x - (cell.x + 0.5)) <= 0.75 && abs(location.z - (cell.z + 0.5)) <= 0.75
             }
-        }.forEach { dealPhysicalDamage(it, boundaryDamage, currentBoss) }
+        }
+        players.filter(::isInside).forEach { dealPhysicalDamage(it, boundaryDamage, currentBoss) }
+        if (hardModeEmpowered) {
+            summonedIds.toList().mapNotNull(Bukkit::getEntity).filterIsInstance<LivingEntity>()
+                .filter { it.isValid && !it.isDead && isInside(it) }
+                .forEach { dealPhysicalDamage(it, boundaryDamage, currentBoss) }
+        }
     }
 
     private fun finishMainSkill(currentBoss: Evoker) {
@@ -905,14 +926,14 @@ internal class QixiThirdPhaseController(
         val solo = activePlayers().size == 1
         if (keepApart) {
             broadcast("§4§n王母娘娘§f: §f天规在此——不得相近。")
-            broadcastAfter(
+            broadcastLawAfter(
                 20,
                 if (solo) "§b牛郎：§f场中只余你一人——也不要靠近我和织女，七格之内同样会触发天罚！"
                 else "§b牛郎：§f彼此散开！靠得太近会触发天罚！每二人之间不可相距在7格以内！"
             )
         } else {
             broadcast("§4§n王母娘娘§f: §f天规在此——不得相离。")
-            broadcastAfter(
+            broadcastLawAfter(
                 20,
                 if (solo) "§d织女：§f快靠近我或牛郎君！独自远离我们七格之外，同样会触发天罚！"
                 else "§d织女：§f别落单！快找同伴会合，独行便是自寻死路！必须与至少一人相距7格以内！"
@@ -943,6 +964,7 @@ internal class QixiThirdPhaseController(
     }
 
     private fun clearHeavenlyLaw() {
+        timedDialogues.removeIf { it.heavenlyLaw }
         currentLaw = null
         lawWarningRemaining = 0
         lawActiveRemaining = 0
@@ -1096,6 +1118,17 @@ internal class QixiThirdPhaseController(
     }
 
     private fun endTianhe(currentBoss: Evoker) {
+        if (difficulty == QixiDifficulty.HARD && thresholdTianheTriggered && defeatedConservers >= CONSERVER_COUNT && !hardModeEmpowered) {
+            hardModeEmpowered = true
+            currentBoss.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = bossSpeed * 1.15
+            currentBoss.getAttribute(Attribute.ATTACK_DAMAGE)?.let { it.baseValue *= 1.10 }
+            val pdc = currentBoss.persistentDataContainer
+            pdc.set(MobFactory.KEY_CUSTOM_ARMOR, PersistentDataType.DOUBLE, bossArmor * 1.10)
+            pdc.get(MobFactory.KEY_CUSTOM_DAMAGE, PersistentDataType.DOUBLE)?.let {
+                pdc.set(MobFactory.KEY_CUSTOM_DAMAGE, PersistentDataType.DOUBLE, it * 1.10)
+            }
+            broadcast("§c王母娘娘天威激荡，速度、攻击与护甲提升！此后的金簪将追击所有人，也会伤及天兵！")
+        }
         floatingPlayers.mapNotNull(Bukkit::getPlayer).forEach {
             it.removePotionEffect(PotionEffectType.LEVITATION)
             removeTianhePlayerModifiers(it)
@@ -1320,14 +1353,27 @@ internal class QixiThirdPhaseController(
     }
 
     private fun summonHeavenlySoldiers() {
-        summonedIds.removeIf { Bukkit.getEntity(it)?.isValid != true }
-        val capacity = (maxActiveSummons - summonedIds.size).coerceAtLeast(0)
-        val amount = min(summonsPerCast, capacity)
+        summonedIds.removeIf { id ->
+            val entity = Bukkit.getEntity(id) as? LivingEntity
+            entity == null || !entity.isValid || entity.isDead
+        }
+        if (difficulty == QixiDifficulty.HARD) {
+            // 换波属于机制清场，不产生掉落，避免通过反复召唤刷奖励。
+            summonedIds.toList().mapNotNull(Bukkit::getEntity).filterIsInstance<LivingEntity>().forEach { entity ->
+                replacedSummonIds += entity.uniqueId
+                entity.health = 0.0
+            }
+            summonedIds.clear()
+        }
+        summonHalves.keys.retainAll(summonedIds)
+        val amount = (min(summonsPerCast, maxActiveSummons) - summonedIds.size).coerceAtLeast(0)
         if (amount <= 0) return
+        val halfCounts = Half.entries.associateWith { half -> summonHalves.values.count { it == half } }.toMutableMap()
         val frontAnchors = summonAnchors(Half.FRONT).shuffled().iterator()
         val backAnchors = summonAnchors(Half.BACK).shuffled().iterator()
+        val players = activePlayers()
         repeat(amount) { index ->
-            val half = if (index % 2 == 0) Half.FRONT else Half.BACK
+            val half = if (halfCounts.getValue(Half.FRONT) <= halfCounts.getValue(Half.BACK)) Half.FRONT else Half.BACK
             val anchor = if (half == Half.FRONT && frontAnchors.hasNext()) frontAnchors.next()
             else if (half == Half.BACK && backAnchors.hasNext()) backAnchors.next()
             else plazaCenter()
@@ -1338,9 +1384,25 @@ internal class QixiThirdPhaseController(
             track(entity)
             summonedIds += entity.uniqueId
             summonHalves[entity.uniqueId] = half
-            if (entity is Mob) activePlayers().minByOrNull { it.location.distanceSquared(entity.location) }?.let { entity.target = it }
+            halfCounts[half] = halfCounts.getValue(half) + 1
+            if (entity is Mob) players.minByOrNull { it.location.distanceSquared(entity.location) }?.let { entity.target = it }
             world.spawnParticle(Particle.END_ROD, anchor.clone().add(0.0, 1.0, 0.0), 18, 0.45, 0.8, 0.45, 0.08)
         }
+    }
+
+    private fun clearJadeOrders() {
+        playerIds.mapNotNull(Bukkit::getPlayer).forEach { player ->
+            player.inventory.contents.forEachIndexed { slot, stack ->
+                if (stack != null && resourceId(stack) == JADE_ORDER_ID) player.inventory.setItem(slot, null)
+            }
+            if (resourceId(player.itemOnCursor) == JADE_ORDER_ID) player.setItemOnCursor(null)
+        }
+        // 只扫描广场包围盒，不遍历整张世界；也能清除玩家重新丢出的令牌。
+        world.getNearbyEntities(BoundingBox(-610.0, world.minHeight.toDouble(), 2355.0, -490.0, world.maxHeight.toDouble(), 2510.0))
+            .filterIsInstance<Item>().filter { resourceId(it.itemStack) == JADE_ORDER_ID }.forEach {
+                trackedEntities.remove(it.uniqueId)
+                it.remove()
+            }
     }
 
     private fun spawnBearer(half: Half) {
@@ -1569,7 +1631,8 @@ internal class QixiThirdPhaseController(
             return
         }
         face(entity, target)
-        entity.velocity = delta.normalize().multiply(bossSpeed.coerceIn(0.15, 0.45)).setY(entity.velocity.y.coerceIn(-0.15, 0.15))
+        val speed = bossSpeed.coerceIn(0.15, 0.45) * if (hardModeEmpowered) 1.15 else 1.0
+        entity.velocity = delta.normalize().multiply(speed).setY(entity.velocity.y.coerceIn(-0.15, 0.15))
     }
 
     private fun freezeAndFace(entity: LivingEntity, target: Player) {
@@ -1627,8 +1690,9 @@ internal class QixiThirdPhaseController(
             )
         }
         target.noDamageTicks = 0
+        val finalAmount = amount * if (normalAttack && source == boss && hardModeEmpowered) 1.10 else 1.0
         val damageAction = {
-            if (source != null && source.isValid) target.damage(amount, source) else target.damage(amount)
+            if (source != null && source.isValid) target.damage(finalAmount, source) else target.damage(finalAmount)
         }
         if (normalAttack) {
             MonsterDamageClassification.withNormalAttack(plugin, target, damageAction)
@@ -1655,6 +1719,10 @@ internal class QixiThirdPhaseController(
         messages.forEach { message ->
             timedDialogues += TimedDialogue(elapsedTicks + delayTicks.coerceAtLeast(0), message)
         }
+    }
+
+    private fun broadcastLawAfter(delayTicks: Int, message: String) {
+        timedDialogues += TimedDialogue(elapsedTicks + delayTicks.coerceAtLeast(0), message, heavenlyLaw = true)
     }
 
     private fun flushTimedDialogues() {
@@ -1827,7 +1895,8 @@ internal class QixiThirdPhaseController(
         if (entity.uniqueId !in trackedEntities && entity != boss) return
         event.drops.clear()
         event.droppedExp = 0
-        if (id != null && id != BOSS_ID) addConfiguredTongxinDrop(event, id)
+        val replaced = replacedSummonIds.remove(entity.uniqueId)
+        if (id != null && id != BOSS_ID && !replaced) addConfiguredTongxinDrop(event, id)
         trackedEntities.remove(entity.uniqueId)
         summonedIds.remove(entity.uniqueId)
         summonHalves.remove(entity.uniqueId)

@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
 import org.bukkit.FluidCollisionMode
@@ -20,12 +21,12 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
     // 【改动2】将 cast 改为 onCast
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
+        val formationCast = FormationCast()
 
         // 1. 直接读取配置，不再需要判断路径是否存在
         val range = safeConfig.getDouble("$path.range", 10.0)
         val radius = safeConfig.getDouble("$path.radius", 5.0)
-        val duration = safeConfig.getDouble("$path.duration", 5.0) *
-            plugin.accessorySkillManager.getCurrentFormationDurationMultiplier(player)
+        val duration = safeConfig.getDouble("$path.duration", 5.0)
         val strength = safeConfig.getDouble("$path.pull_strength", 0.08)
         val lingliAdd = safeConfig.getDouble("$path.lingli_add", 1.0)
 
@@ -59,7 +60,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             override fun run() {
                 if (ticks >= maxTicks) {
                     if (level >= 5) {
-                        collapseFormation(player, center, radius, safeConfig)
+                        collapseFormation(player, center, radius, safeConfig, formationCast)
                     }
                     this.cancel()
                     return
@@ -84,6 +85,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                             if (!tags.contains("panling") || !tags.contains("monster")) continue
 
                             if (entity.location.distance(center) > radius) continue
+                            formationControlHit(plugin, player, entity, formationCast)
 
                             if (level >= 3) {
                                 // 每秒刷新一次，宽限略大于1秒；阵法结束或目标离圈后会自然恢复。
@@ -119,7 +121,8 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         caster: Player,
         center: Location,
         radius: Double,
-        config: ConfigurationSection
+        config: ConfigurationSection,
+        formationCast: FormationCast
     ) {
         val world = center.world ?: return
         val rootMillis = (config.getDouble("tier5.root_duration", 1.5) * 1000.0).toLong()
@@ -142,6 +145,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             val target = entity as? LivingEntity ?: continue
             if (target === caster || !ElementFormationTierEffects.isFormationMonster(target)) continue
             if (target.location.distanceSquared(center) > radiusSquared) continue
+            formationControlHit(plugin, caster, target, formationCast)
             // 管理器内部会单独排除 instance_boss，其他裂地效果仍可作用于BOSS。
             plugin.elementZfManager.tierEffects.applyRoot(target, rootMillis)
         }

@@ -220,6 +220,33 @@ class DatabaseManager(private val plugin: Hjh_database) {
                     ps.executeUpdate()
                 }
 
+                conn.prepareStatement(
+                    """
+                    INSERT INTO qixi_bridge_build (uuid, player_name, revision, updated_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(uuid) DO UPDATE SET
+                        player_name = excluded.player_name,
+                        global_progress = 0,
+                        daily_claim_date = NULL,
+                        daily_use_date = NULL,
+                        daily_uses = 0,
+                        dungeon_reward_date = NULL,
+                        dungeon_reward_count = 0,
+                        contribution = 0,
+                        claimed_milestones = 0,
+                        personal_claimed_tiers = 0,
+                        revision = excluded.revision,
+                        updated_at = excluded.updated_at
+                    """.trimIndent()
+                ).use { ps ->
+                    val now = System.currentTimeMillis()
+                    ps.setString(1, uuid.toString())
+                    ps.setString(2, playerName)
+                    ps.setLong(3, now)
+                    ps.setLong(4, now)
+                    ps.executeUpdate()
+                }
+
                 subsystems.saveWarehouse(conn, WarehouseData(uuid, playerName))
 
                 conn.prepareStatement(

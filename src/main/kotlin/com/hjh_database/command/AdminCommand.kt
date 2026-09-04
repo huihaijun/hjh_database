@@ -1,6 +1,7 @@
 package com.hjh_database.command
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.admin.AdminInteractionBlocks.Kind
 import com.hjh_database.admin.money.MoneyAdminGui
 import com.hjh_database.admin.money.MoneySort
 import com.hjh_database.alchemy.data.AlchemyTier
@@ -67,6 +68,8 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin alchemy <list|give|getcauldron> ... - 丹药系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin gettp <方块材质> <传送点ID> - 获取传送触发器")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin getarrayblock -获取术士阵法升级方块 ")
+            sender.sendMessage("§e/hjhadmin getrebirthblock - 获取转生祭坛方块")
+            sender.sendMessage("§e/hjhadmin getelementcrystalblock - 获取元素结晶交互方块")
             // 【新增】副本系统提示
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin dungeon <trigger|set> - 副本系统指令")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin medicaltest <玩家名> <view|add|remove> <试炼ID>")
@@ -216,7 +219,6 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             plugin.baihuDzManager.reload()
             plugin.baihuWeaponSkillManager.reload()
             plugin.chonghuaManager.reload()
-            com.hjh_database.dungeon.qixi.QixiAccessPolicy.reload(plugin)
             plugin.qixiBridgeBuildManager.reload()
             plugin.kaiWuManager.loadConfig()
             plugin.kaiWuManager.loadNodes()
@@ -779,6 +781,15 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         }
 
         // === getarrayblock (获取阵法升级紫水晶块) ===
+        if (subCommand == "getrebirthblock" || subCommand == "getelementcrystalblock") {
+            if (sender !is Player) return error(sender, "只有游戏内玩家可以领取交互方块。")
+            if (sender.inventory.firstEmpty() == -1) return error(sender, "请先在背包中留出一个空位。")
+            val kind = if (subCommand == "getrebirthblock") Kind.REBIRTH else Kind.ELEMENT_CRYSTAL
+            sender.inventory.addItem(plugin.adminInteractionBlocks.createItem(kind))
+            sender.sendMessage("§a已领取${kind.title}，放置后即可供玩家交互。")
+            return true
+        }
+
         if (subCommand == "getarrayblock") {
             if (sender !is Player) {
                 sender.sendMessage("§c只有玩家可以使用此命令。")
@@ -1191,6 +1202,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "job", "race", "givetoken", "level", "reload", "gettestgear", "get", "give",
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
+                "getrebirthblock", "getelementcrystalblock",
                 "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong", "damagetest", "money", "dz"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }

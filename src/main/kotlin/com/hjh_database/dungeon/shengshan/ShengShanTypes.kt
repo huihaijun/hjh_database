@@ -89,6 +89,7 @@ internal data class ShengShanSession(
     val bars: MutableSet<BossBar> = HashSet(),
     val remaining: MutableList<Trigram> = Trigram.entries.toMutableList(),
     val guesses: MutableMap<UUID, Trigram> = HashMap(),
+    val successfulGuessCounts: MutableMap<UUID, Int> = HashMap(),
     val guessBuffPlayers: MutableSet<UUID> = HashSet(),
     val previousRegeneration: MutableMap<UUID, PotionEffect?> = HashMap(),
     val previousNightVision: MutableMap<UUID, PotionEffect?> = HashMap(),
@@ -107,6 +108,8 @@ internal data class ShengShanSession(
     var arenaEntered: Boolean = false,
     var loopTestMode: Boolean = false,
     var loopTestOwnerId: UUID? = null,
+    var bgmStarted: Boolean = false,
+    var bgmTask: BukkitTask? = null,
     var ending: Boolean = false
 )
 

@@ -123,10 +123,9 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
     )
 
     private data class ExitReward(
-        val experience: Int,
+        val banknotes: Int,
         val starSand: Int,
-        val exchangeTickets: Int,
-        val conversionTickets: Int
+        val exchangeTickets: Int
     )
 
     private data class Session(
@@ -211,7 +210,6 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             plugin.saveResource("dungeon/qixi.yml", false)
         }
         config = YamlConfiguration.loadConfiguration(file)
-        QixiAccessPolicy.reload(plugin)
         worldName = config.getString("world", "world") ?: "world"
         minLevel = config.getInt("entry.min-level", 40)
         minRarity = config.getInt("entry.min-total-rarity", 40)
@@ -283,16 +281,14 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         if (block.world.name != worldName || block.type != Material.BELL || block.y != EXIT_BELL_Y) return
         val reward = when {
             block.x == EASY_EXIT_BELL_X && block.z == EASY_EXIT_BELL_Z -> ExitReward(
-                experience = 1200,
+                banknotes = 2,
                 starSand = 2,
-                exchangeTickets = 8,
-                conversionTickets = 16
+                exchangeTickets = 20
             )
             block.x == HARD_EXIT_BELL_X && block.z == HARD_EXIT_BELL_Z -> ExitReward(
-                experience = 2500,
-                starSand = 4,
-                exchangeTickets = 32,
-                conversionTickets = 32
+                banknotes = 6,
+                starSand = 6,
+                exchangeTickets = 60
             )
             else -> return
         }
@@ -311,17 +307,15 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             QIXI_BRIDGE_RETURN_PITCH
         )
         player.teleport(returnLocation)
-        plugin.playerManager.giveExp(player, reward.experience)
+        giveExitResource(player, "yinpiao", reward.banknotes, "银票")
         giveExitResource(player, "xingsha", reward.starSand, "星砂")
         giveExitResource(player, "yuansuduihuanquan", reward.exchangeTickets, "元素兑换券")
-        giveExitResource(player, "yuansuzhuanhuaquan", reward.conversionTickets, "元素转化券")
         plugin.playerManager.getPlayerData(player)?.let(plugin.databaseManager::savePlayerAsync)
         player.sendMessage(
             "§f你返回了鹊影桥，获得了" +
                 "§b星砂 §f× §e${reward.starSand}§f、" +
-                "§e经验 §f× §e${reward.experience}§f、" +
-                "§b元素兑换券 §f× §e${reward.exchangeTickets}§f、" +
-                "§b元素转化券 §f× §e${reward.conversionTickets}"
+                "§e银票 §f× §e${reward.banknotes}§f、" +
+                "§b元素兑换券 §f× §e${reward.exchangeTickets}"
         )
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.9f, 1.15f)
     }
@@ -354,12 +348,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             event.player.sendMessage("§c鹊桥星愿秘境正在进行中，请稍后再试！")
             return
         }
-        val platformPlayers = block.world.players.filter(::isOnEntryPlatform)
-        val deniedPlayers = platformPlayers.filterNot { QixiAccessPolicy.isAllowed(plugin, it) }
-        deniedPlayers.forEach(::removeInternalTestPlayer)
-        if (event.player in deniedPlayers) return
-
-        val candidates = platformPlayers.filter { it !in deniedPlayers }
+        val candidates = block.world.players.filter(::isOnEntryPlatform)
         if (candidates.isEmpty()) {
             event.player.sendMessage("§c传送阵上没有可进入秘境的玩家！")
             return
@@ -485,10 +474,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
         pending.task?.cancel()
         pending.task = null
         pendingDifficultySelection = null
-        val onlinePlayers = pending.playerIds.mapNotNull(Bukkit::getPlayer).filter { it.isOnline }
-        val deniedPlayers = onlinePlayers.filterNot { QixiAccessPolicy.isAllowed(plugin, it) }
-        deniedPlayers.forEach(::removeInternalTestPlayer)
-        val players = onlinePlayers.filter { it !in deniedPlayers }
+        val players = pending.playerIds.mapNotNull(Bukkit::getPlayer).filter { it.isOnline }
         if (players.isEmpty()) return
         players.forEach {
             it.sendMessage(
@@ -508,12 +494,6 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             player.teleport(entryRemovalDestination() ?: return@forEach)
             player.sendMessage("§c§l【鹊桥星愿】§c长时间未作出难度选择，你们已被移出秘境进入选择区。")
         }
-    }
-
-    private fun removeInternalTestPlayer(player: Player) {
-        entryRemovalDestination()?.let(player::teleport)
-        player.sendMessage(QixiAccessPolicy.deniedMessage(plugin))
-        player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 0.8f)
     }
 
     private fun entryRemovalDestination(): Location? {
@@ -2082,12 +2062,11 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
                 data.updateStatus(3)
                 val record = data.dungeonRecords.getOrPut(chestId) { DungeonRecord() }
                 record.clears++
-                record.availableOpens++
                 grantCompletionTitleIfEligible(player, data.dungeonRecords)
                 plugin.databaseManager.savePlayerAsync(data)
                 player.sendMessage(
-                    "§e[秘境] §a${s.difficulty.displayName}通关记录 +1，" +
-                        "§6[${s.difficulty.displayName}]金宝箱§a可开箱次数 +1！"
+                    "§e[秘境] §a${s.difficulty.displayName}通关记录 +1。" +
+                        "§7当前限时秘境挑战活动已结束，不给予开箱次数。"
                 )
                 if (data.questStatuses[Side_Qixi_StarWish.ID] == QuestStatus.IN_PROGRESS &&
                     data.questProgress[Side_Qixi_StarWish.ID] == 3
@@ -2097,7 +2076,6 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
                 }
             }
             player.teleport(destination)
-            plugin.qixiBridgeBuildManager.grantDungeonCompletionReward(player, hardDifficulty = !easy)
         }
     }
 

@@ -65,4 +65,10 @@ abstract class QuestBase(
         return false
     }
 
+    /**
+     * 无副作用地判断当前阶段是否会接管该 NPC 的对话。
+     * 同一 NPC 可能命中多个进行中任务时，任务管理器据此先让玩家选择。
+     */
+    open fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean = false
+
 }

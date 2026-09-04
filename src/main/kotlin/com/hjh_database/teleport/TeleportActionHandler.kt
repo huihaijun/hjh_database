@@ -2,7 +2,6 @@ package com.hjh_database.teleport
 
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
-import com.hjh_database.dungeon.qixi.QixiAccessPolicy
 import com.hjh_database.quest.core.QuestStatus
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -115,20 +114,8 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
                 }
             }
             "ENTER_QIXI_BRIDGE" -> {
-                if (!QixiAccessPolicy.isAllowed(plugin, player)) {
-                    player.sendMessage(QixiAccessPolicy.deniedMessage(plugin))
-                    player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.8f, 0.8f)
-                    return false
-                }
-                val status = data.questStatuses[QIXI_QUEST_ID] ?: QuestStatus.LOCKED
-                val progress = data.questProgress[QIXI_QUEST_ID] ?: 0
-                if (status != QuestStatus.COMPLETED &&
-                    (status != QuestStatus.IN_PROGRESS || progress < 1)
-                ) {
-                    player.sendMessage("§7鹊灵没有回应你的呼唤，或许应该先去问问监星官沈观。")
-                    player.playSound(player.location, Sound.ENTITY_PARROT_AMBIENT, 0.7f, 0.7f)
-                    return false
-                }
+                // 常态开放；传送后的旧任务推进逻辑仍保留。
+                return true
             }
             "ENTER_PENGLAI" -> {
                 val requiredQuestId = when (data.race) {

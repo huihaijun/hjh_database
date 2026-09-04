@@ -19,8 +19,16 @@ class XianRace(manager: RaceManager) : RaceBase(manager) {
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onProofUse(event: PlayerInteractEvent) {
-        if (event.hand != EquipmentSlot.HAND || !event.action.isRightClick) return
+        if (!event.action.isRightClick) return
         val player = event.player
+        if (event.hand == EquipmentSlot.OFF_HAND) {
+            // 主手证明处理右键时，必须连同副手事件一起取消，否则副手物品仍会被使用。
+            if (manager.getResourceId(player.inventory.itemInMainHand) == XianTalentManager.PROOF_ITEM_ID) {
+                event.isCancelled = true
+            }
+            return
+        }
+        if (event.hand != EquipmentSlot.HAND) return
         if (!isRaceActive(player) || manager.getResourceId(player.inventory.itemInMainHand) != XianTalentManager.PROOF_ITEM_ID) return
 
         val clickedLocation = event.clickedBlock?.location

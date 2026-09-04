@@ -11,7 +11,7 @@ import com.hjh_database.qixiazhen.farming.data.PlayerFarmState
 import com.hjh_database.qixiazhen.farming.display.FarmDisplayManager
 import com.hjh_database.qixiazhen.farming.effect.FarmToolEffect
 import com.hjh_database.qixiazhen.farming.effect.impl.FarmGrowthTorchEffect
-import com.hjh_database.qixiazhen.farming.event.FarmDisasterEffect
+import com.hjh_database.qixiazhen.farming.effect.impl.FarmInsectWardEffect
 import com.hjh_database.qixiazhen.farming.event.impl.FarmInsectDisasterEffect
 import com.hjh_database.qixiazhen.farming.util.FarmingItems
 import org.bukkit.Location
@@ -31,6 +31,7 @@ import kotlin.random.Random
 
 class FarmingManager(val plugin: Hjh_database) {
     private data class PendingCropRemoval(val plotId: Long, val expiresAt: Long)
+    private data class InsectSettlement(val changed: Boolean, val occurrences: Int)
 
     val config = FarmingConfig(plugin)
     private val repository = FarmingRepository(plugin)
@@ -43,8 +44,8 @@ class FarmingManager(val plugin: Hjh_database) {
     private val pendingCropRemovals = ConcurrentHashMap<UUID, PendingCropRemoval>()
     private val pendingFacilityChanges = ConcurrentHashMap.newKeySet<FarmBlockKey>()
     private val resourceKey = NamespacedKey(plugin, "resource_id")
-    private val tools: Map<String, FarmToolEffect> = listOf(FarmGrowthTorchEffect()).associateBy { it.resourceId }
-    private val disasters: List<FarmDisasterEffect> = listOf(FarmInsectDisasterEffect())
+    private val tools: Map<String, FarmToolEffect> = listOf(FarmGrowthTorchEffect(), FarmInsectWardEffect()).associateBy { it.resourceId }
+    private val insectDisaster = FarmInsectDisasterEffect()
     val displays = FarmDisplayManager(plugin, this)
     private var eventTask: BukkitTask? = null
 
@@ -105,7 +106,15 @@ class FarmingManager(val plugin: Hjh_database) {
             plugin.databaseManager.submitDatabaseOperation { repository.loadPlayer(id) }.whenComplete { data, _ ->
                 runOnMain {
                     loading.remove(id)
-                    if (data != null && plugin.server.getPlayer(id)?.isOnline == true) playerStates[id] = data
+                    val onlinePlayer = plugin.server.getPlayer(id)
+                    if (data != null && onlinePlayer?.isOnline == true) {
+                        playerStates[id] = data
+                        data.values.forEach { state ->
+                            val settlement = settleInsectStages(state)
+                            if (settlement.changed) saveState(onlinePlayer, state)
+                            notifyInsectEvents(onlinePlayer, state, settlement.occurrences)
+                        }
+                    }
                 }
             }
         }
@@ -286,6 +295,9 @@ class FarmingManager(val plugin: Hjh_database) {
 
         val tool = tools[heldId]
         if (tool != null) {
+            val settlement = settleInsectStages(state)
+            if (settlement.changed) saveState(player, state)
+            notifyInsectEvents(player, state, settlement.occurrences)
             if (!tool.apply(player, state, this)) player.sendMessage(config.message("no_crop"))
             showPlotDetails(player, plot, state)
             return
@@ -305,12 +317,19 @@ class FarmingManager(val plugin: Hjh_database) {
             state.plantedAt = now
             state.maturesAt = now + seed.matureSeconds * 1000L
             state.yieldMultiplier = 1.0
+            state.insectCheckedStage = 0
+            state.insectDisasterCount = 0
+            state.insectProtectedUntil = 0L
             saveState(player, state)
             player.sendMessage(config.message("planted").replace("{crop}", crop.name))
             player.playSound(plotLocation(plot), Sound.ITEM_CROP_PLANT, 1.0f, 1.0f)
             showPlotDetails(player, plot, state)
             return
         }
+
+        val settlement = settleInsectStages(state)
+        if (settlement.changed) saveState(player, state)
+        notifyInsectEvents(player, state, settlement.occurrences)
 
         if (state.ready()) {
             harvest(player, state)
@@ -423,14 +442,45 @@ class FarmingManager(val plugin: Hjh_database) {
     private fun runOnlineDisasters() {
         for (player in plugin.server.onlinePlayers) {
             val states = playerStates[player.uniqueId] ?: continue
-            for (state in states.values.filter { it.planted && !it.ready() }) {
-                val effect = disasters.firstOrNull { it.shouldTrigger() } ?: continue
-                val presentation = config.event(effect.eventId) ?: continue
-                effect.apply(state)
-                saveState(player, state)
-                val cropName = config.crop(state.cropId)?.name ?: state.cropId.orEmpty()
-                player.sendMessage(presentation.message.replace("{XX作物}", cropName).replace("{crop}", cropName))
+            for (state in states.values.filter { it.planted }) {
+                val settlement = settleInsectStages(state)
+                if (settlement.changed) saveState(player, state)
+                notifyInsectEvents(player, state, settlement.occurrences)
             }
+        }
+    }
+
+    private fun settleInsectStages(state: PlayerFarmState, now: Long = System.currentTimeMillis()): InsectSettlement {
+        if (!state.planted || state.insectCheckedStage >= FarmInsectDisasterEffect.GROWTH_CHECKPOINTS) {
+            return InsectSettlement(false, 0)
+        }
+        val duration = state.maturesAt - state.plantedAt
+        if (duration <= 0L) return InsectSettlement(false, 0)
+
+        var occurrences = 0
+        var changed = false
+        for (stage in (state.insectCheckedStage + 1)..FarmInsectDisasterEffect.GROWTH_CHECKPOINTS) {
+            val checkpointAt = state.plantedAt + duration * stage / 10L
+            if (checkpointAt > now) break
+
+            state.insectCheckedStage = stage
+            changed = true
+            if (state.insectDisasterCount >= FarmInsectDisasterEffect.MAX_OCCURRENCES) continue
+            if (checkpointAt <= state.insectProtectedUntil) continue
+            if (!insectDisaster.shouldTrigger()) continue
+
+            insectDisaster.apply(state)
+            occurrences++
+        }
+        return InsectSettlement(changed, occurrences)
+    }
+
+    private fun notifyInsectEvents(player: Player, state: PlayerFarmState, occurrences: Int) {
+        if (occurrences <= 0) return
+        val presentation = config.event(insectDisaster.eventId) ?: return
+        val cropName = config.crop(state.cropId)?.name ?: state.cropId.orEmpty()
+        repeat(occurrences) {
+            player.sendMessage(presentation.message.replace("{XX作物}", cropName).replace("{crop}", cropName))
         }
     }
 
@@ -581,6 +631,7 @@ class FarmingManager(val plugin: Hjh_database) {
 
     companion object {
         private const val CROP_REMOVAL_CONFIRM_MILLIS = 3_000L
+        const val INSECT_WARD_RESOURCE_ID = "fangchongfu"
         const val FIELD_RESOURCE_ID = "farm_field"
         const val CONTROLLER_RESOURCE_ID = "farm_controller_bell"
         const val DEED_RESOURCE_ID = "farm_plot_deed"

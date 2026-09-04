@@ -1,26 +1,13 @@
 name: "鹊桥星愿"
 world: world
 
-# 七夕限时支线仅限制新接取；截止前已经接取的玩家仍可继续并完成任务。
+# 旧活动配置留档；限时支线已停止新接取，修改日期不会重新派发。已接取者可继续完成。
 event-quest:
   min-level: 40
   last-accept-date: "2026-08-31"
   time-zone: "Asia/Shanghai"
 
-# 内测白名单开启后，仅列表中的玩家可以接取限时任务、前往鹊影桥并进入秘境。
-# 可填写玩家 UUID（推荐，不受改名影响）或玩家名；执行 /hjhadmin reload 后生效。
-internal-test:
-  enabled: false
-  whitelist:
-    - "krisp114514"
-    - "huihaijun"
-    - "huihaijun"
-    - "ai_milook"
-    - "TTwTou"
-    - "_YWYN_"
-    - "qiushuang_bring"
-    # - "PlayerName"
-  denied-message: "&c当前副本处于内测中，暂时无法进入"
+# 常态副本：无白名单和传送前置；停止派发限时任务、共建烟花和新的金宝箱次数。
 
 entry:
   min-level: 40
@@ -106,7 +93,7 @@ phase-three:
       golden-boundary-weight: 3
       inverted-river-weight: 1
       summons-per-cast: 12
-      maximum-active-summons: 24
+      maximum-active-summons: 12
       law-damage-interval-seconds: 2.0
       inverted-river-warning-seconds: 15.0
       inverted-river-next-wave-seconds: 15.0

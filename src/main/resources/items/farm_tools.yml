@@ -26,3 +26,10 @@ farm_growth_torch:
     - "&7&o神奇的火把"
     - "&7&o能够加速一块农田30秒的生长时间"
 
+fangchongfu:
+  material: SNOWBALL
+  max_stack_size: 64
+  name: "&b防虫符"
+  lore:
+    - "&7&o右键已播种的灵田使用"
+    - "&7&o为作物增加30分钟虫害防护"

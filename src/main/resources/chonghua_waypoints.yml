@@ -285,6 +285,28 @@ waypoints:
       z: -523.68
       yaw: 179.82
       pitch: 1.20
+  north_penglai:
+    region: NORTH
+    name: 蓬莱
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: 418.14
+      y: 35.00
+      z: -642.57
+      yaw: 901.95
+      pitch: 6.00
+  north_shengshan:
+    region: NORTH
+    name: 圣山
+    material: FIRE_CHARGE
+    location:
+      world: world
+      x: -25.25
+      y: 47.00
+      z: -913.96
+      yaw: 810.75
+      pitch: 7.20
   huangchengzhongxin_longlinzhisen:
     region: HUANGCHENGZHONGXIN
     name: 龙鳞之森-重华晶

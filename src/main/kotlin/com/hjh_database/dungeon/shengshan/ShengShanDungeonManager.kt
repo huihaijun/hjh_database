@@ -17,6 +17,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
+import org.bukkit.SoundCategory
 import org.bukkit.World
 import org.bukkit.attribute.Attribute
 import org.bukkit.attribute.AttributeModifier
@@ -81,6 +82,20 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         private const val CURRENT_TRIGRAM_TEST_ITEM_ID = "shengshan_current_trigram_test"
         private const val LOOP_TEST_ITEM_ID = "shengshan_loop_test"
         private const val LOOP_TEST_VICTORY_ARGUMENT = "victory"
+        private const val EXIT_BELL_X = 3238
+        private const val EXIT_BELL_Y = 128
+        private const val EXIT_BELL_Z = -1874
+        private const val SILVER_NOTE_ID = "yinpiao"
+        private const val SPIRIT_JADE_SLIP_ID = "lingyujian"
+        private const val SACRED_BEAST_BADGE_ID = "shengshouhuiji"
+        private const val ELEMENT_EXCHANGE_TICKET_ID = "yuansuduihuanquan"
+        private const val EXIT_EXPERIENCE = 2000
+        private const val FIRST_CLEAR_TITLE_ID = "zhenxiang"
+        private const val FIRST_CLEAR_MILESTONE_ID = "shengshan_first_clear"
+        private const val GUESS_MASTER_TITLE_ID = "shenjimiaosuan"
+        private const val GUESS_MASTER_MILESTONE_ID = "shengshan_four_correct_guesses"
+        private const val SHENGSHAN_BGM = "hjh:bgm_shengshan"
+        private const val SHENGSHAN_BGM_LOOP_TICKS = 3_050L
         private const val MAX_RESIDUAL_WATER_BLOCKS = 50_000
         private val WATER_EYE_BLOCKS = listOf(
             Triple(3191, 150, -1839), Triple(3191, 151, -1839),
@@ -108,6 +123,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         terrain.recoverOnStartup()
         Bukkit.getWorld(WORLD_NAME)?.let(::clearResidualWater)
         Bukkit.getWorld(WORLD_NAME)?.let(::clearResidualLava)
+        Bukkit.getWorld(WORLD_NAME)?.let(::ensureExitBell)
         Bukkit.getOnlinePlayers().forEach { player ->
             player.removeScoreboardTag(PLAYER_TAG)
             player.getAttribute(Attribute.MOVEMENT_SPEED)?.getModifier(guessSpeedKey)?.let {
@@ -191,6 +207,91 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
             })
         })
     }
+
+    private fun ensureExitBell(world: World) {
+        world.getBlockAt(EXIT_BELL_X, EXIT_BELL_Y, EXIT_BELL_Z).setBlockData(
+            Bukkit.createBlockData("minecraft:bell[attachment=floor,facing=west,powered=false]"),
+            false
+        )
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onExitBellInteract(event: PlayerInteractEvent) {
+        if (event.hand != EquipmentSlot.HAND || event.action != Action.RIGHT_CLICK_BLOCK) return
+        val block = event.clickedBlock ?: return
+        if (!isExitBell(block)) return
+        event.isCancelled = true
+        grantExitReward(event.player, block.location)
+    }
+
+    private fun grantExitReward(player: Player, bellLocation: Location) {
+        bellLocation.world.playSound(
+            bellLocation.clone().add(.5, .5, .5),
+            Sound.BLOCK_BELL_USE,
+            1.0f,
+            1.0f
+        )
+        val data = plugin.playerManager.getPlayerData(player)
+        val record = data?.dungeonRecords?.getOrPut(DUNGEON_RECORD_ID) { DungeonRecord() }
+        player.teleport(Location(bellLocation.world, -24.50, 47.00, -914.50, 448.76f, 1.65f))
+        if (data == null || record == null) {
+            player.sendMessage("§c玩家数据尚未加载，离场奖励发放失败，请联系管理员。")
+            return
+        }
+
+        plugin.playerManager.giveExp(player, EXIT_EXPERIENCE)
+        giveExitResource(player, SILVER_NOTE_ID, 1, "银票")
+        giveExitResource(player, SACRED_BEAST_BADGE_ID, 3, "圣兽徽记")
+        giveExitResource(player, ELEMENT_EXCHANGE_TICKET_ID, 32, "元素兑换券")
+        player.sendMessage(
+            "§f你离开了§b§l圣山§f，获得了" +
+                "§9银票 §f× §e1§f、§b圣兽徽记 §f× §e3§f、" +
+                "§e经验 §f× §e$EXIT_EXPERIENCE§f、§b元素兑换券 §f× §e32§f。"
+        )
+
+        if (data.job == 3) grantShengShanMedicalInsight(player, data)
+
+        if (record.clears == 1) {
+            giveExitResource(player, SPIRIT_JADE_SLIP_ID, 1, "灵玉简")
+            giveExitResource(player, SACRED_BEAST_BADGE_ID, 4, "圣兽徽记")
+            player.sendMessage(
+                "§f由于你首次通过§b§l圣山§f秘境，你额外获得了：" +
+                    "§b灵玉简 §f× §e1§f、§b圣兽徽记 §f× §e4§f。"
+            )
+        }
+        plugin.databaseManager.savePlayerAsync(data)
+        player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.1f)
+    }
+
+    private fun grantShengShanMedicalInsight(player: Player, data: com.hjh_database.data.PlayerData) {
+        val skills = listOf("wanxiangsu" to "万象苏", "bazhenjue" to "八阵诀")
+        val available = skills.filterNot { (id, _) -> data.hasLearnedMedicalSkill(id) }
+        val learned = available.randomOrNull() ?: return
+        if (!data.learnMedicalSkill(learned.first)) return
+        val remaining = skills.count { (id, _) -> !data.hasLearnedMedicalSkill(id) }
+        player.sendMessage(
+            "§f你在§b§l圣山§f的秘境中领悟了医术——§e§l${learned.second}§f，" +
+                "此秘境你还可领悟的医术数为§b$remaining/2§f。"
+        )
+    }
+
+    private fun giveExitResource(player: Player, resourceId: String, amount: Int, displayName: String) {
+        val item = plugin.resourceManager.getItem(resourceId)
+        if (item == null) {
+            plugin.logger.warning("圣山副本离场奖励缺少资源：$resourceId")
+            player.sendMessage("§c[错误] 未找到离场奖励：$displayName，请联系管理员。")
+            return
+        }
+        item.amount = amount
+        player.inventory.addItem(item).values.forEach { overflow ->
+            player.world.dropItemNaturally(player.location, overflow)
+            player.sendMessage("§e背包已满，$displayName 已掉落在你的脚下。")
+        }
+    }
+
+    private fun isExitBell(block: Block): Boolean =
+        block.world.name == WORLD_NAME && block.type == Material.BELL &&
+            block.x == EXIT_BELL_X && block.y == EXIT_BELL_Y && block.z == EXIT_BELL_Z
 
     private fun checkSacredBeastTrials(players: List<Pair<UUID, String>>): List<TrialResult>? = try {
         val result = ArrayList<TrialResult>()
@@ -454,6 +555,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         s.nextTrigram = s.remaining.random()
         s.guessToken = UUID.randomUUID().toString().replace("-", "").take(12)
         val firstGuess = s.round == 1
+        if (firstGuess) startShengShanBgm(s)
         val guessSeconds = if (firstGuess) 12 else 6
         val guessTicks = guessSeconds * 20
         val center = s.world()?.let(::shengShanBossSpawn) ?: return
@@ -584,7 +686,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
             s.phase = ShengShanPhase.COMBAT
             applyGuessBuff(s, event.player)
             event.player.sendMessage("§a你指定了下一道卦象：${selected.color}§l${selected.displayName}§a。")
-            event.player.sendMessage("§6圣山祝福受到引动：§e你的步伐加快、力量增强，并获得生命恢复与夜视，持续至本卦结束。")
+            event.player.sendMessage("§6圣山祝福受到引动：§e你的步伐加快、力量增强，生息涌动，持续至本卦结束。")
             playDungeonEffect(s, ShengShanEffect.TRIGRAM_REVEAL,
                 s.world()?.let(::shengShanBossSpawn) ?: return,
                 options = ShengShanEffectOptions(radius = 13.0, height = .35, color = TRIGRAM_REVEAL_COLORS.getValue(selected)))
@@ -615,7 +717,16 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         activePlayers(s).forEach { player ->
             if (s.guesses[player.uniqueId] == trigram) {
                 applyGuessBuff(s, player)
-                player.sendMessage("§a你猜对了卦象！§6圣山祝福受到引动：§e你的步伐加快、力量增强，并获得生命恢复与夜视，持续至本卦结束。")
+                val successes = (s.successfulGuessCounts[player.uniqueId] ?: 0) + 1
+                s.successfulGuessCounts[player.uniqueId] = successes
+                if (!s.loopTestMode && successes == 4) {
+                    plugin.titleManager.grantMilestoneTitle(
+                        player,
+                        GUESS_MASTER_TITLE_ID,
+                        GUESS_MASTER_MILESTONE_ID
+                    )
+                }
+                player.sendMessage("§a你猜对了卦象！§6圣山祝福受到引动：§e你的步伐加快、力量增强，生息涌动，持续至本卦结束。")
                 player.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 0.9f, 1.2f)
             }
         }
@@ -741,7 +852,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         playDungeonEffect(s, ShengShanEffect.FIRE_BURST, spawn,
             options = ShengShanEffectOptions(radius = 3.0, height = 4.0))
         playDungeonSound(s, spawn, Sound.ENTITY_BLAZE_AMBIENT, 1.0f, .65f)
-        sendElderLine(s, "它的内核暴露出来了，快冲进去，彻底将它杀死！")
+        sendElderLine(s, "卦象已破！它的内核暂时暴露出来了，快冲进去将它杀死！")
     }
 
     private fun onCoreDefeated(s: ShengShanSession, core: LivingEntity) {
@@ -823,16 +934,26 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         laterEnding(s, 445L) { broadcast(s, "§b神族长老：§f看来有些事情，必须重新查清楚了。") }
         laterEnding(s, 505L) {
             val world = s.world()
-            if (world != null) activePlayers(s).forEach { player ->
-                plugin.playerManager.getPlayerData(player)?.let { data ->
-                    val record = data.dungeonRecords.getOrPut(DUNGEON_RECORD_ID) { DungeonRecord() }
-                    record.clears += 1
-                    record.availableOpens += 1
-                    plugin.databaseManager.savePlayerAsync(data)
-                    player.sendMessage("§e[秘境] §a圣山通关记录 +1，§6[圣山]金宝箱§a可开箱次数 +1！")
+            if (world != null) {
+                ensureExitBell(world)
+                activePlayers(s).forEach { player ->
+                    plugin.playerManager.getPlayerData(player)?.let { data ->
+                        val record = data.dungeonRecords.getOrPut(DUNGEON_RECORD_ID) { DungeonRecord() }
+                        record.clears += 1
+                        record.availableOpens += 1
+                        if (record.clears == 1) {
+                            plugin.titleManager.grantMilestoneTitle(
+                                player,
+                                FIRST_CLEAR_TITLE_ID,
+                                FIRST_CLEAR_MILESTONE_ID
+                            )
+                        }
+                        plugin.databaseManager.savePlayerAsync(data)
+                        player.sendMessage("§e[秘境] §a圣山通关记录 +1，§6[圣山]金宝箱§a可开箱次数 +1！")
+                    }
+                    player.teleport(Location(world, 3245.48, 128.0, -1873.14, 11609.19f, 6.30f))
+                    player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.2f, 1.0f)
                 }
-                player.teleport(Location(world, 3245.48, 128.0, -1873.14, 11609.19f, 6.30f))
-                player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.2f, 1.0f)
             }
             cleanup(s)
         }
@@ -1102,7 +1223,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBreak(event: BlockBreakEvent) {
-        if (session != null && isInsideArena(event.block.location)) event.isCancelled = true
+        if (isExitBell(event.block) || session != null && isInsideArena(event.block.location)) event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -1126,12 +1247,12 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onEntityExplode(event: EntityExplodeEvent) {
-        if (session != null) event.blockList().removeIf { isInsideArena(it.location) }
+        event.blockList().removeIf { isExitBell(it) || session != null && isInsideArena(it.location) }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockExplode(event: BlockExplodeEvent) {
-        if (session != null) event.blockList().removeIf { isInsideArena(it.location) }
+        event.blockList().removeIf { isExitBell(it) || session != null && isInsideArena(it.location) }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -1174,6 +1295,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
     }
 
     private fun removeParticipant(s: ShengShanSession, player: Player, statusAlreadyRestored: Boolean = false) {
+        stopShengShanBgm(player)
         s.current?.removePlayer(player)
         clearDungeonEffectsFor(s, player)
         player.removeScoreboardTag(PLAYER_TAG)
@@ -1212,6 +1334,7 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
     private fun cleanup(s: ShengShanSession) {
         if (session !== s) return
         val dungeonWorld = s.world()
+        stopShengShanBgm(s)
         s.current?.shutdown(restoreTerrain = true)
         s.current = null
         s.tasks.forEach(BukkitTask::cancel)
@@ -1235,6 +1358,45 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
         s.playerIds.clear()
         guardianInvulnerableUntilTick.clear()
         session = null
+    }
+
+    private fun startShengShanBgm(s: ShengShanSession) {
+        if (s.bgmStarted || session !== s) return
+        s.bgmStarted = true
+        playShengShanBgmOnce(s)
+        val task = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+            if (session !== s) return@Runnable
+            playShengShanBgmOnce(s)
+        }, SHENGSHAN_BGM_LOOP_TICKS, SHENGSHAN_BGM_LOOP_TICKS)
+        s.bgmTask = task
+        s.tasks += task
+    }
+
+    private fun playShengShanBgmOnce(s: ShengShanSession) {
+        activePlayers(s).forEach { player ->
+            stopShengShanBgm(player)
+            player.playSound(player.location, SHENGSHAN_BGM, SoundCategory.RECORDS, 1.0f, 1.0f)
+        }
+    }
+
+    private fun stopShengShanBgm(s: ShengShanSession) {
+        s.bgmTask?.let { task ->
+            task.cancel()
+            s.tasks.remove(task)
+        }
+        s.bgmTask = null
+        s.bgmStarted = false
+        val players = LinkedHashMap<UUID, Player>()
+        s.playerIds.mapNotNull(Bukkit::getPlayer).forEach { players[it.uniqueId] = it }
+        Bukkit.getOnlinePlayers()
+            .filter { it.scoreboardTags.contains(PLAYER_TAG) }
+            .forEach { players[it.uniqueId] = it }
+        players.values.forEach(::stopShengShanBgm)
+    }
+
+    private fun stopShengShanBgm(player: Player) {
+        player.stopSound(SHENGSHAN_BGM, SoundCategory.RECORDS)
+        player.stopSound(SHENGSHAN_BGM)
     }
 
     fun clearBossBars(player: Player) {
@@ -1465,8 +1627,8 @@ private val ECHO_DESCRIPTIONS = mapOf(
     Trigram.MOUNTAIN to "下一卦象将继承艮山之势，护甲提高20%。",
     Trigram.FIRE to "下一卦象将继承离火之势，造成的伤害附带20%穿甲率。",
     Trigram.WIND to "下一卦象将继承巽风之势，移动速度提高15%。",
-    Trigram.SWAMP to "下一卦象命中玩家时有50%概率施加5秒中毒III；同一玩家10秒内至多触发一次。",
-    Trigram.EARTH to "下一卦象命中玩家时有50%概率施加5秒凋零III；同一玩家10秒内至多触发一次。"
+    Trigram.SWAMP to "下一卦象命中时有50%概率施加短暂中毒。",
+    Trigram.EARTH to "下一卦象命中时有50%概率施加短暂凋零。"
 )
 
 private fun Trigram.revealName(): String = when (this) {

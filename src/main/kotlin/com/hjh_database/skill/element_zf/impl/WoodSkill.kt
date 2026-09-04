@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
 import com.hjh_database.skill.element_zf.FormationElement
@@ -16,6 +17,7 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
     // 【改动2】将 cast 改为 onCast
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
+        val formationCast = FormationCast()
 
         // 1. 读取配置 (父类已处理非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 2.5)
@@ -44,10 +46,8 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 如果有目标才造成伤害
         if (target != null) {
             // 计算伤害
-            val unamplifiedDamage = data.zfStr * damagePercent
-            val damageMultiplier = plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
-            val baseDamage = data.zfStr * damageMultiplier
-            val finalDamage = unamplifiedDamage * damageMultiplier
+            val finalDamage = data.zfStr * damagePercent
+            val baseDamage = data.zfStr
 
             // 枯萎必须先于伤害写入状态，这样主伤害直接击杀目标时也能正确触发五级魂灵跳跃。
             if (level >= 3) {
@@ -63,15 +63,16 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                     safeConfig.getDouble("tier3.movement_reduction", 0.10),
                     safeConfig.getDouble("tier5.soul_jump_radius", 10.0),
                     safeConfig.getDouble("tier5.soul_jump_damage_percent", 0.50),
-                    (duration * 1000.0).toLong()
+                    (duration * 1000.0).toLong(),
+                    formationCast
                 )
             }
 
-            formationMagicDamage(plugin, player, target, finalDamage, FormationElement.WOOD)
+            formationMagicDamage(plugin, player, target, finalDamage, FormationElement.WOOD, cast = formationCast)
 
             // 吸血逻辑
-            // 巽离灵枢只增幅木阵伤害，吸血仍严格按未增幅伤害计算。
-            val healAmount = ceil(unamplifiedDamage * healPercent)
+            // 按本次阵法强度快照计算吸血。
+            val healAmount = ceil(finalDamage * healPercent)
             val currentHp = player.health
             // getAttribute 可能返回 null，必须使用 !! 断言
             val maxHp = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)!!.value

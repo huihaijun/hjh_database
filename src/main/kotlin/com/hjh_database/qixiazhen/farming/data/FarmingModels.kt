@@ -29,6 +29,9 @@ data class PlayerFarmState(
     var plantedAt: Long = 0L,
     var maturesAt: Long = 0L,
     var yieldMultiplier: Double = 1.0,
+    var insectCheckedStage: Int = 0,
+    var insectDisasterCount: Int = 0,
+    var insectProtectedUntil: Long = 0L,
     var updatedAt: Long = System.currentTimeMillis()
 ) {
     val planted: Boolean get() = !cropId.isNullOrBlank()
@@ -41,6 +44,9 @@ data class PlayerFarmState(
         plantedAt = 0L
         maturesAt = 0L
         yieldMultiplier = 1.0
+        insectCheckedStage = 0
+        insectDisasterCount = 0
+        insectProtectedUntil = 0L
         updatedAt = System.currentTimeMillis()
     }
 }

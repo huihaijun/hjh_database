@@ -26,6 +26,9 @@ import com.hjh_database.quest.impl.main.shen.Shen_06
 import com.hjh_database.quest.impl.main.shen.Shen_07
 import com.hjh_database.quest.impl.main.shen.Shen_08
 import com.hjh_database.quest.impl.main.shen.Shen_09
+import com.hjh_database.quest.impl.main.shen.Shen_10
+import com.hjh_database.quest.impl.main.shen.Shen_11
+import com.hjh_database.quest.impl.main.shen.Shen_12
 import com.hjh_database.quest.impl.main.south.South_01
 import com.hjh_database.quest.impl.main.south.South_02
 import com.hjh_database.quest.impl.main.south.South_03
@@ -40,6 +43,9 @@ import com.hjh_database.quest.impl.main.yao.Yao_06
 import com.hjh_database.quest.impl.main.yao.Yao_07
 import com.hjh_database.quest.impl.main.yao.Yao_08
 import com.hjh_database.quest.impl.main.yao.Yao_09
+import com.hjh_database.quest.impl.main.yao.Yao_10
+import com.hjh_database.quest.impl.main.yao.Yao_11
+import com.hjh_database.quest.impl.main.yao.Yao_12
 import com.hjh_database.quest.impl.main.west.West_01
 import com.hjh_database.quest.impl.main.west.West_02
 import com.hjh_database.quest.impl.main.west.West_03
@@ -53,6 +59,9 @@ import com.hjh_database.quest.impl.main.xian.Xian_06
 import com.hjh_database.quest.impl.main.xian.Xian_07
 import com.hjh_database.quest.impl.main.xian.Xian_08
 import com.hjh_database.quest.impl.main.xian.Xian_09
+import com.hjh_database.quest.impl.main.xian.Xian_10
+import com.hjh_database.quest.impl.main.xian.Xian_11
+import com.hjh_database.quest.impl.main.xian.Xian_12
 import com.hjh_database.quest.impl.main.zhan.Zhan_01
 import com.hjh_database.quest.impl.main.zhan.Zhan_02
 import com.hjh_database.quest.impl.main.zhan.Zhan_03
@@ -62,6 +71,9 @@ import com.hjh_database.quest.impl.main.zhan.Zhan_06
 import com.hjh_database.quest.impl.main.zhan.Zhan_07
 import com.hjh_database.quest.impl.main.zhan.Zhan_08
 import com.hjh_database.quest.impl.main.zhan.Zhan_09
+import com.hjh_database.quest.impl.main.zhan.Zhan_10
+import com.hjh_database.quest.impl.main.zhan.Zhan_11
+import com.hjh_database.quest.impl.main.zhan.Zhan_12
 import com.hjh_database.quest.impl.side.Side_Archer_QuiverBook
 import com.hjh_database.quest.impl.side.Side_Medical_TaolizhiBook
 import com.hjh_database.quest.impl.side.Side_Qixi_StarWish
@@ -119,6 +131,9 @@ object QuestRegistry {
         manager.register(Yao_07())
         manager.register(Yao_08())
         manager.register(Yao_09())
+        manager.register(Yao_10())
+        manager.register(Yao_11())
+        manager.register(Yao_12())
 
         // === 神族主线 ===
         manager.register(Shen_01())
@@ -130,6 +145,9 @@ object QuestRegistry {
         manager.register(Shen_07())
         manager.register(Shen_08())
         manager.register(Shen_09())
+        manager.register(Shen_10())
+        manager.register(Shen_11())
+        manager.register(Shen_12())
 
         // === 战神族主线 ===
         manager.register(Zhan_01())
@@ -141,6 +159,9 @@ object QuestRegistry {
         manager.register(Zhan_07())
         manager.register(Zhan_08())
         manager.register(Zhan_09())
+        manager.register(Zhan_10())
+        manager.register(Zhan_11())
+        manager.register(Zhan_12())
 
         // === 仙族主线 ===
         manager.register(Xian_01())
@@ -152,6 +173,9 @@ object QuestRegistry {
         manager.register(Xian_07())
         manager.register(Xian_08())
         manager.register(Xian_09())
+        manager.register(Xian_10())
+        manager.register(Xian_11())
+        manager.register(Xian_12())
 
         // === 支线 ===
         manager.register(Side_Ren_01())

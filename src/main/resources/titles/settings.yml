@@ -3,7 +3,10 @@
 custom:
   max_titles: 3
   max_name_length: 8
-  costs: [20, 40, 60]
+  costs:
+  - 20
+  - 40
+  - 60
 
 # 可通过 /hjhadmin title display <chat|overhead|tab> <on|off> 修改并立即应用。
 display:

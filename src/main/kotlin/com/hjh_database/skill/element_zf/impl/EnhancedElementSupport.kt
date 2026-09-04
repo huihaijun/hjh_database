@@ -4,6 +4,7 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.listener.FormationMagicDamage
 import com.hjh_database.skill.element_zf.FormationDamageEvent
 import com.hjh_database.skill.element_zf.FormationElement
+import com.hjh_database.skill.element_zf.FormationCast
 import org.bukkit.Color
 import org.bukkit.FluidCollisionMode
 import org.bukkit.Location
@@ -35,9 +36,10 @@ internal fun enhancedMagicDamage(
     attacker: Player,
     target: LivingEntity,
     damage: Double,
-    element: FormationElement? = null
+    element: FormationElement? = null,
+    cast: FormationCast? = null
 ) {
-    formationMagicDamage(plugin, attacker, target, damage, element)
+    formationMagicDamage(plugin, attacker, target, damage, element, cast = cast)
 }
 
 /** 统一的阵法伤害入口：标记伤害来源，并彻底取消本次伤害的无敌帧。 */
@@ -47,12 +49,21 @@ internal fun formationMagicDamage(
     target: LivingEntity,
     damage: Double,
     element: FormationElement? = null,
-    suppressKnockback: Boolean = false
+    suppressKnockback: Boolean = false,
+    cast: FormationCast? = null
 ) {
+    cast?.hitTargets?.add(target.uniqueId)
     val actualDamage = FormationMagicDamage.deal(plugin, attacker, target, damage, suppressKnockback)
     if (actualDamage > 0.0) {
-        plugin.server.pluginManager.callEvent(FormationDamageEvent(attacker, target, damage, actualDamage, element))
+        plugin.server.pluginManager.callEvent(FormationDamageEvent(attacker, target, damage, actualDamage, element, cast))
     }
+}
+
+/** 土阵等纯控制也算命中，但不能凭空产生传导伤害。 */
+internal fun formationControlHit(plugin: Hjh_database, caster: Player, target: LivingEntity, cast: FormationCast) {
+    if (!target.isValid || target.isDead) return
+    cast.hitTargets.add(target.uniqueId)
+    plugin.server.pluginManager.callEvent(FormationDamageEvent(caster, target, 0.0, 0.0, FormationElement.EARTH, cast))
 }
 
 internal fun broadcastOriginMessage(player: Player, color: String, elementName: String, spellName: String) {

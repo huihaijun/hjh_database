@@ -62,6 +62,12 @@ class FarmingListener(private val manager: FarmingManager) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onInteract(event: PlayerInteractEvent) {
         if (event.hand != EquipmentSlot.HAND) return
+        if ((event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK) &&
+            manager.resourceId(event.player.inventory.itemInMainHand) == FarmingManager.INSECT_WARD_RESOURCE_ID
+        ) {
+            // 防虫符使用雪球作为底材，任何右键都必须阻止原版投掷。
+            event.isCancelled = true
+        }
         val block = event.clickedBlock ?: return
         when (event.action) {
             Action.RIGHT_CLICK_BLOCK -> {

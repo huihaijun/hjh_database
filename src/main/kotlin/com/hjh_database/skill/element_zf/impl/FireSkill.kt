@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
 import com.hjh_database.skill.element_zf.FormationElement
@@ -17,6 +18,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
     // 【改动2】方法名从 cast 改为 onCast (参数依然是你原本需要的那些)
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
+        val formationCast = FormationCast()
 
         // 此时，父类已经帮你处理好了“不扣法宝”和“回流判定”了！
 
@@ -43,10 +45,10 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 只在有目标时造成伤害
         if (target != null) {
-            val baseDamage = data.zfStr * plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+            val baseDamage = data.zfStr
             val finalDamage = baseDamage * damagePercent
 
-            formationMagicDamage(plugin, player, target, finalDamage, FormationElement.FIRE)
+            formationMagicDamage(plugin, player, target, finalDamage, FormationElement.FIRE, cast = formationCast)
 
             if (level >= 3 && target.isValid && !target.isDead) {
                 val markDuration = safeConfig.getDouble("tier3.mark_duration", 5.0)
@@ -56,7 +58,8 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                     baseDamage,
                     safeConfig.getDouble("tier3.explosion_radius", 3.0),
                     safeConfig.getDouble("tier3.explosion_damage_percent", 1.0),
-                    (markDuration * 1000.0).toLong()
+                    (markDuration * 1000.0).toLong(),
+                    formationCast
                 )
             }
 
@@ -64,7 +67,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 val sparkRadius = safeConfig.getDouble("tier5.spark_radius", 10.0)
                 val sparkCount = safeConfig.getInt("tier5.spark_count", 3).coerceAtLeast(0)
                 val sparkDamage = baseDamage * safeConfig.getDouble("tier5.spark_damage_percent", 1.25)
-                launchSparks(player, target, sparkRadius, sparkCount, sparkDamage)
+                launchSparks(player, target, sparkRadius, sparkCount, sparkDamage, formationCast)
             }
 
             // 只有打中人才播放特效
@@ -160,7 +163,8 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         primaryTarget: LivingEntity,
         radius: Double,
         count: Int,
-        damage: Double
+        damage: Double,
+        formationCast: FormationCast
     ) {
         if (count <= 0) return
         val origin = primaryTarget.location.clone().add(0.0, primaryTarget.height * 0.55, 0.0)
@@ -178,12 +182,12 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             if (target == null) {
                 launchDissipatingSpark(origin, index, count)
             } else {
-                launchTargetedSpark(caster, origin, target.uniqueId, damage)
+                launchTargetedSpark(caster, origin, target.uniqueId, damage, formationCast)
             }
         }
     }
 
-    private fun launchTargetedSpark(caster: Player, origin: Location, targetId: java.util.UUID, damage: Double) {
+    private fun launchTargetedSpark(caster: Player, origin: Location, targetId: java.util.UUID, damage: Double, formationCast: FormationCast) {
         object : BukkitRunnable() {
             var step = 0
             var current = origin.clone()
@@ -201,7 +205,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 if (offset.lengthSquared() <= 0.64 || step >= 14) {
                     target.world.spawnParticle(Particle.FLAME, end, 12, 0.25, 0.35, 0.25, 0.035)
                     target.world.playSound(end, Sound.ENTITY_BLAZE_SHOOT, 0.55f, 1.7f)
-                    formationMagicDamage(plugin, caster, target, damage, FormationElement.FIRE)
+                    formationMagicDamage(plugin, caster, target, damage, FormationElement.FIRE, cast = formationCast)
                     cancel()
                     return
                 }

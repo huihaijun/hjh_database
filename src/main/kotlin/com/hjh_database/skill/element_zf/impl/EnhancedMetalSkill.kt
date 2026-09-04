@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.EnhancedElementSkill
@@ -18,11 +19,11 @@ import kotlin.math.sin
 
 class EnhancedMetalSkill(private val plugin: Hjh_database) : EnhancedElementSkill {
     override fun cast(player: Player, data: PlayerData): Boolean {
+        val formationCast = FormationCast()
         val targetPoint = getEnhancedSightLocation(player, 20.0, FluidCollisionMode.NEVER)
         val cloudCenter = targetPoint.clone().add(0.0, 7.5, 0.0)
         val world = targetPoint.world ?: return false
-        val damage = data.zfStr * 5.0 *
-            plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+        val damage = data.zfStr * 5.0
         val radius = 5.5
 
         broadcastOriginMessage(player, "§e", "金元素", "暗云裂解")
@@ -44,7 +45,7 @@ class EnhancedMetalSkill(private val plugin: Hjh_database) : EnhancedElementSkil
             override fun run() {
                 if (ticks >= 12) {
                     for (victim in victims) {
-                        enhancedMagicDamage(plugin, player, victim, damage, FormationElement.METAL)
+                        enhancedMagicDamage(plugin, player, victim, damage, FormationElement.METAL, cast = formationCast)
                         victim.setMetadata(META_METAL_WEAKEN_UNTIL, FixedMetadataValue(plugin, System.currentTimeMillis() + 5000L))
                         victim.world.spawnParticle(Particle.FLASH, victim.location.add(0.0, victim.height * 0.5, 0.0), 1)
                     }

@@ -95,8 +95,15 @@ class FarmDisplayManager(
         if (!state.planted) return serializer.deserialize("$cropName\n§7未种植")
         val status = if (state.ready()) "§a已成熟" else "§e生长中"
         val text = if (detailed) {
-            val seconds = (state.remainingMs() + 999L) / 1000L
-            "$cropName\n$status\n§7距离成熟：§f${seconds}秒\n§7预计产量倍率：§f${"%.0f".format(state.yieldMultiplier * 100)}%"
+            val now = System.currentTimeMillis()
+            val seconds = (state.remainingMs(now) + 999L) / 1000L
+            val protection = if (!state.ready(now) && state.insectProtectedUntil > now) {
+                val protectionSeconds = (state.insectProtectedUntil - now + 999L) / 1000L
+                "\n§7防虫：§a${protectionSeconds}秒"
+            } else {
+                ""
+            }
+            "$cropName\n$status\n§7距离成熟：§f${seconds}秒\n§7预计产量倍率：§f${"%.0f".format(state.yieldMultiplier * 100)}%$protection"
         } else {
             "$cropName\n$status"
         }

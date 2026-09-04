@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.EnhancedElementSkill
@@ -19,12 +20,12 @@ import kotlin.math.sin
 
 class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkill {
     override fun cast(player: Player, data: PlayerData): Boolean {
+        val formationCast = FormationCast()
         val center = getEnhancedSightLocation(player, 13.0, FluidCollisionMode.ALWAYS)
         val world = center.world ?: return false
         val radius = 10.0
-        val durationMultiplier = plugin.accessorySkillManager.getCurrentFormationDurationMultiplier(player)
-        val durationTicks = (300.0 * durationMultiplier).toInt()
-        val durationMillis = (15_000.0 * durationMultiplier).toLong()
+        val durationTicks = 300
+        val durationMillis = 15_000L
         val mobs = world.getNearbyEntities(center, radius, radius, radius).asSequence()
             .filterIsInstance<LivingEntity>()
             .filter { isEnhancedMonster(it) && it.location.distanceSquared(center) <= radius * radius }
@@ -36,6 +37,7 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
         drawTornadoBurst(center, radius)
 
         for (mob in mobs) {
+            formationControlHit(plugin, player, mob, formationCast)
             val pull = normalizedFlatVector(mob.location, center).multiply(0.55)
             pull.y = 0.85
             mob.velocity = mob.velocity.add(pull)

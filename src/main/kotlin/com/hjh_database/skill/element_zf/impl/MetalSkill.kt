@@ -1,5 +1,6 @@
 package com.hjh_database.skill.element_zf.impl
 
+import com.hjh_database.skill.element_zf.FormationCast
 import com.hjh_database.Hjh_database
 import com.hjh_database.skill.element_zf.AbstractElementSkill
 import com.hjh_database.skill.element_zf.FormationElement
@@ -17,6 +18,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
     // 【改动2】将 cast 改为 onCast
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
+        val formationCast = FormationCast()
 
         // 1. 获取配置数值 (父类已处理好了非空和路径检查)
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 2.5)
@@ -79,11 +81,10 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             .toList()
 
         // 造成伤害
-        val damage = data.zfStr * damagePercent *
-            plugin.accessorySkillManager.getCurrentFormationDamageMultiplier(player)
+        val damage = data.zfStr * damagePercent
 
         for (victim in victims) {
-            formationMagicDamage(plugin, player, victim, damage, FormationElement.METAL)
+            formationMagicDamage(plugin, player, victim, damage, FormationElement.METAL, cast = formationCast)
         }
 
         if (level >= 3) {
@@ -108,7 +109,8 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                 effectRadius,
                 damage * damageRatio,
                 moveDuration,
-                moveSpeed
+                moveSpeed,
+                formationCast
             )
         }
 
@@ -258,7 +260,8 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         radius: Double,
         damage: Double,
         durationSeconds: Double,
-        blocksPerSecond: Double
+        blocksPerSecond: Double,
+        formationCast: FormationCast
     ) {
         val hitTargets = HashSet<java.util.UUID>()
         val maxPulses = (durationSeconds.coerceAtLeast(0.0) * 4.0).toInt().coerceAtLeast(1)
@@ -297,7 +300,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
                     if (!ElementFormationTierEffects.isFormationMonster(target)) continue
                     if (target.location.distanceSquared(center) > radiusSquared) continue
                     if (!hitTargets.add(target.uniqueId)) continue
-                    formationMagicDamage(plugin, caster, target, damage, FormationElement.METAL)
+                    formationMagicDamage(plugin, caster, target, damage, FormationElement.METAL, cast = formationCast)
                     target.world.spawnParticle(Particle.WAX_OFF, target.location.add(0.0, target.height * 0.55, 0.0), 12, 0.25, 0.35, 0.25, 0.02)
                 }
                 pulses++

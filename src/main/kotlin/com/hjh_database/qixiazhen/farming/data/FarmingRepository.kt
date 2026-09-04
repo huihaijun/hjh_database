@@ -71,6 +71,9 @@ class FarmingRepository(private val plugin: Hjh_database) {
                                 planted_at BIGINT DEFAULT 0,
                                 matures_at BIGINT DEFAULT 0,
                                 yield_multiplier DOUBLE DEFAULT 1.0,
+                                insect_checked_stage INT DEFAULT 0,
+                                insect_disaster_count INT DEFAULT 0,
+                                insect_protected_until BIGINT DEFAULT 0,
                                 updated_at BIGINT DEFAULT 0,
                                 PRIMARY KEY (player_uuid, plot_id)
                             )
@@ -80,7 +83,8 @@ class FarmingRepository(private val plugin: Hjh_database) {
                             """
                             INSERT INTO farm_player_plots_yml_migration
                             SELECT player_uuid, player_name, plot_id, crop_id, seed_resource_id,
-                                   planted_at, matures_at, yield_multiplier, updated_at
+                                   planted_at, matures_at, yield_multiplier,
+                                   insect_checked_stage, insect_disaster_count, insect_protected_until, updated_at
                             FROM farm_player_plots
                             """.trimIndent()
                         )
@@ -126,6 +130,9 @@ class FarmingRepository(private val plugin: Hjh_database) {
                         rs.getLong("planted_at"),
                         rs.getLong("matures_at"),
                         rs.getDouble("yield_multiplier"),
+                        rs.getInt("insect_checked_stage"),
+                        rs.getInt("insect_disaster_count"),
+                        rs.getLong("insect_protected_until"),
                         rs.getLong("updated_at")
                     )
                     result[state.plotId] = state
@@ -161,8 +168,9 @@ class FarmingRepository(private val plugin: Hjh_database) {
             """
             INSERT INTO farm_player_plots (
                 player_uuid, player_name, plot_id, crop_id, seed_resource_id,
-                planted_at, matures_at, yield_multiplier, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                planted_at, matures_at, yield_multiplier, insect_checked_stage,
+                insect_disaster_count, insect_protected_until, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(player_uuid, plot_id) DO UPDATE SET
                 player_name = excluded.player_name,
                 crop_id = excluded.crop_id,
@@ -170,6 +178,9 @@ class FarmingRepository(private val plugin: Hjh_database) {
                 planted_at = excluded.planted_at,
                 matures_at = excluded.matures_at,
                 yield_multiplier = excluded.yield_multiplier,
+                insect_checked_stage = excluded.insect_checked_stage,
+                insect_disaster_count = excluded.insect_disaster_count,
+                insect_protected_until = excluded.insect_protected_until,
                 updated_at = excluded.updated_at
             """.trimIndent()
         ).use { ps ->
@@ -181,7 +192,10 @@ class FarmingRepository(private val plugin: Hjh_database) {
             ps.setLong(6, state.plantedAt)
             ps.setLong(7, state.maturesAt)
             ps.setDouble(8, state.yieldMultiplier)
-            ps.setLong(9, state.updatedAt)
+            ps.setInt(9, state.insectCheckedStage)
+            ps.setInt(10, state.insectDisasterCount)
+            ps.setLong(11, state.insectProtectedUntil)
+            ps.setLong(12, state.updatedAt)
             ps.executeUpdate()
         }
     }

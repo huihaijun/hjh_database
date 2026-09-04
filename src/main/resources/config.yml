@@ -29,7 +29,7 @@ passive-subtitles:
         disabled: "hjh:subtitle.accessory.reflux.disabled"
         blessing: "hjh:subtitle.accessory.yanling.blessing"
     xunlilingshu:
-      # 普通概率回流与卦印必定回流都复用现有的“回流触发”右下角字幕。
+      # 保留普通概率回流的右下角字幕；风场和火种不额外刷 ActionBar。
       sound-event: "hjh:subtitle.accessory.reflux.triggered"
       event-sounds:
         enabled: "hjh:subtitle.accessory.reflux.enabled"

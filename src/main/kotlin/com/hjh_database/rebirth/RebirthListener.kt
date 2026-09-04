@@ -1,13 +1,12 @@
 package com.hjh_database.rebirth
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.admin.AdminInteractionBlocks.Kind
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
-import org.bukkit.block.BlockFace
-import org.bukkit.block.data.type.EndPortalFrame
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -24,35 +23,19 @@ import java.util.concurrent.ConcurrentHashMap
 
 class RebirthListener(private val plugin: Hjh_database) : Listener {
     private val resourceIdKey = NamespacedKey(plugin, "resource_id")
-    private val altarWorld = "world"
-    private val altarX = 207
-    private val altarY = 47
-    private val altarZ = 71
     private val rebirthClickWindowMs = 1000L
     private val lastAltarClicks = ConcurrentHashMap<UUID, Long>()
     private val rebirthingPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
-    fun initAltar() {
-        plugin.server.scheduler.runTask(plugin, Runnable {
-            val world = Bukkit.getWorld(altarWorld) ?: return@Runnable
-            val block = world.getBlockAt(altarX, altarY, altarZ)
-            block.type = Material.END_PORTAL_FRAME
-            val frameData = Material.END_PORTAL_FRAME.createBlockData() as EndPortalFrame
-            frameData.facing = BlockFace.NORTH
-            frameData.setEye(true)
-            block.blockData = frameData
-        })
-    }
-
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onAltarInteract(event: PlayerInteractEvent) {
-        if (event.hand != EquipmentSlot.HAND) return
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
 
         val block = event.clickedBlock ?: return
-        if (!isRebirthAltar(block.location)) return
+        if (plugin.adminInteractionBlocks.typeAt(block) != Kind.REBIRTH) return
 
         event.isCancelled = true
+        if (event.hand != EquipmentSlot.HAND) return
         val player = event.player
         if (rebirthingPlayers.contains(player.uniqueId)) return
 
@@ -79,6 +62,8 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
         rebirthingPlayers.add(uuid)
         player.closeInventory()
         player.sendMessage("§8转生祭坛吞没了你的影子……")
+        plugin.chonghuaManager.preparePlayerReset(uuid)
+        plugin.qixiBridgeBuildManager.preparePlayerReset(uuid)
 
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             try {
@@ -86,6 +71,9 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     if (player.isOnline) {
                         finishRebirth(player)
+                    } else {
+                        plugin.chonghuaManager.cancelPlayerReset(uuid)
+                        plugin.qixiBridgeBuildManager.cancelPlayerReset(uuid)
                     }
                     rebirthingPlayers.remove(uuid)
                 })
@@ -96,6 +84,8 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
                     if (player.isOnline) {
                         player.sendMessage("§c转生失败，请联系管理员查看后台日志。")
                     }
+                    plugin.chonghuaManager.cancelPlayerReset(uuid)
+                    plugin.qixiBridgeBuildManager.cancelPlayerReset(uuid)
                     rebirthingPlayers.remove(uuid)
                 })
             }
@@ -121,6 +111,8 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
         plugin.shenConsciousnessManager.resetPlayerData(player.uniqueId)
         plugin.shenTributeManager.resetPlayerData(player)
         plugin.xianTalentManager.resetPlayerData(player.uniqueId)
+        plugin.chonghuaManager.resetPlayerData(player)
+        plugin.qixiBridgeBuildManager.resetPlayerData(player)
         plugin.farmingManager.resetPlayerData(player)
         plugin.busuanManager.resetPlayerData(player.uniqueId)
         plugin.baihuMiasmaManager.resetPlayerData(player)
@@ -152,13 +144,6 @@ class RebirthListener(private val plugin: Hjh_database) : Listener {
                 }
             }
         }
-    }
-
-    private fun isRebirthAltar(location: Location): Boolean {
-        return location.world?.name == altarWorld &&
-            location.blockX == altarX &&
-            location.blockY == altarY &&
-            location.blockZ == altarZ
     }
 
     private fun isHoldingWangchuanWater(item: ItemStack?): Boolean {
