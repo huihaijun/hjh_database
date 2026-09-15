@@ -66,6 +66,17 @@ shengshan_loop_test:
     - "&c仅限管理员使用，不会被消耗。"
     - "&e[右键使用]"
 
+zhenyao_floor_ten_test:
+  material: NETHER_STAR
+  name: "&4&l镇妖塔·第十层测试器"
+  lore:
+    - "&7正常进入镇妖塔后，主手持此物右键，"
+    - "&7将本局所有存活参与者快进至第十层。"
+    - "&7清理当前楼层，直接开始蚩尤出场剧情。"
+    - ""
+    - "&c仅限管理员使用，不会被消耗。"
+    - "&e[右键使用]"
+
 tongxinsuo:
   material: BRICK
   name: "&e同心锁"

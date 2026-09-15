@@ -444,6 +444,11 @@ class PlayerManager(private val plugin: Hjh_database) {
             data.speed *= (1.0 + bonuses["speed_percent"]!!)
         }
 
+        data.attack *= TemporaryStatMultipliers.value(data.tempBonuses, "attack")
+        data.archerDamage *= TemporaryStatMultipliers.value(data.tempBonuses, "archer_damage")
+        data.zfStr *= TemporaryStatMultipliers.value(data.tempBonuses, "zf_str")
+        data.armor *= TemporaryStatMultipliers.value(data.tempBonuses, "armor")
+        data.speed *= TemporaryStatMultipliers.value(data.tempBonuses, "speed")
         syncToVanilla(player, data)
     }
 

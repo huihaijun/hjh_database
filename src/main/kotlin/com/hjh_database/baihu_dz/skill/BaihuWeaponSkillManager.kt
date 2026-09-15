@@ -1,6 +1,8 @@
 package com.hjh_database.baihu_dz.skill
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.client.CooldownItemTarget
+import com.hjh_database.client.ItemCooldownVisual
 import com.hjh_database.baihu_dz.BaihuWeaponData
 import com.hjh_database.baihu_dz.skill.impl.AnhuishinuSkill
 import com.hjh_database.baihu_dz.skill.impl.CiguheirenSkill
@@ -31,10 +33,16 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
     private val skillConfigCache: MutableMap<String, ConfigurationSection> = HashMap()
     private val skillRegistry: MutableMap<String, BaihuWeaponSkill> = HashMap()
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private val rangedVisuals = mutableMapOf<UUID, ItemCooldownVisual>()
 
     init {
         registerSkills()
         reload()
+        plugin.clientBridge.itemCooldowns.register("baihu_weapon") { player ->
+            val now = System.currentTimeMillis()
+            rangedVisuals.entries.removeIf { (uuid, _) -> (globalCooldowns[uuid] ?: 0L) <= now }
+            listOfNotNull(rangedVisuals[player.uniqueId]?.copy(endMillis = globalCooldowns[player.uniqueId] ?: 0L))
+        }
     }
 
     fun reload() {
@@ -100,7 +108,7 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         }
 
         if (NorthWetnessSkill.tryInterruptSkill(player) {
-                applyCooldown(player, item.type, 5.0)
+                applyCooldown(player, item.type, 5.0, item)
             }
         ) {
             return
@@ -110,7 +118,7 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         if (!result.success) return
 
         if (result.consumeDurability && !plugin.baihuDzManager.consumeDurability(player, item, weaponData)) return
-        if (result.startCooldown) startCooldown(player, item.type, config, data)
+        if (result.startCooldown) startCooldown(player, item.type, config, data, item)
 
         val successMsg = result.message ?: config.getString("message")
         if (!successMsg.isNullOrEmpty()) {
@@ -118,15 +126,18 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         }
     }
 
-    fun startCooldown(player: Player, material: Material, config: ConfigurationSection, data: PlayerData? = null) {
+    fun startCooldown(
+        player: Player, material: Material, config: ConfigurationSection,
+        data: PlayerData? = null, sourceItem: ItemStack = player.inventory.itemInMainHand
+    ) {
         val baseSeconds = config.getDouble("cooldown", 10.0).coerceAtLeast(0.0)
         val ignoreCoolReduce = config.getBoolean("ignore_cool_reduce", true)
         val reduce = if (ignoreCoolReduce) 0.0 else (data?.coolReduce ?: 0.0).coerceAtMost(0.5)
         val finalSeconds = baseSeconds * (1.0 - reduce)
-        applyCooldown(player, material, finalSeconds)
+        applyCooldown(player, material, finalSeconds, sourceItem)
     }
 
-    private fun applyCooldown(player: Player, material: Material, finalSeconds: Double) {
+    private fun applyCooldown(player: Player, material: Material, finalSeconds: Double, sourceItem: ItemStack) {
         val ticks = (finalSeconds * 20.0).toInt().coerceAtLeast(0)
 
         if (material != Material.BOW && material != Material.CROSSBOW) {
@@ -134,6 +145,12 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         }
 
         globalCooldowns[player.uniqueId] = System.currentTimeMillis() + (finalSeconds * 1000.0).toLong()
+        if (material == Material.BOW || material == Material.CROSSBOW) {
+            rangedVisuals[player.uniqueId] = ItemCooldownVisual(
+                "active", CooldownItemTarget.item(sourceItem),
+                globalCooldowns.getValue(player.uniqueId), (finalSeconds * 1000).toLong()
+            )
+        } else rangedVisuals.remove(player.uniqueId)
 
         object : BukkitRunnable() {
             override fun run() {

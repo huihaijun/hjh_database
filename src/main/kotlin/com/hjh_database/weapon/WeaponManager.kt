@@ -443,6 +443,9 @@ class WeaponManager(private val plugin: Hjh_database) {
 
         // 【新增】灵力回复数值 (默认 0.0 代表不回蓝)
         @JvmField var manaRegen: Double = 0.0
+        /** 溯归：以本次阵法配置回蓝量为基数的灵力消耗倍率。 */
+        @JvmField var suguiManaMultiplier: Double = sec.getDouble("sugui_mana_multiplier", 3.0)
+            .takeIf { it.isFinite() && it > 0.0 } ?: 3.0
 
         @JvmField var stats: MutableMap<String, Double> = HashMap()
         override val activationSpec: ActivationSpec = ActivationSpec(

@@ -21,6 +21,8 @@ class PlayerListener(private val plugin: Hjh_database) : Listener {
     fun onJoin(event: PlayerJoinEvent) {
         plugin.playerManager.loadAndCache(event.player) { data ->
             plugin.qixiDungeonManager.backfillCompletionTitle(event.player, data.dungeonRecords)
+            plugin.zhenyaoTowerManager.onPlayerDataLoaded(event.player, data)
+            plugin.huomoDungeonManager.onPlayerDataLoaded(event.player, data)
         }
         // 【新增】进服时，异步加载玩家的个人仓库数据
         plugin.warehouseManager.loadAndCache(event.player)

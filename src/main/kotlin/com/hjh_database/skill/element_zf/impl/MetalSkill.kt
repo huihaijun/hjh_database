@@ -36,9 +36,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 2. 增加灵力 & 提示
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
-        data.lingli = data.lingli + lingliAdd
-        // 施法路径高频触发，延迟合并保存灵力变化。
-        plugin.databaseManager.queuePlayerSave(data)
+        plugin.elementZfManager.restoreFormationMana(player, lingliAdd, capAtMax = false)
 
         // 3. 计算目标位置 (星云中心)
         val hitLoc = getHitLocation(player, range)

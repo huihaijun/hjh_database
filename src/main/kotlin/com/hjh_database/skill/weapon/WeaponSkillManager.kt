@@ -1,6 +1,8 @@
 package com.hjh_database.skill.weapon
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.client.CooldownItemTarget
+import com.hjh_database.client.ItemCooldownVisual
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.weapon.job_0.baihuajianSkill
 import com.hjh_database.skill.weapon.job_0.chitongjianSkill
@@ -50,6 +52,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private val skillRegistry: MutableMap<String, WeaponSkill> = HashMap()
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
     private val cooldownVersions: MutableMap<UUID, Long> = ConcurrentHashMap()
+    private val rangedVisuals = mutableMapOf<UUID, ItemCooldownVisual>()
 
     // 记录由技能主动维持的持续状态。Key: 玩家 UUID, Value: 武器/技能 ID。
     private val activeToggles = ConcurrentHashMap<UUID, String>()
@@ -60,6 +63,14 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     init {
         registerSkills()
         reload()
+        plugin.clientBridge.itemCooldowns.register("weapon") { player ->
+            val visual = rangedVisuals[player.uniqueId]
+            val end = globalCooldowns[player.uniqueId] ?: 0L
+            if (end <= System.currentTimeMillis()) {
+                rangedVisuals.remove(player.uniqueId)
+                emptyList()
+            } else listOfNotNull(visual?.copy(endMillis = end))
+        }
 
         // 每 tick 检查一次即可，避免每个技能各自启动重复任务。
         object : BukkitRunnable() {
@@ -165,7 +176,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         val activeConfig = config.getConfigurationSection("active") ?: return
 
         if (NorthWetnessSkill.tryInterruptSkill(player) {
-                applyCooldown(player, data, item.type, 5.0, ignoreReduction = true)
+                applyCooldown(player, data, item, 5.0, ignoreReduction = true)
             }
         ) {
             return
@@ -173,7 +184,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 
         if (skill.castActive(player, data, activeConfig, projectile)) {
             val baseCd = activeConfig.getDouble("cooldown", 10.0)
-            applyCooldown(player, data, item.type, baseCd)
+            applyCooldown(player, data, item, baseCd)
             plugin.elementCrystalManager.triggerWaterSkill(
                 player,
                 "weapon",
@@ -208,13 +219,14 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private fun applyCooldown(
         player: Player,
         data: PlayerData,
-        mat: Material,
+        item: ItemStack,
         baseSeconds: Double,
         ignoreReduction: Boolean = false
     ) {
         val reduce = if (ignoreReduction) 0.0 else data.coolReduce.coerceAtMost(0.5)
         val finalSeconds = baseSeconds * (1.0 - reduce)
         val ticks = (finalSeconds * 20).toInt()
+        val mat = item.type
 
         // 弓和弩不设置原版物品冷却，否则会影响拉弓/装填手感。
         if (mat != Material.BOW && mat != Material.CROSSBOW) {
@@ -222,6 +234,12 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         }
 
         globalCooldowns[player.uniqueId] = System.currentTimeMillis() + (finalSeconds * 1000).toLong()
+        if (mat == Material.BOW || mat == Material.CROSSBOW) {
+            rangedVisuals[player.uniqueId] = ItemCooldownVisual(
+                "active", CooldownItemTarget.item(item), globalCooldowns.getValue(player.uniqueId),
+                (finalSeconds * 1000).toLong()
+            )
+        } else rangedVisuals.remove(player.uniqueId)
         val cooldownVersion = cooldownVersions.merge(player.uniqueId, 1L) { current, increment ->
             current + increment
         } ?: 1L
@@ -276,6 +294,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
 
         activeWeapons.keys.removeIf { it !in online }
         activeToggles.keys.removeIf { it !in online }
+        rangedVisuals.entries.removeIf { (uuid, _) -> (globalCooldowns[uuid] ?: 0L) <= System.currentTimeMillis() }
     }
 
     private fun findActiveWeaponId(player: Player): String? {
@@ -343,6 +362,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     }
 
     fun resetCooldown(player: Player, material: Material? = null) {
+        rangedVisuals.remove(player.uniqueId)
         globalCooldowns.remove(player.uniqueId)
         cooldownVersions.merge(player.uniqueId, 1L) { current, increment -> current + increment }
         material?.let { player.setCooldown(it, 0) }

@@ -23,6 +23,14 @@ import kotlin.math.abs
 
 /** 画江湖 Fabric 客户端的唯一协议入口。游戏逻辑仍由服务端裁定。 */
 class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageListener {
+    val itemCooldowns = ItemCooldownVisualRegistry { id, error ->
+        plugin.logger.log(java.util.logging.Level.WARNING, "冷却 HUD 来源 $id 采集失败", error)
+    }
+    private val lastItemCooldowns = mutableMapOf<UUID, List<ItemCooldownVisual>>()
+    val entityModels = ClientEntityModels { targets, writer ->
+        val bytes = encode(writer)
+        targets.filter { it.isOnline && hasClient(it) }.forEach { it.sendPluginMessage(plugin, CHANNEL, bytes) }
+    }
     private val verified = ConcurrentHashMap.newKeySet<UUID>()
     private val lastHud = ConcurrentHashMap<UUID, HudSnapshot>()
     private val lastDungeonParty = ConcurrentHashMap<UUID, DungeonPartySnapshot>()
@@ -33,11 +41,14 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         plugin.server.messenger.registerIncomingPluginChannel(plugin, CHANNEL, this)
         plugin.server.messenger.registerOutgoingPluginChannel(plugin, CHANNEL)
         plugin.server.pluginManager.registerEvents(this, plugin)
-        syncTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable { syncChangedHud() }, 2L, 2L)
+        syncTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable { syncChangedHud(); entityModels.tick() }, 2L, 2L)
         plugin.server.onlinePlayers.forEach(::scheduleClientCheck)
     }
 
     fun shutdown() {
+        itemCooldowns.clear()
+        lastItemCooldowns.clear()
+        entityModels.clear()
         syncTask?.cancel()
         syncTask = null
         verified.clear()
@@ -49,6 +60,29 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
     }
 
     fun hasClient(player: Player): Boolean = verified.contains(player.uniqueId)
+
+    /** 原版信标渲染，由客户端旋转到起终点方向；0 tick立即移除。 */
+    fun beaconBeam(targets: Collection<Player>, id: UUID, origin: Location, end: Location, durationTicks: Int = 8, color: Int = 0xFFFFFF) {
+        val bytes = encode { out ->
+            out.writeByte(12)
+            out.writeLong(id.mostSignificantBits); out.writeLong(id.leastSignificantBits)
+            out.writeInt(durationTicks.coerceIn(0, 100))
+            out.writeDouble(origin.x); out.writeDouble(origin.y); out.writeDouble(origin.z)
+            out.writeDouble(end.x); out.writeDouble(end.y); out.writeDouble(end.z)
+            out.writeInt(color)
+        }
+        targets.filter { it.isOnline && hasClient(it) }.forEach { it.sendPluginMessage(plugin, CHANNEL, bytes) }
+    }
+
+    /** 纯渲染相机平移，不修改玩家位置或旋转；duration=0取消，客户端也会自行到期。 */
+    fun cameraShake(targets: Collection<Player>, durationTicks: Int, strength: Float = .12f) {
+        val bytes = encode { out ->
+            out.writeByte(CAMERA_SHAKE)
+            out.writeInt(durationTicks.coerceIn(0, 600))
+            out.writeFloat(strength.coerceIn(0f, .25f))
+        }
+        targets.filter { it.isOnline && hasClient(it) }.forEach { it.sendPluginMessage(plugin, CHANNEL, bytes) }
+    }
 
     /** 向同世界附近客户端只发送一次“效果语义”，粒子采样全部由客户端完成。 */
     fun emitParticle(effect: ClientParticleEffect, origin: Location, end: Location = origin, data: Int = 0) {
@@ -167,6 +201,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
+        lastItemCooldowns.remove(event.player.uniqueId)
         verified.remove(event.player.uniqueId)
         lastHud.remove(event.player.uniqueId)
         lastDungeonParty.remove(event.player.uniqueId)
@@ -190,6 +225,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
                 sendHud(player, force = true)
                 sendDungeonParty(player, force = true)
                 sendAccessoryHud(player, force = true)
+                sendItemCooldowns(player, force = true)
                 scheduleInitialHudRefresh(player)
             }
         }.onFailure { error ->
@@ -199,6 +235,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     private fun scheduleClientCheck(player: Player) {
         val playerId = player.uniqueId
+        lastItemCooldowns.remove(playerId)
         verified.remove(playerId)
         lastHud.remove(playerId)
         lastDungeonParty.remove(playerId)
@@ -213,7 +250,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         }
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline && !verified.contains(playerId)) {
-                player.kickPlayer("§c本服务器必须安装《画江湖》客户端 Mod。\n§7请安装 hjh_mod 1.0.7（Minecraft 1.21.3 / Fabric）后重新进入。")
+                player.kickPlayer("§c本服务器必须安装《画江湖》客户端 Mod。\n§7请安装 hjh_mod 1.0.12（Minecraft 1.21.3 / Fabric）后重新进入。")
             }
         }, HANDSHAKE_TIMEOUT_TICKS)
     }
@@ -229,19 +266,21 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
     }
 
     private fun syncChangedHud() {
-        // 同一时刻只允许一个副本，队伍快照每轮只计算一次，避免按查看者重复触发护甲修正链。
-        val dungeonPartySnapshot = createDungeonPartySnapshot()
+        // 按真实副本场次分组，每轮只采集一次各成员属性，禁止混用全服 status=5 名单。
+        val dungeonPartySnapshots = createDungeonPartySnapshots()
         verified.toList().forEach { uuid ->
             val player = plugin.server.getPlayer(uuid)
             if (player == null || !player.isOnline) {
+                lastItemCooldowns.remove(uuid)
                 verified.remove(uuid)
                 lastHud.remove(uuid)
                 lastDungeonParty.remove(uuid)
                 lastAccessoryHud.remove(uuid)
             } else {
                 sendHud(player, force = false)
-                sendDungeonParty(player, force = false, sharedSnapshot = dungeonPartySnapshot)
+                sendDungeonParty(player, force = false, sharedSnapshots = dungeonPartySnapshots)
                 sendAccessoryHud(player, force = false)
+                sendItemCooldowns(player, force = false)
             }
         }
     }
@@ -254,9 +293,31 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
                     sendHud(player, force = true)
                     sendDungeonParty(player, force = true)
                     sendAccessoryHud(player, force = true)
+                    sendItemCooldowns(player, force = true)
                 }
             }, delay)
         }
+    }
+
+    private fun sendItemCooldowns(player: Player, force: Boolean) {
+        val now = System.currentTimeMillis()
+        val snapshot = itemCooldowns.snapshot(player, now)
+        if (!force && lastItemCooldowns[player.uniqueId] == snapshot) return
+        send(player) { out ->
+            out.writeByte(ITEM_COOLDOWN_VISUALS)
+            out.writeShort(snapshot.size)
+            snapshot.forEach { entry ->
+                out.writeUTF(entry.id)
+                out.writeByte(entry.target.kind)
+                out.writeUTF(entry.target.key)
+                out.writeUTF(entry.target.value)
+                out.writeBoolean(entry.tintVanilla)
+                out.writeLong((entry.endMillis - now).coerceAtLeast(0L))
+                out.writeLong(entry.durationMillis)
+                out.writeInt(entry.color)
+            }
+        }
+        lastItemCooldowns[player.uniqueId] = snapshot
     }
 
     private fun sendHud(player: Player, force: Boolean) {
@@ -273,15 +334,14 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         }
     }
 
-    private fun sendDungeonParty(player: Player, force: Boolean, sharedSnapshot: DungeonPartySnapshot? = null) {
-        val viewerData = plugin.playerManager.getData(player.uniqueId) ?: return
-        val baseSnapshot = sharedSnapshot ?: createDungeonPartySnapshot()
-        val snapshot = if (viewerData.status == DUNGEON_STATUS) {
-            DungeonPartySnapshot(baseSnapshot.members.sortedWith(
-                compareBy<DungeonPartyMember> { it.uuid != player.uniqueId }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-            ))
-        } else DungeonPartySnapshot(emptyList())
+    private fun sendDungeonParty(
+        player: Player,
+        force: Boolean,
+        sharedSnapshots: Map<UUID, DungeonPartySnapshot>? = null
+    ) {
+        // 不在任何有效场次（包括资料未加载、退出、掉线恢复）时也发空名单，清除旧侧栏。
+        val snapshots = sharedSnapshots ?: createDungeonPartySnapshots()
+        val snapshot = snapshots[player.uniqueId] ?: DungeonPartySnapshot(emptyList())
         val previous = lastDungeonParty[player.uniqueId]
         if (!force && previous != null && snapshot.nearlyEquals(previous)) return
         lastDungeonParty[player.uniqueId] = snapshot
@@ -335,9 +395,10 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         }
     }
 
-    private fun createDungeonPartySnapshot(): DungeonPartySnapshot = DungeonPartySnapshot(
-        plugin.server.onlinePlayers.asSequence()
-            .mapNotNull { member ->
+    private fun createDungeonPartySnapshots(): Map<UUID, DungeonPartySnapshot> {
+        val parties = plugin.dungeonParties.snapshotParties().map { participants ->
+            participants.mapNotNull { memberId ->
+                val member = plugin.server.getPlayer(memberId)?.takeIf { it.isOnline } ?: return@mapNotNull null
                 val data = plugin.playerManager.getData(member.uniqueId) ?: return@mapNotNull null
                 if (data.status != DUNGEON_STATUS) return@mapNotNull null
                 DungeonPartyMember(
@@ -351,10 +412,14 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
                     statusFlags(member)
                 )
             }
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-            .take(MAX_DUNGEON_PARTY_SIZE)
-            .toList()
-    )
+        }
+        return dungeonPartiesByViewer(
+            parties,
+            DungeonPartyMember::uuid,
+            compareBy(String.CASE_INSENSITIVE_ORDER) { it.name },
+            MAX_DUNGEON_PARTY_SIZE
+        ).mapValues { (_, members) -> DungeonPartySnapshot(members) }
+    }
 
     /** 与天机令和实际受伤结算共用护甲事件链，确保临时破甲即时进入 HUD。 */
     private fun effectiveArmor(player: Player, baseArmor: Double): Double {
@@ -416,7 +481,8 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     companion object {
         const val CHANNEL = "hjh_mod:main"
-        const val PROTOCOL_VERSION = 5
+        const val PROTOCOL_VERSION = 7
+        private const val ITEM_COOLDOWN_VISUALS = 15
         private const val HELLO = 1
         private const val HUD_SYNC = 2
         private const val PARTICLE_EFFECT = 3
@@ -427,6 +493,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         private const val CANCEL_TIMED_EFFECT = 8
         private const val DUNGEON_PARTY_SYNC = 9
         private const val ACCESSORY_HUD_SYNC = 10
+        private const val CAMERA_SHAKE = 11
         private const val DUNGEON_STATUS = 5
         private const val MAX_DUNGEON_PARTY_SIZE = 16
         private const val MAX_PLAYER_NAME_LENGTH = 32

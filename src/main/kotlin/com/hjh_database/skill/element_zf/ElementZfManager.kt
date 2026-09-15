@@ -1,6 +1,8 @@
 package com.hjh_database.skill.element_zf
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.client.CooldownItemTarget
+import com.hjh_database.client.ItemCooldownVisual
 import com.hjh_database.data.PlayerData
 import com.hjh_database.skill.element_zf.impl.*
 import com.hjh_database.spawner.impl.NorthWetnessSkill
@@ -10,16 +12,143 @@ import net.kyori.adventure.key.Key
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.ChatColor
+import org.bukkit.Color
+import org.bukkit.Particle
+import org.bukkit.Sound
 import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.bukkit.scheduler.BukkitRunnable
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class ElementZfManager(private val plugin: Hjh_database) {
+    private data class ReturnReceipt(
+        val data: PlayerData,
+        val multiplier: Double,
+        val tick: Int = org.bukkit.Bukkit.getCurrentTick(),
+        var element: ItemStack? = null,
+        var restored: Double = 0.0,
+        var baseMana: Double = 0.0
+    )
+    private val castingReceipts = mutableMapOf<UUID, ReturnReceipt>()
+    private val returnReceipts = mutableMapOf<UUID, MutableMap<String, ReturnReceipt>>()
+
+    fun recordConsumedElement(player: Player, item: ItemStack) {
+        castingReceipts[player.uniqueId]?.element = item.clone().apply { amount = 1 }
+    }
+
+    /** 只记录阵法自身的实际回蓝，溢出上限的部分不追扣；金元素保留原有回蓝规则。 */
+    fun restoreFormationMana(player: Player, amount: Double, capAtMax: Boolean = true) {
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        val before = data.lingli
+        if (amount > 0.0 && amount.isFinite()) {
+            if (!capAtMax) data.lingli += amount
+            else if (before < data.maxLingli) data.lingli = minOf(data.maxLingli, before + amount)
+            castingReceipts[player.uniqueId]?.let {
+                it.baseMana += amount
+                it.restored += (data.lingli - before).coerceAtLeast(0.0)
+            }
+            plugin.databaseManager.queuePlayerSave(data)
+        }
+    }
+
+    private fun suguiState(player: Player, type: String, data: PlayerData): SuguiReadiness {
+        val receipt = returnReceipts[player.uniqueId]?.get(type) ?: return SuguiReadiness.UNAVAILABLE
+        if (!isOnCooldown(player, type) || receipt.data !== data || player.isDead) return SuguiReadiness.UNAVAILABLE
+        if (receipt.tick == org.bukkit.Bukkit.getCurrentTick()) return SuguiReadiness.SAME_TICK
+        val item = receipt.element ?: return SuguiReadiness.UNAVAILABLE
+        val furnace = plugin.playerManager.weaponManager.checkActiveWeapon(player, player.inventory.itemInOffHand, 40)
+        val inventory = player.inventory
+        return suguiReadiness(
+            validReceipt = true,
+            sameTick = false,
+            activeFurnace = data.job == 2 && furnace?.reqJob == 2 && getActiveFurnaceRarity(player) != null,
+            availableMana = data.lingli,
+            debit = receipt.restored + receipt.baseMana * receipt.multiplier,
+            canStoreElement = inventory.firstEmpty() != -1 || inventory.storageContents.any {
+                it != null && it.isSimilar(item) && it.amount < minOf(it.maxStackSize, inventory.maxStackSize)
+            }
+        )
+    }
+
+    /** 只读资格检查；不消费记录、灵力或元素。 */
+    fun canSugui(player: Player, type: String): Boolean {
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return false
+        return suguiState(player, type.uppercase(), data) == SuguiReadiness.READY
+    }
+
+    /** 返回 true 表示本次右键已由溯归处理；不会重放阵法或重置冷却。 */
+    fun trySugui(player: Player, type: String, data: PlayerData): Boolean {
+        val receipts = returnReceipts[player.uniqueId] ?: return false
+        val receipt = receipts[type] ?: return false
+        if (!isOnCooldown(player, type) || receipt.data !== data || player.isDead) {
+            receipts.remove(type)
+            return false
+        }
+        val debit = receipt.restored + receipt.baseMana * receipt.multiplier
+        when (suguiState(player, type, data)) {
+            SuguiReadiness.UNAVAILABLE -> return false
+            SuguiReadiness.SAME_TICK -> return true
+            SuguiReadiness.NO_MANA -> {
+                player.sendActionBar("§c溯归灵力不足，需要 ${"%.1f".format(debit)} 点（含撤销回蓝）。")
+                return true
+            }
+            SuguiReadiness.NO_SPACE -> {
+                player.sendActionBar("§c请先在背包中留出空间，再发动溯归。")
+                return true
+            }
+            SuguiReadiness.READY -> Unit
+        }
+        val item = receipt.element ?: return false
+        val inventory = player.inventory
+        receipts.remove(type) // 先撤销资格，确保同次施法至多返还一枚。
+        data.lingli -= debit
+        inventory.addItem(item.clone())
+        plugin.databaseManager.queuePlayerSave(data)
+        player.sendActionBar("§6§l【溯归】发动 本次阵法不消耗元素")
+        playSuguiFeedback(player)
+        return true
+    }
+
+    /** 半秒金色光环向身体收拢，只在结算成功后播放，不生成实体。 */
+    private fun playSuguiFeedback(player: Player) {
+        player.playSound(player.location, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.65f, 1.6f)
+        val world = player.world
+        val dust = Particle.DustOptions(Color.fromRGB(255, 190, 65), 0.85f)
+        object : BukkitRunnable() {
+            private var frame = 0
+
+            override fun run() {
+                if (!player.isOnline || player.isDead || player.world != world) {
+                    cancel()
+                    return
+                }
+                val center = player.location.add(0.0, 0.6 + frame * 0.13, 0.0)
+                val radius = 1.0 - frame * 0.22
+                for (point in 0 until 12) {
+                    val angle = point * Math.PI / 6.0 + frame * 0.35
+                    player.spawnParticle(
+                        Particle.DUST, center.clone().add(kotlin.math.cos(angle) * radius, 0.0, kotlin.math.sin(angle) * radius),
+                        1, 0.0, 0.0, 0.0, 0.0, dust
+                    )
+                }
+                if (++frame >= 5) {
+                    player.spawnParticle(Particle.END_ROD, center, 8, 0.15, 0.2, 0.15, 0.015)
+                    player.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.65f, 1.8f)
+                    cancel()
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 2L)
+    }
+
+    fun clearSugui(player: Player) {
+        castingReceipts.remove(player.uniqueId)
+        returnReceipts.remove(player.uniqueId)
+    }
     val tierEffects = ElementFormationTierEffects(plugin)
     private var config: FileConfiguration? = null
 
@@ -42,6 +171,15 @@ class ElementZfManager(private val plugin: Hjh_database) {
     init {
         reload()
         registerSkills()
+        plugin.clientBridge.itemCooldowns.register("formation_sugui") { player ->
+            groupKeys.mapNotNull { (type, group) ->
+                if (!canSugui(player, type)) return@mapNotNull null
+                ItemCooldownVisual(
+                    type, CooldownItemTarget.group(group.toString()), getCooldownTime(player, type),
+                    durationMillis = 1L, color = 0x7F8FD9FF, tintVanilla = true
+                )
+            }
+        }
     }
 
     fun reload() {
@@ -133,12 +271,18 @@ class ElementZfManager(private val plugin: Hjh_database) {
         }
 
         // 3. 执行技能逻辑。风场先生成只读计划，技能成功后才提交状态。
+        returnReceipts[player.uniqueId]?.remove(type)
+        val furnace = plugin.playerManager.weaponManager.checkActiveWeapon(player, player.inventory.itemInOffHand, 40)!!
+        val receipt = ReturnReceipt(data, furnace.suguiManaMultiplier)
+        castingReceipts[player.uniqueId] = receipt
         val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player)
         val success = try {
             skill.cast(player, level, config!!.getConfigurationSection("skills.$type"))
         } catch (throwable: Throwable) {
             plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, false)
             throw throwable
+        } finally {
+            castingReceipts.remove(player.uniqueId)
         }
 
         if (!success) {
@@ -165,6 +309,9 @@ class ElementZfManager(private val plugin: Hjh_database) {
             plugin.elementCrystalManager.triggerWaterSkill(player, "formation", type, finalCd)
             plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, true)
             plugin.accessorySkillManager.onElementFormationCast(player, data)
+            if (receipt.element != null && receipt.baseMana > 0.0 && isOnCooldown(player, type)) {
+                returnReceipts.getOrPut(player.uniqueId) { mutableMapOf() }[type] = receipt
+            }
 
             // 5. 发送提示消息
             val msg = config!!.getString("skills.$type.message")
@@ -248,11 +395,14 @@ class ElementZfManager(private val plugin: Hjh_database) {
     }
 
     fun setCooldown(player: Player, type: String, seconds: Double) {
+        // 新施法或湿气惩罚开始后，旧施法的资格不能借用新的冷却复活。
+        returnReceipts[player.uniqueId]?.remove(type)
         val endTime = System.currentTimeMillis() + (seconds * 1000).toLong()
         internalCooldowns.computeIfAbsent(player.uniqueId) { ConcurrentHashMap() }[type] = endTime
     }
 
     fun resetCooldown(player: Player, type: String) {
+        returnReceipts[player.uniqueId]?.remove(type.uppercase())
         if (internalCooldowns.containsKey(player.uniqueId)) {
             internalCooldowns[player.uniqueId]!!.remove(type)
         }
@@ -274,6 +424,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
 
         val newEnd = currentEnd - (seconds * 1000.0).toLong()
         if (newEnd <= now) {
+            returnReceipts[player.uniqueId]?.remove(keyToUse)
             playerCds.remove(keyToUse)
             setVisualCooldown(player, keyToUse, 0.0)
         } else {
@@ -298,6 +449,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
         }
 
         // 2. 先建立风场计划，资源消耗维持原始阵法规则。
+        returnReceipts[player.uniqueId]?.remove(type)
         val accessoryPlan = plugin.accessorySkillManager.prepareElementFormationCast(player)
         val manaCost = 25.0
         if (data.lingli < manaCost) {
@@ -373,6 +525,8 @@ class ElementZfManager(private val plugin: Hjh_database) {
     }
 
     fun shutdown() {
+        castingReceipts.clear()
+        returnReceipts.clear()
         tierEffects.shutdown()
     }
 

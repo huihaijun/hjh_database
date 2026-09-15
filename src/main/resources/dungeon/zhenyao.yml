@@ -1,0 +1,5 @@
+# 入口按钮只在此世界响应；场地和出口使用同一世界。
+entry-world: world
+
+# 测试阶段只有 test，后续在入场检查与正式传送之间接入难度选择。
+difficulty: test

@@ -39,7 +39,9 @@ data class MobDefinition(
     val offHand: Material? = null,
     // 由 MobFactory 统一应用，副本怪物不应在生成后另走一套标签/体型初始化逻辑。
     val scoreboardTags: Set<String> = emptySet(),
-    val slimeSize: Int? = null
+    val slimeSize: Int? = null,
+    val headTexture: String? = null,
+    val knockbackResistance: Double? = null
 )
 
 object MobRegistry {

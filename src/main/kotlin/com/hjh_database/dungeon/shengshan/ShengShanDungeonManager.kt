@@ -1,6 +1,7 @@
 package com.hjh_database.dungeon.shengshan
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.dungeon.DungeonPartyProvider
 import com.hjh_database.combat.MonsterDamageClassification
 import com.hjh_database.dungeon.DungeonRecord
 import com.hjh_database.listener.CombatDamageCalculationEvent
@@ -72,7 +73,7 @@ import java.util.LinkedHashSet
 import java.util.UUID
 import kotlin.math.max
 
-class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
+class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener, DungeonPartyProvider {
     companion object {
         const val PLAYER_TAG = "shengshan_dungeon_player"
         const val ENTITY_TAG = "shengshan_dungeon_entity"
@@ -1467,6 +1468,12 @@ class ShengShanDungeonManager(internal val plugin: Hjh_database) : Listener {
     }
 
     // ------------------------- Boss 控制层公用能力 -------------------------
+
+    override val dungeonId: String get() = "shengshan"
+
+    override fun activePartyMembers(): List<Set<UUID>> = session?.let { current ->
+        listOf(activePlayers(current).mapTo(linkedSetOf()) { it.uniqueId })
+    }.orEmpty()
 
     internal fun activePlayers(s: ShengShanSession): List<Player> = s.playerIds.mapNotNull(Bukkit::getPlayer)
         .filter { it.isOnline && !it.isDead && it.scoreboardTags.contains(PLAYER_TAG) &&

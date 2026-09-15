@@ -1,0 +1,3 @@
+# 测试阶段只开放 test；正式难度选择入口预留在全队验证之后。
+world: world
+difficulty: test

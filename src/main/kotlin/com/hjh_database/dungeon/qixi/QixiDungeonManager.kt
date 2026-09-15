@@ -1,6 +1,7 @@
 package com.hjh_database.dungeon.qixi
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.dungeon.DungeonPartyProvider
 import com.hjh_database.dungeon.DungeonRecord
 import com.hjh_database.quest.core.QuestStatus
 import com.hjh_database.quest.impl.side.Side_Qixi_StarWish
@@ -78,7 +79,7 @@ internal enum class QixiDifficulty(val displayName: String, val color: String, v
 }
 
 /** 鹊桥星愿副本（当前完成鹊桥唤醒、护送和七夕广场测试落点）。 */
-class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
+class QixiDungeonManager(private val plugin: Hjh_database) : Listener, DungeonPartyProvider {
     private val pendingCompletionTitleAwards = ConcurrentHashMap.newKeySet<UUID>()
 
     init {
@@ -2368,6 +2369,12 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener {
             bar.progress = 1.0.coerceAtMost(if (title.contains("0%")) 0.0 else 1.0)
         }
     }
+
+    override val dungeonId: String get() = "qixi"
+
+    override fun activePartyMembers(): List<Set<UUID>> = session?.let { current ->
+        listOf(activePlayers(current).mapTo(linkedSetOf()) { it.uniqueId })
+    }.orEmpty()
 
     private fun activePlayers(s: Session): List<Player> = s.playerIds.mapNotNull(Bukkit::getPlayer)
         .filter { it.isOnline && it.scoreboardTags.contains(PLAYER_TAG) }

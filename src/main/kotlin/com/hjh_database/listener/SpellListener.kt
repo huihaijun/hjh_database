@@ -7,10 +7,21 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.event.player.PlayerChangedWorldEvent
+import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
 class SpellListener(private val plugin: Hjh_database) : Listener {
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) = plugin.elementZfManager.clearSugui(event.player)
+
+    @EventHandler
+    fun onDeath(event: PlayerDeathEvent) = plugin.elementZfManager.clearSugui(event.entity)
+
+    @EventHandler
+    fun onWorldChange(event: PlayerChangedWorldEvent) = plugin.elementZfManager.clearSugui(event.player)
 
     @EventHandler
     fun onCastSpell(event: PlayerInteractEvent) {
@@ -39,6 +50,7 @@ class SpellListener(private val plugin: Hjh_database) : Listener {
         event.isCancelled = true
 
         val data = plugin.playerManager.getData(player.uniqueId)!!
+        if (plugin.elementZfManager.trySugui(player, elementType.name, data)) return
         val activeOffHandWeapon = plugin.playerManager.weaponManager.getWeaponData(activeOffHandWeaponId)
         val useEnhanced = player.isSneaking && (activeOffHandWeapon?.rarity ?: 0) >= 6
 

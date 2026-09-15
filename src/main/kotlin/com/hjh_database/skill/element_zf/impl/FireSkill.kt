@@ -31,14 +31,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
         // 4. 增加灵力
-        if (lingliAdd > 0) {
-            val currentLingli = data.lingli
-            val maxLingli = data.maxLingli
-            if (currentLingli < maxLingli) {
-                data.lingli = min(maxLingli, currentLingli + lingliAdd)
-                plugin.databaseManager.queuePlayerSave(data)
-            }
-        }
+        plugin.elementZfManager.restoreFormationMana(player, lingliAdd)
 
         // 5. 索敌
         val target = getTarget(player, range, searchRadius)

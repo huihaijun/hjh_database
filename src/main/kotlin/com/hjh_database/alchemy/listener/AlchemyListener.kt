@@ -15,6 +15,7 @@ import com.hjh_database.listener.CombatDamageCalculationEvent
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.UseCooldown
 import net.kyori.adventure.key.Key
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -31,11 +32,14 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.entity.EntityPotionEffectEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffectType
 import java.io.File
+import java.util.UUID
 
 class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
@@ -46,6 +50,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     private val presetColors = listOf("#FF5555", "#AA0000", "#5555FF", "#0000AA", "#00AA00", "#55FF55", "#FFAA00", "#FFFF55", "#FF55FF", "#000000")
     private val cauldronDataFile = File(plugin.dataFolder, "alchemy_cauldrons.yml")
     private val registeredCauldrons = mutableSetOf<String>()
+    private val lastPillInteractionTick = mutableMapOf<UUID, Int>()
 
     init {
         loadRegisteredCauldrons()
@@ -72,7 +77,8 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onPlayerConsume(event: PlayerInteractEvent) {
-        if (event.hand == EquipmentSlot.OFF_HAND) return
+        val hand = event.hand ?: return
+        if (hand != EquipmentSlot.HAND && hand != EquipmentSlot.OFF_HAND) return
         if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
         val item = event.item ?: return
         if (!item.hasItemMeta()) return
@@ -87,7 +93,12 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         if (effectId == null) return
 
         val effect = plugin.alchemyManager.getEffect(effectId) ?: return
+        // 识别后立即阻止原版饮用/投掷，包括药毒中和玩家数据尚未加载时。
+        event.isCancelled = true
         val player = event.player
+        val tick = Bukkit.getCurrentTick()
+        // 一次右键可能派发主副手事件；主手最后一颗被扣完后也不能连带吃掉副手。
+        if (lastPillInteractionTick.put(player.uniqueId, tick) == tick) return
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
         val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
         val sicknessChannel = PillSicknessChannel.fromEffectId(consumeResourceId ?: effectId)
@@ -106,7 +117,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             val thrownItem = item.clone().apply { amount = 1 }
             applyPillCooldownComponent(thrownItem, sicknessChannel)
             item.subtract(1)
-            player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
+            player.inventory.setItem(hand, if (item.amount > 0) item else null)
 
             val potion = player.launchProjectile(ThrownPotion::class.java)
             potion.item = thrownItem
@@ -142,7 +153,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
 
         // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
         item.subtract(1)
-        player.inventory.setItemInMainHand(if (item.amount > 0) item else null)
+        player.inventory.setItem(hand, if (item.amount > 0) item else null)
         setPillSicknessCooldown(player, cooldownItem, cooldownTicks)
 
         player.playSound(player.location, org.bukkit.Sound.ENTITY_GENERIC_DRINK, 1f, 1f)
@@ -157,6 +168,20 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             syncOtherPillCooldowns(player, playerData)
         }
         setSicknessEnd(playerData, sicknessChannel, System.currentTimeMillis() + sicknessMillis)
+    }
+
+    // 已开始的原版饮用（例如插件重载前开始）也不能消耗丹药或留下玻璃瓶。
+    @EventHandler(priority = EventPriority.HIGHEST)
+    fun preventVanillaPillConsume(event: PlayerItemConsumeEvent) {
+        val pdc = event.item.itemMeta?.persistentDataContainer ?: return
+        val effectId = pdc.get(alchemyIdKey, PersistentDataType.STRING)
+            ?: pdc.get(resourceIdKey, PersistentDataType.STRING) ?: return
+        if (plugin.alchemyManager.getEffect(effectId) != null) event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onPillPlayerQuit(event: PlayerQuitEvent) {
+        lastPillInteractionTick.remove(event.player.uniqueId)
     }
 
     @EventHandler(ignoreCancelled = true)

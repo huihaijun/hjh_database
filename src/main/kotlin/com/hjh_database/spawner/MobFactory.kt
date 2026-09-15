@@ -86,6 +86,7 @@ object MobFactory {
         }
 //        entity.getAttribute(Attribute.ATTACK_DAMAGE)?.baseValue = def.damage
         entity.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = def.speed
+        def.knockbackResistance?.let { entity.getAttribute(Attribute.KNOCKBACK_RESISTANCE)?.baseValue = it }
 
         // 2. 护甲系统适配
         entity.getAttribute(Attribute.ARMOR)?.baseValue = 0.0
@@ -199,6 +200,18 @@ object MobFactory {
             setCosmetic(EquipmentSlot.FEET, def.boots)
             setCosmetic(EquipmentSlot.HAND, def.mainHand)
             setCosmetic(EquipmentSlot.OFF_HAND, def.offHand)
+            def.headTexture?.let { texture ->
+                val head = ItemStack(Material.PLAYER_HEAD)
+                val meta = head.itemMeta as org.bukkit.inventory.meta.SkullMeta
+                val profile = org.bukkit.Bukkit.createProfile(java.util.UUID.nameUUIDFromBytes(texture.toByteArray()))
+                profile.setProperty(com.destroystokyo.paper.profile.ProfileProperty("textures", texture))
+                meta.playerProfile = profile
+                meta.isUnbreakable = true
+                meta.attributeModifiers = com.google.common.collect.ArrayListMultimap.create()
+                head.itemMeta = meta
+                equipment.helmet = head
+                equipment.helmetDropChance = 0f
+            }
         }
 
         return entity

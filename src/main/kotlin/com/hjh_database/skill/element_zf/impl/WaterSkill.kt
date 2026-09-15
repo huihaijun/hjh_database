@@ -37,14 +37,7 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         // 2. 获取数据并增加灵力
         val data = plugin.playerManager.getData(player.uniqueId)!!
 
-        if (lingliAdd > 0) {
-            val currentLingli = data.lingli
-            val maxLingli = data.maxLingli
-            if (currentLingli < maxLingli) {
-                data.lingli = min(maxLingli, currentLingli + lingliAdd)
-                plugin.databaseManager.queuePlayerSave(data)
-            }
-        }
+        plugin.elementZfManager.restoreFormationMana(player, lingliAdd)
 
         // 3. 寻找目标
         val targets = findTargets(player, range)

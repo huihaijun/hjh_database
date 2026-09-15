@@ -71,6 +71,8 @@ abstract class AbstractElementSkill(protected val plugin: Hjh_database) : Elemen
 
         // 3. 执行物品扣除 (如果既不是法宝，又没触发回流)
         if (willConsumeItem) {
+            if (handItem.type.isAir || handItem.amount <= 0) return false
+            plugin.elementZfManager.recordConsumedElement(player, handItem)
             handItem.amount = handItem.amount - 1
         }
 

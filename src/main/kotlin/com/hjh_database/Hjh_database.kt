@@ -17,6 +17,8 @@ import com.hjh_database.baihu_dz.skill.impl.HuzhizhanqiSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.chonghua.ChonghuaManager
 import com.hjh_database.client.ClientBridge
+import com.hjh_database.dungeon.DungeonPartyProvider
+import com.hjh_database.dungeon.DungeonPartyRegistry
 import com.hjh_database.command.AdminCommand
 import com.hjh_database.command.ResourceReloadCommand
 import com.hjh_database.command.StatsCommand
@@ -31,6 +33,8 @@ import com.hjh_database.dungeon.chest.GoldenChestManager
 import com.hjh_database.dungeon.chest.VaultChestListener
 import com.hjh_database.dungeon.qixi.QixiDungeonManager
 import com.hjh_database.dungeon.shengshan.ShengShanDungeonManager
+import com.hjh_database.dungeon.zhenyao.ZhenyaoTowerManager
+import com.hjh_database.dungeon.huomo.HuomoDungeonManager
 import com.hjh_database.event.qixi.QixiBridgeBuildManager
 import com.hjh_database.dungeon.baihu.trial.BaihuTrialManager
 import com.hjh_database.dungeon.qinglong.QingLongManager
@@ -133,6 +137,8 @@ class Hjh_database : JavaPlugin() {
     lateinit var goldenChestManager: GoldenChestManager //金宝箱管理器
     lateinit var qixiDungeonManager: QixiDungeonManager
     lateinit var shengShanDungeonManager: ShengShanDungeonManager
+    lateinit var zhenyaoTowerManager: ZhenyaoTowerManager
+    lateinit var huomoDungeonManager: HuomoDungeonManager
     lateinit var qixiBridgeBuildManager: QixiBridgeBuildManager
     lateinit var warehouseManager: com.hjh_database.warehouse.manager.WarehouseManager // 【新增】个人仓库管理器
     lateinit var adminWarehouseGui: com.hjh_database.warehouse.admin.AdminWarehouseGui
@@ -154,6 +160,16 @@ class Hjh_database : JavaPlugin() {
     lateinit var equipmentActivationManager: EquipmentActivationManager
     lateinit var passiveSubtitleManager: PassiveSubtitleManager
     lateinit var clientBridge: ClientBridge
+    val dungeonParties = DungeonPartyRegistry { id, error ->
+        logger.log(java.util.logging.Level.WARNING, "副本 $id 的队伍 HUD 名单采集失败", error)
+    }
+
+    /** 新副本统一从这里注册事件与队伍 HUD，无需修改 ClientBridge。 */
+    fun <T> registerDungeon(manager: T) where T : org.bukkit.event.Listener, T : DungeonPartyProvider {
+        if (dungeonParties.register(manager)) {
+            server.pluginManager.registerEvents(manager, this)
+        }
+    }
     fun isBaihuDzManagerInitialized(): Boolean {
         return this::baihuDzManager.isInitialized
     }
@@ -236,6 +252,8 @@ class Hjh_database : JavaPlugin() {
         this.goldenChestManager = GoldenChestManager(this)
         this.qixiDungeonManager = QixiDungeonManager(this)
         this.shengShanDungeonManager = ShengShanDungeonManager(this)
+        this.zhenyaoTowerManager = ZhenyaoTowerManager(this)
+        this.huomoDungeonManager = HuomoDungeonManager(this)
         this.qixiBridgeBuildManager = QixiBridgeBuildManager(this)
         // 【新增】初始化个人仓库管理器
         this.warehouseManager = com.hjh_database.warehouse.manager.WarehouseManager(this)
@@ -328,8 +346,10 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(this.xuanwuTrialManager, this)
         // 金宝箱监听
         server.pluginManager.registerEvents(VaultChestListener(this), this)
-        pm.registerEvents(this.qixiDungeonManager, this)
-        pm.registerEvents(this.shengShanDungeonManager, this)
+        registerDungeon(this.qixiDungeonManager)
+        registerDungeon(this.shengShanDungeonManager)
+        registerDungeon(this.zhenyaoTowerManager)
+        registerDungeon(this.huomoDungeonManager)
         pm.registerEvents(this.qixiBridgeBuildManager, this)
         // 【新增】个人仓库系统监听
         pm.registerEvents(com.hjh_database.warehouse.listener.WarehouseBlockListener(this), this)
@@ -378,6 +398,8 @@ class Hjh_database : JavaPlugin() {
             for (player in server.onlinePlayers) {
                 playerManager.loadAndCache(player) { data ->
                     qixiDungeonManager.backfillCompletionTitle(player, data.dungeonRecords)
+                    zhenyaoTowerManager.onPlayerDataLoaded(player, data)
+                    huomoDungeonManager.onPlayerDataLoaded(player, data)
                 }
                 // 【新增】同时加载玩家的仓库数据！
                 warehouseManager.loadAndCache(player)
@@ -420,6 +442,17 @@ class Hjh_database : JavaPlugin() {
     }
 
     override fun onDisable() {
+        dungeonParties.clear()
+        if (::huomoDungeonManager.isInitialized) {
+            try { huomoDungeonManager.shutdown() }
+            catch (error: Exception) { logger.log(java.util.logging.Level.SEVERE, "火魔停服清理异常，保留恢复日志", error) }
+        }
+        // 崩塔楼板和飞行状态先恢复；此时客户端通信、死亡流程及数据库仍可用。
+        if (::zhenyaoTowerManager.isInitialized) {
+            try { zhenyaoTowerManager.shutdown() }
+            catch (error: Exception) { logger.log(java.util.logging.Level.SEVERE, "镇妖塔停服清理异常，保留恢复日志供下次启动重试", error) }
+        }
+
         // 必须在监听器失效前关闭只读快照菜单，杜绝重载期间取走克隆物品。
         // 归尘匣中的真实物品会在关闭前安全退回玩家背包。
         TianjiUtilityMenus.closeOpenMenusForDisable()
