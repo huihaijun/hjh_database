@@ -46,7 +46,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         var playerName: String,
         var value: Int = 0,
         var lastIncreaseMs: Long = 0L,
-        var lastFullDamageMs: Long = 0L,
+        var lastFullDamageTick: Int = 0,
         var lastInCave: Boolean = false,
         var dirty: Boolean = false
     )
@@ -87,11 +87,19 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     }
 
     private var tickTask: BukkitTask? = null
+    private var fullDamageTask: BukkitTask? = null
     private var saveTask: BukkitTask? = null
 
     fun start() {
         createTable()
         tickTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable { tick() }, 40L, 40L)
+        fullDamageTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
+            for (player in Bukkit.getOnlinePlayers()) {
+                if (!isAdminBypassMode(player) && getMiasma(player) >= FULL_THRESHOLD) {
+                    damageAtFullMiasma(player)
+                }
+            }
+        }, 20L, 20L)
         saveTask = plugin.server.scheduler.runTaskTimer(plugin, Runnable { saveDirtyAsync() }, 1200L, 1200L)
 
         for (player in Bukkit.getOnlinePlayers()) {
@@ -101,6 +109,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
     fun shutdown() {
         tickTask?.cancel()
+        fullDamageTask?.cancel()
         saveTask?.cancel()
         ioExecutor.shutdown()
         try {
@@ -217,10 +226,6 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
 
             updateBossBar(player, status.value)
             applyMiasmaBonuses(player, status.value)
-
-            if (status.value >= 1000) {
-                damageAtFullMiasma(player)
-            }
         }
     }
 
@@ -267,7 +272,7 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         }
         if (oldValue < FULL_THRESHOLD && newValue >= FULL_THRESHOLD) {
             dealMagicDamage(player, 30.0)
-            status?.lastFullDamageMs = System.currentTimeMillis()
+            status?.lastFullDamageTick = Bukkit.getCurrentTick()
             player.sendMessage(color("&4虎瘴彻底压入心脉，痛楚开始持续蔓延……"))
         }
     }
@@ -277,9 +282,9 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         val penaltyTimes = thresholdPenaltyTimes.computeIfAbsent(player.uniqueId) { LongArray(THRESHOLD_PENALTY_COUNT) }
         if (now - penaltyTimes[index] < THRESHOLD_PENALTY_COOLDOWN_MS) return
 
-        // 20%/40%/80% 三个阶段分别计时，避免绝瘴丹造成阈值反复横跳并重复扣血。
+        // 25%/50%/75% 三个阶段分别计时，避免绝瘴丹造成阈值反复横跳并重复扣血。
         penaltyTimes[index] = now
-        // 战神族只免疫20%/40%/80%三个阶段的直接伤害，阶段异常与满值伤害照常生效。
+        // 战神族只免疫25%/50%/75%三个阶段的直接伤害，阶段异常与满值伤害照常生效。
         if (!plugin.raceModule.getZhanRace().isRaceActive(player)) {
             dealMagicDamage(player, damage)
         }
@@ -391,11 +396,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
     private fun damageAtFullMiasma(player: Player) {
         if (player.isDead || player.health <= 0.0) return
         val status = statuses[player.uniqueId] ?: return
-        val now = System.currentTimeMillis()
-        if (now - status.lastFullDamageMs < FULL_DAMAGE_INTERVAL_MS) return
-        status.lastFullDamageMs = now
+        val currentTick = Bukkit.getCurrentTick()
+        if (currentTick - status.lastFullDamageTick < FULL_DAMAGE_INTERVAL_TICKS) return
+        status.lastFullDamageTick = currentTick
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-        dealMagicDamage(player, maxHealth * 0.05)
+        dealMagicDamage(player, maxHealth * 0.10)
     }
 
     private fun dealMagicDamage(player: Player, damage: Double) {
@@ -548,11 +553,11 @@ class BaihuMiasmaManager(private val plugin: Hjh_database) : Listener {
         private const val INCREASE_PER_STEP = 40
         private const val ENTRY_MIASMA = 60
         private const val OUTSIDE_DECAY_PER_TICK = 50
-        private const val SPEED_THRESHOLD = 200
-        private const val ARMOR_THRESHOLD = 400
-        private const val HEALTH_THRESHOLD = 800
+        private const val SPEED_THRESHOLD = 250
+        private const val ARMOR_THRESHOLD = 500
+        private const val HEALTH_THRESHOLD = 750
         private const val FULL_THRESHOLD = 1000
-        private const val FULL_DAMAGE_INTERVAL_MS = 2_000L
+        private const val FULL_DAMAGE_INTERVAL_TICKS = 20
         private const val THRESHOLD_PENALTY_COOLDOWN_MS = 6 * 60 * 1000L
         private const val SPEED_PENALTY_INDEX = 0
         private const val ARMOR_PENALTY_INDEX = 1

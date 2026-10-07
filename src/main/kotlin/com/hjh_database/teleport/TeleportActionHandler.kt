@@ -16,6 +16,8 @@ import org.bukkit.potion.PotionEffectType
 class TeleportActionHandler(private val plugin: Hjh_database) {
     fun checkConditions(player: Player, data: PlayerData, actionStr: String): Boolean {
         when (actionStr) {
+            "ENTER_RABBIT_WONDERLAND" -> return plugin.bountyManager.canEnterRabbitWonderland(player)
+            "ENTER_XIN_MANSION" -> return plugin.bountyManager.canEnterXinMansion(player)
             "JOB_TRIAL_WARRIOR" -> {
                 // 1. 职业检查：如果是 0, 1, 2, 3 中的任意一个，则禁止
                 if (data.job != null && data.job in 0..3) {
@@ -155,6 +157,14 @@ class TeleportActionHandler(private val plugin: Hjh_database) {
      */
     fun handle(player: Player, data: PlayerData, actionStr: String): Boolean {
         when (actionStr) {
+            "ENTER_RABBIT_WONDERLAND" -> {
+                plugin.bountyManager.onRabbitWonderlandEntered(player)
+                return false
+            }
+            "ENTER_XIN_MANSION" -> {
+                plugin.bountyManager.onXinMansionEntered(player)
+                return false
+            }
             // === 新增：选择种族-前往新手前置 ===
             "CHOOSE_HUMAN_START", "CHOOSE_YAO_START", "CHOOSE_GOD_START", "CHOOSE_IMMORTAL_START", "CHOOSE_WAR_GOD_START" -> {
                 // 1. 处理队伍 (关闭友伤)

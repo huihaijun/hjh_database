@@ -35,7 +35,9 @@ class Shen_05 : QuestBase("main_shen_5", "[神族主线]丹塔问药", QuestType
         "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f不会用？无妨，听一遍。",
         "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f丹药分§e初级§f、§e中级§f、§e高级§f三品。冶药法等级越高，能炼的品级越高。不过高级丹药唯有§d医师§f方可炼制——那不仅是手艺，还需一颗济世之心。",
         "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f操作不难：走到炼药锅前，伸手即触，界面自开。选好丹药与品级，药锅便与你共鸣，锅面会浮现所需材料的影子。照着影子将材料逐一投入，材料齐备，丹药自会凝成，落入你行囊中。记住——共鸣期间勿离锅太远，否则会中断。不过断了也无妨，材料不损，回来重新开炉便是。",
-        "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f还有一桩要事。丹药炼成即可服用，见效极快——这是好处。但§c是药三分毒§f，服下丹药后体内会生出一种§c药丹疾病§f。此症不痛不痒，却会在一定时间内排斥其他丹药的药力。药丹疾病尚在，别的丹药便灌不进去。越是猛烈的丹药，持续越久。日后对敌时，吃药须掐准时机，切勿连灌。",
+        "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f还有一桩要事。丹药虽能迅速奏效，服下后却会生出§c药丹疾病§f。此症不痛不痒，只会暂时排斥同类药力。丹药分§e归元§f、§e助势§f、§e飞丹§f三类，须辨清各类。",
+        "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f同类丹药，不因名称或品级而异，都须待本类的药丹疾病消退后再用。愈合丹与回灵丹同属§e归元§f，服下一种之后，归元之疾尚在，另一种也不可续服。",
+        "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f不同类别的药丹疾病互不牵连。归元之疾尚在，仍可使用助势或飞丹，但那一类自身若也有药丹疾病，便须待其消退。此症消退快慢因丹药而异，临敌之前分清药类，方能用药有度。",
         "§e[${StoryNpcs.SHEN_DANTAFUZEREN.displayName}§e] §f今日便从简单的练起——去炼§e二十枚§f初窥丹药。够治那棵树了，还能余下不少留给你自己。去吧。"
     )
 

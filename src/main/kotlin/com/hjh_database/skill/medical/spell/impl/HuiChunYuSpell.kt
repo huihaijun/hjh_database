@@ -27,10 +27,11 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         val zfStr = data.zfStr
 
         // 读取配置参数
-        val radius = config?.getDouble("radius", 8.0) ?: 8.0
-        val healMultiplier = config?.getDouble("heal_multiplier", 2.8) ?: 2.8
+        val radius = config?.getDouble("radius", 4.0) ?: 4.0
+        val healMultiplier = config?.getDouble("heal_multiplier", 1.2) ?: 1.2
+        val missingHealthRatio = config?.getDouble("missing_health_ratio", 0.32) ?: 0.32
         val shieldDuration = config?.getInt("shield_duration", 30) ?: 30
-        val shieldMultiplier = config?.getDouble("shield_multiplier", 0.5) ?: 0.5 // 50%的自身生命值
+        val shieldMultiplier = config?.getDouble("shield_multiplier", 1.2) ?: 1.2
 
         val healAmount = zfStr * healMultiplier
         val center = player.location
@@ -65,7 +66,9 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             }
 
             // 执行群体治疗
-            plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "huichunyu")
+            val maxHealth = target.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+            val targetHeal = healAmount + (maxHealth - target.health).coerceAtLeast(0.0) * missingHealthRatio
+            plugin.medicalSpellManager.applyMedicalHeal(player, target, targetHeal, "huichunyu")
 
             // 为每个被治疗的目标播放绿色的星芒粒子
             target.world.spawnParticle(
@@ -81,16 +84,14 @@ class HuiChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         lowestHpAlly?.let(shieldTargets::add)
         for (target in shieldTargets) {
             if (!target.isDead && target.isOnline) {
-                applyShield(target, shieldMultiplier, shieldDuration)
+                applyShield(target, zfStr * shieldMultiplier, shieldDuration)
             }
         }
 
         return true
     }
 
-    private fun applyShield(target: Player, multiplier: Double, durationSeconds: Int) {
-        val targetMaxHealth = target.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
-        val shieldAmount = targetMaxHealth * multiplier
+    private fun applyShield(target: Player, shieldAmount: Double, durationSeconds: Int) {
         if (shieldAmount <= 0.0 || durationSeconds <= 0) return
 
         val amplifier = (ceil(shieldAmount / 4.0).toInt() - 1).coerceAtLeast(0)

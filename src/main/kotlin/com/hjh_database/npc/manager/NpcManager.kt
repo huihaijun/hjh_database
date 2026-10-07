@@ -5,6 +5,8 @@ import com.hjh_database.Hjh_database
 import com.hjh_database.npc.data.CustomTrade
 import com.hjh_database.npc.data.NpcInstance
 import com.hjh_database.npc.data.NpcTemplate
+import com.hjh_database.npc.data.NpcIds
+import com.hjh_database.quest.core.StoryNpcs
 import org.bukkit.Bukkit
 import org.bukkit.Chunk
 import org.bukkit.Location
@@ -33,6 +35,8 @@ class NpcManager(private val plugin: Hjh_database) {
     private val npcFolder = File(plugin.dataFolder, "npc")
     private val npcsFile = File(npcFolder, "npcs.yml")
     private val libraryFile = File(npcFolder, "templates.yml")
+    private val aliasesFile = File(npcFolder, "id-aliases.yml")
+    private val idAliases = LinkedHashMap<String, String>()
 
     // 旧版数据源，仅用于首次迁移。迁移成功后保留原文件作为备份。
     private val legacyTemplatesFolder = File(npcFolder, "templates")
@@ -50,6 +54,11 @@ class NpcManager(private val plugin: Hjh_database) {
         templates.clear()
         instances.clear()
         libraryTemplateIds.clear()
+        idAliases.clear()
+        if (aliasesFile.exists()) {
+            val aliases = YamlConfiguration.loadConfiguration(aliasesFile).getConfigurationSection("aliases")
+            aliases?.getKeys(false)?.forEach { old -> aliases.getString(old)?.let { idAliases[old] = it } }
+        }
 
         val migrated = if (npcsFile.exists()) {
             loadNpcFile(npcsFile)
@@ -69,14 +78,36 @@ class NpcManager(private val plugin: Hjh_database) {
             }
         }
 
+        // 独立映射文件也能兼容更新插件前旧进程再次保存的 NPC 配置。
+        val renamed = templates.keys.any { resolveId(it) != it } || instances.values.any { resolveId(it.templateId) != it.templateId }
+        val canonicalTemplates = templates.values.associateBy({ resolveId(it.id) }, { it.copy(id = resolveId(it.id)) })
+        templates.clear()
+        templates.putAll(canonicalTemplates)
+        instances.replaceAll { _, instance -> instance.copy(templateId = resolveId(instance.templateId)) }
+        val canonicalLibrary = libraryTemplateIds.map(::resolveId)
+        libraryTemplateIds.clear()
+        libraryTemplateIds.addAll(canonicalLibrary)
+
+        // 保留御书房内正确高度的管理员，清除重复配置和实体。
+        if (templates.containsKey("yushufangguanliyuan") && templates.containsKey("yushufangguanliyuan1")) {
+            removeInstancesByTemplate("yushufangguanliyuan")
+            templates.remove("yushufangguanliyuan")
+            libraryTemplateIds.remove("yushufangguanliyuan")
+            idAliases.entries.removeIf { it.key == "yushufangguanliyuan" || it.value == "yushufangguanliyuan" }
+            val aliasesConfig = YamlConfiguration()
+            idAliases.forEach { (old, target) -> aliasesConfig.set("aliases.$old", target) }
+            saveAtomically(aliasesConfig, aliasesFile)
+            saveData()
+        }
+
         plugin.logger.info(
             "已加载 ${templates.size} 个 NPC 配置、${instances.size} 个 NPC 实例、" +
                 "${libraryTemplateIds.size} 个石锄模板。"
         )
 
-        if (migrated && (templates.isNotEmpty() || instances.isNotEmpty())) {
+        if ((migrated || renamed) && (templates.isNotEmpty() || instances.isNotEmpty())) {
             saveData()
-            plugin.logger.info("旧版 NPC 数据已迁移到 npcs.yml；石锄模板库已初始化为空。")
+            plugin.logger.info(if (migrated) "旧版 NPC 数据已迁移到 npcs.yml；石锄模板库已初始化为空。" else "NPC ID 与实例、模板库关联已同步更新。")
         }
     }
 
@@ -225,33 +256,90 @@ class NpcManager(private val plugin: Hjh_database) {
         }
     }
 
-    fun getTemplate(id: String): NpcTemplate? = templates[id]
+    fun resolveId(id: String): String = idAliases[id] ?: id
+
+    fun sameNpc(first: String, second: String): Boolean = resolveId(first) == resolveId(second)
+
+    /** 旧任务和已保存的神识/赏金快照仍可使用改名前的 ID。 */
+    fun compatibleIds(id: String): List<String> {
+        val current = resolveId(id)
+        return listOf(current) + idAliases.filterValues { it == current }.keys
+    }
+
+    fun getTemplate(id: String): NpcTemplate? = templates[resolveId(id)]
+
+    fun isStoryNpc(id: String): Boolean = StoryNpcs.entries.any { it.id == resolveId(id) }
+
+    fun isIdAvailable(id: String, currentId: String? = null): Boolean {
+        val current = currentId?.let(::resolveId)
+        return (id !in templates || id == current) &&
+            (id !in idAliases || resolveId(id) == current) &&
+            (StoryNpcs.entries.none { it.id == id } || id == current)
+    }
+
+    fun defaultId(name: String, currentId: String? = null): String {
+        if (currentId != null && isStoryNpc(currentId)) return resolveId(currentId)
+        return NpcIds.unique(NpcIds.fromName(name)) { isIdAvailable(it, currentId) }
+    }
+
+    fun renameTemplate(id: String, newId: String): Boolean {
+        val current = resolveId(id)
+        val template = templates[current] ?: return false
+        if (current == newId) return true
+        if (isStoryNpc(current) || !NpcIds.isValid(newId) || !isIdAvailable(newId, current)) return false
+        val aliases = LinkedHashMap(idAliases)
+        aliases.replaceAll { _, target -> if (target == current) newId else target }
+        aliases.remove(newId)
+        aliases[current] = newId
+        // 先保存兼容映射；写盘失败时不改变正在使用的数据。
+        val config = YamlConfiguration()
+        aliases.forEach { (old, target) -> config.set("aliases.$old", target) }
+        try {
+            saveAtomically(config, aliasesFile)
+        } catch (exception: Exception) {
+            plugin.logger.severe("保存 NPC ID 失败: ${exception.message}")
+            return false
+        }
+        idAliases.clear()
+        idAliases.putAll(aliases)
+        templates.remove(current)
+        templates[newId] = template.copy(id = newId)
+        instances.replaceAll { _, instance ->
+            if (instance.templateId == current) instance.copy(templateId = newId) else instance
+        }
+        if (libraryTemplateIds.remove(current)) libraryTemplateIds.add(newId)
+        refreshTemplateEntities(newId)
+        saveData()
+        return true
+    }
 
     fun getLibraryTemplates(): List<NpcTemplate> = libraryTemplateIds
         .mapNotNull(templates::get)
         .sortedWith(compareBy<NpcTemplate> { stripColors(it.name) }.thenBy { it.id })
 
     fun saveTemplateToLibrary(id: String): Boolean {
-        if (!templates.containsKey(id)) return false
-        libraryTemplateIds.add(id)
+        val current = resolveId(id)
+        if (!templates.containsKey(current)) return false
+        libraryTemplateIds.add(current)
         saveData()
         return true
     }
 
     fun removeTemplateFromLibrary(id: String): Boolean {
-        if (!libraryTemplateIds.remove(id)) return false
-        if (instances.values.none { it.templateId == id } && isGeneratedTemplate(id)) {
-            templates.remove(id)
+        val current = resolveId(id)
+        if (!libraryTemplateIds.remove(current)) return false
+        if (instances.values.none { it.templateId == current } && isGeneratedTemplate(current)) {
+            templates.remove(current)
         }
         saveData()
         return true
     }
 
-    fun isLibraryTemplate(id: String): Boolean = id in libraryTemplateIds
+    fun isLibraryTemplate(id: String): Boolean = resolveId(id) in libraryTemplateIds
 
     /** 把普通村民或数据缺失的旧 NPC 收编为可编辑 NPC。 */
     fun adoptVillager(villager: Villager): String {
-        val storedId = villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING)
+        val storedId = villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING)?.let(::resolveId)
         if (storedId != null && templates.containsKey(storedId)) {
             if (!instances.containsKey(villager.uniqueId)) {
                 instances[villager.uniqueId] = NpcInstance(villager.uniqueId, storedId, villager.location)
@@ -261,7 +349,7 @@ class NpcManager(private val plugin: Hjh_database) {
             return storedId
         }
 
-        val id = "converted_${UUID.randomUUID().toString().take(8)}"
+        val id = defaultId(villager.customName ?: "新收编村民")
         val template = NpcTemplate(
             id = id,
             name = villager.customName ?: "§e新收编村民",
@@ -297,6 +385,10 @@ class NpcManager(private val plugin: Hjh_database) {
     }
 
     fun applyNpcAttributes(villager: Villager) {
+        villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING)?.let { old ->
+            val current = resolveId(old)
+            if (current != old) villager.persistentDataContainer.set(npcKey, PersistentDataType.STRING, current)
+        }
         villager.removeWhenFarAway = false
         villager.isInvulnerable = true
         villager.isSilent = false
@@ -322,10 +414,10 @@ class NpcManager(private val plugin: Hjh_database) {
     }
 
     fun refreshTemplateEntities(templateId: String): Int {
-        val template = templates[templateId] ?: return 0
+        val template = getTemplate(templateId) ?: return 0
         var count = 0
         for (instance in instances.values) {
-            if (instance.templateId != templateId) continue
+            if (instance.templateId != template.id) continue
             val villager = Bukkit.getEntity(instance.uuid) as? Villager ?: continue
             villager.customName = template.name
             villager.isCustomNameVisible = true
@@ -338,7 +430,7 @@ class NpcManager(private val plugin: Hjh_database) {
     }
 
     fun spawnNpc(location: Location, templateId: String): Villager? {
-        val template = templates[templateId] ?: return null
+        val template = getTemplate(templateId) ?: return null
         val world = location.world ?: return null
         if (!location.chunk.isLoaded) location.chunk.load()
         val villager = world.spawn(location, Villager::class.java) { entity ->
@@ -346,16 +438,16 @@ class NpcManager(private val plugin: Hjh_database) {
             entity.villagerType = template.type
             entity.customName = template.name
             entity.isCustomNameVisible = true
-            entity.persistentDataContainer.set(npcKey, PersistentDataType.STRING, templateId)
+            entity.persistentDataContainer.set(npcKey, PersistentDataType.STRING, template.id)
         }
         applyNpcAttributes(villager)
-        instances[villager.uniqueId] = NpcInstance(villager.uniqueId, templateId, location.clone())
+        instances[villager.uniqueId] = NpcInstance(villager.uniqueId, template.id, location.clone())
         saveData()
         return villager
     }
 
     fun removeInstancesByTemplate(templateId: String, targetLocation: Location? = null): Int {
-        val oldInstances = instances.values.filter { it.templateId == templateId }.toList()
+        val oldInstances = instances.values.filter { sameNpc(it.templateId, templateId) }.toList()
         val checkedChunks = HashSet<String>()
         val removedUuids = HashSet<UUID>()
         var removedCount = 0
@@ -419,7 +511,7 @@ class NpcManager(private val plugin: Hjh_database) {
             val villager = entity as? Villager ?: continue
             if (villager.uniqueId in removedUuids) continue
             val id = villager.persistentDataContainer.get(npcKey, PersistentDataType.STRING) ?: continue
-            if (id != templateId) continue
+            if (!sameNpc(id, templateId)) continue
             villager.remove()
             if (removedUuids.add(villager.uniqueId)) count++
         }
@@ -443,5 +535,5 @@ class NpcManager(private val plugin: Hjh_database) {
 
     private fun stripColors(input: String): String = input.replace(Regex("§[0-9A-FK-ORa-fk-or]"), "")
 
-    private fun isGeneratedTemplate(id: String): Boolean = id.startsWith("npc_") || id.startsWith("converted_")
+    private fun isGeneratedTemplate(id: String): Boolean = !isStoryNpc(id)
 }

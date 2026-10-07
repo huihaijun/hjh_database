@@ -45,6 +45,10 @@ class CrystalData(val id: String, sec: ConfigurationSection) : ActivatableEquipm
     val replenishThreshold: Int = sec.getInt("quiver_data.replenish_threshold", 16)
     val replenishAmount: Int = sec.getInt("quiver_data.replenish_amount", 32)
 
+    val yuanCastInterval: Int = sec.getInt("yuan_data.cast_interval", 8).coerceAtLeast(1)
+    val yuanCastGain: Int = sec.getInt("yuan_data.cast_gain", 1).coerceAtLeast(0)
+    val yuanMaxStorage: Int = sec.getInt("yuan_data.max_storage", 4).coerceAtLeast(1)
+
     val medicalOverflowMaxStorage: Double = sec.getDouble("taolizhi_data.max_storage", 100.0)
     val medicalOverflowTriggerStorage: Double = sec.getDouble("taolizhi_data.trigger_storage", 20.0)
     val medicalOverflowCooldownSeconds: Double = sec.getDouble("taolizhi_data.cooldown", 3.0)
@@ -53,7 +57,7 @@ class CrystalData(val id: String, sec: ConfigurationSection) : ActivatableEquipm
     val medicalOverflowStorageMultiplier: Double = sec.getDouble("taolizhi_data.storage_multiplier", 0.5)
 
     // 镇岳沉锋状态机配置。保持默认值与旧版硬编码一致，便于以后直接改 crystals.yml。
-    val mountainMaxStacks: Int = sec.getInt("zhenyue_data.max_stacks", 10).coerceAtLeast(1)
+    val mountainMaxStacks: Int = sec.getInt("zhenyue_data.max_stacks", 5).coerceAtLeast(1)
     val mountainInitialDurationMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.initial_duration", 3.0))
     val mountainStackExtensionMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.stack_duration_extension", 1.5))
     val mountainDropIntervalMillis: Long = secondsToMillis(sec.getDouble("zhenyue_data.stack_drop_interval", 2.0))
@@ -190,6 +194,10 @@ class CrystalManager(private val plugin: Hjh_database) {
                 .replace("{stored}", "0")
                 .replace("{max_storage}", formatNumber(data.medicalOverflowMaxStorage))
                 .replace("{trigger_storage}", formatNumber(data.medicalOverflowTriggerStorage))
+                .replace("{yuan}", "0")
+                .replace("{max_yuan}", data.yuanMaxStorage.toString())
+                .replace("{yuan_interval}", data.yuanCastInterval.toString())
+                .replace("{yuan_gain}", data.yuanCastGain.toString())
             newLore.add(ChatColor.translateAlternateColorCodes('&', finalLine))
         }
         meta.lore = newLore
@@ -364,6 +372,9 @@ class CrystalManager(private val plugin: Hjh_database) {
 
         val medicalOverflowKey = NamespacedKey(plugin, "medical_overflow_stored")
         val currentMedicalOverflow = meta.persistentDataContainer.get(medicalOverflowKey, PersistentDataType.DOUBLE) ?: 0.0
+        val currentYuan = (meta.persistentDataContainer.get(NamespacedKey(plugin, "accessory_yuan"), PersistentDataType.INTEGER) ?: 0)
+            .coerceIn(0, crystalData.yuanMaxStorage)
+        var yuanLore: String? = null
 
         for (line in crystalData.lore) {
             var finalLine = line
@@ -377,6 +388,15 @@ class CrystalManager(private val plugin: Hjh_database) {
                 .replace("{stored}", formatNumber(currentMedicalOverflow))
                 .replace("{max_storage}", formatNumber(crystalData.medicalOverflowMaxStorage))
                 .replace("{trigger_storage}", formatNumber(crystalData.medicalOverflowTriggerStorage))
+                .replace("{yuan}", currentYuan.toString())
+                .replace("{max_yuan}", crystalData.yuanMaxStorage.toString())
+                .replace("{yuan_interval}", crystalData.yuanCastInterval.toString())
+                .replace("{yuan_gain}", crystalData.yuanCastGain.toString())
+
+            if (line.contains("{yuan}")) {
+                yuanLore = org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine)
+                continue
+            }
 
             if (crystalData.id.startsWith("yuansujiejing") && finalLine.contains("饰品属性")) {
                 newLore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalLine))
@@ -433,113 +453,64 @@ class CrystalManager(private val plugin: Hjh_database) {
                     }
 
                     if (eData.goldPoints >= 4 && playerData.job == 0) {
-                        activeSkills.add("&6[战] &e[金·精进] [金戈] &f冷却:&b12&f秒")
-                        activeSkills.add("&f普通攻击命中第&b3&f次怪物时,向前方&b8&f格距离")
-                        activeSkills.add("&f斩出一道伤害为&b200%&f近战强度的剑气,贯穿路径上的怪物")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(0, "gold"))
                     }
                     if (eData.goldPoints >= 4 && playerData.job == 1) {
-                        activeSkills.add("&6[弓] &e[金·精进] [鸣镝] &f冷却:&b10&f秒")
-                        activeSkills.add("&f箭矢命中目标后,若与其距离超过&b10&f格")
-                        activeSkills.add("&f则对其追加一段&b200%箭矢强度&f的伤害")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(1, "gold"))
                     }
                     if (eData.goldPoints >= 4 && playerData.job == 2) {
-                        activeSkills.add("&6[术] &e[金·精进] [金印] &f冷却:&b15&f秒")
-                        activeSkills.add("&f元素阵法命中目标&b造成伤害&f后,为目标打下&b[金印]&f标记,持续&b3&f秒")
-                        activeSkills.add("&b[金印]&f:持续时间结束后爆炸,对目标&b2&f格范围内怪物造成持有印记期间")
-                        activeSkills.add("&f受到的伤害总数的&b50%&f的伤害,最多&b200&f点")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(2, "gold"))
                     }
                     if (eData.goldPoints >= 4 && playerData.job == 3) {
-                        activeSkills.add("&6[医] &e[金·精进] [金针] &f冷却:&b15&f秒")
-                        activeSkills.add("&f释放医术后,向&b15格&f内离你最近的&b2&f只怪物飞出金针")
-                        activeSkills.add("&f造成&b150%阵法强度&f伤害并定身其&b1&f秒")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(3, "gold"))
                     }
                     if (eData.woodPoints >= 4 && playerData.job == 0) {
-                        activeSkills.add("&6[战] &a[木·精进] [生根] &f冷却:&b15&f秒")
-                        activeSkills.add("&f受到伤害后生成&b根脉&f持续生长&b8&f秒,生长中心会跟随自身移动")
-                        activeSkills.add("&f旧中心的十字根脉会在&b2&f秒后消失,并持续减速路径内怪物")
-                        activeSkills.add("&f每秒回复路径上队友&b4&f点生命,不同根脉的恢复不会叠加")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(0, "wood"))
                     }
                     if (eData.woodPoints >= 4 && playerData.job == 1) {
-                        activeSkills.add("&6[弓] &a[木·精进] [藤矢] &f冷却:&b5&f秒")
-                        activeSkills.add("&f箭矢命中目标后,对目标附带&b[藤蔓]&f标记持续&b8&f秒")
-                        activeSkills.add("&b[藤蔓]&f:减速50%,命中带有此标记的目标后,会为自己恢复&b2&f点生命")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(1, "wood"))
                     }
                     if (eData.woodPoints >= 4 && playerData.job == 2) {
-                        activeSkills.add("&6[术] &a[木·精进] [溯生] &f冷却:&b20&f秒")
-                        activeSkills.add("&f受到伤害后,在&b1.5&f秒内回复&b70%此伤害值&f的生命")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(2, "wood"))
                     }
                     if (eData.woodPoints >= 4 && playerData.job == 3) {
-                        activeSkills.add("&6[医] &a[木·精进] [花语] &f冷却:&b15&f秒")
-                        activeSkills.add("&f使用医术回复生命后,将&b50%此次治愈值&f传递给身旁最近的一名队友")
-                        activeSkills.add("&f最多以此法传递&b三&f次且无法传递给相同玩家")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(3, "wood"))
                     }
                     if (eData.waterPoints >= 4 && playerData.job == 0) {
-                        activeSkills.add("&6[战] &9[水·精进] [潮返] &f冷却:&b12&f秒")
-                        activeSkills.add("&f攻击/受到伤害后,在&b2&f秒内依次向周围&b10&f格扩散三道水波")
-                        activeSkills.add("&f前两道水波:造成&b50%最大生命&f的伤害,对怪物造成轻微减速&b3&f秒")
-                        activeSkills.add("&f第三道水波:造成&b75%最大生命&f的伤害,并小幅击飞怪物")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(0, "water"))
                     }
                     if (eData.waterPoints >= 4 && playerData.job == 1) {
-                        activeSkills.add("&6[弓] &9[水·精进] [水月] &f冷却:&b8&f秒")
-                        activeSkills.add("&f箭矢命中目标后,复制一根&b水箭&f,对其附近&b5&f格的最近一名怪物造成同等伤害")
-                        activeSkills.add("&b水箭&f命中后,令自己移速增加&b30%&f持续&b3&f秒")
-                        activeSkills.add("&f若其身旁没有怪物,则&b水箭&f会攻击原目标")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(1, "water"))
                     }
                     if (eData.waterPoints >= 4 && playerData.job == 2) {
-                        activeSkills.add("&6[术] &9[水·精进] [回潮] &f冷却:&b15&f秒")
-                        activeSkills.add("&f释放元素阵法后,从身旁&b5&f格的怪物内吸取灵力")
-                        activeSkills.add("&f每1只怪物会为自己额外回复&b2&f点灵力,至多&b20&f点")
-                        activeSkills.add("&f并获得&b5&f秒速度提升,每1只怪物延长&b2&f秒,至多&b20&f秒")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(2, "water"))
                     }
                     if (eData.waterPoints >= 4 && playerData.job == 3) {
-                        activeSkills.add("&6[医] &9[水·精进] [净流] &f冷却:&b20&f秒")
-                        activeSkills.add("&f释放医术后进入&b[净流]&f状态,持续&b8&f秒")
-                        activeSkills.add("&b[净流]&f:医旗回复灵力速度增加&b50%&f,且回复量增加&b20%&f")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(3, "water"))
                     }
                     if (eData.firePoints >= 4 && playerData.job == 0) {
-                        activeSkills.add("&6[战] &c[火·精进] [炎斩] &f冷却:&b15&f秒")
-                        activeSkills.add("&f普通攻击造成伤害后,对目标叠加一层&b[炎斩]&f持续&b5&f秒")
-                        activeSkills.add("&f叠满三层时,移去所有标记并造成必定&b暴击&f的&b穿甲&f伤害")
-                        activeSkills.add("&f基础为&b250%近战强度&f并附带&b最大生命8%&f斩杀伤害")
-                        activeSkills.add("&f斩杀伤害最高&b150&f点,然后进入冷却")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(0, "fire"))
                     }
                     if (eData.firePoints >= 4 && playerData.job == 1) {
-                        activeSkills.add("&6[弓] &c[火·精进] [爆燃] &f冷却:&b15&f秒")
-                        activeSkills.add("&f箭矢命中怪物后,以其为中心引发一次半径为&b5&f格的烈火爆炸")
-                        activeSkills.add("&f造成&b150%箭矢强度&f的伤害")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(1, "fire"))
                     }
                     if (eData.firePoints >= 4 && playerData.job == 2) {
-                        activeSkills.add("&6[术] &c[火·精进] [阵焚] &f冷却:&b20&f秒")
-                        activeSkills.add("&f元素阵法造成伤害后,在目标脚底生成焚阵,在&b1&f秒后喷发")
-                        activeSkills.add("&b击飞&f&b2&f格范围内怪物并造成&b250%阵法强度&f的伤害")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(2, "fire"))
                     }
                     if (eData.firePoints >= 4 && playerData.job == 3) {
-                        activeSkills.add("&6[医] &c[火·精进] [灼脉] &f冷却:&b20&f秒")
-                        activeSkills.add("&f释放医术造成伤害后,令目标进入&b[经脉受损]&f持续&b5&f秒")
-                        activeSkills.add("&b[经脉受损]&f:移速降低&c50%&f,伤害降低&b30%&f")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(3, "fire"))
                     }
                     if (eData.earthPoints >= 4 && playerData.job == 0) {
-                        activeSkills.add("&6[战] &6[土·精进] [崩山] &f冷却:&b15&f秒")
-                        activeSkills.add("&f每受到4次伤害时,将引发崩裂,眩晕周围&b10&f格怪物&b0.8&f秒")
-                        activeSkills.add("&f同时降低他们&b50%&f护甲持续&b8&f秒")
-                        activeSkills.add("&f并获得&b最大生命50%&f的护盾(最多&b40&f点)持续&b15&f秒")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(0, "earth"))
                     }
                     if (eData.earthPoints >= 4 && playerData.job == 1) {
-                        activeSkills.add("&6[弓] &6[土·精进] [岩钉] &f冷却:&b15&f秒")
-                        activeSkills.add("&f箭矢命中目标后,对目标施加&b[定身]&f持续&b1.5&f秒")
-                        activeSkills.add("&b[定身]&f结束时岩钉会爆裂,削弱目标&b50%&f护甲持续&b5&f秒")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(1, "earth"))
                     }
                     if (eData.earthPoints >= 4 && playerData.job == 2) {
-                        activeSkills.add("&6[术] &6[土·精进] [镇石] &f冷却:&b20&f秒")
-                        activeSkills.add("&f受到伤害后,额外受到&b20%此次伤害值&f的&b真实伤害&f")
-                        activeSkills.add("&f(若此伤害让你&c致死&f,则改为体力&c降为1&f)")
-                        activeSkills.add("&f然后获得等同于&b200%此次伤害值&f的&b护盾&f,持续&b15&f秒")
-                        activeSkills.add("&f护盾消失时,对周围&b4&f格怪物造成&b0.5&f秒晕眩效果")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(2, "earth"))
                     }
                     if (eData.earthPoints >= 4 && playerData.job == 3) {
-                        activeSkills.add("&6[医] &6[土·精进] [厚土] &f冷却:&b20&f秒")
-                        activeSkills.add("&f释放医术治愈友军时,会为这些友军叠加&b100%阵法强度&f的护盾持续&b5&f秒")
-                        activeSkills.add("&f护盾消失时,会令其获得持续&b5&f秒的生命回复效果")
+                        activeSkills.addAll(com.hjh_database.accessory.element.MasteryDescriptions.lines(3, "earth"))
                     }
 
                     if (activeSkills.isNotEmpty()) {
@@ -593,6 +564,8 @@ class CrystalManager(private val plugin: Hjh_database) {
             // 这里会显示“职业不符”或“等级不足”或“未激活”
             newLore.addAll(statusLore)
         }
+
+        yuanLore?.let(newLore::add)
 
         meta.lore = newLore
         item.itemMeta = meta

@@ -20,7 +20,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
     override fun onCast(player: Player, level: Int, safeConfig: ConfigurationSection, path: String): Boolean {
         val formationCast = FormationCast()
 
-        // 此时，父类已经帮你处理好了“不扣法宝”和“回流判定”了！
+        // 此时，父类已经处理了法宝判定与元素消耗。
 
         val damagePercent = safeConfig.getDouble("$path.damage_percent", 3.0)
         val range = safeConfig.getDouble("$path.range", 10.0)
@@ -35,6 +35,7 @@ class FireSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 5. 索敌
         val target = getTarget(player, range, searchRadius)
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, target?.location ?: player.eyeLocation.add(player.eyeLocation.direction.multiply(range)))
 
         // 只在有目标时造成伤害
         if (target != null) {

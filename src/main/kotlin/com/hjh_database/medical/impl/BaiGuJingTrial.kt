@@ -411,8 +411,9 @@ class BaiGuJingTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
         player.sendMessage(
-            "§d§l墓园-白骨精 §f: §a呵……二十五盏魂灯尽数归暗，哭声也停了。小医师，你替这些无名亡魂补上了迟来多年的送别。§d魂灵游§a的法门，本座说到做到，传你便是。"
+            "§d§l墓园-白骨精 §f: §a呵……二十五盏魂灯尽数归暗，结晶中的怨气也散了。小医师，你替无名亡魂补上了迟来的送别。这卷§d魂灵游§a便化入你的灵智，本座说到做到。"
         )
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 0.9f)
         player.world.spawnParticle(
@@ -442,7 +443,6 @@ class BaiGuJingTrial(
             })
         }
 
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
@@ -452,9 +452,9 @@ class BaiGuJingTrial(
         cleanUp()
         if (player.isOnline && !player.isDead) player.teleport(exitLocation)
         if (shouldMessage) {
-            player.sendMessage("§c墓园-白骨精的医术试炼失败！")
+            player.sendMessage("§d§l墓园-白骨精 §f: §7魂灯未尽，亡魂尚在徘徊。卷轴你留着，本座会先炼去一部分结晶中的怨气；下次少带一些，再来补上这场送别。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

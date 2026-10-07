@@ -1,6 +1,8 @@
 package com.hjh_database.medical
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.data.PlayerData
+import com.hjh_database.util.ItemUtil
 import org.bukkit.ChatColor
 import org.bukkit.Bukkit
 import org.bukkit.event.EventPriority
@@ -20,6 +22,17 @@ import java.util.*
 class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
 
     val activeTrials = mutableMapOf<UUID, MedicalTrial>()
+    private val trialMaterials = mapOf(
+        "shanshenmiao" to Triple("shanshengongpin", "山神庙贡品", 20),
+        "wangyuanwai" to Triple("wangyuanwaibeiqiangzoudehuowu", "王员外被抢走的货物", 12),
+        "wenquankezhan" to Triple("wenquankezhanbujipin", "温泉客栈需要的补给品", 12),
+        "zhuanyuanshangxian" to Triple("shangxianwenxian", "上仙被抢走的文献", 12),
+        "huzhenshangren" to Triple("huzhenshangrenshouju", "商人被抢走的收据", 12),
+        "chendafu" to Triple("chendafudecaoyaoshu", "陈大夫草药束", 16),
+        "yuzhu" to Triple("shanmei", "山魅", 16),
+        "luohe" to Triple("shuizudegongpin", "水族的贡品", 12),
+        "baigujing" to Triple("yuanqidejiejing", "怨气的结晶", 12)
+    )
 
     // 【新增】试炼 ID 注册表，以后有新的试炼直接写在这个列表里即可
     val registeredTrialIds = listOf(
@@ -57,11 +70,11 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
 
         if (resId == "shanshenmiao_test" || resId == "wangyuanwai_test" || resId == "wenquankezhan_test" || resId == "zhuanyuanshangxian_test" || resId == "huzhenshangren_test" || resId == "chendafu_test" || resId == "yuzhu_test" || resId == "luohe_test" || resId == "baigujing_test") {
             event.isCancelled = true
-            tryStartTrial(player, item, resId)
+            tryStartTrial(player, resId)
         }
     }
 
-    private fun tryStartTrial(player: org.bukkit.entity.Player, item: ItemStack, resId: String) {
+    private fun tryStartTrial(player: org.bukkit.entity.Player, resId: String) {
         if (activeTrials.containsKey(player.uniqueId)) return
 
         val trialId = when (resId) {
@@ -160,9 +173,16 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
             return
         }
 
-        // 原先的 containsKey 检查已经删掉，因为上面 isNotEmpty 已经拦截了并发
+        val (materialId, materialName, _) = trialMaterials.getValue(trialId)
+        val required = requiredMaterialCount(data, trialId)
+        val inventory = player.inventory
+        val available = inventory.storageContents.filter { ItemUtil.getPublicId(it) == materialId }
+            .sumOf { it?.amount ?: 0 }
+        if (available < required) {
+            player.sendMessage("§c[医术试炼] 需要 §e$materialName §c×§e$required§c，背包中仅有 §e$available§c。卷轴与材料均未消耗。")
+            return
+        }
 
-        item.amount -= 1
         // 启动试炼实例
         val instance = when (resId) {
             "shanshenmiao_test" -> com.hjh_database.medical.impl.ShanShenMiaoTrial(plugin, player)
@@ -178,8 +198,70 @@ class MedicalTrialManager(private val plugin: Hjh_database) : Listener {
             // "xinmiao_test" -> com.hjh_database.medical.impl.XinMiaoTrial(plugin, player)
             else -> return
         }
+        var remaining = required
+        for (slot in inventory.storageContents.indices) {
+            val stack = inventory.getItem(slot) ?: continue
+            if (ItemUtil.getPublicId(stack) != materialId) continue
+            val taken = minOf(stack.amount, remaining)
+            stack.amount -= taken
+            inventory.setItem(slot, stack.takeIf { it.amount > 0 })
+            remaining -= taken
+            if (remaining == 0) break
+        }
+        player.sendMessage("§e[医术试炼] 已交付 §b$materialName §e×§b$required§e。卷轴暂不消耗，通过试炼后方可承接医术传承。")
         activeTrials[player.uniqueId] = instance
         instance.start()
+    }
+
+    private fun requiredMaterialCount(data: PlayerData, trialId: String): Int {
+        val original = trialMaterials.getValue(trialId).third
+        val reduction = original / 4
+        val failures = (data.medicalTrialFailures[trialId] ?: 0).coerceIn(0, 3)
+        return (original - reduction * failures).coerceAtLeast(original / 4)
+    }
+
+    fun completeTrial(player: org.bukkit.entity.Player, trialId: String): Boolean {
+        if (activeTrials[player.uniqueId]?.trialId != trialId) return false
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        val inventory = player.inventory
+        val slot = inventory.contents.indices.firstOrNull {
+            val scroll = inventory.getItem(it) ?: return@firstOrNull false
+            scroll.amount > 0 && getTrialItemId(scroll) == "${trialId}_test"
+        }
+        if (slot == null) {
+            player.sendMessage("§c[医术试炼] 卷轴不在背包中，无法承接医术传承，请携带对应卷轴再来。")
+            failTrial(player, trialId)
+            return false
+        }
+        val scroll = inventory.getItem(slot) ?: return false
+        scroll.amount -= 1
+        inventory.setItem(slot, scroll.takeIf { it.amount > 0 })
+        data.medicalTrialFailures.remove(trialId)
+        activeTrials.remove(player.uniqueId)
+        player.sendMessage("§a[医术试炼] 试炼通过，已消耗 §f1 §a个卷轴，医术传承将收录于你的灵智。")
+        return true
+    }
+
+    fun failTrial(player: org.bukkit.entity.Player, trialId: String) {
+        if (activeTrials[player.uniqueId]?.trialId != trialId) return
+        activeTrials.remove(player.uniqueId)
+        val data = plugin.playerManager.getPlayerData(player) ?: return
+        data.medicalTrialFailures[trialId] = ((data.medicalTrialFailures[trialId] ?: 0) + 1).coerceAtMost(3)
+        val (_, materialName, original) = trialMaterials.getValue(trialId)
+        val required = requiredMaterialCount(data, trialId)
+        if (player.isOnline) {
+            player.sendMessage("§c[医术试炼失败] §e本次交付的材料不退还，卷轴未被消耗。下次进入需 §b$materialName §e×§b$required§e。" +
+                if (required == original / 4) "§7已降至初次要求的25%。" else "")
+        }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
+            try {
+                plugin.databaseManager.dataSource?.connection?.use { connection ->
+                    plugin.databaseManager.saveCompletedMedicalTrials(connection, data)
+                }
+            } catch (exception: Exception) {
+                plugin.logger.severe("保存医术试炼失败次数失败: ${exception.message}")
+            }
+        })
     }
 
     private fun getTrialItemId(item: ItemStack): String? {

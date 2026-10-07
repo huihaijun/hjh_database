@@ -105,8 +105,8 @@ class jiaolongnuSkill : WeaponSkill, Listener {
                                 pData.tempBonuses.remove(SPEED_BUFF_KEY)
                                 pluginMain.playerManager.updateStats(player)
 
-                                // 赋予 15 秒 (300 ticks) 的 8 点黄心护盾 (Absorption 等级 1 = 4 颗心 = 8 点)
-                                player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, 300, 1))
+                                // 赋予 15 秒 (300 ticks) 的 16 点黄心护盾 (Absorption 等级 3 = 8 颗心 = 16 点)
+                                player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, 300, 3))
 
                                 // 水声提示结束
                                 player.playSound(player.location, Sound.ENTITY_PLAYER_SPLASH, 1f, 1f)

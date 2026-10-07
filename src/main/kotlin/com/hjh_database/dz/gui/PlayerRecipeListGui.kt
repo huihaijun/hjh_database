@@ -23,7 +23,8 @@ import java.util.HashMap
 class PlayerRecipeListGui(
     private val plugin: Hjh_database,
     private val player: Player,
-    private val category: String
+    private val category: String,
+    selectedRarity: Int? = null
 ) : InventoryHolder, Listener {
 
     private val inv: Inventory = Bukkit.createInventory(this, 54, getCategoryTitle(category))
@@ -37,6 +38,7 @@ class PlayerRecipeListGui(
 
     init {
         loadRecipes()
+        page = rarityPages.indexOf(selectedRarity).coerceAtLeast(0)
         setupPage()
         plugin.server.pluginManager.registerEvents(this, plugin)
     }
@@ -83,10 +85,10 @@ class PlayerRecipeListGui(
 
         // 3. 设置翻页按钮：按稀有度翻页（保留底栏箭头）
         if (page > 0) {
-            setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}")
+            setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}", customModelData = 103)
         }
         if (page < rarityPages.lastIndex) {
-            setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}")
+            setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}", customModelData = 104)
         }
 
         // 4. 返回按钮 (保持原逻辑)
@@ -235,11 +237,12 @@ class PlayerRecipeListGui(
     }
 
     // 原代码中有 setBtn 定义但未使用（只在内部直接 new 实现了），为保持一致性保留
-    private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String) {
+    private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String, customModelData: Int? = null) {
         val item = ItemStack(mat)
         val meta = item.itemMeta
         if (meta != null) {
             meta.setDisplayName(name)
+            if (customModelData != null) meta.setCustomModelData(customModelData)
             if (lore.isNotEmpty()) meta.lore = lore.toList()
             item.itemMeta = meta
         }
@@ -347,7 +350,8 @@ class PlayerRecipeListGui(
         event.isCancelled = true
         if (event.currentItem == null) return // 允许点空位，反正做了判断
 
-        val slot = event.slot
+        val slot = event.rawSlot
+        if (slot !in 0 until inv.size) return
 
         // 0. 顶部羊毛栏点击 (slots 0-8)
         if (slot in 0..8) {
@@ -380,8 +384,11 @@ class PlayerRecipeListGui(
             return
         }
         if (slot == 49) {
-            player.closeInventory()
-            CategoryGui(plugin, player, null).open()
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (player.openInventory.topInventory == inv) {
+                    CategoryGui(plugin, player, null).open()
+                }
+            })
             return
         }
 
@@ -392,8 +399,12 @@ class PlayerRecipeListGui(
 
             if (recipeId != null) {
                 // println("[GUI命中] Slot:$slot -> ID:$recipeId")
-                player.closeInventory()
-                RecipePreviewGui(plugin, player, category, recipeId).open()
+                val selectedRarity = rarityPages.getOrNull(page)
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (player.openInventory.topInventory == inv) {
+                        RecipeCraftingGui(plugin, player, category, plugin.recipeManager.getRecipe(category, recipeId), selectedRarity).open()
+                    }
+                })
             } else {
                 // 如果点了有物品的格子但 Map 里没 ID，说明这是异常情况
                 if (event.currentItem?.type != Material.AIR) {

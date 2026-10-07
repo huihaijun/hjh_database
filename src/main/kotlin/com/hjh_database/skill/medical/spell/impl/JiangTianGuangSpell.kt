@@ -273,7 +273,7 @@ class JiangTianGuangSpell(private val plugin: Hjh_database) : MedicalSpell, List
         } else {
             val maxHealth = damageSource.getAttribute(Attribute.MAX_HEALTH)?.value ?: damageSource.health
             val before = damageSource.health
-            damageSource.health = (before + healAmount).coerceAtMost(maxHealth)
+            damageSource.health = (before + healAmount * plugin.elementCrystalManager.reworkedMastery.healingMultiplier(damageSource, medicalTreatment = true)).coerceAtMost(maxHealth)
             damageSource.health - before
         }
 

@@ -22,6 +22,7 @@ class EnhancedWoodSkill(private val plugin: Hjh_database) : EnhancedElementSkill
     override fun cast(player: Player, data: PlayerData): Boolean {
         val formationCast = FormationCast()
         val target = findTarget(player, 10.0) ?: return false
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, target.location)
         val baseDamage = data.zfStr * 2.25
         val damage = baseDamage
         val startedAt = System.currentTimeMillis()
@@ -49,7 +50,7 @@ class EnhancedWoodSkill(private val plugin: Hjh_database) : EnhancedElementSkill
                 enhancedMagicDamage(plugin, player, target, damage, FormationElement.WOOD, cast = formationCast)
                 val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
                 // 木阵回流只增幅伤害，持续回血仍使用未增幅的原始伤害快照。
-                player.health = min(maxHealth, player.health + baseDamage * 0.05)
+                plugin.elementCrystalManager.reworkedMastery.heal(player, baseDamage * 0.05)
                 playSoulLink(player, target)
                 playContractHalo(target)
                 seconds++

@@ -28,6 +28,7 @@ class EnhancedWaterSkill(private val plugin: Hjh_database) : EnhancedElementSkil
         val formationCast = FormationCast()
         val center = getEnhancedSightLocation(player, 16.0, FluidCollisionMode.ALWAYS)
         val world = center.world ?: return false
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, center)
         val damage = data.zfStr * 2.5
         val extraDamage = data.zfStr
         val directions = buildXDirections()

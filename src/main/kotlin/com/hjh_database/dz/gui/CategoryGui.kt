@@ -137,6 +137,7 @@ class CategoryGui(
     fun onClick(event: InventoryClickEvent) {
         if (event.inventory != inv) return
         event.isCancelled = true
+        if (event.rawSlot !in 0 until inv.size) return
 
         val currentItem = event.currentItem
         if (currentItem == null) return
@@ -150,12 +151,15 @@ class CategoryGui(
         val catId = meta.persistentDataContainer.get(categoryKey, PersistentDataType.STRING)
 
         if (!catId.isNullOrEmpty()) {
-            player.closeInventory()
             if (player.isOp && player.inventory.itemInMainHand.type == Material.WOODEN_HOE) {
+                player.closeInventory()
                 AdminRecipeListGui(plugin, player, catId).open()
             } else {
-                // 假设 PlayerRecipeListGui 已经/将会被重构为 Kotlin
-                PlayerRecipeListGui(plugin, player, catId).open()
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (player.openInventory.topInventory == inv) {
+                        PlayerRecipeListGui(plugin, player, catId).open()
+                    }
+                })
             }
         }
     }

@@ -235,6 +235,7 @@ class NpcAdminGui(
                 player.playSound(player.location, Sound.BLOCK_ANVIL_USE, 1f, 1f)
                 player.sendMessage("§a配置已保存！")
                 player.closeInventory()
+                plugin.npcModule.getInteractListener().beginIdEdit(player, templateId)
             }
         }
     }

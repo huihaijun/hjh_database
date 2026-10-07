@@ -23,6 +23,7 @@ class EnhancedEarthSkill(private val plugin: Hjh_database) : EnhancedElementSkil
         val formationCast = FormationCast()
         val center = getEnhancedSightLocation(player, 13.0, FluidCollisionMode.ALWAYS)
         val world = center.world ?: return false
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, center)
         val radius = 10.0
         val durationTicks = 300
         val durationMillis = 15_000L

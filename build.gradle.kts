@@ -37,10 +37,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("com.zaxxer:HikariCP:5.1.0")
-    testImplementation(kotlin("test-junit"))
+    implementation("com.belerweb:pinyin4j:2.5.1")
 }
-
-tasks.register("verifyXunlilingshu") { dependsOn(tasks.named("test")) }
 
 tasks {
     // 替代 pom.xml 中的 <filtering>true</filtering>

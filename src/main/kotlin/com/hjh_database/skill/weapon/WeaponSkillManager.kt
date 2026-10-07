@@ -19,6 +19,7 @@ import com.hjh_database.skill.weapon.job_1.beidoumieshengongSkill
 import com.hjh_database.skill.weapon.job_1.heitienuSkill
 import com.hjh_database.skill.weapon.job_1.honglingnuSkill
 import com.hjh_database.skill.weapon.job_1.jiaolongnuSkill
+import com.hjh_database.skill.weapon.job_1.jinjiazhanhunSkill
 import com.hjh_database.skill.weapon.job_1.qingtonggongSkill
 import com.hjh_database.skill.weapon.job_1.riyueliuxingnuSkill
 import com.hjh_database.skill.weapon.job_1.tengmugongSkill
@@ -53,6 +54,9 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
     private val globalCooldowns: MutableMap<UUID, Long> = ConcurrentHashMap()
     private val cooldownVersions: MutableMap<UUID, Long> = ConcurrentHashMap()
     private val rangedVisuals = mutableMapOf<UUID, ItemCooldownVisual>()
+    private val rangedUseModifiers = mutableMapOf<UUID, RangedUseSettings>()
+    private val chargeFractions = mutableMapOf<UUID, Double>()
+    private val previousChargeTicks = mutableMapOf<UUID, Int>()
 
     // 记录由技能主动维持的持续状态。Key: 玩家 UUID, Value: 武器/技能 ID。
     private val activeToggles = ConcurrentHashMap<UUID, String>()
@@ -77,6 +81,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
             override fun run() {
                 checkActiveWeaponChanges()
                 checkAllToggles()
+                tickRangedUse()
             }
         }.runTaskTimer(plugin, 1L, 1L)
     }
@@ -131,6 +136,7 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         skillRegistry["beidoumieshengong"] = beidoumieshengongSkill()
         skillRegistry["tingchao"] = tingchaoSkill()
         skillRegistry["zhuiyue"] = zhuiyueSkill()
+        skillRegistry["jinjiazhanhun"] = jinjiazhanhunSkill()
 
         skillRegistry["novice_bow"] = NoviceBowSkill()
     }
@@ -183,15 +189,9 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         }
 
         if (skill.castActive(player, data, activeConfig, projectile)) {
-            val baseCd = activeConfig.getDouble("cooldown", 10.0)
-            applyCooldown(player, data, item, baseCd)
-            plugin.elementCrystalManager.triggerWaterSkill(
-                player,
-                "weapon",
-                weaponId,
-                baseCd * (1.0 - data.coolReduce),
-                item.type
-            )
+            if (!activeConfig.getBoolean("cooldown_on_exit", false)) {
+                startSkillCooldown(player, weaponId, item)
+            }
 
             val successMsg = activeConfig.getString("message")
             if (!successMsg.isNullOrEmpty()) {
@@ -201,6 +201,15 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
                 )
             }
         }
+    }
+
+    fun startSkillCooldown(player: Player, weaponId: String, item: ItemStack) {
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        val baseCd = skillConfigCache[weaponId]?.getDouble("active.cooldown", 10.0) ?: return
+        applyCooldown(player, data, item, baseCd)
+        plugin.elementCrystalManager.triggerWaterSkill(
+            player, "weapon", weaponId, baseCd * (1.0 - data.coolReduce), item.type
+        )
     }
 
     private fun isWeaponActive(
@@ -357,8 +366,91 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         return plugin
     }
 
+    fun getSkillConfig(weaponId: String): ConfigurationSection? = skillConfigCache[weaponId.lowercase()]
+
+    /** 倍率相对于原版：移速 5 = 取消弓弩使用时的 80% 减速；蓄力 2 = 两倍速度。 */
+    fun setRangedUseModifier(player: Player, weaponId: String, movementMultiplier: Double, chargeSpeed: Double, durationTicks: Int) {
+        chargeFractions.remove(player.uniqueId)
+        previousChargeTicks.remove(player.uniqueId)
+        rangedUseModifiers[player.uniqueId] = RangedUseSettings(
+            weaponId.lowercase(), movementMultiplier.coerceIn(0.0, 10.0), chargeSpeed.coerceIn(0.05, 10.0),
+            org.bukkit.Bukkit.getCurrentTick() + durationTicks.coerceAtLeast(1)
+        )
+        plugin.clientBridge.syncRangedUse(player)
+    }
+
+    fun clearRangedUseModifier(player: Player, weaponId: String) {
+        if (rangedUseModifiers[player.uniqueId]?.weaponId != weaponId.lowercase()) return
+        rangedUseModifiers.remove(player.uniqueId)
+        chargeFractions.remove(player.uniqueId)
+        previousChargeTicks.remove(player.uniqueId)
+        plugin.clientBridge.syncRangedUse(player)
+    }
+
+    fun getRangedUseSettings(player: Player): RangedUseSettings? {
+        if (player.isDead) return null
+        val item = player.inventory.itemInMainHand
+        if (item.type != Material.BOW && item.type != Material.CROSSBOW) return null
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return null
+        val weapon = plugin.equipmentActivationManager.resolveHeldWeapon(player, data) ?: return null
+        val modifier = rangedUseModifiers[player.uniqueId]
+        if (modifier != null) {
+            if (modifier.endTick <= org.bukkit.Bukkit.getCurrentTick()) rangedUseModifiers.remove(player.uniqueId)
+            else if (modifier.weaponId == weapon.id) return modifier
+        }
+        val config = getSkillConfig(weapon.id)?.getConfigurationSection("ranged_use") ?: return null
+        return RangedUseSettings(
+            weapon.id, config.getDouble("movement_multiplier", 1.0).coerceIn(0.0, 10.0),
+            config.getDouble("charge_speed", 1.0).coerceIn(0.05, 10.0)
+        )
+    }
+
+    private fun tickRangedUse() {
+        val online = plugin.server.onlinePlayers.mapTo(HashSet()) { it.uniqueId }
+        rangedUseModifiers.keys.removeIf { it !in online }
+        chargeFractions.keys.removeIf { it !in online }
+        previousChargeTicks.keys.removeIf { it !in online }
+        for (player in plugin.server.onlinePlayers) {
+            val settings = getRangedUseSettings(player)
+            if (settings == null || settings.chargeSpeed == 1.0 || !player.hasActiveItem() ||
+                player.activeItemHand != org.bukkit.inventory.EquipmentSlot.HAND ||
+                player.activeItem.type !in listOf(Material.BOW, Material.CROSSBOW)) {
+                chargeFractions.remove(player.uniqueId)
+                previousChargeTicks.remove(player.uniqueId)
+                continue
+            }
+            // 调整原版剩余使用时间，弓的射击力度、弩的装填消耗仍由服务端原逻辑裁定。
+            val used = player.activeItemUsedTime
+            if (used < (previousChargeTicks[player.uniqueId] ?: -1)) chargeFractions.remove(player.uniqueId)
+            previousChargeTicks[player.uniqueId] = used
+            val accumulated = (chargeFractions[player.uniqueId] ?: 0.0) + settings.chargeSpeed - 1.0
+            val extraTicks = kotlin.math.floor(accumulated).toInt()
+            chargeFractions[player.uniqueId] = accumulated - extraTicks
+            val maxTime = player.activeItemRemainingTime + player.activeItemUsedTime
+            player.setActiveItemRemainingTime((player.activeItemRemainingTime - extraTicks).coerceIn(1, maxTime.coerceAtLeast(1)))
+        }
+    }
+
     fun reduceCooldown(player: Player, seconds: Double) {
         reduceCooldown(player, seconds, player.inventory.itemInMainHand.type)
+    }
+
+    fun reduceCooldownBySeconds(player: Player, seconds: Double, item: ItemStack = player.inventory.itemInMainHand) {
+        val remaining = (globalCooldowns[player.uniqueId] ?: return) - System.currentTimeMillis()
+        if (remaining > 0L && seconds > 0.0) reduceCooldownByRatio(player, seconds * 1000.0 / remaining, item)
+    }
+
+    fun reduceCooldownByRatio(player: Player, ratio: Double, item: ItemStack = player.inventory.itemInMainHand) {
+        val remaining = (globalCooldowns[player.uniqueId] ?: return) - System.currentTimeMillis()
+        if (remaining <= 0L) return
+        val data = plugin.playerManager.getData(player.uniqueId) ?: return
+        val visual = rangedVisuals[player.uniqueId]
+        applyCooldown(player, data, item,
+            remaining / 1000.0 * (1.0 - ratio.coerceIn(0.0, 1.0)), ignoreReduction = true)
+        // 沿用原始总时长，让遮罩直接减少，并按新的结束时间发送冷却完成提示。
+        if (visual != null) rangedVisuals[player.uniqueId]?.let {
+            rangedVisuals[player.uniqueId] = it.copy(durationMillis = visual.durationMillis)
+        }
     }
 
     fun resetCooldown(player: Player, material: Material? = null) {
@@ -389,3 +481,10 @@ class WeaponSkillManager(private val plugin: Hjh_database) {
         }
     }
 }
+
+data class RangedUseSettings(
+    val weaponId: String,
+    val movementMultiplier: Double = 1.0,
+    val chargeSpeed: Double = 1.0,
+    val endTick: Int = Int.MAX_VALUE
+)

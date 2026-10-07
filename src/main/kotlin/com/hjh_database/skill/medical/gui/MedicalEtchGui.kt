@@ -194,8 +194,8 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
                 "§e点击立即清洗"
             )
         )
-        inventory.setItem(SLOT_PREVIOUS, createItem(Material.ARROW, "§f上一阶", "§7当前：${holder.rarity}阶"))
-        inventory.setItem(SLOT_NEXT, createItem(Material.ARROW, "§f下一阶", "§7当前：${holder.rarity}阶"))
+        inventory.setItem(SLOT_PREVIOUS, createItem(Material.ARROW, "§f上一阶", "§7当前：${holder.rarity}阶", customModelData = 101))
+        inventory.setItem(SLOT_NEXT, createItem(Material.ARROW, "§f下一阶", "§7当前：${holder.rarity}阶", customModelData = 102))
 
         manager.getSkillIdsByRarity(holder.rarity).take(SKILL_SLOTS.size).forEachIndexed { index, skillId ->
             val learned = data?.hasLearnedMedicalSkill(skillId) == true
@@ -367,10 +367,11 @@ class MedicalEtchGui(private val plugin: Hjh_database) : Listener {
         return false
     }
 
-    private fun createItem(material: Material, name: String, vararg lore: String): ItemStack {
+    private fun createItem(material: Material, name: String, vararg lore: String, customModelData: Int? = null): ItemStack {
         val item = ItemStack(material)
         val meta = item.itemMeta ?: return item
         meta.setDisplayName(name)
+        if (customModelData != null) meta.setCustomModelData(customModelData)
         if (lore.isNotEmpty()) meta.lore = lore.toList()
         meta.persistentDataContainer.set(manager.keyIgnoreRefresh, PersistentDataType.INTEGER, 1)
         item.itemMeta = meta

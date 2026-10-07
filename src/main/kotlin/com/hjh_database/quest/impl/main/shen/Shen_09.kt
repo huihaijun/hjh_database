@@ -37,6 +37,9 @@ class Shen_09 : QuestBase("main_shen_9", "[神族主线]职业启程", QuestType
 
     override fun checkComplete(progress: Int): Boolean = false
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        npcId == StoryNpcs.RENHUANGXUANYUANSHI.id && currentProgress in 0..1
+
     override fun onNpcDialogue(player: Player, npcId: String, currentProgress: Int): Boolean {
         if (npcId != StoryNpcs.RENHUANGXUANYUANSHI.id) return false
 

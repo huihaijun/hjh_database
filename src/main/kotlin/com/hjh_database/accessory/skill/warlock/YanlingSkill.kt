@@ -38,12 +38,6 @@ class YanlingSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
 
     override val accessoryId: String = "yanling"
 
-    override fun getThresholdPercent(crystalData: CrystalData): Double = 0.5
-
-    override fun getCostPerLevel(crystalData: CrystalData): Double = 3.0
-
-    override fun getTriggerProbability(crystalData: CrystalData): Double = 0.5
-
     override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
         super.getHudState(player, item, crystalData).copy(
             effectEndMillis = activeUntil[player.uniqueId] ?: 0L,

@@ -305,7 +305,8 @@ class ChenDaFuTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§a陈大夫 §f: §a好手法！杏花雨的行气法门已传入你的灵智，且收好了。")
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
+        player.sendMessage("§a陈大夫 §f: §a炉温稳了，药性也保住了。你带回的草药没有白费，这卷§d杏花雨§a的行气法门就传入你的灵智；往后行医，也要这般沉着细心。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -324,7 +325,6 @@ class ChenDaFuTrial(
                 }
             })
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     private fun failByOverheat() {
@@ -339,8 +339,8 @@ class ChenDaFuTrial(
         phase = Phase.ENDED
         cleanUp()
         if (player.isOnline && !player.isDead) player.teleport(exitLocation)
-        if (shouldMessage) player.sendMessage("§c陈大夫的医术试炼失败！")
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        if (shouldMessage) player.sendMessage("§a陈大夫 §f: §7炉火未稳，医术还须多练。卷轴不收回，我会拿余下的草药再备一炉；下次少带一些，切记红温之时及时压火。")
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

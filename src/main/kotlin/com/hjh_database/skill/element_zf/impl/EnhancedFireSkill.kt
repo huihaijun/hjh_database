@@ -21,6 +21,7 @@ class EnhancedFireSkill(private val plugin: Hjh_database) : EnhancedElementSkill
         val formationCast = FormationCast()
         val targets = findTargets(player)
         if (targets.isEmpty()) return false
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, targets.first().location)
         val initialDamage = data.zfStr * 6.0
         val tickDamage = data.zfStr * 1.5
 

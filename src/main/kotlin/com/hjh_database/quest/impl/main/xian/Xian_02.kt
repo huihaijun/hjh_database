@@ -36,15 +36,16 @@ class Xian_02 : QuestBase("main_xian_2", "[仙族主线]开物初识", QuestType
         "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f……吃好了？那便说些正事。近来下界魔物躁动，如失心智般见人便袭。我原疑心是§4§n镇妖塔§f中那些妖族孽障逃逸作乱——这帮妖物所到之处民生凋敝，实在令人忧心。也罢，此事容后再说。",
         "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f说了这许多，倒有些口干。道友，可否替我将那茶杯取来？",
         "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f且慢，不必亲自起身。我族有一门§e隔空取物§f的本事，唤作§b开物术§f。你初来乍到，正好一学。",
-        "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f施术时须心神专一——目光聚于目标，右手遥遥一点，便能引动四方灵气，将物件轻轻“请”到手心。切忌分神，灵气中断，白费心神。",
+        "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f施术时须心神专一——目光聚于目标，用§b右手§f遥遥一点，便能引动四方灵气，将物件轻轻“请”到手心。切勿离起始之处超过§b四格§f，否则术法中断，已耗的精力亦不会返还。",
         "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f万物有灵，山石草木皆然。取用之前先看分明：若见§a绿光盈盈§f，便是灵气充盈的§a“富饶”§f之态，此时取用最为便当。若光华转§e暗黄§f，便是灵脉将竭，采之费时费力，往往不得其果。若只余§7灰蒙蒙一片§f，那是灵脉休眠未醒，不可再取。待它休养完毕，绿光自会重临。",
-        "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f此外，施展此术会损耗§b精力§f，精力随时而生。开物术每精进一层，精力上限与§b取物速度§f皆会提升。",
+        "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f此术以§b精力§f维系，§b每开采一秒，消耗一点精力§f。开物术精进后，精力上限提高，取物愈快，同样的资源耗费便愈少。精力损耗之后，待恢复之期结束，自会回满。",
+        "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f魔物袭扰虽不会令术法立断，却会扰乱已经凝聚的灵气，损失§c当前进度§f。初学时损失五成，每精进一级少损失一成，§b五级及以上仅损失一成§f；此扰动每§b两秒§f至多发生一次。重新凝聚散失的灵气，亦须继续耗费精力。",
         "§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f听明白了？那便小试牛刀——茶壶就在你身旁的§e桌案§f上，为我取来吧。"
     )
 
     override fun getProgressText(progress: Int): List<String> = when (progress) {
-        0 -> listOf("§c主手持有 §b小飞的引荐信 §c拜见仙族盟主")
-        1 -> listOf("§c使用开物术取得 §b盟主的茶杯§c，主手持有后交给盟主")
+        0 -> listOf("§c手持 §b小飞的引荐信 §c拜见仙族盟主")
+        1 -> listOf("§c使用开物术取得 §b盟主的茶杯§c，手持茶杯交给盟主")
         else -> listOf("§a已将茶杯交给盟主")
     }
 
@@ -89,7 +90,7 @@ class Xian_02 : QuestBase("main_xian_2", "[仙族主线]开物初识", QuestType
 
         if (index == LETTER_CHECK_INDEX) {
             if (!isHoldingXiaofeiLetter(player.inventory.itemInMainHand)) {
-                player.sendMessage("§c[任务] -> 请将§b小飞的引荐信§c拿在主手，再与盟主对话。")
+                player.sendMessage("§c[任务] -> 请手持§b小飞的引荐信§c，再与盟主对话。")
                 player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
                 return
             }
@@ -110,7 +111,7 @@ class Xian_02 : QuestBase("main_xian_2", "[仙族主线]开物初识", QuestType
         if (scriptIndex == afterLetterScript.lastIndex) {
             talkProgress.remove(player.uniqueId)
             plugin.questManager.updateProgress(player, id, 1)
-            player.sendMessage("§a[任务] -> 使用开物术取得盟主的茶杯，主手持有后交给盟主。")
+            player.sendMessage("§a[任务] -> 使用开物术取得盟主的茶杯，手持茶杯交给盟主。")
         } else {
             talkProgress[player.uniqueId] = index + 1
         }
@@ -119,7 +120,7 @@ class Xian_02 : QuestBase("main_xian_2", "[仙族主线]开物初识", QuestType
     private fun handleTeaCupDelivery(player: Player) {
         val hand = player.inventory.itemInMainHand
         if (getResourceId(hand) != TEA_CUP_ID || hand.amount < 1) {
-            player.sendMessage("§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f茶杯还在桌案上么？用开物术取来，拿在主手交给我吧。")
+            player.sendMessage("§e[${StoryNpcs.XIAN_XIANZUMENGZHU.displayName}§e] §f茶杯还在桌案上么？用开物术取来，手持茶杯交给我吧。")
             player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
             return
         }

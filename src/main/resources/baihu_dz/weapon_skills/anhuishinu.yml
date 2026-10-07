@@ -1,12 +1,12 @@
 active:
   enable: true
-  cooldown: 8.0
+  cooldown: 30.0
   ignore_cool_reduce: true
   message: "&b&l武器技【寒山游猎】已发动"
-  hunting_duration: 5.0
+  hunting_duration: 10.0
   health_per_second: 4.0
   saturation_per_second: 2.0
-  enhanced_shots: 3
+  enhanced_shots: 5
   enhanced_duration: 10.0
   enhanced_shot_cooldown: 0.5
   bonus_damage_multiplier: 1.5

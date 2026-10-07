@@ -198,6 +198,7 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
             player.sendMessage("§c[仙风道骨] §f目标地点配置已失效，请在菜单中解除绑定。")
             return
         }
+        if (plugin.bountyManager.blocksRepairEastTravel(player, waypointId)) return
         val remaining = remainingCooldownSeconds(data)
         if (remaining > 0L) {
             player.sendMessage("§c[仙风道骨] §f仙力尚未恢复，还需 §c${remaining}秒§f。")
@@ -207,6 +208,8 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
             player.sendMessage("§e[仙风道骨] §f你已经在凝聚仙力。")
             return
         }
+
+        if (plugin.bountyManager.blockBountyTeleport(player)) return
 
         val start = player.location.clone()
         player.sendMessage("§e[仙风道骨] §f正在前往 §b${waypoint.name}§f，请静止吟唱3秒……")
@@ -256,6 +259,7 @@ class XianTalentManager(private val plugin: Hjh_database) : Listener {
 
                 channels.remove(player.uniqueId)
                 cancel()
+                if (plugin.bountyManager.blocksRepairEastTravel(player, waypointId)) return
                 if (!player.teleport(currentWaypoint.targetLoc.clone())) {
                     player.sendMessage("§c[仙风道骨] §f传送失败，本次不会进入冷却。")
                     return

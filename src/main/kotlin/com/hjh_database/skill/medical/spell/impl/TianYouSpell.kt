@@ -32,14 +32,16 @@ class TianYouSpell(private val plugin: Hjh_database) : MedicalSpell {
     private val activeOffenseBoosts = ConcurrentHashMap<UUID, OffenseBoostState>()
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
-        val radius = config?.getDouble("radius", 10.0) ?: 10.0
-        val shieldMultiplier = config?.getDouble("shield_multiplier", 3.0) ?: 3.0
-        val durationSeconds = config?.getInt("duration", 15) ?: 15
+        val radius = config?.getDouble("radius", 4.0) ?: 4.0
+        val shieldMultiplier = config?.getDouble("shield_multiplier", 3.2) ?: 3.2
+        val maxHealthPenalty = config?.getDouble("caster_max_health_penalty", 0.64) ?: 0.64
+        val durationSeconds = config?.getInt("duration", 8) ?: 8
         val offensePercentPerShield = config?.getDouble("offense_percent_per_shield", 0.01) ?: 0.01
         val offenseBoostCap = config?.getDouble("offense_boost_cap", 0.3) ?: 0.3
         val offenseBoostDuration = config?.getInt("offense_boost_duration", 5) ?: 5
 
-        val shieldAmount = data.zfStr * shieldMultiplier
+        val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+        val totalShield = (data.zfStr * shieldMultiplier - maxHealth * maxHealthPenalty).coerceAtLeast(0.0)
         val durationTicks = durationSeconds * 20L
         val center = player.location
 
@@ -58,18 +60,20 @@ class TianYouSpell(private val plugin: Hjh_database) : MedicalSpell {
         val targets = player.world.getNearbyEntities(center, radius, radius, radius)
             .asSequence()
             .filterIsInstance<Player>()
-            .filter { it.location.distanceSquared(center) <= radius * radius }
+            .filter { it.isOnline && !it.isDead && it.location.distanceSquared(center) <= radius * radius }
             .toMutableSet()
         targets.add(player)
+        val shieldAmount = totalShield / targets.size
 
         for (target in targets) {
             if (target.isDead || target.absorptionAmount >= shieldAmount) continue
 
             val amplifier = (shieldAmount / 4.0).toInt()
+            // 留一刻余量，确保到期任务能先读取剩余护盾再清除药水效果。
             target.addPotionEffect(
                 PotionEffect(
                     PotionEffectType.ABSORPTION,
-                    durationTicks.toInt(),
+                    durationTicks.toInt() + 1,
                     amplifier,
                     false,
                     false,

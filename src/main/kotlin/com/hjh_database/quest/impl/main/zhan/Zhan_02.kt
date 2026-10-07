@@ -47,15 +47,16 @@ class Zhan_02 : QuestBase("main_zhan_2", "[战神族主线]引导之石", QuestT
         "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f算了，都是些没头绪的事。你刚说奉族长之命来采石做检验的？",
         "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f正好。在这片荒地上开采资源，早成了我族的基本功。我现在就把§e开物术§f教给你。",
         "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f万物有灵，这些资源也一样。靠近时仔细看：冒§a绿莹莹的光§f，就是§a富饶§f，这时候采最快也最丰厚。采过之后变§e暗黄§f，就是§e枯竭§f，再硬来费时费力，说不定什么也捞不着。若是§7灰蒙蒙一片§f，那是它在休养，等绿光回来再动手不迟。",
-        "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f用你的§b右手§f轻触，等待一会，资源便到你手上了。§b左手§f轻触，你还能驱动灵识，看到这个资源的一些信息。",
-        "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f施展开物术要耗§b精力§f，精力会随时间慢慢回复。开物术等级越高，精力上限越高，§b开采速度也会越快§f。",
+        "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f用你的§b右手§f轻触，等待一会，资源便到你手上了。§b左手§f轻触，你还能驱动灵识，看到这个资源的一些信息。施术时别跑离开工的位置超过§b四格§f，不然这趟开采就停了，花掉的精力也收不回来。",
+        "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f记好了，开物术§b每开采一秒，就消耗一点精力§f。功夫练熟了，精力上限会提高，手脚也更利索，同样的活就越省力。精力用了不必慌，过一阵子自会回满。",
+        "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f怪物打过来，不至于一下把活打断，但会毁掉你§c眼下做成的一部分§f。一级损失一半，每升一级少损失一成，§b五级往后只损失一成§f；每§b两秒§f最多损失一次。被毁掉的这部分还得重做，时间和精力都要再花！",
         "§e[${StoryNpcs.ZHAN_QILONG.displayName}§e] §f去，拿这块石头练练手。采上§e两块§f，应该够族长那边用了。"
     )
 
     override fun getProgressText(progress: Int): List<String> = when (progress) {
-        0 -> listOf("§c主手持有飞虎的介绍信，与族长对话")
+        0 -> listOf("§c手持飞虎的介绍信，与族长对话")
         1 -> listOf("§c前往引导之石旁，与祁龙对话")
-        2 -> listOf("§c主手持有两块引导碎石，返回议事厅交给族长")
+        2 -> listOf("§c手持两块引导碎石，返回议事厅交给族长")
         else -> listOf("§a已将引导碎石交给族长")
     }
 
@@ -80,7 +81,7 @@ class Zhan_02 : QuestBase("main_zhan_2", "[战神族主线]引导之石", QuestT
 
         if (index == chiefBeforeLetter.size) {
             if (!isHoldingFeihuLetter(player.inventory.itemInMainHand)) {
-                player.sendMessage("§c[任务] -> 请将【飞虎的介绍信】拿在主手，再左键族长。")
+                player.sendMessage("§c[任务] -> 请手持【飞虎的介绍信】，用左手轻触族长，与他交谈。")
                 player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
                 return true
             }
@@ -110,7 +111,7 @@ class Zhan_02 : QuestBase("main_zhan_2", "[战神族主线]引导之石", QuestT
         if (index == qilongScript.lastIndex) {
             talkProgress.remove(player.uniqueId)
             plugin.questManager.updateProgress(player, id, 2)
-            player.sendMessage("§a[任务] -> 采集两块引导碎石，主手持有后返回族长处。")
+            player.sendMessage("§a[任务] -> 采集两块引导碎石，手持碎石返回族长处。")
         }
         return true
     }
@@ -118,7 +119,7 @@ class Zhan_02 : QuestBase("main_zhan_2", "[战神族主线]引导之石", QuestT
     private fun handleStoneDelivery(player: Player): Boolean {
         val hand = player.inventory.itemInMainHand
         if (getResourceId(hand) != STONE_RESOURCE_ID || hand.amount < REQUIRED_STONES) {
-            player.sendMessage("§e[${StoryNpcs.ZHAN_ZUZHANG.displayName}§e] §f样本还不够。主手拿好§e两块引导碎石§f再交给我。")
+            player.sendMessage("§e[${StoryNpcs.ZHAN_ZUZHANG.displayName}§e] §f样本还不够。手持§e两块引导碎石§f再交给我。")
             player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
             return true
         }

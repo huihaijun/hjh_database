@@ -73,9 +73,14 @@ class BaihuDzCategoryGui(
     fun onClick(event: InventoryClickEvent) {
         if (event.inventory != inv) return
         event.isCancelled = true
+        if (event.rawSlot !in 0 until inv.size) return
         val meta = event.currentItem?.itemMeta ?: return
         val category = meta.persistentDataContainer.get(categoryKey, PersistentDataType.STRING) ?: return
-        player.closeInventory()
-        BaihuDzRecipeListGui(plugin, player, category, manageMode).open()
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            if (player.openInventory.topInventory == inv) {
+                if (manageMode) player.closeInventory()
+                BaihuDzRecipeListGui(plugin, player, category, manageMode).open()
+            }
+        })
     }
 }

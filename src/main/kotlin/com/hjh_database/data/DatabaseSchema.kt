@@ -16,6 +16,7 @@ internal class DatabaseSchema(
         createForgeTable()
         createKaiWuTable()
         createQuestTable()
+        createBountyTable()
         createAlchemyTable()
         createMedicalTable()
         createPlayerStatusTable()
@@ -34,6 +35,21 @@ internal class DatabaseSchema(
         createTitleTables()
         createQixiBridgeBuildTable()
         updateTables()
+    }
+
+    private fun createBountyTable() {
+        executeSql(
+            """
+            CREATE TABLE IF NOT EXISTS player_bounty (
+                uuid VARCHAR(36) PRIMARY KEY,
+                bounty_rank INT NOT NULL DEFAULT 0,
+                bounty_exp INT NOT NULL DEFAULT 0,
+                refresh_day VARCHAR(10) NOT NULL,
+                state_json TEXT NOT NULL,
+                updated_at BIGINT NOT NULL
+            );
+            """.trimIndent()
+        )
     }
 
     private fun createBusuanTable() {
@@ -213,6 +229,7 @@ internal class DatabaseSchema(
                     safeAddColumn(stmt, "player_alchemy", "juezhang_pill_sickness_end", "BIGINT DEFAULT 0")
                     safeAddColumn(stmt, "player_alchemy", "qushi_pill_sickness_end", "BIGINT DEFAULT 0")
                     safeAddColumn(stmt, "player_alchemy", "jiedu_pill_sickness_end", "BIGINT DEFAULT 0")
+                    safeAddColumn(stmt, "player_alchemy", "category_sickness_ends", "TEXT DEFAULT '{}'")
                     safeAddColumn(stmt, "player_jianghu_xinde", "player_name", "VARCHAR(32)")
                     safeAddColumn(stmt, "player_jianghu_xinde", "jianghu_xinde", "INT DEFAULT 0")
                     safeAddColumn(stmt, "player_jianghu_xinde", "xiushen_exp_gained", "INT DEFAULT 0")
@@ -220,6 +237,7 @@ internal class DatabaseSchema(
 
                     // 医术灵智与当前启用列表必须分开保存。
                     safeAddColumn(stmt, "player_medical", "learned_skills", "TEXT DEFAULT ''")
+                    safeAddColumn(stmt, "player_medicaltest", "failed_attempts", "TEXT DEFAULT '{}'")
 
                     // 神族贡品：以首次领取为起点的现实时间 24 小时领取窗口。
                     safeAddColumn(stmt, "player_shen_tribute", "claim_window_started_at", "BIGINT NOT NULL DEFAULT 0")
@@ -380,7 +398,8 @@ internal class DatabaseSchema(
                 pill_sickness_end BIGINT DEFAULT 0,
                 juezhang_pill_sickness_end BIGINT DEFAULT 0,
                 qushi_pill_sickness_end BIGINT DEFAULT 0,
-                jiedu_pill_sickness_end BIGINT DEFAULT 0
+                jiedu_pill_sickness_end BIGINT DEFAULT 0,
+                category_sickness_ends TEXT DEFAULT '{}'
             );
         """.trimIndent()
         executeSql(sql)
@@ -489,7 +508,8 @@ internal class DatabaseSchema(
         CREATE TABLE IF NOT EXISTS player_medicaltest (
             uuid VARCHAR(36) PRIMARY KEY,
             player_name VARCHAR(255),
-            completed_trials TEXT
+            completed_trials TEXT,
+            failed_attempts TEXT DEFAULT '{}'
         )
     """.trimIndent()
         try {

@@ -14,6 +14,18 @@ abstract class QuestBase(
     val type: QuestType,
     val order: Int = 0 // 排序用，尤其是主线
 ) {
+    private data class NpcDialogue(
+        val npcId: String,
+        val stages: IntRange,
+        val action: (Player, Int) -> Boolean
+    )
+    private val npcDialogues = mutableListOf<NpcDialogue>()
+
+    /** 新任务只需声明一次 NPC、阶段和操作，匹配及冲突选择由任务系统统一处理。 */
+    protected fun npcDialogue(npcId: String, stages: IntRange, action: (Player, Int) -> Boolean) {
+        npcDialogues += NpcDialogue(npcId, stages, action)
+    }
+
     abstract val description: List<String>
     open val raceLimit: Int? = null // 限制种族ID
     /**
@@ -62,13 +74,15 @@ abstract class QuestBase(
      * @return 返回 true 表示任务系统接管了对话，不再播放NPC原本的闲聊；返回 false 表示无事发生
      */
     open fun onNpcDialogue(player: Player, npcId: String, currentProgress: Int): Boolean {
-        return false
+        val dialogue = npcDialogues.firstOrNull { it.npcId == npcId && currentProgress in it.stages } ?: return false
+        return dialogue.action(player, currentProgress)
     }
 
     /**
      * 无副作用地判断当前阶段是否会接管该 NPC 的对话。
      * 同一 NPC 可能命中多个进行中任务时，任务管理器据此先让玩家选择。
      */
-    open fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean = false
+    open fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        npcDialogues.any { it.npcId == npcId && currentProgress in it.stages }
 
 }

@@ -34,11 +34,11 @@ class HuShenZhouSpell(private val plugin: Hjh_database) : MedicalSpell, Listener
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         val zfStr = data.zfStr
         // 读取配置中的参数
-        val multiplier = config?.getDouble("absorption_multiplier", 3.0) ?: 3.0
+        val multiplier = config?.getDouble("absorption_multiplier", 2.4) ?: 2.4
         val durationSeconds = config?.getInt("duration", 20) ?: 20
         val durationTicks = durationSeconds * 20L
 
-        // 吸收伤害量 = 阵法强度 * 300%
+        // 吸收伤害量 = 阵法强度 * 240%
         val shieldAmount = zfStr * multiplier
 
         // 1. 赋予吸收伤害的护盾 (赋予黄心)

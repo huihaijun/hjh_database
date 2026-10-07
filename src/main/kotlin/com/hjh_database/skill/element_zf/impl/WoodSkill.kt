@@ -34,6 +34,7 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 3. 寻找目标
         val target = findTarget(player, range)
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, target?.location ?: player.eyeLocation.add(player.eyeLocation.direction.multiply(range)))
 
         // 4. 造成伤害与吸血
         // 如果有目标才造成伤害
@@ -70,7 +71,7 @@ class WoodSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
             // getAttribute 可能返回 null，必须使用 !! 断言
             val maxHp = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)!!.value
             if (currentHp < maxHp) {
-                player.health = min(maxHp, currentHp + healAmount)
+                plugin.elementCrystalManager.reworkedMastery.heal(player, healAmount)
             }
             // 只有打中人才播放针对目标的特效
             playEffects(player, target)

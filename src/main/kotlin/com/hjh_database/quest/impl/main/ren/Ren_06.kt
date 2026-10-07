@@ -64,6 +64,9 @@ class Ren_06 : QuestBase("main_ren_6", "[人族主线]皇城指引", QuestType.M
     // 逻辑处理
     // ==========================================
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        npcId == StoryNpcs.REN_LIGONGGONG.id && currentProgress == 0
+
     override fun onNpcDialogue(player: Player, npcId: String, currentProgress: Int): Boolean {
         if (npcId == StoryNpcs.REN_LIGONGGONG.id) {
             if (currentProgress == 0) {

@@ -258,6 +258,7 @@ class Mazeituantuanzhang(private val plugin: Hjh_database, private val boss: Liv
                     // 头前方的射线碰到了不可穿过的方块 (比如两格高的仙人掌、墙壁) -> 直接眩晕！
                     isDashing = false
                     applyStun()
+                    plugin.bountyManager.onSandWallHit(boss, headRay.hitBlock!!)
                     cancel()
                     return
                 }

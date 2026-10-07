@@ -205,7 +205,7 @@ class HuzhizhanqiSkill(private val plugin: Hjh_database) : Listener {
             if (!plugin.baihuMiasmaManager.isMiasmaIncreaseStopped(target)) return@forEach
             if (health > 0.0) {
                 val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: target.maxHealth
-                target.health = min(maxHealth, target.health + health)
+                plugin.elementCrystalManager.reworkedMastery.heal(target, health)
             }
             if (saturation > 0.0) {
                 target.saturation = min(target.foodLevel.toFloat(), target.saturation + saturation.toFloat())

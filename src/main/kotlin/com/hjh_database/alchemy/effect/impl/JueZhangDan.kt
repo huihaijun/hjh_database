@@ -38,7 +38,7 @@ class JueZhangDan : AlchemyEffect {
         player.world.spawnParticle(Particle.WITCH, player.location.clone().add(0.0, 1.0, 0.0), 16, 0.35, 0.45, 0.35, 0.02)
         player.sendMessage("§b[绝瘴丹] §f散去了 §b${String.format("%.1f", removed / 10.0)}% §7虎瘴§f。")
 
-        if (after > SHIELD_THRESHOLD) {
+        if (before >= SHIELD_THRESHOLD) {
             grantShield(player)
             player.sendMessage("§b[绝瘴丹] §7残余虎瘴仍重，药力凝成护盾护住心脉。")
         }
@@ -61,8 +61,8 @@ class JueZhangDan : AlchemyEffect {
 
     companion object {
         private const val MIASMA_REMOVE = 80
-        private const val SHIELD_THRESHOLD = 400
+        private const val SHIELD_THRESHOLD = 500
         private const val SHIELD_AMOUNT = 15.0
-        private const val SHIELD_DURATION_TICKS = 30 * 20
+        private const val SHIELD_DURATION_TICKS = 15 * 20
     }
 }

@@ -222,7 +222,7 @@ class Qianlishensheshou(
         )
         try {
             if (damage > 0.0) {
-                target.damage(damage)
+                target.damage(damage, boss)
             }
         } finally {
             target.removeMetadata(PHYSICAL_SKILL_METADATA, plugin)

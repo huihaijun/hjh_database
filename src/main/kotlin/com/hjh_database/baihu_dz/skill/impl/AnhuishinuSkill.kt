@@ -21,6 +21,7 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent
 import org.bukkit.inventory.ItemStack
@@ -63,6 +64,7 @@ class AnhuishinuSkill(
         val settings: Settings,
         var remainingShots: Int,
         val expiresAt: Long,
+        val generation: Long = System.nanoTime(),
         var lastVolleyTick: Int = Int.MIN_VALUE
     )
 
@@ -71,6 +73,7 @@ class AnhuishinuSkill(
     private val bonusDamageKey = NamespacedKey(plugin, "anhu_hunt_bonus_damage")
     private val slowTicksKey = NamespacedKey(plugin, "anhu_hunt_slow_ticks")
     private val slowAmplifierKey = NamespacedKey(plugin, "anhu_hunt_slow_amplifier")
+    private val generationKey = NamespacedKey(plugin, "anhu_hunt_generation")
 
     init {
         plugin.server.scheduler.runTaskTimer(plugin, Runnable { tickStates() }, 5L, 5L)
@@ -88,12 +91,14 @@ class AnhuishinuSkill(
         arrow.remove()
 
         huntingStates.remove(player.uniqueId)?.let { clearVirtualCharge(it.item) }
-        enhancedStates.remove(player.uniqueId)?.let { clearVirtualCharge(it.item) }
+        enhancedStates.remove(player.uniqueId)?.let {
+            if (it.remainingShots > 0) clearVirtualCharge(it.item)
+        }
 
         val now = System.currentTimeMillis()
-        val durationMs = (config.getDouble("hunting_duration", 5.0) * 1000.0).toLong().coerceAtLeast(1L)
+        val durationMs = (config.getDouble("hunting_duration", 10.0) * 1000.0).toLong().coerceAtLeast(1L)
         val settings = Settings(
-            enhancedShots = config.getInt("enhanced_shots", 3).coerceAtLeast(1),
+            enhancedShots = config.getInt("enhanced_shots", 5).coerceAtLeast(1),
             enhancedDurationMs = (config.getDouble("enhanced_duration", 10.0) * 1000.0).toLong().coerceAtLeast(1L),
             shotCooldownTicks = (config.getDouble("enhanced_shot_cooldown", 0.5) * 20.0).toInt().coerceAtLeast(0),
             bonusDamageMultiplier = config.getDouble("bonus_damage_multiplier", 1.5).coerceAtLeast(0.0),
@@ -121,7 +126,7 @@ class AnhuishinuSkill(
             player.setCooldown(Material.CROSSBOW, settings.shotCooldownTicks)
         }
 
-        // 激活箭已被用于施法；下一刻装入虚拟箭，让游猎后的三次射击不依赖背包箭矢。
+        // 激活箭已被用于施法；下一刻装入虚拟箭，让游猎后的强化射击不依赖背包箭矢。
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (huntingStates[player.uniqueId] === state) ensureVirtualCharge(item)
         }, 1L)
@@ -166,26 +171,27 @@ class AnhuishinuSkill(
 
         val enhanced = enhancedStates[uuid] ?: return false
         if (System.currentTimeMillis() >= enhanced.expiresAt) {
-            if (enhancedStates.remove(uuid, enhanced)) clearVirtualCharge(enhanced.item)
+            if (enhancedStates.remove(uuid, enhanced) && enhanced.remainingShots > 0) clearVirtualCharge(enhanced.item)
             return false
         }
+        if (enhanced.remainingShots <= 0 && enhanced.lastVolleyTick != currentTick) return false
         empowerArrow(player, arrow, data, enhanced)
         event.setConsumeItem(false)
 
         if (enhanced.lastVolleyTick != currentTick) {
             enhanced.lastVolleyTick = currentTick
             enhanced.remainingShots = (enhanced.remainingShots - 1).coerceAtLeast(0)
-            val remaining = enhanced.remainingShots
             if (enhanced.settings.shotCooldownTicks > 0) {
                 player.setCooldown(Material.CROSSBOW, enhanced.settings.shotCooldownTicks)
             }
 
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 if (enhancedStates[uuid] !== enhanced || enhanced.lastVolleyTick != currentTick) return@Runnable
-                if (remaining > 0) {
+                if (enhanced.remainingShots > 0) {
                     ensureVirtualCharge(enhanced.item)
                 } else {
-                    enhancedStates.remove(uuid, enhanced)
+                    // 保留本轮状态至过期，让最后一发箭也能通过击杀补回次数。
+                    clearVirtualCharge(enhanced.item)
                 }
             }, 1L)
         }
@@ -203,15 +209,39 @@ class AnhuishinuSkill(
         val slowTicks = pdc.get(slowTicksKey, PersistentDataType.INTEGER) ?: 100
         val slowAmplifier = pdc.get(slowAmplifierKey, PersistentDataType.INTEGER) ?: 1
 
-        if (bonusDamage > 0.0) dealArmorPiercingDamage(shooter, target, bonusDamage)
+        target.setMetadata(KILL_ARROW_METADATA, FixedMetadataValue(plugin, arrow))
+        try {
+            if (bonusDamage > 0.0) dealArmorPiercingDamage(shooter, target, bonusDamage)
+        } finally {
+            target.removeMetadata(KILL_ARROW_METADATA, plugin)
+        }
         target.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, slowTicks, slowAmplifier, false, true, true), true)
         spawnHitFrost(target)
+    }
+
+    fun onMobDeath(event: EntityDeathEvent) {
+        val target = event.entity
+        if (!isValidTarget(target)) return
+        val arrow = target.getMetadata(KILL_ARROW_METADATA)
+            .firstOrNull { it.owningPlugin == plugin }?.value() as? AbstractArrow
+            ?: (target.lastDamageCause as? EntityDamageByEntityEvent)?.damager as? AbstractArrow
+            ?: return
+        val generation = arrow.persistentDataContainer.get(generationKey, PersistentDataType.LONG) ?: return
+        val player = arrow.shooter as? Player ?: return
+        val state = enhancedStates[player.uniqueId] ?: return
+        if (state.generation != generation || System.currentTimeMillis() >= state.expiresAt) return
+        state.remainingShots++
+        plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            if (enhancedStates[player.uniqueId] === state && state.remainingShots > 0) {
+                ensureVirtualCharge(state.item)
+            }
+        }, 1L)
     }
 
     fun onCrossbowLoad(event: EntityLoadCrossbowEvent): Boolean {
         val player = event.entity as? Player ?: return false
         val uuid = player.uniqueId
-        if (!huntingStates.containsKey(uuid) && !enhancedStates.containsKey(uuid)) return false
+        if (!huntingStates.containsKey(uuid) && (enhancedStates[uuid]?.remainingShots ?: 0) <= 0) return false
         event.setConsumeItem(false)
         return true
     }
@@ -225,7 +255,9 @@ class AnhuishinuSkill(
 
     override fun deactivate(player: Player) {
         huntingStates.remove(player.uniqueId)?.let { clearVirtualCharge(it.item) }
-        enhancedStates.remove(player.uniqueId)?.let { clearVirtualCharge(it.item) }
+        enhancedStates.remove(player.uniqueId)?.let {
+            if (it.remainingShots > 0) clearVirtualCharge(it.item)
+        }
     }
 
     private fun tickStates() {
@@ -271,16 +303,19 @@ class AnhuishinuSkill(
         for ((uuid, state) in enhancedStates.entries) {
             val player = Bukkit.getPlayer(uuid)
             if (player == null || !player.isOnline || player.isDead) {
-                if (enhancedStates.remove(uuid, state)) clearVirtualCharge(state.item)
+                if (enhancedStates.remove(uuid, state) && state.remainingShots > 0) clearVirtualCharge(state.item)
                 continue
             }
             if (now >= state.expiresAt) {
                 if (enhancedStates.remove(uuid, state)) {
-                    clearVirtualCharge(state.item)
-                    player.sendMessage("§7[寒山游猎] 强化射击已过期。")
+                    if (state.remainingShots > 0) {
+                        clearVirtualCharge(state.item)
+                        player.sendMessage("§7[寒山游猎] 强化射击已过期。")
+                    }
                 }
                 continue
             }
+            if (state.remainingShots <= 0) continue
 
             player.world.spawnParticle(
                 Particle.SNOWFLAKE,
@@ -297,7 +332,7 @@ class AnhuishinuSkill(
     private fun restoreHuntingResources(player: Player, state: HuntingState) {
         if (state.healthPerSecond > 0.0) {
             val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: player.maxHealth
-            player.health = min(maxHealth, player.health + state.healthPerSecond)
+            plugin.elementCrystalManager.reworkedMastery.heal(player, state.healthPerSecond)
         }
         if (state.saturationPerSecond > 0.0f) {
             player.saturation = min(player.foodLevel.toFloat(), player.saturation + state.saturationPerSecond)
@@ -310,6 +345,7 @@ class AnhuishinuSkill(
         pdc.set(bonusDamageKey, PersistentDataType.DOUBLE, data.archerDamage * state.settings.bonusDamageMultiplier)
         pdc.set(slowTicksKey, PersistentDataType.INTEGER, state.settings.slowTicks)
         pdc.set(slowAmplifierKey, PersistentDataType.INTEGER, state.settings.slowAmplifier)
+        pdc.set(generationKey, PersistentDataType.LONG, state.generation)
         arrow.pierceLevel = max(arrow.pierceLevel, state.settings.pierceLevel)
         arrow.pickupStatus = AbstractArrow.PickupStatus.DISALLOWED
 
@@ -388,5 +424,6 @@ class AnhuishinuSkill(
     companion object {
         private val FROST_DUST = Particle.DustOptions(Color.fromRGB(22, 55, 112), 1.1f)
         private const val ARROW_TRAIL_MAX_TICKS = 200
+        private const val KILL_ARROW_METADATA = "anhu_hunt_kill_arrow"
     }
 }

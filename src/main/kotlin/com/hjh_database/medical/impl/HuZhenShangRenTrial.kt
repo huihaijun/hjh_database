@@ -575,7 +575,8 @@ class HuZhenShangRenTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§a虎镇商人 §f: §a三炉丹药皆已炼成，念气劲的行气法门便赠予你！")
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
+        player.sendMessage("§a虎镇商人 §f: §a收据寻回，三炉丹药也皆已炼成，这笔人情我记下了！§d念气劲§a的行气法门便随卷轴传入你的灵智，愿你气随心行，救人于危难。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -594,7 +595,6 @@ class HuZhenShangRenTrial(
                 }
             })
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     private fun failWithMessage(message: String) {
@@ -609,8 +609,8 @@ class HuZhenShangRenTrial(
         phase = Phase.ENDED
         cleanUp()
         if (player.isOnline && !player.isDead) player.teleport(exitLocation)
-        if (shouldMessage) player.sendMessage("§c虎镇商人的医术试炼失败！")
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        if (shouldMessage) player.sendMessage("§a虎镇商人 §f: §7丹炉这一回未成，买卖也有失手的时候。卷轴先留着，已有的收据我会归好账；下次少补一些，再来练练投药与控火。")
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

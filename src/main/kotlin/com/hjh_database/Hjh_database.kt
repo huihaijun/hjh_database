@@ -105,8 +105,10 @@ class Hjh_database : JavaPlugin() {
     lateinit var kaiWuAdminGui: com.hjh_database.kaiwu.KaiWuAdminGui
     lateinit var medicalManager: com.hjh_database.skill.medical.MedicalManager
     lateinit var medicalSpellManager: MedicalSpellManager
+    lateinit var medicalSpellListener: MedicalSpellListener
     lateinit var npcModule: NpcModule
     lateinit var questManager: QuestManager
+    lateinit var bountyManager: com.hjh_database.quest.impl.bounty.BountyManager
     lateinit var questGui: QuestGui
     lateinit var alchemyManager: AlchemyManager
     lateinit var raceModule: com.hjh_database.race.RaceManager
@@ -235,6 +237,7 @@ class Hjh_database : JavaPlugin() {
         // NPC模块初始化
         this.npcModule = NpcModule(this)
         this.npcModule.enable()
+        this.bountyManager = com.hjh_database.quest.impl.bounty.BountyManager(this)
 
         // 羽毛系统
         this.featherManager = com.hjh_database.feather.FeatherManager(this)
@@ -281,6 +284,9 @@ class Hjh_database : JavaPlugin() {
         server.pluginManager.registerEvents(this.elementCrystalManager.archerMastery, this)
         server.pluginManager.registerEvents(this.elementCrystalManager.warlockMastery, this)
         server.pluginManager.registerEvents(this.elementCrystalManager.medicalMastery, this)
+        server.pluginManager.registerEvents(elementCrystalManager.masterySupport, this)
+        server.pluginManager.registerEvents(elementCrystalManager.reworkedMastery, this)
+        elementCrystalManager.masterySupport.start()
         this.elementCrystalGui = ElementCrystalGui(this)
         server.pluginManager.registerEvents(this.elementCrystalGui, this)
         server.pluginManager.registerEvents(ElementCrystalInteractListener(this), this)
@@ -324,7 +330,8 @@ class Hjh_database : JavaPlugin() {
         pm.registerEvents(WeaponSkillListener(this), this)
         pm.registerEvents(com.hjh_database.kaiwu.KaiWuListener(this), this)
         pm.registerEvents(this.kaiWuAdminGui, this)
-        pm.registerEvents(MedicalSpellListener(this), this)
+        medicalSpellListener = MedicalSpellListener(this)
+        pm.registerEvents(medicalSpellListener, this)
         pm.registerEvents(CustomMagmaCubeListener(this), this)
 
         // 3. 独立系统与GUI监听
@@ -442,6 +449,18 @@ class Hjh_database : JavaPlugin() {
     }
 
     override fun onDisable() {
+        // 在监听器失效前退还真实材料、成品并清空预览，防止热重载取走展示物品。
+        for (player in server.onlinePlayers) {
+            when (val holder = player.openInventory.topInventory.holder) {
+                is com.hjh_database.dz.gui.RecipeCraftingGui -> holder.closeForDisable()
+                is com.hjh_database.baihu_dz.BaihuDzCraftingGui -> holder.closeForDisable()
+            }
+        }
+        if (::elementCrystalManager.isInitialized) {
+            elementCrystalManager.reworkedMastery.shutdown()
+            elementCrystalManager.masterySupport.shutdown()
+        }
+        if (::medicalSpellListener.isInitialized) medicalSpellListener.shutdown()
         dungeonParties.clear()
         if (::huomoDungeonManager.isInitialized) {
             try { huomoDungeonManager.shutdown() }
@@ -553,6 +572,9 @@ class Hjh_database : JavaPlugin() {
 
         if (::busuanManager.isInitialized) {
             busuanManager.shutdown()
+        }
+        if (::bountyManager.isInitialized) {
+            bountyManager.shutdown()
         }
 
         // 【新增】关服时清理所有正在进行的医术试炼，防止 BossBar 残留或刷出幽灵实体

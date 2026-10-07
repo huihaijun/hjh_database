@@ -15,8 +15,11 @@ import org.bukkit.block.data.Lightable
 import org.bukkit.entity.Item
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
+import org.bukkit.event.entity.EntityDamageByBlockEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.potion.PotionEffect
@@ -36,13 +39,18 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         var elementCount: Int = 0,
         var miasmaCoalWindowStart: Long = 0L,
         var miasmaCoalCount: Int = 0,
+        var equipmentCoreWindowStart: Long = 0L,
+        var equipmentCoreCount: Int = 0,
+        var darkIronWindowStart: Long = 0L,
+        var darkIronCount: Int = 0,
         var reliveWindowStart: Long = 0L,
         var reliveCount: Int = 0
     )
 
     private data class Fuel(
         val seconds: Int,
-        val limitType: LimitType? = null
+        val limitType: LimitType? = null,
+        val miasmaReduction: Int = 0
     )
 
     private data class StatusDisplay(
@@ -53,6 +61,8 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
     private enum class LimitType {
         ELEMENT,
         MIASMA_COAL,
+        EQUIPMENT_CORE,
+        DARK_IRON,
         RELIVE_STONE
     }
 
@@ -93,6 +103,12 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
+    fun isBurningFire(block: org.bukkit.block.Block): Boolean =
+        block.world == world() && block.type == Material.SOUL_CAMPFIRE &&
+            (block.blockData as? Lightable)?.isLit == true && points.any {
+                it.x == block.x && it.y == block.y && it.z == block.z && it.remainingSeconds > 0.0
+            }
+
     private fun tick() {
         elapsedSeconds++
         val world = world() ?: return
@@ -121,6 +137,15 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
 
         updateRangeStatusDisplays(world)
         sendActiveStatusDisplays(world)
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onCampfireDamage(event: EntityDamageByBlockEvent) {
+        if (event.entity !is Player || event.cause != EntityDamageEvent.DamageCause.CAMPFIRE) return
+        val block = event.damager ?: return
+        if (block.type != Material.SOUL_CAMPFIRE || block.world != world()) return
+        if (points.none { it.x == block.x && it.y == block.y && it.z == block.z }) return
+        event.isCancelled = true
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -181,6 +206,11 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         val wasUnlit = point.remainingSeconds <= 0.01
         point.remainingSeconds = (point.remainingSeconds + consume * fuel.seconds).coerceAtMost(MAX_SECONDS)
         addCategoryCount(point, fuel.limitType, consume)
+        if (fuel.miasmaReduction > 0) {
+            entity.thrower?.let(Bukkit::getPlayer)?.let { player ->
+                plugin.baihuMiasmaManager.reduceMiasma(player, consume * fuel.miasmaReduction)
+            }
+        }
         shrinkItem(entity, consume)
 
         setLit(point, true)
@@ -207,6 +237,8 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
             null -> Int.MAX_VALUE
             LimitType.ELEMENT -> (ELEMENT_LIMIT - point.elementCount).coerceAtLeast(0)
             LimitType.MIASMA_COAL -> (MIASMA_COAL_LIMIT - point.miasmaCoalCount).coerceAtLeast(0)
+            LimitType.EQUIPMENT_CORE -> (EQUIPMENT_CORE_LIMIT - point.equipmentCoreCount).coerceAtLeast(0)
+            LimitType.DARK_IRON -> (DARK_IRON_LIMIT - point.darkIronCount).coerceAtLeast(0)
             LimitType.RELIVE_STONE -> (RELIVE_STONE_LIMIT - point.reliveCount).coerceAtLeast(0)
         }
     }
@@ -216,6 +248,8 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         when (type) {
             LimitType.ELEMENT -> point.elementCount += amount
             LimitType.MIASMA_COAL -> point.miasmaCoalCount += amount
+            LimitType.EQUIPMENT_CORE -> point.equipmentCoreCount += amount
+            LimitType.DARK_IRON -> point.darkIronCount += amount
             LimitType.RELIVE_STONE -> point.reliveCount += amount
             null -> return
         }
@@ -230,6 +264,14 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         if (now - point.miasmaCoalWindowStart >= LIMIT_WINDOW_MS) {
             point.miasmaCoalWindowStart = now
             point.miasmaCoalCount = 0
+        }
+        if (now - point.equipmentCoreWindowStart >= NEW_FUEL_LIMIT_WINDOW_MS) {
+            point.equipmentCoreWindowStart = now
+            point.equipmentCoreCount = 0
+        }
+        if (now - point.darkIronWindowStart >= NEW_FUEL_LIMIT_WINDOW_MS) {
+            point.darkIronWindowStart = now
+            point.darkIronCount = 0
         }
         if (now - point.reliveWindowStart >= RELIVE_STONE_LIMIT_WINDOW_MS) {
             point.reliveWindowStart = now
@@ -306,14 +348,22 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         val name = when (type) {
             LimitType.ELEMENT -> "火/土元素"
             LimitType.MIASMA_COAL -> "附满瘴气的煤炭"
+            LimitType.EQUIPMENT_CORE -> "附满瘴气的装备核心"
+            LimitType.DARK_IRON -> "附满瘴气的玄铁锭"
             LimitType.RELIVE_STONE -> "重生石"
         }
         val limit = when (type) {
             LimitType.ELEMENT -> ELEMENT_LIMIT
             LimitType.MIASMA_COAL -> MIASMA_COAL_LIMIT
+            LimitType.EQUIPMENT_CORE -> EQUIPMENT_CORE_LIMIT
+            LimitType.DARK_IRON -> DARK_IRON_LIMIT
             LimitType.RELIVE_STONE -> RELIVE_STONE_LIMIT
         }
-        val minutes = if (type == LimitType.RELIVE_STONE) 6 else 8
+        val minutes = when (type) {
+            LimitType.EQUIPMENT_CORE, LimitType.DARK_IRON -> 5
+            LimitType.RELIVE_STONE -> 6
+            else -> 8
+        }
         player.sendMessage(color("&c【白虎镇火】&7此处镇火 $minutes 分钟内可投入的 &e$name &7已达到上限 &c$limit&7。"))
     }
 
@@ -340,6 +390,8 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
             val now = System.currentTimeMillis()
             point.elementWindowStart = now
             point.miasmaCoalWindowStart = now
+            point.equipmentCoreWindowStart = now
+            point.darkIronWindowStart = now
             point.reliveWindowStart = now
         }
     }
@@ -377,6 +429,10 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
             "pojiupige" -> Fuel(7)
             "zhizhuyan" -> Fuel(4)
             "fumanzhangqidemeitan" -> Fuel(15, LimitType.MIASMA_COAL)
+            "fumanzhangqidezhuangbeihexin" -> Fuel(10, LimitType.EQUIPMENT_CORE, 20)
+            "fumanzhangqidexuantieding" -> Fuel(15, LimitType.DARK_IRON, 50)
+            "zhangqi_hupo" -> Fuel(50, miasmaReduction = 150)
+            "zhangqi_hujin" -> Fuel(50, miasmaReduction = 200)
             "relive_stone" -> Fuel(30, LimitType.RELIVE_STONE)
             else -> null
         }
@@ -400,10 +456,13 @@ class BaihuTownFireManager(private val plugin: Hjh_database) : Listener {
         private const val FUEL_PICKUP_RADIUS = 1.75
         private const val LIMIT_WINDOW_MS = 8 * 60 * 1000L
         private const val RELIVE_STONE_LIMIT_WINDOW_MS = 6 * 60 * 1000L
+        private const val NEW_FUEL_LIMIT_WINDOW_MS = 5 * 60 * 1000L
         private const val LIMIT_WARNING_COOLDOWN_MS = 5_000L
         private const val STATUS_DISPLAY_SECONDS = 5
         private const val ELEMENT_LIMIT = 100
         private const val MIASMA_COAL_LIMIT = 20
+        private const val EQUIPMENT_CORE_LIMIT = 10
+        private const val DARK_IRON_LIMIT = 5
         private const val RELIVE_STONE_LIMIT = 5
         private const val MIASMA_SOURCE = "baihu_town_fire"
     }

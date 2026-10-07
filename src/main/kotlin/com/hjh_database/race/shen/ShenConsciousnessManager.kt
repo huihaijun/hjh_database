@@ -53,7 +53,7 @@ class ShenConsciousnessManager(private val plugin: Hjh_database) : Listener {
         if (!ensureLoaded(player)) return
 
         val links = linksByPlayer[player.uniqueId] ?: return
-        if (links.containsKey(template.id)) {
+        if (links.keys.any { plugin.npcModule.manager.sameNpc(it, template.id) }) {
             player.sendMessage("§e[神识] §f你已与 §e${template.name}§f 建立神识。")
             return
         }
@@ -142,7 +142,7 @@ class ShenConsciousnessManager(private val plugin: Hjh_database) : Listener {
         }
 
         val links = linksByPlayer[player.uniqueId] ?: return
-        if (links.containsKey(template.id)) return
+        if (links.keys.any { plugin.npcModule.manager.sameNpc(it, template.id) }) return
         if (links.size >= MAX_LINKS) {
             player.sendMessage("§c[神识] §f神识位已满，建立失败。")
             return

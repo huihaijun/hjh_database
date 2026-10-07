@@ -1,6 +1,8 @@
 package com.hjh_database.teleport
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.quest.impl.bounty.chuji.trade.QiMiaoXianJing
+import com.hjh_database.quest.impl.bounty.shangji.trade.WoDeMaiKeFeng
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.event.EventHandler
@@ -72,6 +74,8 @@ class TeleportListener(private val plugin: Hjh_database) : Listener {
         interactCooldown[player.uniqueId] = now
         // ------------------------------------------
         val pointId = plugin.teleportManager.getPointIdByBlock(block.location) ?: return
+        if (pointId == QiMiaoXianJing.ENTRANCE_POINT_ID && e.action != Action.PHYSICAL) return
+        if (pointId in setOf(WoDeMaiKeFeng.ENTRANCE_POINT_ID, WoDeMaiKeFeng.SECOND_ENTRANCE_POINT_ID) && e.action != Action.PHYSICAL) return
         // 压力板触发时，不要取消事件，否则压力板按不下去看着很怪
         if (e.action == Action.RIGHT_CLICK_BLOCK && !isInteractable(block.type)) {
             e.isCancelled = true

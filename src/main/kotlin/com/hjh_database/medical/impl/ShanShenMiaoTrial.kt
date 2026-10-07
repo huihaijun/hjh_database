@@ -174,9 +174,12 @@ class ShanShenMiaoTrial(
     }
 
     private fun win() {
+        if (phase == 2) return
+        phase = 2
         cleanUp()
         player.teleport(winLoc)
-        player.sendMessage("§a恭喜你完成了“山神庙庙公的医术试炼”！")
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
+        player.sendMessage("§a§l山神庙庙公 §f: §a供香未断，贡品尚存，山神总算应了这一方祈愿。你舍身护供，老夫便以§9毒素针§a相授；愿你以毒制邪，切莫伤及无辜。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         val data = plugin.playerManager.getPlayerData(player)
         if (data != null) {
@@ -196,15 +199,16 @@ class ShanShenMiaoTrial(
                 }
             })
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
+        if (phase == 2) return
+        phase = 2
         cleanUp()
         if (player.isOnline && !player.isDead) {
-            player.sendMessage("§c医术试炼失败！")
+            player.sendMessage("§a§l山神庙庙公 §f: §7供仪未成，莫急着责怪自己。卷轴留着，老夫再备些贡品；下回来，你只需补上尚缺的那一份。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

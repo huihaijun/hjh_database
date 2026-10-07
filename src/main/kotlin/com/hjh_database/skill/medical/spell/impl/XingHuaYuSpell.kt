@@ -20,8 +20,8 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         val range = (config?.getDouble("range", 16.0) ?: 16.0).coerceAtLeast(0.0)
-        val damageMultiplier = config?.getDouble("damage_multiplier", 1.2) ?: 1.2
-        val shieldRatio = config?.getDouble("shield_ratio", 0.3) ?: 0.3
+        val damageMultiplier = config?.getDouble("damage_multiplier", 1.6) ?: 1.6
+        val shieldRatio = config?.getDouble("shield_ratio", 0.16) ?: 0.16
         val shieldDurationTicks = ((config?.getDouble("shield_duration", 8.0) ?: 8.0) * 20.0)
             .toInt()
             .coerceAtLeast(1)
@@ -30,10 +30,10 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             .coerceAtLeast(0L)
         val rainRadius = (config?.getDouble("rain_radius", 8.0) ?: 8.0).coerceAtLeast(0.0)
         val rainCenterHeight = config?.getDouble("rain_center_height", 4.0) ?: 4.0
-        val durationTicks = ((config?.getDouble("duration", 10.0) ?: 10.0) * 20.0)
+        val durationTicks = ((config?.getDouble("duration", 12.0) ?: 12.0) * 20.0)
             .toInt()
             .coerceAtLeast(0)
-        val healAmount = data.zfStr * (config?.getDouble("heal_multiplier", 1.0) ?: 1.0)
+        val healRatio = config?.getDouble("target_max_health_ratio", 0.08) ?: 0.08
         val monsterDamage = data.zfStr * damageMultiplier
 
         val startLocation = player.eyeLocation.clone()
@@ -56,7 +56,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                         rainRadius,
                         rainCenterHeight,
                         durationTicks,
-                        healAmount
+                        healRatio
                     )
                     cancel()
                     return
@@ -75,7 +75,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                         rainRadius,
                         rainCenterHeight,
                         durationTicks,
-                        healAmount
+                        healRatio
                     )
                     cancel()
                     return
@@ -110,7 +110,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                     rainRadius,
                     rainCenterHeight,
                     durationTicks,
-                    healAmount
+                    healRatio
                 )
                 cancel()
             }
@@ -126,7 +126,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         rainRadius: Double,
         rainCenterHeight: Double,
         durationTicks: Int,
-        healAmount: Double
+        healRatio: Double
     ) {
         val fixedLocation = plantedLocation.clone()
         fixedLocation.world.playSound(fixedLocation, Sound.BLOCK_GRASS_PLACE, 1.0f, 1.25f)
@@ -149,7 +149,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                     rainRadius,
                     rainCenterHeight,
                     durationTicks,
-                    healAmount
+                    healRatio
                 )
             }
         }.runTaskLater(plugin, delayTicks)
@@ -161,7 +161,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         radius: Double,
         rainCenterHeight: Double,
         durationTicks: Int,
-        healAmount: Double
+        healRatio: Double
     ) {
         val fixedSeedLocation = seedLocation.clone()
         val world = fixedSeedLocation.world
@@ -201,7 +201,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
                 elapsedTicks += RAIN_UPDATE_TICKS
                 if (elapsedTicks % 20 == 0) {
-                    healPlayersInRain(caster, rainCenter, radius, healAmount)
+                    healPlayersInRain(caster, rainCenter, radius, healRatio)
                     world.playSound(rainCenter, Sound.BLOCK_AMETHYST_BLOCK_STEP, 0.5f, 1.5f)
                 }
 
@@ -210,7 +210,7 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         }.runTaskTimer(plugin, RAIN_UPDATE_TICKS.toLong(), RAIN_UPDATE_TICKS.toLong())
     }
 
-    private fun healPlayersInRain(caster: Player, rainCenter: Location, radius: Double, healAmount: Double) {
+    private fun healPlayersInRain(caster: Player, rainCenter: Location, radius: Double, healRatio: Double) {
         val radiusSquared = radius * radius
         for (entity in rainCenter.world.getNearbyEntities(rainCenter, radius, radius, radius)) {
             val target = entity as? Player ?: continue
@@ -221,7 +221,8 @@ class XingHuaYuSpell(private val plugin: Hjh_database) : MedicalSpell {
             val deltaZ = target.location.z - rainCenter.z
             if (deltaX * deltaX + deltaZ * deltaZ > radiusSquared) continue
 
-            plugin.medicalSpellManager.applyMedicalHeal(caster, target, healAmount, "xinghuayu")
+            val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
+            plugin.medicalSpellManager.applyMedicalHeal(caster, target, maxHealth * healRatio, "xinghuayu")
             target.addPotionEffect(PotionEffect(PotionEffectType.SATURATION, 1, 0, false, false, true))
             target.world.spawnParticle(
                 Particle.HEART,

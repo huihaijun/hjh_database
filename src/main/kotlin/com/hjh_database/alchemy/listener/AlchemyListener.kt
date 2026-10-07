@@ -8,6 +8,7 @@ import com.hjh_database.alchemy.data.AlchemyTier
 import com.hjh_database.alchemy.data.PillSicknessChannel
 import com.hjh_database.alchemy.effect.impl.DuoHun
 import com.hjh_database.alchemy.effect.impl.JieDuWan
+import com.hjh_database.alchemy.effect.impl.XinShiKangDuDan
 import com.hjh_database.alchemy.gui.AlchemyAdminGui
 import com.hjh_database.alchemy.gui.AlchemyAdminListGui // 导入新 GUI
 import com.hjh_database.alchemy.gui.AlchemyPlayerGui
@@ -101,8 +102,9 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         if (lastPillInteractionTick.put(player.uniqueId, tick) == tick) return
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
         val consumeResourceId = pdc.get(resourceIdKey, PersistentDataType.STRING)
-        val sicknessChannel = PillSicknessChannel.fromEffectId(consumeResourceId ?: effectId)
         val resourceData = consumeResourceId?.let { plugin.resourceManager.getLocalResource(it) }
+            ?: plugin.resourceManager.getLocalResource(effectId)
+        val sicknessChannel = PillSicknessChannel.fromEffectId(consumeResourceId ?: effectId, resourceData?.category)
 
         // 可堆叠的自定义喷溅药水由插件接管投掷和扣除，避免原版不消耗物品。
         if (item.type == Material.SPLASH_POTION && isManagedSplashPill(effectId, consumeResourceId)) {
@@ -110,7 +112,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             val canApplyEffect = resourceData?.onlyDoctor != true || playerData.job == DOCTOR_JOB
 
             if (canApplyEffect && isSickForThisPill(playerData, sicknessChannel)) {
-                sendSicknessMessage(player, sicknessEndFor(playerData, sicknessChannel))
+                sendSicknessMessage(player, sicknessChannel, sicknessEndFor(playerData, sicknessChannel))
                 return
             }
 
@@ -139,7 +141,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         val tier = try { AlchemyTier.valueOf(tierName) } catch (e: Exception) { AlchemyTier.LOW }
 
         if (isSickForThisPill(playerData, sicknessChannel)) {
-            sendSicknessMessage(player, sicknessEndFor(playerData, sicknessChannel))
+            sendSicknessMessage(player, sicknessChannel, sicknessEndFor(playerData, sicknessChannel))
             return
         }
 
@@ -154,7 +156,6 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         // 【修改】1.21.3 中推荐使用 subtract()，更稳定地扣除物品数量
         item.subtract(1)
         player.inventory.setItem(hand, if (item.amount > 0) item else null)
-        setPillSicknessCooldown(player, cooldownItem, cooldownTicks)
 
         player.playSound(player.location, org.bukkit.Sound.ENTITY_GENERIC_DRINK, 1f, 1f)
         player.playSound(player.location, org.bukkit.Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 2f)
@@ -164,10 +165,11 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             val pill = ActivePill(effectId, tier, duration)
             playerData.activePills.add(pill)
         }
-        if (sicknessChannel == PillSicknessChannel.JIEDU) {
+        if (effectId.startsWith("jieduwan", ignoreCase = true)) {
             syncOtherPillCooldowns(player, playerData)
         }
         setSicknessEnd(playerData, sicknessChannel, System.currentTimeMillis() + sicknessMillis)
+        setPillSicknessCooldown(player, cooldownItem, cooldownTicks)
     }
 
     // 已开始的原版饮用（例如插件重载前开始）也不能消耗丹药或留下玻璃瓶。
@@ -226,12 +228,16 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    fun onPoisonApplied(event: EntityPotionEffectEvent) {
+    fun onPoisonOrWitherApplied(event: EntityPotionEffectEvent) {
         val player = event.entity as? Player ?: return
-        if (event.newEffect?.type != PotionEffectType.POISON) return
+        val type = event.newEffect?.type ?: return
+        if (type != PotionEffectType.POISON && type != PotionEffectType.WITHER) return
         val playerData = plugin.playerManager.getPlayerData(player) ?: return
         if (playerData.activePills.any {
-                it.remainingSeconds > 0L && it.effectId.startsWith(JieDuWan.PREFIX, ignoreCase = true)
+                it.remainingSeconds > 0L && (
+                    it.effectId.equals(XinShiKangDuDan.ID, ignoreCase = true) ||
+                        (type == PotionEffectType.POISON && it.effectId.startsWith(JieDuWan.PREFIX, ignoreCase = true))
+                    )
             }
         ) {
             event.isCancelled = true
@@ -244,21 +250,26 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             tags.contains("panling") && tags.contains("monster")
     }
 
-    private fun sendSicknessMessage(player: Player, sicknessEnd: Long) {
-        val leftTime = (sicknessEnd - System.currentTimeMillis()) / 1000.0
-        player.sendMessage("§c[药毒] 身体还在排斥药力，无法继续服用！(剩余 %.1f秒)".format(leftTime))
+    private fun sendSicknessMessage(player: Player, channel: PillSicknessChannel, sicknessEnd: Long) {
+        val typeName = when (channel) {
+            PillSicknessChannel.CHUKUI -> "初窥"
+            PillSicknessChannel.GUIYUAN -> "归元"
+            PillSicknessChannel.ZHUSHI -> "助势"
+            PillSicknessChannel.FEIDAN -> "飞丹"
+            PillSicknessChannel.JUEZHANG -> "绝瘴丹"
+            PillSicknessChannel.QUSHI -> "祛湿丹"
+            PillSicknessChannel.JIEDU -> "高级解毒丸"
+            PillSicknessChannel.STANDARD -> "其他"
+        }
+        val leftTime = (sicknessEnd - System.currentTimeMillis()).coerceAtLeast(0L) / 1000.0
+        player.sendActionBar("§c§l${typeName}的药丹疾病还剩：%.1f秒".format(leftTime))
     }
 
     private fun isSickForThisPill(
         data: com.hjh_database.data.PlayerData,
         channel: PillSicknessChannel
     ): Boolean {
-        return when (channel) {
-            PillSicknessChannel.STANDARD -> data.isSick()
-            PillSicknessChannel.JUEZHANG -> data.isJuezhangSick()
-            PillSicknessChannel.QUSHI -> data.isQushiSick()
-            PillSicknessChannel.JIEDU -> data.isJieduSick()
-        }
+        return System.currentTimeMillis() < sicknessEndFor(data, channel)
     }
 
     private fun sicknessEndFor(
@@ -270,6 +281,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             PillSicknessChannel.JUEZHANG -> data.juezhangPillSicknessEnd
             PillSicknessChannel.QUSHI -> data.qushiPillSicknessEnd
             PillSicknessChannel.JIEDU -> data.jieduPillSicknessEnd
+            else -> data.pillCategorySicknessEnds[channel.name] ?: 0L
         }
     }
 
@@ -283,6 +295,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
             PillSicknessChannel.JUEZHANG -> data.juezhangPillSicknessEnd = end
             PillSicknessChannel.QUSHI -> data.qushiPillSicknessEnd = end
             PillSicknessChannel.JIEDU -> data.jieduPillSicknessEnd = end
+            else -> data.pillCategorySicknessEnds[channel.name] = end
         }
     }
 
@@ -462,11 +475,7 @@ class AlchemyListener(private val plugin: Hjh_database) : Listener {
         data: com.hjh_database.data.PlayerData
     ) {
         val now = System.currentTimeMillis()
-        listOf(
-            PillSicknessChannel.STANDARD,
-            PillSicknessChannel.JUEZHANG,
-            PillSicknessChannel.QUSHI
-        ).forEach { channel ->
+        PillSicknessChannel.entries.filter { it != PillSicknessChannel.JIEDU }.forEach { channel ->
             val remainingTicks = ((sicknessEndFor(data, channel) - now).coerceAtLeast(0L) / 50L).toInt()
             val cooldownMarker = ItemStack(Material.POTION)
             applyPillCooldownComponent(cooldownMarker, channel)

@@ -12,15 +12,12 @@ import java.util.UUID
 
 /**
  * 弓箭手(job=1)的元素结晶·精进技能 (4点时解锁) 协调中心
- * 委托至 5 个元素的独立实现类
+ * 保留金精进入口；重构的木水火土由 ReworkedMasterySkills 在最终结算阶段处理。
  */
 class ArcherMasterySkills(private val plugin: Hjh_database) : Listener {
 
     private val gold = GoldMasteryArcher(plugin)
-    private val wood = WoodMasteryArcher(plugin)
-    private val water = WaterMasteryArcher(plugin)
     private val fire = FireMasteryArcher(plugin)
-    private val earth = EarthMasteryArcher(plugin)
 
     @EventHandler
     fun handleDamageDealt(event: ElementCrystalDamageDealtEvent) {
@@ -40,18 +37,6 @@ class ArcherMasterySkills(private val plugin: Hjh_database) : Listener {
         )
     }
 
-    @EventHandler
-    fun handleArmorCalculation(event: ElementCrystalArmorCalculationEvent) {
-        val victim = event.victim
-        if (event.armor <= 0.0 || !victim.hasMetadata(EarthMasteryArcher.META_ARMOR_REDUCE)) return
-        val until = victim.getMetadata(EarthMasteryArcher.META_ARMOR_REDUCE).firstOrNull()?.asLong() ?: 0L
-        if (System.currentTimeMillis() < until) {
-            event.armor *= 0.5
-        } else {
-            victim.removeMetadata(EarthMasteryArcher.META_ARMOR_REDUCE, plugin)
-        }
-    }
-
     /** 玩家造成伤害时调用 */
     fun onDamageDealt(
         player: Player,
@@ -63,18 +48,12 @@ class ArcherMasterySkills(private val plugin: Hjh_database) : Listener {
         eventDamage: Double
     ) {
         gold.onDamageDealt(player, victim, eData, pData, isArrowHit, arrow)
-        wood.onDamageDealt(player, victim, eData, pData, isArrowHit)
-        water.onDamageDealt(player, victim, eData, pData, isArrowHit, arrow, eventDamage)
         fire.onDamageDealt(player, victim, eData, pData, isArrowHit)
-        earth.onDamageDealt(player, victim, eData, pData, isArrowHit)
     }
 
     /** 玩家下线或清理时调用 */
     fun cleanup(uuid: UUID) {
         gold.cleanup(uuid)
-        wood.cleanup(uuid)
-        water.cleanup(uuid)
         fire.cleanup(uuid)
-        earth.cleanup(uuid)
     }
 }

@@ -21,7 +21,7 @@ import java.util.UUID
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** 普通回流保持 BaseRefluxSkill 原规则；风场和火种均按施法者隔离。 */
+/** 补元由基类处理；风场和火种均按施法者隔离。 */
 class XunlilingshuSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
     class CastPlan
     private data class Wind(val until: Long)
@@ -40,9 +40,6 @@ class XunlilingshuSkill(plugin: Hjh_database) : BaseRefluxSkill(plugin) {
     private var visualTicks = 0
 
     override val accessoryId = "xunlilingshu"
-    override fun getThresholdPercent(crystalData: CrystalData) = 0.5
-    override fun getCostPerLevel(crystalData: CrystalData) = 1.5
-    override fun getTriggerProbability(crystalData: CrystalData) = 0.65
 
     override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
         super.getHudState(player, item, crystalData).copy(

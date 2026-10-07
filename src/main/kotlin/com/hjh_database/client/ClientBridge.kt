@@ -27,6 +27,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         plugin.logger.log(java.util.logging.Level.WARNING, "冷却 HUD 来源 $id 采集失败", error)
     }
     private val lastItemCooldowns = mutableMapOf<UUID, List<ItemCooldownVisual>>()
+    private val lastRangedUse = mutableMapOf<UUID, com.hjh_database.skill.weapon.RangedUseSettings?>()
     val entityModels = ClientEntityModels { targets, writer ->
         val bytes = encode(writer)
         targets.filter { it.isOnline && hasClient(it) }.forEach { it.sendPluginMessage(plugin, CHANNEL, bytes) }
@@ -47,6 +48,10 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     fun shutdown() {
         itemCooldowns.clear()
+        plugin.server.onlinePlayers.filter(::hasClient).forEach { player ->
+            send(player) { out -> out.writeByte(RANGED_USE); out.writeUTF(""); out.writeDouble(1.0); out.writeDouble(1.0); out.writeInt(0) }
+        }
+        lastRangedUse.clear()
         lastItemCooldowns.clear()
         entityModels.clear()
         syncTask?.cancel()
@@ -60,6 +65,21 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
     }
 
     fun hasClient(player: Player): Boolean = verified.contains(player.uniqueId)
+
+    fun syncRangedUse(player: Player, force: Boolean = false) {
+        if (!hasClient(player)) return
+        val settings = plugin.weaponSkillManager?.getRangedUseSettings(player)
+        if (!force && lastRangedUse.containsKey(player.uniqueId) && lastRangedUse[player.uniqueId] == settings) return
+        send(player) { out ->
+            out.writeByte(RANGED_USE)
+            out.writeUTF(settings?.weaponId ?: "")
+            out.writeDouble(settings?.movementMultiplier ?: 1.0)
+            out.writeDouble(settings?.chargeSpeed ?: 1.0)
+            out.writeInt(if (settings == null) 0 else if (settings.endTick == Int.MAX_VALUE) -1
+                else (settings.endTick - org.bukkit.Bukkit.getCurrentTick()).coerceAtLeast(0))
+        }
+        lastRangedUse[player.uniqueId] = settings
+    }
 
     /** 原版信标渲染，由客户端旋转到起终点方向；0 tick立即移除。 */
     fun beaconBeam(targets: Collection<Player>, id: UUID, origin: Location, end: Location, durationTicks: Int = 8, color: Int = 0xFFFFFF) {
@@ -201,6 +221,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
+        lastRangedUse.remove(event.player.uniqueId)
         lastItemCooldowns.remove(event.player.uniqueId)
         verified.remove(event.player.uniqueId)
         lastHud.remove(event.player.uniqueId)
@@ -226,6 +247,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
                 sendDungeonParty(player, force = true)
                 sendAccessoryHud(player, force = true)
                 sendItemCooldowns(player, force = true)
+                syncRangedUse(player, force = true)
                 scheduleInitialHudRefresh(player)
             }
         }.onFailure { error ->
@@ -236,6 +258,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
     private fun scheduleClientCheck(player: Player) {
         val playerId = player.uniqueId
         lastItemCooldowns.remove(playerId)
+        lastRangedUse.remove(playerId)
         verified.remove(playerId)
         lastHud.remove(playerId)
         lastDungeonParty.remove(playerId)
@@ -250,7 +273,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
         }
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             if (player.isOnline && !verified.contains(playerId)) {
-                player.kickPlayer("§c本服务器必须安装《画江湖》客户端 Mod。\n§7请安装 hjh_mod 1.0.12（Minecraft 1.21.3 / Fabric）后重新进入。")
+                player.kickPlayer("§c本服务器必须安装《画江湖》客户端 Mod。\n§7请安装 hjh_mod 1.0.16（Minecraft 1.21.3 / Fabric）后重新进入。")
             }
         }, HANDSHAKE_TIMEOUT_TICKS)
     }
@@ -272,6 +295,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
             val player = plugin.server.getPlayer(uuid)
             if (player == null || !player.isOnline) {
                 lastItemCooldowns.remove(uuid)
+                lastRangedUse.remove(uuid)
                 verified.remove(uuid)
                 lastHud.remove(uuid)
                 lastDungeonParty.remove(uuid)
@@ -281,6 +305,7 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
                 sendDungeonParty(player, force = false, sharedSnapshots = dungeonPartySnapshots)
                 sendAccessoryHud(player, force = false)
                 sendItemCooldowns(player, force = false)
+                syncRangedUse(player)
             }
         }
     }
@@ -481,7 +506,8 @@ class ClientBridge(private val plugin: Hjh_database) : Listener, PluginMessageLi
 
     companion object {
         const val CHANNEL = "hjh_mod:main"
-        const val PROTOCOL_VERSION = 7
+        const val PROTOCOL_VERSION = 8
+        private const val RANGED_USE = 16
         private const val ITEM_COOLDOWN_VISUALS = 15
         private const val HELLO = 1
         private const val HUD_SYNC = 2

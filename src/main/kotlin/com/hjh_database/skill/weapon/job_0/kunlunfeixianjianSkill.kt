@@ -429,7 +429,7 @@ class kunlunfeixianjianSkill : WeaponSkill, Listener {
         if (amount <= 0.0) return
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: player.health
         val before = player.health
-        player.health = min(maxHealth, before + amount)
+        mainPlugin.elementCrystalManager.reworkedMastery.heal(player, amount)
         if (player.health <= before) return
 
         player.world.spawnParticle(Particle.HEART, player.location.clone().add(0.0, 1.4, 0.0), 6, 0.5, 0.45, 0.5, 0.05)

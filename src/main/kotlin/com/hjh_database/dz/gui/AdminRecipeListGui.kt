@@ -73,10 +73,10 @@ class AdminRecipeListGui(
 
         // 3. 翻页按钮
         if (page > 0) {
-            setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}")
+            setBtn(45, Material.ARROW, "§a上一稀有度", "§7查看 ${formatRarityName(rarityPages[page - 1])}", customModelData = 103)
         }
         if (page < rarityPages.lastIndex) {
-            setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}")
+            setBtn(53, Material.ARROW, "§a下一稀有度", "§7查看 ${formatRarityName(rarityPages[page + 1])}", customModelData = 104)
         }
 
         // 4. 返回按钮
@@ -278,11 +278,12 @@ class AdminRecipeListGui(
 
     private fun stripColor(text: String): String = ChatColor.stripColor(text) ?: text
 
-    private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String) {
+    private fun setBtn(slot: Int, mat: Material, name: String, vararg lore: String, customModelData: Int? = null) {
         val item = ItemStack(mat)
         val meta = item.itemMeta
         if (meta != null) {
             meta.setDisplayName(name)
+            if (customModelData != null) meta.setCustomModelData(customModelData)
             meta.lore = ArrayList(listOf(*lore))
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES)
             item.itemMeta = meta

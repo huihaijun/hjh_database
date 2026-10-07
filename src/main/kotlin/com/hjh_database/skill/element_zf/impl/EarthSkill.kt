@@ -39,6 +39,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 3. 确定阵法中心
         val center = getTargetLocation(player, range)
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, center)
 
         // 4. 提示 & 启动音效
         // center.world 可能为空，但在 Bukkit 运行时通常安全，使用 !! 确保调用
@@ -46,7 +47,7 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
         center.world!!.playSound(center, Sound.BLOCK_GRAVEL_BREAK, 1.0f, 0.6f)
 
         // 5. 开启持续任务
-        object : BukkitRunnable() {
+        val formationTask = object : BukkitRunnable() {
             var ticks = 0
             val maxTicks = (duration * 20).toInt()
 
@@ -105,7 +106,8 @@ class EarthSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
                 ticks++
             }
-        }.runTaskTimer(plugin, 0L, 1L)
+        }
+        formationTask.runTaskTimer(plugin, 0L, 1L)
 
         return true
     }

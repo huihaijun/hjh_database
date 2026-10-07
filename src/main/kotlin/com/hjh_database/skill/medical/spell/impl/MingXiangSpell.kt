@@ -31,18 +31,21 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
     }
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
+        if (activeMeditations.containsKey(player.uniqueId)) {
+            player.sendActionBar("§c§l正在冥想中，无法重复施展。")
+            return false
+        }
         val zfStr = data.zfStr
 
         // 读取配置参数
-        val durationSeconds = config?.getInt("duration", 10) ?: 10
-        val regenMultiplier = config?.getDouble("regen_multiplier", 0.2) ?: 0.2
-        val speedReduction = (config?.getDouble("speed_reduction", 0.7) ?: 0.7).coerceIn(0.0, 1.0)
+        val durationSeconds = config?.getInt("duration", 30) ?: 30
+        val healthStrengthRatio = config?.getDouble("heal_strength_ratio", 0.04) ?: 0.04
+        val missingHealthRatio = config?.getDouble("missing_health_ratio", 0.12) ?: 0.12
+        val manaHealthRatio = config?.getDouble("mana_max_health_ratio", 0.08) ?: 0.08
+        val manaStrengthPenalty = config?.getDouble("mana_strength_penalty", 0.08) ?: 0.08
+        val speedReduction = (config?.getDouble("speed_reduction", 0.8) ?: 0.8).coerceIn(0.0, 1.0)
 
         val maxTicks = durationSeconds * 20
-        val regenAmount = zfStr * regenMultiplier
-
-        // 如果玩家已经在冥想，先取消旧的
-        activeMeditations[player.uniqueId]?.cancel()
 
         // ==================== 修改区域 1：移速惩罚 ====================
         // 获取玩家的移动速度属性 (1.21.3 标准 API)
@@ -84,11 +87,14 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
                 // 每 10 ticks (0.5秒) 触发一次恢复
                 if (ticks > 0 && ticks % 10 == 0) {
                     // --- 恢复生命值 ---
-                    plugin.medicalSpellManager.applyMedicalHeal(player, player, regenAmount, "mingxiang")
+                    val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+                    val missingHealth = (maxHealth - player.health).coerceAtLeast(0.0)
+                    val healAmount = zfStr * healthStrengthRatio + missingHealth * missingHealthRatio
+                    plugin.medicalSpellManager.applyMedicalHeal(player, player, healAmount, "mingxiang")
 
                     // ==================== 修改区域 2：灵力恢复 ====================
                     // 调用你专属的 addLingli 方法，内部自带上限和下限防溢出处理
-                    data.addLingli(regenAmount)
+                    data.addLingli((maxHealth * manaHealthRatio - zfStr * manaStrengthPenalty).coerceAtLeast(0.0))
                     // ==========================================================
 
                     // 播放吸收灵气的音效
@@ -101,8 +107,6 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
                     player.world.spawnParticle(Particle.WITCH, loc, 6, 0.5, 0.8, 0.5, 0.05)
                 }
 
-                ticks += 5 // 任务每 5 ticks 执行一次循环
-
                 // 冥想自然结束
                 if (ticks >= maxTicks) {
                     if (!plugin.passiveSubtitleManager.showCombatEvent(player, "doctor.effect.mingxiang.ended")) {
@@ -110,7 +114,9 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
                     }
                     player.world.playSound(player.location, Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 1.5f)
                     cancelMeditation(player.uniqueId)
+                    return
                 }
+                ticks += 5 // 任务每 5 ticks 执行一次循环
             }
         }.runTaskTimer(plugin, 0L, 5L)
 
@@ -121,7 +127,8 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
 
     // 统一的取消冥想方法
     private fun cancelMeditation(uuid: UUID) {
-        activeMeditations.remove(uuid)?.cancel()
+        val task = activeMeditations.remove(uuid) ?: return
+        task.cancel()
         val player = plugin.server.getPlayer(uuid)
         // 精准解除减速的 AttributeModifier
         if (player != null) {
@@ -130,6 +137,7 @@ class MingXiangSpell(private val plugin: Hjh_database) : MedicalSpell, Listener 
                 val modifierKey = org.bukkit.NamespacedKey(plugin, "mingxiang_slowness")
                 speedAttribute.removeModifier(modifierKey)
             }
+            plugin.medicalSpellManager.startCooldown(player, "mingxiang")
         }
     }
 

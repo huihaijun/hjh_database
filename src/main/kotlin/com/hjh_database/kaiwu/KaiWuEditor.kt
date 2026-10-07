@@ -18,7 +18,6 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
 
     // --- 新增：缓存上一次保存的配置，作为新建节点的默认值 ---
     private var lastTimeSeconds = 10.0
-    private var lastEnergyCost = 10.0
     private var lastExp = 20.0
     private var lastReqLevel = 1.0
     private var lastCooldownSec = 300.0
@@ -53,14 +52,6 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
             46, createSettingIcon(
                 Material.CLOCK, "§e采集耗时",
                 node?.timeSeconds ?: lastTimeSeconds, "秒", "左键+0.5 / 右键-0.5"
-            )
-        )
-
-        // [47] 精力消耗
-        inv.setItem(
-            47, createSettingIcon(
-                Material.COOKED_BEEF, "§c精力消耗",
-                node?.energyCost ?: lastEnergyCost, "点", "左键+1 / 右键-1"
             )
         )
 
@@ -125,7 +116,6 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
             val isLeft = e.isLeftClick
 
             if (item.type == Material.CLOCK) updateVal(item, if (isLeft) 0.5 else -0.5, 0.5, 60.0, "秒")
-            else if (item.type == Material.COOKED_BEEF) updateVal(item, if (isLeft) 1.0 else -1.0, 0.0, 1000.0, "点")
             else if (item.type == Material.EXPERIENCE_BOTTLE) updateVal(item, if (isLeft) 5.0 else -5.0, 0.0, 10000.0, "点")
             else if (item.type == Material.LADDER) updateVal(item, if (isLeft) 1.0 else -1.0, 1.0, 100.0, "级")
             else if (item.type == Material.COMPASS) updateVal(item, if (isLeft) 10.0 else -10.0, 10.0, 3600.0, "秒")
@@ -158,7 +148,6 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
         }
 
         val time = parseVal(inv.getItem(46))
-        val energy = parseVal(inv.getItem(47))
         val exp = parseVal(inv.getItem(48)).toInt()
         val reqLv = parseVal(inv.getItem(49)).toInt()
         val cooldown = parseVal(inv.getItem(50)).toInt()
@@ -167,13 +156,12 @@ class KaiWuEditor(private val plugin: Hjh_database, private val manager: KaiWuMa
 
         // --- 【新增】每次关闭保存时，更新上一次配置缓存 ---
         lastTimeSeconds = time
-        lastEnergyCost = energy
         lastExp = exp.toDouble()
         lastReqLevel = reqLv.toDouble()
         lastCooldownSec = cooldown.toDouble()
         lastDepletedSec = depleted.toDouble()
 
-        manager.saveNodeFromEditor(locKey, drops, time, energy, exp, reqLv, cooldown, depleted)
+        manager.saveNodeFromEditor(locKey, drops, time, exp, reqLv, cooldown, depleted)
         e.player.sendMessage("§a[开物术] 资源点配置已保存！")
     }
 

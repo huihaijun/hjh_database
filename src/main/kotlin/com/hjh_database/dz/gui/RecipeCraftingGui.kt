@@ -29,16 +29,19 @@ class RecipeCraftingGui(
     private val plugin: Hjh_database,
     private val player: Player,
     private val category: String,
-    private val recipe: DzRecipe? // 允许传入 null 以配合原逻辑检查
+    private val recipe: DzRecipe?, // 允许传入 null 以配合原逻辑检查
+    private val returnRarity: Int? = null
 ) : InventoryHolder, Listener {
 
     private var inv: Inventory? = null // 为了配合原逻辑(异常时为null)，这里必须是可空
 
-    private val INPUT_SLOTS = intArrayOf(11, 12, 13, 14, 15)
-    private val MATERIAL_INFO_SLOT = 0
-    private val OUTPUT_SLOT = 24
+    private val INPUT_SLOTS = intArrayOf(37, 38, 39, 40, 41)
+    private val PREVIEW_SLOTS = intArrayOf(10, 11, 12, 13, 14)
+    private val MATERIAL_INFO_SLOT = 15
+    private val OUTPUT_SLOT = 43
     private val BACK_BUTTON_SLOT = 45
-    private val BUTTON_SLOT = 49
+    private val BUTTON_SLOT = 42
+    private var closed = false
     private val outputPlaceholderKey = NamespacedKey(plugin, "forge_output_placeholder")
 
     init {
@@ -48,7 +51,7 @@ class RecipeCraftingGui(
             // Kotlin init 块无法像 Java构造函数那样直接 return 停止对象创建，
             // 但 inv 为 null 会导致 open() 不执行，逻辑效果一致。
         } else {
-            this.inv = Bukkit.createInventory(this, 54, "锻造:${plainItemName(recipe.result)}")
+            this.inv = Bukkit.createInventory(this, 54, "${getItemDisplayName(recipe.result)}§8锻造")
             setupGui()
             plugin.server.pluginManager.registerEvents(this, plugin)
         }
@@ -67,7 +70,10 @@ class RecipeCraftingGui(
             if (!isInputSlot(i)) inventory.setItem(i, bg)
         }
 
-        // 红色玻璃占住输出槽，让原版Shift自动寻槽只能落入材料槽。
+        recipe?.ingredients?.take(PREVIEW_SLOTS.size)?.forEachIndexed { i, item ->
+            inventory.setItem(PREVIEW_SLOTS[i], item.clone())
+        }
+        inventory.setItem(16, recipe?.result?.clone())
         inventory.setItem(MATERIAL_INFO_SLOT, createMaterialInfoButton())
         inventory.setItem(OUTPUT_SLOT, createOutputPlaceholder())
         inventory.setItem(BACK_BUTTON_SLOT, createBackButton())
@@ -161,17 +167,14 @@ class RecipeCraftingGui(
         val item = ItemStack(Material.BREWING_STAND)
         val meta = item.itemMeta
         if (meta != null) {
-            meta.setDisplayName("§6锻造材料一览")
+            meta.setDisplayName("§e§l配方要求")
             val lore = ArrayList<String>()
             val safeRecipe = recipe
-            if (safeRecipe == null || safeRecipe.ingredients.isEmpty()) {
-                lore.add("§7无额外材料")
-            } else {
-                for (ingredient in safeRecipe.ingredients) {
-                    if (ingredient.type == Material.AIR) continue
-                    lore.add("§f${getItemDisplayName(ingredient)} §7x§e${ingredient.amount}")
-                }
-                if (lore.isEmpty()) lore.add("§7无额外材料")
+            if (safeRecipe != null) {
+                lore.add("§7职业: ${DzUtil.getJobName(safeRecipe.reqJob)}")
+                lore.add("§7锻造等级: ${safeRecipe.reqForgeLevel}")
+                lore.add("§7锻造资质: ${safeRecipe.reqLicense}")
+                lore.add("§7锻造成功奖励经验: ${safeRecipe.expReward}")
             }
             meta.lore = lore
             item.itemMeta = meta
@@ -180,10 +183,11 @@ class RecipeCraftingGui(
     }
 
     private fun createBackButton(): ItemStack {
-        val item = ItemStack(Material.RED_BED)
+        val item = ItemStack(Material.ARROW)
         val meta = item.itemMeta
         if (meta != null) {
-            meta.setDisplayName("§c返回配方预览")
+            meta.setDisplayName("§c返回配方列表")
+            meta.setCustomModelData(102)
             meta.lore = listOf("§7退还已放入的材料并返回")
             item.itemMeta = meta
         }
@@ -199,13 +203,8 @@ class RecipeCraftingGui(
         }
     }
 
-    private fun plainItemName(item: ItemStack): String {
-        val meta = item.itemMeta
-        val name = if (meta != null && meta.hasDisplayName()) meta.displayName else item.type.name
-        return ChatColor.stripColor(name) ?: name
-    }
-
     private fun updateButtonState() {
+        if (closed) return
         val inventory = inv ?: return
         ensureOutputPlaceholder(inventory)
         val errors = checkRequirements()
@@ -225,7 +224,7 @@ class RecipeCraftingGui(
             }
         } else {
             // 条件不满足
-            btn = ItemStack(Material.BARRIER)
+            btn = ItemStack(Material.ANVIL)
             val meta = btn.itemMeta
             if (meta != null) {
                 meta.setDisplayName("§c§l无法锻造")
@@ -250,7 +249,17 @@ class RecipeCraftingGui(
 
     @EventHandler
     fun onClose(event: InventoryCloseEvent) {
-        if (event.inventory == inv && inv != null) {
+        if (event.inventory == inv) releaseItems()
+    }
+
+    fun closeForDisable() {
+        releaseItems()
+        player.closeInventory()
+    }
+
+    private fun releaseItems() {
+        if (!closed && inv != null) {
+            closed = true
             // 退还材料
             for (slot in INPUT_SLOTS) {
                 val item = inv!!.getItem(slot)
@@ -265,6 +274,7 @@ class RecipeCraftingGui(
                 inv!!.setItem(OUTPUT_SLOT, null)
                 giveOrDrop(output)
             }
+            inv!!.clear()
             HandlerList.unregisterAll(this)
         }
     }
@@ -273,6 +283,10 @@ class RecipeCraftingGui(
     fun onClick(event: InventoryClickEvent) {
         val inventory = inv ?: return
         if (event.view.topInventory != inventory) return
+        if (closed) {
+            event.isCancelled = true
+            return
+        }
 
         // DOUBLE_CLICK/COLLECT_TO_CURSOR 会从整个 InventoryView 收集同类物品，
         // 即使双击发生在玩家背包，也必须在锻造界面统一拦截。
@@ -300,19 +314,17 @@ class RecipeCraftingGui(
         } else if (slot < inventory.size) {
             event.isCancelled = true
         } else if (event.action == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            val output = inventory.getItem(OUTPUT_SLOT)
-            if (output != null && !isOutputPlaceholder(output)) {
-                // 有成品时，原版会把Shift的同类物品合并进输出堆；领取成品前暂时禁止。
-                event.isCancelled = true
-            } else {
-                plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
-            }
+            event.isCancelled = true
+            moveToInputs(event)
+            updateButtonState()
         }
 
         if (slot == BACK_BUTTON_SLOT) {
-            val safeRecipe = recipe ?: return
-            player.closeInventory()
-            RecipePreviewGui(plugin, player, category, safeRecipe.id).open()
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (!closed && player.openInventory.topInventory == inventory) {
+                    PlayerRecipeListGui(plugin, player, category, returnRarity).open()
+                }
+            })
             return
         }
 
@@ -332,6 +344,10 @@ class RecipeCraftingGui(
     fun onDrag(event: InventoryDragEvent) {
         val inventory = inv ?: return
         if (event.view.topInventory != inventory) return
+        if (closed) {
+            event.isCancelled = true
+            return
+        }
 
         val topSlots = event.rawSlots.filter { it < inventory.size }
         if (topSlots.any { !isInputSlot(it) }) {
@@ -341,6 +357,29 @@ class RecipeCraftingGui(
         if (topSlots.isNotEmpty()) {
             plugin.server.scheduler.runTask(plugin, Runnable { this.updateButtonState() })
         }
+    }
+
+    // Shift 只向真实材料槽转移，绝不合并进预览物品或成品。
+    private fun moveToInputs(event: InventoryClickEvent) {
+        val inventory = inv ?: return
+        val source = event.currentItem ?: return
+        var remaining = source.amount
+        for (slot in INPUT_SLOTS) {
+            val target = inventory.getItem(slot) ?: continue
+            if (!target.isSimilar(source)) continue
+            val moved = minOf(remaining, (minOf(target.maxStackSize, inventory.maxStackSize) - target.amount).coerceAtLeast(0))
+            target.amount += moved
+            remaining -= moved
+        }
+        for (slot in INPUT_SLOTS) {
+            if (remaining == 0) break
+            val target = inventory.getItem(slot)
+            if (target != null && !target.type.isAir) continue
+            val moved = minOf(remaining, source.maxStackSize, inventory.maxStackSize)
+            inventory.setItem(slot, source.clone().apply { amount = moved })
+            remaining -= moved
+        }
+        event.currentItem = if (remaining == 0) null else source.clone().apply { amount = remaining }
     }
 
     private fun doCraft() {

@@ -62,6 +62,23 @@ object MobRegistry {
 
     fun init() {
         mobs.clear()
+        register(MobDefinition(
+            id = "bounty_gongsunwangfuwushi",
+            name = "&c公孙王府武士",
+            type = EntityType.ZOMBIE,
+            health = 9999.0,
+            damage = 30.0,
+            armor = 9999.0,
+            speed = 0.25,
+            maxNearby = 1,
+            drops = emptyList(),
+            exp = 0,
+            chestplate = Material.IRON_CHESTPLATE,
+            leggings = Material.IRON_LEGGINGS,
+            boots = Material.IRON_BOOTS,
+            mainHand = Material.GOLDEN_SWORD,
+            headTexture = "eyJ0aW1lc3RhbXAiOjE0MTEyODQ4ODc0MzgsInByb2ZpbGVJZCI6IjViYjE5ZjBjNDBjNjQzMmZhMGY0NTQyZDAzY2YzZGNjIiwicHJvZmlsZU5hbWUiOiJBdWRpYWNlMDgwOSIsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9hNWFmZmQ2NGVjNzFlNzhhY2NhM2Y0ZWE4Yzk2NzRjN2RhMWNjNmQ0MzQ1Yjg1YTYxOGE3YTM3M2FmYyJ9fX0="
+        ))
         // === 示例：注册一个测试怪物 ===
         register(MobDefinition(
             id = "ceshijiangshi",
@@ -97,12 +114,12 @@ object MobRegistry {
                 MobDrop("wood", 1, 2, 0.8),
                 // 掉落金元素
                 MobDrop("metal", 1, 2, 0.4),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
-                // 20%掉落皮革 卖钱的
-                MobDrop("pojiupige", 1, 1, 0.1),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 1, 0.48),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
+                // 8%掉落皮革 卖钱的
+                MobDrop("pojiupige", 1, 1, 0.08),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
@@ -123,10 +140,10 @@ object MobRegistry {
                 MobDrop("wood", 1, 2, 0.9),
                 // 掉落金元素
                 MobDrop("metal", 1, 2, 0.2),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 1, 0.48),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
@@ -148,12 +165,12 @@ object MobRegistry {
                 MobDrop("wood", 1, 2, 0.6),
                 // 掉落水元素
                 MobDrop("metal", 1, 2, 0.2),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
-                // 50%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 1, 0.5),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.48),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
+                // 20%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 1, 0.2),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
@@ -174,12 +191,12 @@ object MobRegistry {
                 MobDrop("wood", 2, 3, 0.8),
                 // 掉落金元素
                 MobDrop("metal", 2, 3, 0.4),
-                // 70%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 3, 0.7),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 40%掉落皮革 卖钱的
-                MobDrop("pojiupige", 1, 1, 0.4),
+                // 56%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.56),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 12%掉落皮革 卖钱的
+                MobDrop("pojiupige", 1, 1, 0.12),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
@@ -202,10 +219,10 @@ object MobRegistry {
                 MobDrop("wood", 2, 3, 0.9),
                 // 掉落金元素
                 MobDrop("metal", 1, 2, 0.2),
-                // 70%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 3, 0.7),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
+                // 56%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 3, 0.56),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
@@ -225,19 +242,31 @@ object MobRegistry {
             maxNearby = 3,
             drops = listOf(
                 // 掉落木元素
-                MobDrop("wood", 1, 3, 0.6),
+                MobDrop("wood", 1, 2, 0.6),
                 // 掉落水元素
-                MobDrop("metal", 1, 3, 0.2),
-                // 70%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 3, 0.7),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
-                // 60%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 2, 0.6),
+                MobDrop("metal", 1, 2, 0.2),
+                // 56%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.56),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 24%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 1, 0.24),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_longlinzhisen", 1, 1, 0.05)
             ),
             affixes = listOf(),
+        ))
+        register(MobDefinition(
+            id = "shanchong",
+            name = "&6山虫",
+            type = EntityType.ENDERMITE,
+            health = 25.3,
+            damage = 7.0,
+            armor = 7.475,
+            speed = 0.3,
+            exp = 30,
+            maxNearby = 6,
+            drops = emptyList()
         ))
         register(MobDefinition(
             id = "gongpingongjianshou",
@@ -299,8 +328,8 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 25%掉落贡品
                 MobDrop("shanshengongpin", 1, 2, 0.25),
-                // 40%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 2, 0.4)
+                // 24%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.24)
             ),
             affixes = listOf()
         ))
@@ -315,10 +344,10 @@ object MobRegistry {
             speed = 0.4,
             maxNearby = 1,
             drops = listOf(
-                MobDrop("wood", 1, 2, 1.0),
-                MobDrop("hjh_tongqian", 3, 5, 0.9),
-                MobDrop("relive_stone", 1, 2, 1.0),
-                MobDrop("zhizhuyan", 1, 3, 0.9),
+                MobDrop("wood", 3, 5, 1.0),
+                MobDrop("hjh_tongqian", 5, 8, 0.64),
+                MobDrop("relive_stone", 1, 1, 1.0),
+                MobDrop("zhizhuyan", 1, 2, 1.0),
                 //赤铜锭
                 MobDrop("chitongding", 1, 1, 0.25),
                 // 极低概率掉落江湖心得
@@ -381,8 +410,8 @@ object MobRegistry {
             drops = listOf(
                 MobDrop("wood", 2, 2, 1.0),
                 MobDrop("metal", 2, 2, 0.9),
-                MobDrop("hjh_tongqian", 5, 6, 0.7),
-                MobDrop("relive_stone", 1, 2, 1.0),
+                MobDrop("hjh_tongqian", 5, 8, 0.8),
+                MobDrop("relive_stone", 1, 1, 1.0),
                 MobDrop("renshen", 1, 2, 0.5),
                 //赤铜锭
                 MobDrop("chitongding", 1, 1, 0.25),
@@ -474,12 +503,12 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.6),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
-                // 20%掉落煤炭 卖钱的
-                MobDrop("meitan", 1, 1, 0.2),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.48),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
+                // 12%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.12),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
                 // 极低概率掉落江湖心得
@@ -502,12 +531,12 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.6),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
-                // 20%掉落煤炭 卖钱的
-                MobDrop("meitan", 1, 1, 0.05),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.64),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
+                // 12%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.12),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
                 // 极低概率掉落江湖心得
@@ -532,8 +561,8 @@ object MobRegistry {
                 MobDrop("earth", 1, 2, 0.6),
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.6),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 20%掉落煤炭 卖钱的
                 MobDrop("meitan", 1, 1, 0.05),
                 // 焱砂之心
@@ -560,14 +589,14 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.64),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
-                // 30%掉落煤炭 卖钱的
-                MobDrop("meitan", 1, 1, 0.3),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落煤炭 卖钱的
+                MobDrop("meitan", 1, 1, 0.16),
                 // 焱砂之心
                 MobDrop("yanshazhixin", 1, 1, 0.2),
                 // 极低概率掉落江湖心得
@@ -592,12 +621,12 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 30%掉落货物
                 MobDrop("wangyuanwaibeiqiangzoudehuowu", 1, 2, 0.3),
                 // 焱砂之心
@@ -624,12 +653,12 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 10%掉落人参
                 MobDrop("renshen", 1, 1, 0.1),
                 // 焱砂之心
@@ -656,14 +685,14 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 1.0),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.8),
-                // 10%掉落金元宝
-                MobDrop("jinyuanbao", 1, 1, 0.4),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 1.0),
+                // 64%掉落金元宝
+                MobDrop("jinyuanbao", 2, 3, 0.64),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 2, 2, 1.0),
                 // 货物
                 MobDrop("wangyuanwaibeiqiangzoudehuowu", 3, 4, 1.0),
                 // 焱砂之心
-                MobDrop("yanshazhixin", 1, 2, 0.6),
+                MobDrop("yanshazhixin", 1, 2, 0.64),
                 // 掉落三阶武器材料
                 MobDrop("yanjingshi", 1, 1, 0.3),
                 // 极低概率掉落江湖心得
@@ -693,8 +722,8 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 30%掉落货物
                 MobDrop("shangxianwenxian", 1, 2, 0.3),
                 // 焱砂之心
@@ -720,8 +749,8 @@ object MobRegistry {
                 MobDrop("earth", 1, 2, 0.6),
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
+                // 2%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.02),
                 // 30%掉落货物
                 MobDrop("shangxianwenxian", 1, 2, 0.3),
                 // 焱砂之心
@@ -748,8 +777,8 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 30%掉落货物
                 MobDrop("shangxianwenxian", 1, 2, 0.3),
                 // 焱砂之心
@@ -778,8 +807,8 @@ object MobRegistry {
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
                 // 10%掉落金元宝
                 MobDrop("jinyuanbao", 1, 1, 0.1),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 30%掉落货物
                 MobDrop("wenquankezhanbujipin", 1, 2, 0.3),
                 // 焱砂之心
@@ -802,10 +831,10 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.6),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.9),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.3),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.1),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 30%掉落货物
                 MobDrop("wenquankezhanbujipin", 1, 2, 0.3),
                 // 焱砂之心
@@ -828,10 +857,10 @@ object MobRegistry {
                 MobDrop("fire", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.6),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
                 // 20%掉落货物
                 MobDrop("wenquankezhanbujipin", 1, 2, 0.2),
                 // 焱砂之心
@@ -854,12 +883,12 @@ object MobRegistry {
             drops = listOf(
                 // 掉落土元素
                 MobDrop("earth", 3, 4, 1.0),
-                // 10%掉落金元宝
-                MobDrop("jinyuanbao", 1, 1, 0.4),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 1.0),
+                // 64%掉落金元宝
+                MobDrop("jinyuanbao", 3, 3, 0.64),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 2, 2, 1.0),
                 // 焱砂之心
-                MobDrop("yanshazhixin", 2, 3, 0.6),
+                MobDrop("yanshazhixin", 2, 3, 0.64),
                 // 掉落三阶材料 黄风眼
                 MobDrop("huangfengyan", 1, 1, 0.35),
                 // 极低概率掉落江湖心得
@@ -880,12 +909,12 @@ object MobRegistry {
             drops = listOf(
                 // 掉落土元素
                 MobDrop("earth", 3, 4, 1.0),
-                // 10%掉落金元宝
-                MobDrop("jinyuanbao", 1, 1, 0.4),
-                // 10%掉落重生石
-                MobDrop("relive_stone", 1, 1, 1.0),
+                // 64%掉落金元宝
+                MobDrop("jinyuanbao", 3, 3, 0.64),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 2, 2, 1.0),
                 // 焱砂之心
-                MobDrop("yanshazhixin", 3, 4, 0.6),
+                MobDrop("yanshazhixin", 3, 5, 0.64),
                 // 掉落恶魂丹
                 MobDrop("ehundan", 1, 1, 0.4),
                 // 极低概率掉落江湖心得
@@ -910,12 +939,12 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.16),
                 // 30%掉落瘴气玄铁
                 MobDrop("fumanzhangqidexuantieding", 1, 1, 0.3),
                 // 极低概率掉落江湖心得
@@ -940,12 +969,12 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.16),
                 // 30%掉落瘴气玄铁
                 MobDrop("fumanzhangqidezhuangbeihexin", 1, 1, 0.3),
                 // 极低概率掉落江湖心得
@@ -970,14 +999,14 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 3, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 12%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.12),
+                // 12%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 1, 0.12),
                 // 15%掉落瘴气核心
                 MobDrop("fumanzhangqidezhuangbeihexin", 1, 1, 0.15),
                 // 15掉落瘴气玄铁
@@ -1002,12 +1031,12 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.64),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 16%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.16),
                 // 30%掉落收据
                 MobDrop("huzhenshangrenshouju", 1, 2, 0.3),
                 // 15%掉落瘴气核心
@@ -1033,12 +1062,12 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.64),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 16%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.16),
                 // 30%掉落收据
                 MobDrop("huzhenshangrenshouju", 1, 2, 0.3),
                 // 15掉落瘴气玄铁
@@ -1063,12 +1092,12 @@ object MobRegistry {
                 MobDrop("metal", 1, 2, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 1, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落瘴气meitan
-                MobDrop("fumanzhangqidemeitan", 1, 2, 0.3),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 1, 2, 0.64),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 16%掉落瘴气meitan
+                MobDrop("fumanzhangqidemeitan", 1, 2, 0.16),
                 // 30%掉落收据
                 MobDrop("huzhenshangrenshouju", 1, 2, 0.3),
                 // 15%掉落瘴气核心
@@ -1093,8 +1122,10 @@ object MobRegistry {
                 MobDrop("metal", 5, 5, 0.95),
                 // 掉落土元素
                 MobDrop("earth", 4, 5, 0.95),
-                // 80%掉落金元宝
+                // 80%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.8),
+                // 80%掉落金元宝
+                MobDrop("jinyuanbao", 4, 5, 0.8),
                 // 100%掉落重生石
                 MobDrop("relive_stone", 2, 3, 1.0),
                 // 50%掉落瘴气meitan
@@ -1123,8 +1154,10 @@ object MobRegistry {
                 MobDrop("metal", 5, 5, 0.95),
                 // 掉落土元素
                 MobDrop("earth", 4, 5, 0.95),
-                // 80%掉落金元宝
+                // 80%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.8),
+                // 80%掉落金元宝
+                MobDrop("jinyuanbao", 4, 5, 0.8),
                 // 100%掉落重生石
                 MobDrop("relive_stone", 2, 3, 1.0),
                 // 50%掉落瘴气meitan
@@ -1156,8 +1189,8 @@ object MobRegistry {
                 MobDrop("earth", 1, 2, 0.6),
                 // 30%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.3),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
                 // 30%掉落草药束
                 MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
             ),
@@ -1182,8 +1215,8 @@ object MobRegistry {
                 MobDrop("earth", 1, 2, 0.6),
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
                 // 30%掉落瘴气玄铁
                 MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
             ),
@@ -1208,10 +1241,10 @@ object MobRegistry {
                 MobDrop("earth", 1, 2, 0.6),
                 // 50%掉落铜钱
                 MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 1, 3, 0.3),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 32%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 1, 2, 0.32),
                 //
                 MobDrop("chendafudecaoyaoshu", 1, 1, 0.3),
             ),
@@ -1234,14 +1267,14 @@ object MobRegistry {
                 MobDrop("earth", 2, 3, 0.9),
                 // 30%掉落铜钱
                 MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 20%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 24%掉落破旧皮革
+                MobDrop("pojiupige", 1, 1, 0.24),
                 // 掉落山魅
                 MobDrop("shanmei", 1, 2, 0.35),
                 // 掉落高山恶土
-                MobDrop("gaoshanetu", 1, 1, 0.6),
+                MobDrop("gaoshanetu", 1, 1, 0.48),
 
             ),
             affixes = listOf(), //
@@ -1261,14 +1294,14 @@ object MobRegistry {
                 MobDrop("earth", 2, 3, 0.9),
                 // 30%掉落铜钱
                 MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 20%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 24%掉落破旧皮革
+                MobDrop("pojiupige", 1, 1, 0.24),
                 // 掉落山魅
                 MobDrop("shanmei", 1, 2, 0.35),
                 // 掉落高山恶土
-                MobDrop("gaoshanetu", 1, 1, 0.6),
+                MobDrop("gaoshanetu", 1, 1, 0.48),
             ),
             affixes = listOf(), //
             mainHand = Material.BOW  // 纯装饰
@@ -1289,15 +1322,15 @@ object MobRegistry {
                 // 30%掉落铜钱
                 MobDrop("hjh_tongqian", 2, 2, 0.35),
                 //煤炭
-                MobDrop("meitan", 1, 2, 0.5),
-                // 20%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.2),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                MobDrop("meitan", 1, 1, 0.32),
+                // 8%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.08),
+                // 24%掉落破旧皮革
+                MobDrop("pojiupige", 1, 1, 0.24),
                 // 掉落山魅
                 MobDrop("shanmei", 1, 2, 0.35),
                 // 掉落高山恶土
-                MobDrop("gaoshanetu", 1, 1, 0.6),
+                MobDrop("gaoshanetu", 1, 1, 0.48),
             ),
             affixes = listOf(),
             mainHand = Material.IRON_AXE    // 纯装饰
@@ -1320,12 +1353,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
@@ -1348,12 +1381,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
@@ -1376,12 +1409,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 48%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.48),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 2, 0.16),
                 // 极低概率掉落江湖心得
                 MobDrop("jianghuxinde_xuanshuihupo", 1, 1, 0.05),
             ),
@@ -1402,12 +1435,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("shuizudegongpin", 1, 2, 0.35),
             ),
@@ -1430,12 +1463,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("shuizudegongpin", 1, 2, 0.35),
             ),
@@ -1458,12 +1491,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("shuizudegongpin", 1, 2, 0.35),
             ),
@@ -1484,12 +1517,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("yuanqidejiejing", 1, 2, 0.35),
             ),
@@ -1511,12 +1544,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 3, 0.6),
-                // 30%掉落铜钱
-                MobDrop("hjh_tongqian", 2, 2, 0.35),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落破旧皮革
-                MobDrop("pojiupige", 1, 2, 0.4),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落破旧皮革
+                MobDrop("pojiupige", 1, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("yuanqidejiejing", 1, 2, 0.35),
             ),
@@ -1539,12 +1572,12 @@ object MobRegistry {
                 MobDrop("water", 2, 3, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.6),
-                // 50%掉落铜钱
-                MobDrop("hjh_tongqian", 1, 2, 0.5),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
-                // 30%掉落蜘蛛眼
-                MobDrop("zhizhuyan", 2, 3, 0.3),
+                // 64%掉落铜钱
+                MobDrop("hjh_tongqian", 2, 3, 0.64),
+                // 5%掉落重生石
+                MobDrop("relive_stone", 1, 1, 0.05),
+                // 16%掉落蜘蛛眼
+                MobDrop("zhizhuyan", 2, 2, 0.16),
                 // 35%掉落贡品
                 MobDrop("yuanqidejiejing", 1, 2, 0.35),
             ),
@@ -1565,10 +1598,10 @@ object MobRegistry {
                 MobDrop("water", 3, 4, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.6),
-                // 50%掉落金元宝
-                MobDrop("jinyuanbao", 1, 2, 0.4),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
+                // 80%掉落金元宝
+                MobDrop("jinyuanbao", 5, 8, 0.8),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 3, 3, 1.0),
                 // 85%掉落贡品
                 MobDrop("shuizudegongpin", 3, 4, 0.85),
                 // 35%掉落水魂鳞片
@@ -1594,10 +1627,10 @@ object MobRegistry {
                 MobDrop("water", 3, 4, 0.8),
                 // 掉落土元素
                 MobDrop("earth", 2, 2, 0.6),
-                // 50%掉落金元宝
-                MobDrop("jinyuanbao", 1, 2, 0.4),
-                // 30%掉落重生石
-                MobDrop("relive_stone", 1, 1, 0.3),
+                // 80%掉落金元宝
+                MobDrop("jinyuanbao", 5, 8, 0.8),
+                // 100%掉落重生石
+                MobDrop("relive_stone", 3, 3, 1.0),
                 // 85%掉落贡品
                 MobDrop("shuizudegongpin", 3, 4, 0.85),
                 // 35%掉落千里木

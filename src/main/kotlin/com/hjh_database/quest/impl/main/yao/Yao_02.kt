@@ -45,18 +45,19 @@ class Yao_02 : QuestBase("main_yao_2", "[妖族主线]启灵之果", QuestType.M
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f喏，看见树梢上那些红彤彤的果子没？是不是特别诱人？这启灵果呀，可是咱们叶灵谷的宝贝，百年才结一次，寻常人想闻都闻不着呢——",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f诶诶诶！你干嘛呢！快停下，别往树上爬！",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f哎呀，你这性子也太急了，话都没听完就往树上蹿，树上可没梯子接着你。再说了，咱们§2§o妖族§f可是受天地灵气滋养，与自然和谐共生的种族，你这副手忙脚乱的模样，传出去岂不叫旁人笑话。",
-        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f来，我教你。轻闭双眼，静下心神，用指尖去触碰眼前的花草树木、天地灵物。等你心念合一，与它们共鸣之际——§d砰§f！那东西就自己跑到你手里了，神奇吧？",
+        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f来，我教你。轻闭双眼，静下心神，用§b右手§f的指尖去触碰眼前的花草树木、天地灵物。等你心念合一，与它们共鸣之际——§d砰§f！那东西就自己跑到你手里了，神奇吧？施术时可别跑离开始共鸣的地方超过§b四格§f，不然共鸣会断开，花掉的精力也回不来啦。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f谷主说，这门本事叫做§b开物术§f。咱们妖族天生与自然亲近，和这些天地精华凝成的资源打交道，那可是拿手好戏。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f不过你可得记住了——万物有灵，这些资源也是活的呢。你靠近的时候仔细看：要是它身上冒出§a绿莹莹的光§f，那就是它心情正好，处于§a“富饶”§f状态，这时候采集，事半功倍。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f等采过之后，它的光就会变成§e暗黄色§f，这就叫§e“枯竭”§f了。这时候你要是硬来，不仅费时费力，说不定还什么都捞不着，伤己又伤物，可不划算。",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f要是你实在缺资源，枯竭了也照采不误——那它就会蒙上一层§7灰扑扑§f的光，像是被抽干了力气，开始“休养”了。没关系，让它好好睡一觉，等它恢复精神，绿光还会再亮起来的。",
-        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f哦对了，施展§b开物术§f可是要消耗§b精力§f的。不过不必担心，每过一阵子精力就会自行恢复。开物术每提升一级，精力上限都会提高，§b开采速度也会增加10%§f，最多增加§b50%§f。",
+        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f和草木共鸣也要花精力呀！§b每开采一秒消耗一点精力§f，过一阵子，精力就会自行回满。开物术每提升一级，精力上限都会提高，§b开采速度也会增加10%§f，最多增加§b50%§f；采得越快，同样的东西就越省精力。",
+        "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f要是怪物欺负你，共鸣不会立刻断开，不过§c当前进度§f会散掉一些。一级散掉一半，每升一级少散掉一成，§b五级以后只散掉一成§f；每§b两秒§f最多发生一次。散掉的进度得重新积攒，精力也得继续花，可要留神哦！",
         "§e[${StoryNpcs.YAO_XIAOMAN.displayName}§e] §f好啦，说了这么多，快去试试吧！采上§e两颗启灵果§f，就回去找谷主。记住——用指尖去感受，别用脚爬，摔下来我可不接着你！"
     )
 
     override fun getProgressText(progress: Int): List<String> {
         return when (progress) {
-            0 -> listOf("§c主手持有 §b小花的推荐函 §c交给谷主")
+            0 -> listOf("§c手持 §b小花的推荐函 §c交给谷主")
             1 -> listOf("§c寻找古树旁的 §e小蔓")
             2 -> listOf("§a已询问小蔓", "§c采集启灵果并交给谷主 (0/2)")
             else -> listOf("§a任务已完成")
@@ -111,9 +112,9 @@ class Yao_02 : QuestBase("main_yao_2", "[妖族主线]启灵之果", QuestType.M
                         player.sendMessage("§e[系统] 你将小花的推荐函交给了谷主。")
                         player.playSound(player.location, Sound.ENTITY_ITEM_BREAK, 1f, 1f)
                         talkProgress[player.uniqueId] = index + 1
-                        player.sendMessage("§a[任务] -> 谷主正在阅读推荐函，请左键继续对话。")
+                        player.sendMessage("§a[任务] -> 谷主正在阅读推荐函，请用左手轻触谷主，继续交谈。")
                     } else {
-                        player.sendMessage("§c[任务] -> 请将【小花的推荐函】拿在主手，然后左键谷主。")
+                        player.sendMessage("§c[任务] -> 请手持【小花的推荐函】，用左手轻触谷主，与他交谈。")
                     }
                     return true
                 }

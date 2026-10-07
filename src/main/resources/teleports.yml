@@ -32,6 +32,51 @@
 #      set_job: 0  # 踩上去就变成战士(id:0)
 #    # set_race: 1  custom_action: "ENTER_BOSS_ROOM"
 points:
+  辛府-入口:
+    world: "world"
+    x: 165.56
+    y: 47.00
+    z: 162.75
+    yaw: 4045.61
+    pitch: 4.05
+    trigger:
+      world: "world"
+      x: 173
+      y: 47
+      z: 160
+    actions:
+      custom_action: "ENTER_XIN_MANSION"
+
+  辛府-入口二:
+    world: "world"
+    x: 165.56
+    y: 47.00
+    z: 162.75
+    yaw: 4045.61
+    pitch: 4.05
+    trigger:
+      world: "world"
+      x: 173
+      y: 47
+      z: 159
+    actions:
+      custom_action: "ENTER_XIN_MANSION"
+
+  兔子仙境-入口:
+    world: "world"
+    x: 834.10
+    y: 48.23
+    z: -75.23
+    yaw: 256.73
+    pitch: 90.00
+    trigger:
+      world: "world"
+      x: 835
+      y: 53
+      z: -75
+    actions:
+      custom_action: "ENTER_RABBIT_WONDERLAND"
+
   皇城东门-鹊影桥:
     world: "world"
     x: 1301.78

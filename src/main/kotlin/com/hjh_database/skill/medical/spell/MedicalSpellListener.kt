@@ -25,6 +25,16 @@ import java.util.*
 class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
     // 用于记录正在“运气调息”的玩家
     private val chargingTasks: MutableMap<UUID, Int> = HashMap()
+    private val automaticUntil = mutableMapOf<UUID, Long>()
+    private val slowKey = NamespacedKey(plugin, "medical_banner_regen_slow")
+    private fun automatic(p: Player) = (automaticUntil[p.uniqueId] ?: 0L) > System.currentTimeMillis() && plugin.elementCrystalManager.masterySupport.active(p)
+
+    fun startAutomatic(p: Player) {
+        automaticUntil[p.uniqueId] = System.currentTimeMillis() + 10000L
+        startCharging(p)
+        plugin.elementCrystalManager.reworkedMastery.visuals.manaFlow(p, 0)
+        p.world.playSound(p.location, Sound.ITEM_TRIDENT_RETURN, 0.8f, 1.4f)
+    }
 
     @EventHandler
     fun onInteract(e: PlayerInteractEvent) {
@@ -41,7 +51,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         if (skillId == null) return
 
         // 【新增】如果玩家正在潜行，或正在运气调息的列表中，禁止释放医术
-        if (p.isSneaking || chargingTasks.containsKey(p.uniqueId)) {
+        if (p.isSneaking || (chargingTasks.containsKey(p.uniqueId) && !automatic(p))) {
             p.sendMessage("§c[释放失败] §7运气调息时须全神贯注，无法分神施展医术！")
             return
         }
@@ -93,7 +103,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
             startCharging(p)
         } else {
             // 停止潜行，取消任务
-            stopCharging(p)
+            if (!automatic(p)) stopCharging(p)
         }
     }
 
@@ -112,11 +122,14 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
 
         // 2. 开启循环任务
         val taskId = object : BukkitRunnable() {
-            var remainingTicks = 30
+            var elapsedTicks = 0
+            var visualAge = 0
+            val startingWorld = p.world.uid
 
             override fun run() {
                 // 安全检查：玩家掉线、死亡、不再潜行
-                if (!p.isOnline || p.isDead || !p.isSneaking) {
+                val auto = automatic(p)
+                if (!p.isOnline || p.isDead || p.world.uid != startingWorld || (!p.isSneaking && !auto)) {
                     stopCharging(p)
                     return
                 }
@@ -129,19 +142,31 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
                     stopCharging(p)
                     return
                 }
-                remainingTicks -= 5
-                if (remainingTicks > 0) return
+                visualAge += 5
+                if (auto) plugin.elementCrystalManager.reworkedMastery.visuals.manaFlow(p, visualAge)
+                val regenEvent = MedicalBannerRegenEvent(p, 30, currentWd.manaRegen)
+                plugin.server.pluginManager.callEvent(regenEvent)
+                if (auto && p.isSneaking) {
+                    regenEvent.intervalTicks = (regenEvent.intervalTicks / 1.5).toInt().coerceAtLeast(5)
+                    regenEvent.amount *= 1.5
+                }
+                // 同一条回灵任务切换主动/自动状态；不叠加两条回灵流。
+                val attr = p.getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED)
+                val slow = if (auto) -0.225 else -0.45
+                if (attr != null && attr.getModifier(slowKey)?.amount != slow) {
+                    attr.getModifier(slowKey)?.let(attr::removeModifier)
+                    attr.addTransientModifier(org.bukkit.attribute.AttributeModifier(slowKey, slow, org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1))
+                }
+                elapsedTicks += 5
+                if (elapsedTicks < regenEvent.intervalTicks.coerceAtLeast(5)) return
+                elapsedTicks = 0
                 // === 执行效果 ===
                 // 【关键】使用 !! 断言
                 val data = plugin.playerManager.getData(p.uniqueId)!!
 
-                val regenEvent = MedicalBannerRegenEvent(p, 30, currentWd.manaRegen)
-                plugin.server.pluginManager.callEvent(regenEvent)
-                remainingTicks = regenEvent.intervalTicks.coerceAtLeast(5)
 
                 // 1. 恢复灵力
                 data.addLingli(regenEvent.amount.coerceAtLeast(0.0))
-                p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, remainingTicks + 5, 2, false, false, false))
                 // 特效 (绿色粒子环绕)
                 p.world.spawnParticle(Particle.HAPPY_VILLAGER, p.location.add(0.0, 1.0, 0.0), 3, 0.3, 0.5, 0.3, 0.0)
                 p.world.spawnParticle(Particle.SPLASH, p.location.add(0.0, 0.5, 0.0), 0, 0.0, 1.0, 0.0, 1.0) // 绿色药水粒子
@@ -152,11 +177,19 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
     }
 
     private fun stopCharging(p: Player) {
+        automaticUntil.remove(p.uniqueId)
+        p.getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED)?.let { attr -> attr.getModifier(slowKey)?.let(attr::removeModifier) }
         if (chargingTasks.containsKey(p.uniqueId)) {
             val taskId = chargingTasks.remove(p.uniqueId)!!
             plugin.server.scheduler.cancelTask(taskId)
             sendActionBar(p, "§a[医术] §c你已停止凝聚灵力...")
         }
+    }
+
+    fun shutdown() {
+        chargingTasks.keys.toList().forEach { org.bukkit.Bukkit.getPlayer(it)?.let(::stopCharging) }
+        chargingTasks.values.forEach(plugin.server.scheduler::cancelTask)
+        chargingTasks.clear(); automaticUntil.clear()
     }
 
     private fun sendActionBar(player: Player, message: String) {
@@ -181,7 +214,7 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         return item != null && item.type.name.endsWith("_BANNER") && wd.reqJob == 3
     }
 
-    // === 拾取愈合花逻辑保持不变 ===
+    // === 拾取愈合花 ===
     @EventHandler
     fun onPickup(e: EntityPickupItemEvent) {
         if (e.entity !is Player) return
@@ -194,11 +227,14 @@ class MedicalSpellListener(private val plugin: Hjh_database) : Listener {
         if (item.itemMeta!!.persistentDataContainer.has(keyHeal, PersistentDataType.DOUBLE)) {
             e.isCancelled = true
             e.item.remove()
-            val heal = item.itemMeta!!.persistentDataContainer.get(keyHeal, PersistentDataType.DOUBLE)!!
+            val maxHealth = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+            val maxHealthRatio = item.itemMeta!!.persistentDataContainer.get(
+                NamespacedKey(plugin, YuHeHuaSpell.KEY_MAX_HEALTH_RATIO), PersistentDataType.DOUBLE
+            ) ?: 0.04
+            val heal = item.itemMeta!!.persistentDataContainer.get(keyHeal, PersistentDataType.DOUBLE)!! + maxHealth * maxHealthRatio
             plugin.medicalSpellManager.applyMedicalHeal(p, p, heal, "yuhehua")
             p.world.spawnParticle(Particle.HEART, p.location.add(0.0, 2.0, 0.0), 3, 0.3, 0.3, 0.3, 0.05)
             p.playSound(p.location, Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2.0f)
-            p.sendMessage("§d[医术] §7你拾取了愈合花，生命值恢复了 §a" + String.format("%.1f", heal) + " §7点！")
         }
     }
 }

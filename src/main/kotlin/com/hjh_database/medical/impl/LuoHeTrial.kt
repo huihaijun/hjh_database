@@ -1405,7 +1405,8 @@ class LuoHeTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(exitLocation)
-        player.sendMessage("§b§l水族祭司-洛禾 §f: §a病邪尽散，灵息复归清明。你能在寒热攻补之间守住分寸，§d天佑§a的法门，便交给你了。")
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
+        player.sendMessage("§b§l水族祭司-洛禾 §f: §a病邪尽散，灵息复归清明。你归还贡品，又能在寒热攻补之间守住分寸，§d天佑§a的法门便随卷轴融入你的灵智，愿族人与远客皆受其庇护。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
         player.world.spawnParticle(Particle.HAPPY_VILLAGER, player.location.clone().add(0.0, 1.0, 0.0), 30, 0.5, 0.7, 0.5, 0.05)
 
@@ -1425,7 +1426,6 @@ class LuoHeTrial(
                 }
             })
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
@@ -1434,8 +1434,8 @@ class LuoHeTrial(
         phase = Phase.ENDED
         cleanUp()
         if (player.isOnline && !player.isDead) player.teleport(exitLocation)
-        if (shouldMessage) player.sendMessage("§c水族祭司-洛禾的医术试炼失败！")
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        if (shouldMessage) player.sendMessage("§b§l水族祭司-洛禾 §f: §7病邪未尽，寒热攻补仍须斟酌。卷轴留在你手中，我会先将已有贡品奉回神前；下次少补一些，再来辨明病势。")
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

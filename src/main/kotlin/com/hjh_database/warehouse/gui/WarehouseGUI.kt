@@ -58,6 +58,7 @@ class WarehouseGUI {
             val prevBtn = ItemStack(Material.ARROW)
             val prevMeta = prevBtn.itemMeta
             prevMeta?.setDisplayName("§a上一页")
+            prevMeta?.setCustomModelData(103)
             prevBtn.itemMeta = prevMeta
             inv.setItem(45, prevBtn)
         }
@@ -74,6 +75,7 @@ class WarehouseGUI {
             val nextBtn = ItemStack(Material.ARROW)
             val nextMeta = nextBtn.itemMeta
             nextMeta?.setDisplayName("§a下一页")
+            nextMeta?.setCustomModelData(104)
             nextBtn.itemMeta = nextMeta
             inv.setItem(53, nextBtn)
         }

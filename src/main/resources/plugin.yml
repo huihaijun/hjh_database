@@ -32,3 +32,4 @@ libraries:
   - org.jetbrains.kotlin:kotlin-stdlib:2.0.21
   - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0
   - com.zaxxer:HikariCP:5.1.0
+  - com.belerweb:pinyin4j:2.5.1

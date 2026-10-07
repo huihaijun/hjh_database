@@ -40,8 +40,9 @@ class Yao_04 : QuestBase("main_yao_4", "[妖族主线]初识冶药", QuestType.M
         "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f好了，说回正事。丹药分§e初级§f、§e中级§f、§e高级§f三品。你的冶药法等级越高，能炼的品级就越高。不过高级丹药唯有§d医师§f方可炼制——那可不是光有手艺就行的，还得有一颗济世之心。",
         "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f具体怎么操作？你听好：走到炼药锅前，伸手一触，界面自开。选好丹药与品级，药锅便会与你共鸣，锅面上会浮现所需材料的影子。",
         "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f你就照着影子，把对应的材料丢进去。材料齐了，丹药自会凝成，乖乖落入你行囊里。不过记住——共鸣期间别跑太远，离锅远了就断了。放心，断了也不打紧，材料不会少你的，回来重新开炉便是。",
-        "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f还有一桩要紧事。丹药炼出来就能吃，见效极快——这是好处。可§c是药三分毒§f，吞下丹药后，体内便会生出一种§c药丹疾病§f。",
-        "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f这毛病不痛不痒，但会叫你在一段时间内排斥其他丹药的药力。只要§c药丹疾病§f还在，别的丹药就灌不进去。越是猛烈的丹药，这病就拖得越久，有时候能拖上小半盏茶的功夫。日后在野外跟人动手时，吃药可得掐准时机，别傻乎乎地连着灌！",
+        "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f还有一桩要紧事。丹药炼出来就能吃，见效极快，可§c是药三分毒§f，吞下后体内便会生出§c药丹疾病§f。丹药分§e归元§f、§e助势§f、§e飞丹§f，这毛病只会叫你暂时排斥同类药力。",
+        "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f同一类丹药，换个名字、换个品级，都不能接着灌。愈合丹和回灵丹都属§e归元§f，吃过一个，归元类的药丹疾病没消，另一个也得等。",
+        "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f不同类别倒不会互相拦着，只是各自的药丹疾病还得各自等。归元的还没消，不妨碍用助势或飞丹；可那一类要是也有药丹疾病，就先忍一忍。出了山谷，把药类分清，别到了紧要关头才发现药吃不进去！",
         "§e[${StoryNpcs.YAO_DANYAOPUZHANGGUI.displayName}§e] §f来，这是§e新人丹药§f的丹方和材料——全是谷里采的草药和打理好的药引，干干净净。你拿去试试手，炼丹房就在这儿的二楼，炼成§e五颗§f，交给谷主就好了。"
     )
 

@@ -153,12 +153,13 @@ object TianjiUtilityMenus {
             menuItem(
                 if (page > 0) Material.ARROW else Material.GRAY_DYE,
                 if (page > 0) "§e§l上一页" else "§8上一页",
-                listOf(if (page > 0) "§7点击查看第 ${page} 页" else "§8已经是第一页")
+                listOf(if (page > 0) "§7点击查看第 ${page} 页" else "§8已经是第一页"),
+                customModelData = if (page > 0) 103 else null
             )
         )
         inventory.setItem(
             DUNGEON_STATS_BACK_SLOT,
-            menuItem(Material.OAK_DOOR, "§c§l返回天机令", listOf("§7点击返回主菜单"))
+            menuItem(Material.ARROW, "§c§l返回天机令", listOf("§7点击返回主菜单"), customModelData = 102)
         )
         inventory.setItem(
             DUNGEON_STATS_PAGE_SLOT,
@@ -169,7 +170,8 @@ object TianjiUtilityMenus {
             menuItem(
                 if (page + 1 < totalPages) Material.ARROW else Material.GRAY_DYE,
                 if (page + 1 < totalPages) "§e§l下一页" else "§8下一页",
-                listOf(if (page + 1 < totalPages) "§7点击查看第 ${page + 2} 页" else "§8已经是最后一页")
+                listOf(if (page + 1 < totalPages) "§7点击查看第 ${page + 2} 页" else "§8已经是最后一页"),
+                customModelData = if (page + 1 < totalPages) 104 else null
             )
         )
 
@@ -329,10 +331,11 @@ object TianjiUtilityMenus {
         }
     }
 
-    fun menuItem(material: Material, name: String, lore: List<String> = emptyList()): ItemStack {
+    fun menuItem(material: Material, name: String, lore: List<String> = emptyList(), customModelData: Int? = null): ItemStack {
         val item = ItemStack(material)
         val meta = item.itemMeta
         meta?.setDisplayName(name)
+        if (customModelData != null) meta?.setCustomModelData(customModelData)
         if (lore.isNotEmpty()) meta?.lore = lore
         item.itemMeta = meta
         return item

@@ -12,6 +12,7 @@ class YaoRace(manager: RaceManager) : RaceBase(manager) {
 
     companion object {
         const val PROOF_QUEST_ID = "main_yao_5"
+        const val PROOF_ITEM_ID = "yao_zm_begin"
         private const val RACE_ID = 4
 
         fun isNatureSpiritActive(data: PlayerData): Boolean {

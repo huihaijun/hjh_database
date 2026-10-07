@@ -129,7 +129,7 @@ class riyueliuxingnuSkill : WeaponSkill, Listener {
 
                                 // 1. 恢复4点生命，不再恢复饱食度或饱和度。
                                 val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: player.health
-                                player.health = (player.health + 4.0).coerceAtMost(maxHealth)
+                                plugin.elementCrystalManager.reworkedMastery.heal(player, 4.0)
 
                                 // 2. 增加流星
                                 addMeteor(player)

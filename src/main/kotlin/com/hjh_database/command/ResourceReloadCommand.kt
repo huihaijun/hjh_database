@@ -32,6 +32,7 @@ class ResourceReloadCommand(private val plugin: Hjh_database) : CommandExecutor,
             plugin.jianghuXindeManager.reload()
             plugin.jianghuXindeManager.ensureStationBlock()
             plugin.bgmManager.reload()
+            plugin.bountyManager.reload()
 
             plugin.server.onlinePlayers.forEach { player ->
                 plugin.artifactManager.refreshPlayerArtifacts(player)

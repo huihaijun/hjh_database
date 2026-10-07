@@ -102,23 +102,24 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
         }
 
         if (page > 0) {
-            inv.setItem(45, createIcon(Material.ARROW, "§e§l上一页", listOf("§7前往第 $page 页")))
+            inv.setItem(45, createIcon(Material.ARROW, "§e§l上一页", listOf("§7前往第 $page 页"), customModelData = 103))
         }
         inv.setItem(47, createIcon(Material.MAP, "§f§l第 ${page + 1} / $totalPages 页", listOf("§7共 ${quests.size} 个任务")))
         if (page + 1 < totalPages) {
-            inv.setItem(53, createIcon(Material.ARROW, "§e§l下一页", listOf("§7前往第 ${page + 2} 页")))
+            inv.setItem(53, createIcon(Material.ARROW, "§e§l下一页", listOf("§7前往第 ${page + 2} 页"), customModelData = 104))
         }
 
         // 底部返回按钮
-        inv.setItem(49, createIcon(Material.ARROW, "§f返回上一级", listOf()))
+        inv.setItem(49, createIcon(Material.ARROW, "§f返回上一级", listOf(), customModelData = 102))
 
         player.openInventory(inv)
     }
 
-    private fun createIcon(mat: Material, name: String, lore: List<String>): ItemStack {
+    private fun createIcon(mat: Material, name: String, lore: List<String>, customModelData: Int? = null): ItemStack {
         val item = ItemStack(mat)
         val meta = item.itemMeta!!
         meta.setDisplayName(name)
+        if (customModelData != null) meta.setCustomModelData(customModelData)
         meta.lore = lore
         item.itemMeta = meta
         return item
@@ -137,7 +138,7 @@ class QuestGui(private val plugin: Hjh_database) : Listener {
             when (e.rawSlot) {
                 10 -> openQuestListMenu(player, QuestType.MAIN)
                 12 -> openQuestListMenu(player, QuestType.SIDE)
-                14 -> openQuestListMenu(player, QuestType.BOUNTY)
+                14 -> plugin.bountyManager.open(player)
                 16 -> openQuestListMenu(player, QuestType.CHALLENGE)
             }
             if (e.rawSlot in listOf(10, 12, 14, 16)) {

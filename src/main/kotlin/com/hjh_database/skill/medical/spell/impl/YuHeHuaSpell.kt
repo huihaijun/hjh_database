@@ -18,12 +18,14 @@ class YuHeHuaSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     companion object {
         const val KEY_HEAL_AMOUNT = "med_heal_amount"
+        const val KEY_MAX_HEALTH_RATIO = "med_heal_max_health_ratio"
         const val KEY_OWNER = "med_owner"
     }
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
         val zfStr = data.zfStr
-        val healAmount = zfStr * 0.8
+        val healAmount = zfStr * (config?.getDouble("heal_multiplier", 0.36) ?: 0.36)
+        val maxHealthRatio = config?.getDouble("target_max_health_ratio", 0.04) ?: 0.04
 
         val center = player.location
         player.world.playSound(center, Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 1.5f)
@@ -42,11 +44,11 @@ class YuHeHuaSpell(private val plugin: Hjh_database) : MedicalSpell {
 
             // 【关键】检测目标方块是否是实心的
             if (isSafeLocation(targetLoc)) {
-                spawnFlowerItem(player, targetLoc, healAmount)
+                spawnFlowerItem(player, targetLoc, healAmount, maxHealthRatio)
             } else {
                 // 如果目标位置卡墙了，就直接生成在玩家脚下，稍微给点随机偏移
                 val fallback = center.clone().add((Math.random() - 0.5), 0.5, (Math.random() - 0.5))
-                spawnFlowerItem(player, fallback, healAmount)
+                spawnFlowerItem(player, fallback, healAmount, maxHealthRatio)
             }
         }
 
@@ -59,7 +61,7 @@ class YuHeHuaSpell(private val plugin: Hjh_database) : MedicalSpell {
         return b.type.isAir || b.isPassable
     }
 
-    private fun spawnFlowerItem(owner: Player, loc: Location, healAmount: Double) {
+    private fun spawnFlowerItem(owner: Player, loc: Location, healAmount: Double, maxHealthRatio: Double) {
         val flower = ItemStack(Material.POPPY)
         // 【关键】使用 !! 断言
         val meta = flower.itemMeta!!
@@ -69,6 +71,7 @@ class YuHeHuaSpell(private val plugin: Hjh_database) : MedicalSpell {
         val keyOwner = NamespacedKey(plugin, KEY_OWNER)
 
         meta.persistentDataContainer.set(keyHeal, PersistentDataType.DOUBLE, healAmount)
+        meta.persistentDataContainer.set(NamespacedKey(plugin, KEY_MAX_HEALTH_RATIO), PersistentDataType.DOUBLE, maxHealthRatio)
         meta.persistentDataContainer.set(keyOwner, PersistentDataType.STRING, owner.uniqueId.toString())
 
         flower.itemMeta = meta

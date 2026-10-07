@@ -13,6 +13,10 @@ import org.bukkit.scheduler.BukkitRunnable
 
 class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEntity) {
 
+    companion object {
+        const val VINE_CAST_METADATA = "HJH_SHENMU_VINE_CAST"
+    }
+
     init {
         applyPassiveSkill()
         startActiveSkillTask()
@@ -73,6 +77,7 @@ class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEn
     private fun startVineTrackingTask(initialTargets: List<Player>) {
         // 为每一个被选中的玩家生成一根专属藤蔓
         val vines = initialTargets.map { Vine(it) }
+        val castId = java.util.UUID.randomUUID().toString()
 
         object : BukkitRunnable() {
             var ticksElapsed = 0
@@ -191,9 +196,11 @@ class Shenmushouwei(private val plugin: Hjh_database, private val boss: LivingEn
                                 ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA,
                                 org.bukkit.metadata.FixedMetadataValue(plugin, true)
                             )
+                            p.setMetadata(VINE_CAST_METADATA, org.bukkit.metadata.FixedMetadataValue(plugin, castId))
                             try {
                                 p.damage(10.0, boss)
                             } finally {
+                                p.removeMetadata(VINE_CAST_METADATA, plugin)
                                 p.removeMetadata(ElementFormationTierEffects.MONSTER_SKILL_DAMAGE_METADATA, plugin)
                             }
                             p.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 20, 127))

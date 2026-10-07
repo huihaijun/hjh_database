@@ -9,6 +9,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -66,6 +67,10 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
         val bow = event.bow ?: return
         if (plugin.baihuDzManager.getWeaponDataFromItem(bow) == null) return
 
+        if (player.isSneaking && !plugin.baihuWeaponSkillManager.isOnCooldown(player)) {
+            plugin.baihuWeaponSkillManager.tryCastSkill(player, bow, event.projectile)
+            return
+        }
         if (plugin.baihuWeaponSkillManager.handleArcherShot(event)) return
         if (!player.isSneaking) return
 
@@ -75,6 +80,11 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onAnhuEnhancedArrowHit(event: EntityDamageByEntityEvent) {
         plugin.baihuWeaponSkillManager.onProjectileDamage(event)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onAnhuEnhancedKill(event: EntityDeathEvent) {
+        plugin.baihuWeaponSkillManager.onMobDeath(event)
     }
 
     @EventHandler
@@ -93,6 +103,6 @@ class BaihuWeaponSkillListener(private val plugin: Hjh_database) : Listener {
     }
 
     companion object {
-        private val RIGHT_CLICK_ONLY_SKILLS = setOf("duhuozhu")
+        private val RIGHT_CLICK_ONLY_SKILLS = setOf("hugukuzhang")
     }
 }

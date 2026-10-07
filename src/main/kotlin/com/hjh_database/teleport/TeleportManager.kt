@@ -216,7 +216,7 @@ class TeleportManager(private val plugin: Hjh_database) {
         }
 
         // --- 执行传送 ---
-        player.teleport(point.location)
+        if (!player.teleport(point.location)) return
         player.playSound(player.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f)
 
         if (point.successMsg != null) {

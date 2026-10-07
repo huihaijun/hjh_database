@@ -6,7 +6,6 @@ import com.hjh_database.race.impl.XianRace
 import com.hjh_database.util.DzUtil
 import com.hjh_database.util.ItemUtil
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
@@ -31,9 +30,11 @@ class BaihuDzCraftingGui(
     private val recipe: DzRecipe,
     private val manageMode: Boolean = false
 ) : InventoryHolder, Listener {
-    private val inv: Inventory = Bukkit.createInventory(this, 54, "§6虎瘴锻造")
-    private val inputSlots = intArrayOf(11, 12, 13, 14, 15)
-    private val outputSlot = 24
+    private val inv: Inventory = Bukkit.createInventory(this, 54, "${displayName(recipe.result)}§8锻造")
+    private val inputSlots = intArrayOf(37, 38, 39, 40, 41)
+    private val previewSlots = intArrayOf(10, 11, 12, 13, 14)
+    private val outputSlot = 43
+    private var closed = false
     private val outputPlaceholderKey = NamespacedKey(plugin, "baihu_forge_output_placeholder")
 
     init {
@@ -45,20 +46,28 @@ class BaihuDzCraftingGui(
         val filler = ItemStack(Material.BLACK_STAINED_GLASS_PANE)
         filler.itemMeta = filler.itemMeta?.apply { setDisplayName(" ") }
         for (i in 0 until inv.size) if (i !in inputSlots) inv.setItem(i, filler)
-        inv.setItem(0, materialInfo())
-        // 红色玻璃占住输出槽，让原版Shift自动寻槽只能落入材料槽。
+        recipe.ingredients.take(previewSlots.size).forEachIndexed { i, item ->
+            inv.setItem(previewSlots[i], item.clone())
+        }
+        inv.setItem(16, recipe.result.clone())
+        inv.setItem(15, materialInfo())
         inv.setItem(outputSlot, createOutputPlaceholder())
-        setButton(45, Material.RED_BED, "§c返回配方预览")
+        setButton(45, Material.RED_BED, "§c返回配方列表")
         updateButton()
     }
 
     private fun materialInfo(): ItemStack {
         val item = ItemStack(Material.BREWING_STAND)
         item.itemMeta = item.itemMeta?.apply {
-            setDisplayName("§6虎瘴材料")
-            lore = recipe.ingredients
-                .filter { it.type != Material.AIR }
-                .map { "§f${displayName(it)} §7x§e${it.amount}" }
+            setDisplayName("§6虎瘴锻造要求")
+            lore = mutableListOf(
+                "§7职业: §f${if (recipe.reqJob == -1) "通用" else DzUtil.getJobName(recipe.reqJob)}",
+                "§7锻造等级: §fLv.${recipe.reqForgeLevel}",
+                "§7锻造资质: §f${recipe.reqLicense}",
+                "§7成功经验: §e${recipe.expReward}"
+            ).apply {
+                if (recipe.category != "material") add("§6额外: §f成品仅身负虎瘴时激活")
+            }
         }
         return item
     }
@@ -99,6 +108,7 @@ class BaihuDzCraftingGui(
     }
 
     private fun updateButton() {
+        if (closed) return
         ensureOutputPlaceholder()
         val errors = checkRequirements()
         if (errors.isEmpty()) {
@@ -111,14 +121,14 @@ class BaihuDzCraftingGui(
                     listOf("§7材料与锻造要求均已满足", "§6成品仅身负虎瘴时生效")
                 }
             }
-            inv.setItem(49, item)
+            inv.setItem(42, item)
         } else {
-            val item = ItemStack(Material.BARRIER)
+            val item = ItemStack(Material.ANVIL)
             item.itemMeta = item.itemMeta?.apply {
                 setDisplayName("§c无法锻造")
                 lore = errors
             }
-            inv.setItem(49, item)
+            inv.setItem(42, item)
         }
     }
 
@@ -133,7 +143,17 @@ class BaihuDzCraftingGui(
 
     @EventHandler
     fun onClose(event: InventoryCloseEvent) {
-        if (event.inventory == inv) {
+        if (event.inventory == inv) releaseItems()
+    }
+
+    fun closeForDisable() {
+        releaseItems()
+        player.closeInventory()
+    }
+
+    private fun releaseItems() {
+        if (!closed) {
+            closed = true
             inputSlots.forEach { slot ->
                 val item = inv.getItem(slot)
                 if (item != null && item.type != Material.AIR) {
@@ -146,6 +166,7 @@ class BaihuDzCraftingGui(
                 inv.setItem(outputSlot, null)
                 giveOrDrop(output)
             }
+            inv.clear()
             HandlerList.unregisterAll(this)
         }
     }
@@ -153,6 +174,10 @@ class BaihuDzCraftingGui(
     @EventHandler
     fun onClick(event: InventoryClickEvent) {
         if (event.view.topInventory != inv) return
+        if (closed) {
+            event.isCancelled = true
+            return
+        }
 
         // 双击背包会从整个视图执行 COLLECT_TO_CURSOR，必须在下方背包点击时也拦截。
         if (event.click == ClickType.DOUBLE_CLICK || event.action == InventoryAction.COLLECT_TO_CURSOR) {
@@ -176,20 +201,19 @@ class BaihuDzCraftingGui(
         }
         if (slot < inv.size) event.isCancelled = true
         else if (event.action == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            val output = inv.getItem(outputSlot)
-            if (output != null && !isOutputPlaceholder(output)) {
-                // 有成品时，原版会把Shift的同类物品合并进输出堆；领取成品前暂时禁止。
-                event.isCancelled = true
-            } else {
-                plugin.server.scheduler.runTask(plugin, Runnable { updateButton() })
-            }
+            event.isCancelled = true
+            moveToInputs(event)
+            updateButton()
         }
         when (slot) {
             45 -> {
-                player.closeInventory()
-                BaihuDzRecipePreviewGui(plugin, player, category, recipe.id, manageMode).open()
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (!closed && player.openInventory.topInventory == inv) {
+                        BaihuDzRecipeListGui(plugin, player, category, manageMode).open()
+                    }
+                })
             }
-            49 -> {
+            42 -> {
                 val errors = checkRequirements()
                 if (errors.isEmpty()) craft() else {
                     player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
@@ -202,6 +226,10 @@ class BaihuDzCraftingGui(
     @EventHandler
     fun onDrag(event: InventoryDragEvent) {
         if (event.view.topInventory != inv) return
+        if (closed) {
+            event.isCancelled = true
+            return
+        }
 
         val topSlots = event.rawSlots.filter { it < inv.size }
         if (topSlots.any { it !in inputSlots }) {
@@ -211,6 +239,28 @@ class BaihuDzCraftingGui(
         if (topSlots.isNotEmpty()) {
             plugin.server.scheduler.runTask(plugin, Runnable { updateButton() })
         }
+    }
+
+    // Shift 只向真实材料槽转移，绝不合并进预览物品或成品。
+    private fun moveToInputs(event: InventoryClickEvent) {
+        val source = event.currentItem ?: return
+        var remaining = source.amount
+        for (slot in inputSlots) {
+            val target = inv.getItem(slot) ?: continue
+            if (!target.isSimilar(source)) continue
+            val moved = minOf(remaining, (minOf(target.maxStackSize, inv.maxStackSize) - target.amount).coerceAtLeast(0))
+            target.amount += moved
+            remaining -= moved
+        }
+        for (slot in inputSlots) {
+            if (remaining == 0) break
+            val target = inv.getItem(slot)
+            if (target != null && !target.type.isAir) continue
+            val moved = minOf(remaining, source.maxStackSize, inv.maxStackSize)
+            inv.setItem(slot, source.clone().apply { amount = moved })
+            remaining -= moved
+        }
+        event.currentItem = if (remaining == 0) null else source.clone().apply { amount = remaining }
     }
 
     private fun craft() {
@@ -276,7 +326,7 @@ class BaihuDzCraftingGui(
     }
 
     private fun displayName(item: ItemStack): String {
-        val raw = item.itemMeta?.displayName ?: item.type.name
-        return ChatColor.stripColor(raw) ?: raw
+        val meta = item.itemMeta
+        return if (meta != null && meta.hasDisplayName()) meta.displayName else item.type.name
     }
 }

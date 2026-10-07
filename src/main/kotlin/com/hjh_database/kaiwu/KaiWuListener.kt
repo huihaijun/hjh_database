@@ -3,11 +3,13 @@ package com.hjh_database.kaiwu
 import com.hjh_database.Hjh_database
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import org.bukkit.entity.Mob
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.AsyncPlayerChatEvent
@@ -17,6 +19,13 @@ import org.bukkit.inventory.EquipmentSlot
 class KaiWuListener(private val plugin: Hjh_database) : Listener {
     // 假设 Hjh_database 中有 getKaiWuManager() 方法，Kotlin 中调用为 plugin.kaiWuManager
     private val editor: KaiWuEditor = KaiWuEditor(plugin, plugin.kaiWuManager)
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onMonsterDamage(event: EntityDamageEvent) {
+        val player = event.entity as? Player ?: return
+        if (event.finalDamage <= 0.0 || event.damageSource.causingEntity !is Mob) return
+        plugin.kaiWuManager.reduceMiningProgressOnDamage(player)
+    }
 
     // 1. 聊天确认监听 (删除资源点)
     @EventHandler(priority = EventPriority.LOWEST)
@@ -90,6 +99,7 @@ class KaiWuListener(private val plugin: Hjh_database) : Listener {
         // 玩家开采模式
         if (manager.isNode(event.clickedBlock!!.location)) {
             event.isCancelled = true
+            if (manager.tryAwakenNode(player, event.clickedBlock!!.location)) return
             manager.startMining(player, event.clickedBlock!!.location)
         }
     }

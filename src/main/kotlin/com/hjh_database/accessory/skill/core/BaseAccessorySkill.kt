@@ -34,7 +34,7 @@ abstract class BaseAccessorySkill(protected val plugin: Hjh_database) {
         trackedCooldowns.remove(player.uniqueId)
     }
 
-    /** 各职业基类会在这份通用冷却状态上继续组合箭量、回流、储血等能力。 */
+    /** 各职业基类会在这份通用冷却状态上继续组合箭量、补元、储血等能力。 */
     open fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
         trackedCooldowns[player.uniqueId]?.let {
             AccessorySkillHudState(

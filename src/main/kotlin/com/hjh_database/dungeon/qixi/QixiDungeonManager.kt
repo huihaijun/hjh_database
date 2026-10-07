@@ -1358,7 +1358,7 @@ class QixiDungeonManager(private val plugin: Hjh_database) : Listener, DungeonPa
                 }.forEach { player ->
                     val maximumHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: return@forEach
                     if (player.health >= maximumHealth) return@forEach
-                    player.health = min(maximumHealth, player.health + ZHINV_SPIRIT_PLAYER_HEAL_AMOUNT)
+                    plugin.elementCrystalManager.reworkedMastery.heal(player, ZHINV_SPIRIT_PLAYER_HEAL_AMOUNT)
                     sendActionBar(player, "§d织女的鹊灵洒下星辉：§f恢复§a10§f点生命！")
                     player.world.spawnParticle(
                         Particle.HEART,

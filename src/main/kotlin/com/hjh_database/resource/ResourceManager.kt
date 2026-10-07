@@ -421,7 +421,7 @@ class ResourceManager(private val plugin: Hjh_database) {
     private fun applyResourceCooldownGroup(item: ItemStack, res: ResourceItem) {
         val groupId = when {
             listOf("metal", "wood", "water", "fire", "earth").contains(res.id) -> "${res.id}_group"
-            res.hasSicknessTime -> PillSicknessChannel.fromEffectId(res.id).cooldownGroup
+            res.hasSicknessTime -> PillSicknessChannel.fromEffectId(res.id, res.category).cooldownGroup
             else -> return
         }
 

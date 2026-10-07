@@ -1,9 +1,10 @@
-// 路径: com.hjh_database.accessory.skill.warlock.BaseRefluxSkill.kt
 package com.hjh_database.accessory.skill.warlock
 
 import com.hjh_database.Hjh_database
-import com.hjh_database.accessory.skill.core.AccessorySkillHudState
 import com.hjh_database.accessory.skill.core.BaseAccessorySkill
+import com.hjh_database.accessory.skill.core.AccessoryHudValueKind
+import com.hjh_database.accessory.skill.core.AccessorySkillHudState
+import com.hjh_database.ui.MenuManager
 import com.hjh_database.weapon.CrystalData
 import org.bukkit.NamespacedKey
 import org.bukkit.Sound
@@ -12,70 +13,63 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 
 abstract class BaseRefluxSkill(plugin: Hjh_database) : BaseAccessorySkill(plugin) {
-
     protected abstract val accessoryId: String
-
-    companion object {
-        // 玩家 PDC 会随退服保存，且 /reload 后仍由同一在线 Player 实体保留。
-        private val REFLUX_ACTIVE_KEY = NamespacedKey.fromString("hjh_database:reflux_active")!!
-
-        fun isRefluxActive(player: Player): Boolean =
-            player.persistentDataContainer.get(REFLUX_ACTIVE_KEY, PersistentDataType.BYTE)?.toInt() == 1
-
-        private fun setRefluxActive(player: Player, active: Boolean) {
-            if (active) {
-                player.persistentDataContainer.set(REFLUX_ACTIVE_KEY, PersistentDataType.BYTE, 1.toByte())
-            } else {
-                player.persistentDataContainer.remove(REFLUX_ACTIVE_KEY)
-            }
-        }
-    }
-
-    // ==========================================
-    // 抽象方法：由具体的饰品子类来实现它们各自的数值
-    // ==========================================
-
-    /**
-     * 获取触发回流所需的灵力百分比阈值 (例如 0.5 代表 50%)
-     */
-    abstract fun getThresholdPercent(crystalData: CrystalData): Double
-
-    /**
-     * 获取回流状态下，每级阵法需要消耗的灵力值 (例如 10.0)
-     */
-    abstract fun getCostPerLevel(crystalData: CrystalData): Double
-
-    /**
-     * 【新增】获取触发回流的概率 (0.0 到 1.0，例如 0.35 代表 35%)
-     */
-    abstract fun getTriggerProbability(crystalData: CrystalData): Double
+    private val yuanKey = NamespacedKey(plugin, "accessory_yuan")
+    private val castsKey = NamespacedKey(plugin, "accessory_yuan_casts")
 
     override fun getHudState(player: Player, item: ItemStack, crystalData: CrystalData): AccessorySkillHudState =
-        super.getHudState(player, item, crystalData).copy(refluxEnabled = isRefluxActive(player))
+        super.getHudState(player, item, crystalData).copy(
+            // 复用旧客户端已有的数量/上限显示，无需新增客户端类型。
+            valueKind = AccessoryHudValueKind.ARROWS,
+            currentValue = getStoredYuan(item, crystalData),
+            maxValue = crystalData.yuanMaxStorage
+        )
 
-
-    // ==========================================
-    // 通用的开启/关闭逻辑，子类不需要再重写了
-    // ==========================================
-    override fun handleShiftClick(player: Player, item: ItemStack, isExtract: Boolean, crystalData: CrystalData): Boolean {
-        if (isExtract) {
-            setRefluxActive(player, false)
-            return false
+    fun depositElements(player: Player, item: ItemStack, elements: ItemStack, crystalData: CrystalData): Boolean {
+        if (elements.type.isAir || elements.amount <= 0 || MenuManager.ElementType.entries.none {
+                it != MenuManager.ElementType.RELIVE && plugin.menuManager.isPanlingItem(elements, it)
+            }) return false
+        val meta = item.itemMeta ?: return false
+        val stored = (meta.persistentDataContainer.get(yuanKey, PersistentDataType.INTEGER) ?: 0)
+            .coerceIn(0, crystalData.yuanMaxStorage)
+        val amount = minOf(elements.amount, crystalData.yuanMaxStorage - stored)
+        if (amount <= 0) {
+            player.sendActionBar("§c【补元】元已达到上限：$stored/${crystalData.yuanMaxStorage}")
+            return true
         }
-
-        if (isRefluxActive(player)) {
-            setRefluxActive(player, false)
-            if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId, "disabled")) {
-                player.sendMessage("§c关闭【回流】模式，释放阵法将正常消耗元素。")
-            }
-            player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 0.8f)
-        } else {
-            setRefluxActive(player, true)
-            if (!plugin.passiveSubtitleManager.showAccessoryTrigger(player, accessoryId, "enabled")) {
-                player.sendMessage("§a开启【回流】模式！灵力充沛时，释放阵法将消耗灵力。")
-            }
-            player.playSound(player.location, Sound.BLOCK_BEACON_ACTIVATE, 1f, 1.5f)
-        }
+        meta.persistentDataContainer.set(yuanKey, PersistentDataType.INTEGER, stored + amount)
+        item.itemMeta = meta
+        elements.amount -= amount
+        player.sendActionBar("§a【补元】存入 $amount 个元素，当前元：${stored + amount}/${crystalData.yuanMaxStorage}")
+        player.playSound(player.location, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.5f, 1.5f)
         return true
+    }
+
+    fun getStoredYuan(item: ItemStack, crystalData: CrystalData): Int =
+        (item.itemMeta?.persistentDataContainer?.get(yuanKey, PersistentDataType.INTEGER) ?: 0)
+            .coerceIn(0, crystalData.yuanMaxStorage)
+
+    fun consumeSuguiYuan(item: ItemStack, crystalData: CrystalData): Boolean {
+        val meta = item.itemMeta ?: return false
+        val stored = getStoredYuan(item, crystalData)
+        if (stored <= 0) return false
+        meta.persistentDataContainer.set(yuanKey, PersistentDataType.INTEGER, stored - 1)
+        item.itemMeta = meta
+        return true
+    }
+
+    fun onFormationCast(item: ItemStack, crystalData: CrystalData) {
+        val meta = item.itemMeta ?: return
+        var stored = (meta.persistentDataContainer.get(yuanKey, PersistentDataType.INTEGER) ?: 0)
+            .coerceIn(0, crystalData.yuanMaxStorage)
+        val casts = (meta.persistentDataContainer.get(castsKey, PersistentDataType.INTEGER) ?: 0)
+            .coerceAtLeast(0) + 1
+        if (casts >= crystalData.yuanCastInterval) {
+            stored = minOf(crystalData.yuanMaxStorage, stored + crystalData.yuanCastGain)
+        }
+        meta.persistentDataContainer.set(castsKey, PersistentDataType.INTEGER, casts % crystalData.yuanCastInterval)
+
+        meta.persistentDataContainer.set(yuanKey, PersistentDataType.INTEGER, stored)
+        item.itemMeta = meta
     }
 }

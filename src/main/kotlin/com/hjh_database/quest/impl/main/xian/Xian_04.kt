@@ -31,7 +31,9 @@ class Xian_04 : QuestBase("main_xian_4", "[仙族主线]灵丹初成", QuestType
         "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f……咳，扯远了。盟主前几日差人要一批丹药，我正愁没人搭手。你来得正好，这些材料拿着，足够炼§e二十枚新手疗愈丹§f。我来教你。",
         "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f丹药分§e初级§f、§e中级§f、§e高级§f三品。炼丹之术越精，能炼的品级越高。不过高级丹药唯有§d医师§f方可驾驭——那不是手巧就够的，还需一颗济世之心。",
         "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f操作不难：站到炼药锅前，伸手一触，界面自开。选好丹药与品级，锅身便会与你共鸣，锅面浮现所需材料的§e影子§f。照影投料，材料齐备，丹药自会凝成，落入你的行囊。共鸣时别离锅太远，断了也无妨，材料不损，回来重开便是。",
-        "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f还有一桩须牢记——丹药炼成即可服用，见效极快，这是利处。但§c是药三分毒§f，服下后体内会生出§c药丹疾病§f，一段时日内排斥他药之力。此症未消，再好的灵丹也灌不进去。丹药越猛，此症拖得越久。日后临敌，服药务必§c掐准时机§f，切莫连灌。",
+        "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f还有一桩须牢记——灵丹见效虽快，也逃不过§c是药三分毒§f。服下后生出的§c药丹疾病§f，只会暂时排斥同类药力。丹药有§e归元§f、§e助势§f、§e飞丹§f之分，道友可别混作一谈。",
+        "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f同类丹药，换个名字、换个品级，都得等本类的药丹疾病消退才能再用。愈合丹和回灵丹同属§e归元§f，吃了一个，归元之疾未消，另一个便也用不得。",
+        "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f不同类别之间互不影响，归元之疾未消，不妨碍使用助势或飞丹；只是那一类自身若也有药丹疾病，仍须等候。道友，灵丹再好，也得用在合适的时候，可别被妖兽追着，才想起手里这颗还用不得。",
         "§e[${StoryNpcs.XIAN_LINGDANPUZHANGGUI.displayName}§e] §f去炼吧。炼好了，就送去给盟主。"
     )
 

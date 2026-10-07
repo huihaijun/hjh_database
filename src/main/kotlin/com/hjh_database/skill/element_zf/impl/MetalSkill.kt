@@ -40,6 +40,7 @@ class MetalSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 3. 计算目标位置 (星云中心)
         val hitLoc = getHitLocation(player, range)
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, hitLoc)
         val cloudCenter = hitLoc.clone().add(0.0, 0.1, 0.0) // 稍微抬高防止贴地
 
         // ============================================

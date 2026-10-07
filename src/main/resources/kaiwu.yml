@@ -20,8 +20,7 @@ mining:
   depleted_multiplier: 0.5
   # 枯竭状态下是否延长采集时间 (倍率, 1.0为不变, 2.0为双倍时间)
   depleted_time_multiplier: 2
-  # 3. 精力消耗倍率 (1.5 = 消耗1.5倍精力，体现"浪费精力")
-  depleted_energy_multiplier: 2
+  # 精力按实际开采时间扣除：每秒 1 点；枯竭延长耗时会相应增加总消耗。
   # 每次在枯竭状态下采集，是否重置恢复倒计时？(true=惩罚贪婪，false=固定时间恢复)
   reset_timer_on_depleted_mining: true
   # === 枯竭状态 (Depleted) 配置 ===

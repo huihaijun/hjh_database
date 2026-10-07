@@ -491,6 +491,27 @@ enum class StoryNpcs(
         Villager.Profession.NONE,
         Villager.Type.DESERT,
         317.5,45.50,-690.5, 0f
+    ),
+    SHANGJINSISIZHANG(
+        "shangjinsisizhang",
+        "§a§l赏金司司长——萧衡",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        89.5,48.50,94.5, 0f
+    ),
+    SHANGJINSIZHANGLING(
+        "shangjinsizhangling",
+        "§a§l赏金司掌令——赵明",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        86.5,48.50,74.5, 0f
+    ),
+    GUZHUWANGCHEN(
+        "guzhuwangchen",
+        "§a§l谷主——忘尘",
+        Villager.Profession.NONE,
+        Villager.Type.PLAINS,
+        -677.5,139.50,354.5, 0f
     );
 
 

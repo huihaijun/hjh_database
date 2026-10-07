@@ -31,9 +31,10 @@ class Shen_03 : QuestBase("main_shen_3", "[神族主线]白木样本", QuestType
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f他方才传了信，让我带你熟悉一下这里。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f正好，旁边那棵树的树干不知怎么发白了，我疑心是虫害。你去替我取一块下来看看。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f斧头？用不着。瞧见那白木头上冒的§a绿光§f了么——这便是天地灵气汇聚的征兆，可以用§e开物术§f来取。",
-        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f把目光聚在你想要的东西上，右手轻轻一碰，便能引动周遭灵气帮你把它“请”出来。不过施展时须专注，别乱动，分心中断了白白浪费时间。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f把目光聚在你想要的东西上，用§b右手§f轻轻一碰，便能引动周遭灵气帮你把它“请”出来。施展时不要离开起始位置超过§b四格§f，否则采集会中断，已经消耗的精力不会返还。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f万物有灵，这些能采的东西也一样。下手前仔细看：§a绿光盈盈§f便是§a富饶§f，此时采集最快也最丰厚。若是光变成了§e暗黄色§f，便是枯竭了——还能采，但费时费力，说不定还一无所获。若是§7灰蒙蒙一片§f，那便是正在休养，暂时动不得。等它歇够了，绿光自会回来。",
-        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f每次施展开物术都会消耗§b精力§f，不过精力会随时间慢慢回复。开物术每提升一级，精力上限都会提高，§b开采速度也会增加§f。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f精力的消耗取决于施术时间：§b每开采一秒消耗一点精力§f。开物术精进后，精力上限提高，采集更快，同样的资源便能少耗些精力。恢复之期结束后，精力会一次回满。",
+        "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f受到怪物伤害时，采集不会直接停止，但§c当前进度§f会受损。一级损失五成，此后每级少损失一成，§b五级起固定为一成§f；每§b两秒§f最多发生一次。补回损失的进度，仍会继续消耗精力。",
         "§e[${StoryNpcs.SHEN_ZIYUANZHONGXINFUZEREN.displayName}§e] §f好了，去试试吧。取到样本之后，就快来交给我。"
     )
 

@@ -23,6 +23,7 @@ class EnhancedMetalSkill(private val plugin: Hjh_database) : EnhancedElementSkil
         val targetPoint = getEnhancedSightLocation(player, 20.0, FluidCollisionMode.NEVER)
         val cloudCenter = targetPoint.clone().add(0.0, 7.5, 0.0)
         val world = targetPoint.world ?: return false
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, targetPoint)
         val damage = data.zfStr * 5.0
         val radius = 5.5
 

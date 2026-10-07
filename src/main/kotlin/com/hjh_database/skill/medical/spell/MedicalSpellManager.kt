@@ -152,12 +152,14 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
             data.lingli = data.lingli - manaCost
 
             // A. 设置逻辑冷却 (插件内部判断用)
-            setCooldown(player, skillId, cdMillis)
+            if (skillId != "mingxiang") setCooldown(player, skillId, cdMillis)
 
             plugin.server.pluginManager.callEvent(MedicalCastEvent(player, skillId))
 
             // Trigger Water skill for cooldown refund
-            plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, cdMillis / 1000.0)
+            if (skillId != "mingxiang") {
+                plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, cdMillis / 1000.0)
+            }
 
             // 冥想的提示由技能自身按“开始/结束”状态发送，避免与通用医术释放字幕重复。
             if (!skillId.equals("mingxiang", ignoreCase = true)) {
@@ -179,7 +181,7 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
             // B. 【核心修改】设置独立的视觉冷却 (物品栏转圈圈)
             // 只有手持物品不是空气时才设置
             val hand = player.inventory.itemInMainHand
-            if (hand.type != Material.AIR) {
+            if (hand.type != Material.AIR && skillId != "mingxiang") {
                 // 计算 ticks (1秒 = 20 ticks)
                 val cooldownTicks = (cdMillis / 50).toInt()
                 // 调用下方的视觉冷却方法
@@ -191,7 +193,7 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
     fun applyMedicalHeal(caster: Player, target: LivingEntity, amount: Double, spellId: String? = null): Double {
         if (amount <= 0.0 || target.isDead) return 0.0
 
-        val adjustedAmount = amount * plugin.queqiaoyinSkill.healingMultiplier(target)
+        val adjustedAmount = amount * plugin.queqiaoyinSkill.healingMultiplier(target) * plugin.elementCrystalManager.reworkedMastery.healingMultiplier(target, medicalTreatment = true)
         val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return 0.0
         val oldHealth = target.health
         val actualHeal = adjustedAmount.coerceAtMost(maxHealth - oldHealth).coerceAtLeast(0.0)
@@ -293,6 +295,15 @@ class MedicalSpellManager(private val plugin: Hjh_database) {
     private fun setCooldown(player: Player, skillId: String, durationMillis: Long) {
         val endTime = System.currentTimeMillis() + durationMillis
         cooldowns.computeIfAbsent(player.uniqueId) { ConcurrentHashMap() }[skillId] = endTime
+    }
+
+    fun startCooldown(player: Player, skillId: String) {
+        val data = plugin.playerManager.getPlayerData(player) ?: return
+        val baseSeconds = spellConfigs[skillId]?.getDouble("cooldown", 30.0) ?: 30.0
+        val durationMillis = (baseSeconds * (1.0 - data.coolReduce) * 1000L).toLong()
+        setCooldown(player, skillId, durationMillis)
+        setVisualCooldown(player, skillId, (durationMillis / 50L).toInt())
+        plugin.elementCrystalManager.triggerWaterSkill(player, "medical", skillId, durationMillis / 1000.0)
     }
 
     fun reduceCooldown(player: Player, skillId: String, seconds: Double) {

@@ -43,6 +43,8 @@ class KaiWuManager(private val plugin: Hjh_database) {
     private var dustDepleted: Particle.DustOptions? = null
     private var dustRecovering: Particle.DustOptions? = null
     private val energyRecoveryKey = "__kaiwu_energy_recovery_until"
+    private val damagePenaltyKey = "__kaiwu_damage_penalty_until"
+    private val awakeningCooldownKey = "__yao_life_awakening_until"
 
     init {
         loadConfig()
@@ -100,7 +102,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
                 }
             }
             node.timeSeconds = sec.getDouble("time", 2.0)
-            node.energyCost = sec.getDouble("energy", 5.0)
             node.exp = sec.getInt("exp", 10)
             node.reqLevel = sec.getInt("req_level", 1)
             node.cooldownSec = sec.getInt("cooldown", 60)
@@ -211,18 +212,78 @@ class KaiWuManager(private val plugin: Hjh_database) {
         if (status.state == NodeState.RECOVERING) return "§c✘ 不可开采（恢复中）"
         if (isMining(player)) return "§e● 正在开采"
 
-        val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
-        val hasDepletedPenalty = status.state == NodeState.DEPLETED &&
-            yaoRace?.ignoresDepletedPenalty(player) != true
-        val energyMultiplier = if (hasDepletedPenalty) {
-            config.getDouble("mining.depleted_energy_multiplier", 1.5)
-        } else {
-            1.0
-        }
-        val requiredEnergy = node.energyCost * energyMultiplier
+        val requiredEnergy = getMiningTimeSeconds(player, node, status.state == NodeState.DEPLETED)
         if (data.kaiwuEnergy < requiredEnergy) return "§c✘ 不可开采（精力不足）"
 
         return "§a✔ 可以开采"
+    }
+
+    private fun getMiningTimeSeconds(player: Player, node: NodeConfig, isDepleted: Boolean = false): Double {
+        val data = plugin.playerManager.getPlayerData(player) ?: return node.timeSeconds
+        val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
+        val timeMultiplier = if (isDepleted && yaoRace?.ignoresDepletedPenalty(player) != true) {
+            config.getDouble("mining.depleted_time_multiplier", 2.0)
+        } else {
+            1.0
+        }
+        return (node.timeSeconds * timeMultiplier *
+            (yaoRace?.getKaiwuMiningTimeMultiplier(player) ?: 1.0) /
+            getLevelMiningSpeedMultiplier(data.kaiwuLevel)).coerceAtLeast(0.05)
+    }
+
+    /** 返回 true 表示本次右键由生灵唤醒接管，包括冷却或精力不足的情况。 */
+    fun tryAwakenNode(player: Player, loc: Location): Boolean {
+        val yaoRace = plugin.raceModule.getRace(4) as? YaoRace ?: return false
+        if (!yaoRace.isRaceActive(player) ||
+            plugin.raceModule.getResourceId(player.inventory.itemInMainHand) != YaoRace.PROOF_ITEM_ID
+        ) return false
+        val locKey = serializeLoc(loc)
+        val node = nodeCache[locKey] ?: return false
+        val data = plugin.playerManager.getPlayerData(player) ?: return false
+        val now = System.currentTimeMillis()
+        if (getNodeStatus(data, locKey, now).state != NodeState.RECOVERING) return false
+
+        val cooldownUntil = data.nodeCoolDowns[awakeningCooldownKey] ?: 0L
+        if (cooldownUntil > now) {
+            player.sendMessage("§a[生灵唤醒] §c冷却中，还需 ${(cooldownUntil - now + 999L) / 1000L} 秒。")
+            return true
+        }
+
+        ensureEnergyRecovery(data)
+        val energyCost = getMiningTimeSeconds(player, node) * 2.0
+        if (data.kaiwuEnergy + 1e-9 < energyCost) {
+            player.sendMessage("§a[生灵唤醒] §c精力不足，需要 ${String.format(Locale.ROOT, "%.2f", energyCost)} 点。")
+            return true
+        }
+
+        data.kaiwuEnergy = (data.kaiwuEnergy - energyCost).coerceAtLeast(0.0)
+        ensureEnergyRecovery(data)
+        data.nodeCoolDowns.remove(locKey + SUFFIX_RECOVERING)
+        data.nodeCoolDowns.remove(locKey + SUFFIX_DEPLETED)
+        data.nodeCoolDowns[awakeningCooldownKey] = now + 240_000L
+        plugin.databaseManager.queuePlayerSave(data, 1L)
+
+        val center = loc.clone().add(0.5, 1.0, 0.5)
+        player.world.spawnParticle(Particle.HAPPY_VILLAGER, center, 35, 0.6, 0.4, 0.6, 0.0)
+        player.world.spawnParticle(Particle.TOTEM_OF_UNDYING, center, 25, 0.4, 0.5, 0.4, 0.1)
+        player.world.playSound(center, Sound.ITEM_TOTEM_USE, 0.6f, 1.4f)
+        player.world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 1.2f)
+        player.sendMessage("§a[生灵唤醒] 资源点已恢复富饶！§7消耗 ${String.format(Locale.ROOT, "%.2f", energyCost)} 点精力。")
+        sendNodeInfoActionBar(player, locKey)
+        return true
+    }
+
+    fun reduceMiningProgressOnDamage(player: Player) {
+        if (!isMining(player)) return
+        val bar = miningBars[player.uniqueId] ?: return
+        val data = plugin.playerManager.getPlayerData(player) ?: return
+        val now = System.currentTimeMillis()
+        if ((data.nodeCoolDowns[damagePenaltyKey] ?: 0L) > now) return
+
+        val lossPercent = (50 - (data.kaiwuLevel.coerceAtLeast(1) - 1).coerceAtMost(4) * 10)
+        bar.progress *= 1.0 - lossPercent / 100.0
+        data.nodeCoolDowns[damagePenaltyKey] = now + 2_000L
+        player.sendMessage("§8[§6开物术§8] §c受到怪物攻击，损失当前开采进度的 $lossPercent%。")
     }
 
     private fun getNodeStatus(data: PlayerData, locKey: String, now: Long): NodeStatus {
@@ -294,55 +355,46 @@ class KaiWuManager(private val plugin: Hjh_database) {
         }
 
         // 3. 计算倍率
-        var timeMult = 1.0
-        var energyMult = 1.0
         var yieldMult = 1.0
         val yaoRace = plugin.raceModule.getRace(4) as? YaoRace
         val ignoresDepletedPenalty = yaoRace?.ignoresDepletedPenalty(player) == true
+        val hasDepletedPenalty = isDepleted && !ignoresDepletedPenalty
 
-        if (isDepleted && !ignoresDepletedPenalty) {
-            timeMult = config.getDouble("mining.depleted_time_multiplier", 2.0)
-            energyMult = config.getDouble("mining.depleted_energy_multiplier", 1.5)
+        if (hasDepletedPenalty) {
             yieldMult = config.getDouble("mining.depleted_yield_ratio", 0.5)
 
             val hint = getMsg("messages.node_depleted_hint")
-                .replace("%time%", timeMult.toString())
-                .replace("%energy%", energyMult.toString())
+                .replace("%time%", config.getDouble("mining.depleted_time_multiplier", 2.0).toString())
                 .replace("%yield%", (yieldMult * 100).toInt().toString())
             player.sendMessage(hint)
+        } else if (isDepleted && ignoresDepletedPenalty) {
+            player.sendMessage("§a[自然之灵]发动！无视资源点的枯竭状态影响！")
         }
 
-        val finalEnergyCost = node.energyCost * energyMult
-        val levelSpeedMultiplier = getLevelMiningSpeedMultiplier(data.kaiwuLevel)
-        val finalTime = node.timeSeconds * timeMult *
-            (yaoRace?.getKaiwuMiningTimeMultiplier(player) ?: 1.0) / levelSpeedMultiplier
+        val finalTime = getMiningTimeSeconds(player, node, isDepleted)
+        ensureEnergyRecovery(data)
 
-        // 修复3: 空安全处理
-        if ((data.kaiwuEnergy ?: 0.0) < finalEnergyCost) {
-            ensureEnergyRecovery(data)
-            player.sendMessage("§c精力不足！需要 " + String.format("%.1f", finalEnergyCost) + " 点。")
+        if (data.kaiwuEnergy + 1e-9 < finalTime) {
+            player.sendMessage("§c精力不足！需要 " + String.format("%.2f", finalTime) + " 点。")
             return
         }
 
-        val title = if (isDepleted) getMsg("bossbar.title_depleted") else getMsg("bossbar.title_rich")
-        val barColor = if (isDepleted)
+        val title = if (hasDepletedPenalty) getMsg("bossbar.title_depleted") else getMsg("bossbar.title_rich")
+        val barColor = if (hasDepletedPenalty)
             safeBarColor(config.getString("bossbar.color_depleted", "YELLOW")!!)
         else
             safeBarColor(config.getString("bossbar.color_rich", "GREEN")!!)
 
         val bar = Bukkit.createBossBar(title, barColor, BarStyle.SOLID)
+        bar.progress = 0.0
         bar.addPlayer(player)
         miningBars[player.uniqueId] = bar
         miningStartLoc[player.uniqueId] = player.location
 
         val finalIsDepleted = isDepleted
         val finalYield = yieldMult
-        val costEnergy = finalEnergyCost
 
         val task = object : BukkitRunnable() {
-            var progress = 0.0
-            val tickAdd = 1.0 / (finalTime * 20)
-
             override fun run() {
                 if (!player.isOnline || player.isDead) {
                     cancelMining(player)
@@ -351,24 +403,34 @@ class KaiWuManager(private val plugin: Hjh_database) {
 
                 val maxDist = config.getDouble("mining.interrupt_distance", 4.0)
                 val start = miningStartLoc[player.uniqueId]
-                if (start != null && player.location.distance(start) > maxDist) {
+                if (start != null && (player.world != start.world || player.location.distance(start) > maxDist)) {
                     player.sendMessage(getMsg("messages.mining_interrupted_move"))
                     cancelMining(player)
                     return
                 }
 
-                progress += tickAdd
-                if (progress >= 1.0) progress = 1.0
-                bar.progress = progress
+                // 每游戏刻最多采集 0.05 秒；最后不足一刻的耗时按实际余量扣费。
+                val secondsMined = minOf(0.05, (1.0 - bar.progress) * finalTime)
+                ensureEnergyRecovery(data)
+                if (data.kaiwuEnergy + 1e-9 < secondsMined) {
+                    player.sendMessage("§c精力不足，开采已停止！")
+                    cancelMining(player)
+                    return
+                }
+                data.kaiwuEnergy = (data.kaiwuEnergy - secondsMined).coerceAtLeast(0.0)
+                ensureEnergyRecovery(data)
+                plugin.databaseManager.queuePlayerSave(data)
+                val progress = bar.progress + secondsMined / finalTime
+                bar.progress = if (progress >= 1.0 - 1e-9) 1.0 else progress
 
-                if (progress >= 1.0) {
-                    finishMining(player, data, node, locKey, finalIsDepleted, costEnergy, finalYield)
+                if (bar.progress >= 1.0) {
+                    finishMining(player, data, node, locKey, finalIsDepleted, finalYield)
                     cancelMining(player)
                 }
             }
         }
 
-        task.runTaskTimer(plugin, 0L, 1L)
+        task.runTaskTimer(plugin, 1L, 1L)
         miningTasks[player.uniqueId] = task.taskId
     }
 
@@ -385,14 +447,8 @@ class KaiWuManager(private val plugin: Hjh_database) {
         node: NodeConfig,
         locKey: String,
         wasDepleted: Boolean,
-        energyCost: Double,
         yieldMult: Double
     ) {
-        val currentEnergy = data.kaiwuEnergy ?: 0.0
-        if (currentEnergy < energyCost) return
-        data.kaiwuEnergy = currentEnergy - energyCost
-        ensureEnergyRecovery(data)
-
         val now = System.currentTimeMillis()
 
         // 修复4: 同样使用强转
@@ -667,7 +723,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
         locKey: String,
         drops: List<ItemStack>?,
         time: Double,
-        energy: Double,
         exp: Int,
         reqLv: Int,
         cooldown: Int,
@@ -676,7 +731,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
         nodesConfig.set("$locKey.world", locKey.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0])
         nodesConfig.set("$locKey.drops", drops)
         nodesConfig.set("$locKey.time", time)
-        nodesConfig.set("$locKey.energy", energy)
+        nodesConfig.set("$locKey.energy", null)
         nodesConfig.set("$locKey.exp", exp)
         nodesConfig.set("$locKey.req_level", reqLv)
         nodesConfig.set("$locKey.cooldown", cooldown)
@@ -697,6 +752,7 @@ class KaiWuManager(private val plugin: Hjh_database) {
                 miningBars.remove(uuid)!!.removeAll()
             }
             miningStartLoc.remove(uuid)
+            plugin.playerManager.getPlayerData(player)?.let { plugin.databaseManager.queuePlayerSave(it, 1L) }
         }
     }
 
@@ -782,7 +838,6 @@ class KaiWuManager(private val plugin: Hjh_database) {
     class NodeConfig {
         var drops: MutableList<ItemStack> = ArrayList()
         var timeSeconds: Double = 0.0
-        var energyCost: Double = 0.0
         var exp: Int = 0
         var reqLevel: Int = 0
         var cooldownSec: Int = 0

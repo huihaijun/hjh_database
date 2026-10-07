@@ -41,6 +41,7 @@ class WaterSkill(plugin: Hjh_database) : AbstractElementSkill(plugin) {
 
         // 3. 寻找目标
         val targets = findTargets(player, range)
+        plugin.elementCrystalManager.reworkedMastery.formationCast(player, targets.firstOrNull()?.location ?: castOrigin)
 
         // 4. 造成伤害与控制
         // 如果有目标，才循环造成伤害；没有目标就跳过，但不打断流程

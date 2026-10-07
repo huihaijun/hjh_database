@@ -124,7 +124,7 @@ class ZhenyuechenfengSkill(plugin: Hjh_database) : BaseShieldSkill(plugin) {
         addStacks(player, state, state.meleeStackGain)
     }
 
-    /** [山势]每层独立提供4%全伤害减免。 */
+    /** [山势]每层独立提供7%全伤害减免。 */
     fun onDamageTaken(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
         if (event.isCancelled || event.damage <= 0.0) return
@@ -197,15 +197,15 @@ class ZhenyuechenfengSkill(plugin: Hjh_database) : BaseShieldSkill(plugin) {
         previous: Int,
         current: Int
     ) {
-        if (previous < 3 && current >= 3 && state.rewardMask and REWARD_SHIELD == 0) {
+        if (previous < 5 && current >= 5 && state.rewardMask and REWARD_SHIELD == 0) {
             state.rewardMask = state.rewardMask or REWARD_SHIELD
             grantAbsorption(player)
         }
-        if (previous < 5 && current >= 5 && state.rewardMask and REWARD_REGEN == 0) {
+        if (previous < 2 && current >= 2 && state.rewardMask and REWARD_REGEN == 0) {
             state.rewardMask = state.rewardMask or REWARD_REGEN
             grantRegenerationTwo(player)
         }
-        if (previous < 8 && current >= 8 && state.rewardMask and REWARD_REGEN_UPGRADE == 0) {
+        if (previous < 4 && current >= 4 && state.rewardMask and REWARD_REGEN_UPGRADE == 0) {
             state.rewardMask = state.rewardMask or REWARD_REGEN_UPGRADE
             upgradeRegeneration(player)
         }
@@ -230,7 +230,7 @@ class ZhenyuechenfengSkill(plugin: Hjh_database) : BaseShieldSkill(plugin) {
 
     private fun upgradeRegeneration(player: Player) {
         val existing = player.getPotionEffect(PotionEffectType.REGENERATION)
-        // 若5层的恢复已经结束，仍以生命恢复Ⅱ为升级起点，保证8层至少得到生命恢复Ⅲ。
+        // 若2层的恢复已经结束，仍以生命恢复Ⅱ为升级起点，保证4层至少得到生命恢复Ⅲ。
         val baseAmplifier = existing?.amplifier ?: REGEN_TWO_AMPLIFIER
         val upgradedAmplifier = min(baseAmplifier + 1, MAX_REGEN_AMPLIFIER)
         player.addPotionEffect(
@@ -490,7 +490,7 @@ class ZhenyuechenfengSkill(plugin: Hjh_database) : BaseShieldSkill(plugin) {
         private const val BLOCK_COOLDOWN_MILLIS = 3_000L
         private const val MELEE_STACK_COOLDOWN_MILLIS = 600L
         private const val STATE_TASK_PERIOD_TICKS = 5L
-        private const val DAMAGE_REDUCTION_PER_STACK = 0.04
+        private const val DAMAGE_REDUCTION_PER_STACK = 0.07
         private const val DECAY_ATTACK_BONUS = 1.5
         private const val MOUNTAIN_RADIUS = 6.0
         private const val SUPPRESSION_DURATION_MILLIS = 3_000L

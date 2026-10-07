@@ -3,12 +3,14 @@ package com.hjh_database.npc.listener
 import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent
 import com.hjh_database.Hjh_database
 import com.hjh_database.npc.data.NpcTemplate
+import com.hjh_database.npc.data.NpcIds
 import com.hjh_database.npc.gui.NpcAdminGui
 import com.hjh_database.npc.gui.NpcLibraryGui
 import com.hjh_database.race.impl.HumanRace
 import io.papermc.paper.event.player.AsyncChatEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -29,13 +31,42 @@ import java.util.concurrent.ConcurrentHashMap
 class NpcInteractListener(private val plugin: Hjh_database) : Listener {
 
     private data class NameEditSession(val templateId: String, val entityUuid: UUID?)
+    private data class IdEditSession(val templateId: String, val expiresAt: Long)
 
     private val interactCooldown = HashMap<UUID, Long>()
     private val editingNames = ConcurrentHashMap<UUID, NameEditSession>()
+    private val editingIds = ConcurrentHashMap<UUID, IdEditSession>()
     private val dialogueProgress = HashMap<UUID, HashMap<String, Int>>()
 
     fun beginNameEdit(player: Player, templateId: String, entityUuid: UUID?) {
+        editingIds.remove(player.uniqueId)
         editingNames[player.uniqueId] = NameEditSession(templateId, entityUuid)
+    }
+
+    fun beginIdEdit(player: Player, templateId: String) {
+        editingNames.remove(player.uniqueId)
+        editingIds.remove(player.uniqueId)
+        val manager = plugin.npcModule.manager
+        val template = manager.getTemplate(templateId) ?: return
+        if (manager.isStoryNpc(template.id)) {
+            player.sendMessage("§e[NPC] 该 NPC 已在 QuestNpcRegistry 注册，保留硬编码 ID：§f${template.id}")
+            return
+        }
+        val defaultId = manager.defaultId(template.name, template.id)
+        if (!manager.renameTemplate(template.id, defaultId)) {
+            player.sendMessage("§c[NPC] 默认 ID 保存失败，请查看服务器日志。")
+            return
+        }
+        val session = IdEditSession(defaultId, System.currentTimeMillis() + 30_000L)
+        editingIds[player.uniqueId] = session
+        player.sendMessage("§e[NPC] 默认该 NPC 使用 ID：§f$defaultId")
+        player.sendMessage("§e可在 30 秒内输入新的 ID 作为取代；时间结束或输入 1，将使用默认 ID。")
+        player.sendMessage("§7ID 须以小写英文字母开头，仅包含小写字母、数字、下划线，最多 128 位。")
+        plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            if (editingIds.remove(player.uniqueId, session) && player.isOnline) {
+                player.sendMessage("§a[NPC] 输入时间已结束，当前 ID：§f${manager.resolveId(defaultId)}")
+            }
+        }, 600L)
     }
 
     private fun isCoolingDown(player: Player, intervalMillis: Long = 250L): Boolean {
@@ -94,6 +125,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
 
         event.isCancelled = true
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
+        if (plugin.bountyManager.handleNpcRightClick(player, templateId)) return
         if (template.trades.isEmpty()) {
             player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 1f, 1f)
             player.sendMessage("§e[提示] §7这个NPC暂时不能交易，试着左键和他说说话吧！")
@@ -142,7 +174,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
             return
         }
 
-        val templateId = "npc_${UUID.randomUUID().toString().take(8)}"
+        val templateId = plugin.npcModule.manager.defaultId("新建NPC")
         plugin.npcModule.manager.templates[templateId] = NpcTemplate(
             id = templateId,
             name = "§e新建NPC"
@@ -165,7 +197,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
         if (isCoolingDown(player)) return
         val template = plugin.npcModule.manager.getTemplate(templateId) ?: return
 
-        if (plugin.questManager.handleNpcDialogue(player, templateId)) return
+        if (plugin.questManager.handleNpcDialogue(player, templateId, villager.location)) return
         if (plugin.raceModule.getZhanRace().handleIntelligenceDialogue(player, templateId)) return
 
         val dialogues = template.dialogue
@@ -199,6 +231,35 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
 
     @EventHandler
     fun onChat(event: AsyncChatEvent) {
+        val idSession = editingIds[event.player.uniqueId]
+        if (idSession != null) {
+            event.isCancelled = true
+            val message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim()
+            val receivedAt = System.currentTimeMillis()
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                val player = event.player
+                if (editingIds[player.uniqueId] !== idSession) return@Runnable
+                val manager = plugin.npcModule.manager
+                if (!player.isOnline || !player.isOp || receivedAt >= idSession.expiresAt || message == "1") {
+                    editingIds.remove(player.uniqueId, idSession)
+                    player.sendMessage("§a[NPC] 保留当前 ID：§f${manager.resolveId(idSession.templateId)}")
+                    return@Runnable
+                }
+                if (!NpcIds.isValid(message)) {
+                    player.sendMessage("§c[NPC] ID 格式无效，请在剩余时间内重输小写字母、数字或下划线（以字母开头，最多 128 位）。")
+                    return@Runnable
+                }
+                if (!manager.isIdAvailable(message, idSession.templateId)) {
+                    player.sendMessage("§c[NPC] 该 ID 已被占用，请在剩余时间内输入其他 ID。")
+                    return@Runnable
+                }
+                if (manager.renameTemplate(idSession.templateId, message)) {
+                    editingIds.remove(player.uniqueId, idSession)
+                    player.sendMessage("§a[NPC] ID 已保存：§f$message")
+                } else player.sendMessage("§c[NPC] ID 修改失败，已保留原 ID。")
+            })
+            return
+        }
         val session = editingNames.remove(event.player.uniqueId) ?: return
         event.isCancelled = true
         val player = event.player
@@ -222,6 +283,7 @@ class NpcInteractListener(private val plugin: Hjh_database) : Listener {
     fun onQuit(event: PlayerQuitEvent) {
         interactCooldown.remove(event.player.uniqueId)
         editingNames.remove(event.player.uniqueId)
+        editingIds.remove(event.player.uniqueId)
         dialogueProgress.remove(event.player.uniqueId)
     }
 }

@@ -8,6 +8,7 @@ import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
+import org.bukkit.Location
 import org.bukkit.Sound
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -20,23 +21,49 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class QuestManager(private val plugin: Hjh_database) : Listener {
+    data class NpcTaskChoice(val id: String, val title: String, val execute: () -> Boolean)
+
     private data class PendingNpcSelection(
         val token: String,
         val npcId: String,
+        val npcLocation: Location,
         val questIds: Set<String>,
         val expiresAt: Long
     )
 
-    private data class PreferredNpcQuest(val npcId: String, val questId: String)
+    private data class PreferredNpcQuest(val npcId: String, val questId: String, val choices: Set<String>)
 
     private val questMap = ConcurrentHashMap<String, QuestBase>()
+    private val npcTaskSources = LinkedHashMap<String, (Player, String) -> List<NpcTaskChoice>>()
     private val pendingNpcSelections = ConcurrentHashMap<UUID, PendingNpcSelection>()
     private val preferredNpcQuests = ConcurrentHashMap<UUID, PreferredNpcQuest>()
     private val legacySerializer = LegacyComponentSerializer.legacySection()
 
     init {
         QuestRegistry.registerAll(this)
+        registerNpcTaskSource("quest") { player, npcId ->
+            val data = plugin.playerManager.getPlayerData(player) ?: return@registerNpcTaskSource emptyList()
+            val compatibleIds = plugin.npcModule.manager.compatibleIds(npcId)
+            data.questStatuses.entries.mapNotNull { (questId, status) ->
+                if (status != QuestStatus.IN_PROGRESS) return@mapNotNull null
+                getQuest(questId)?.takeIf { quest -> compatibleIds.any { quest.canHandleNpcDialogue(it, data.questProgress[questId] ?: 0) } }
+            }.sortedWith(compareBy<QuestBase>({ it.type.ordinal }, { it.order }, { it.id }))
+                .map { quest ->
+                    NpcTaskChoice(quest.id, quest.title) {
+                        val progress = data.questProgress[quest.id] ?: 0
+                        val matchingId = plugin.npcModule.manager.compatibleIds(npcId).firstOrNull { quest.canHandleNpcDialogue(it, progress) }
+                        if (data.questStatuses[quest.id] != QuestStatus.IN_PROGRESS || matchingId == null) false
+                        else quest.onNpcDialogue(player, matchingId, progress)
+                    }
+                }
+        }
         Bukkit.getPluginManager().registerEvents(this, plugin)
+    }
+
+    /** 每种任务来源注册一次；提供候选时不能扣物品或推进任务。 */
+    fun registerNpcTaskSource(id: String, source: (Player, String) -> List<NpcTaskChoice>) {
+        check(id !in npcTaskSources) { "NPC 任务来源重复：$id" }
+        npcTaskSources[id] = source
     }
 
     fun register(quest: QuestBase) {
@@ -160,59 +187,69 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    fun handleNpcDialogue(player: Player, npcId: String): Boolean {
+    fun handleNpcDialogue(player: Player, npcId: String, npcLocation: Location): Boolean {
         val data = plugin.playerManager.getPlayerData(player) ?: return false
+        pendingNpcSelections.remove(player.uniqueId)
+        val selectable = npcDialogueChoices(player, npcId)
+        if (selectable.isNotEmpty()) return resolveNpcTaskConflict(player, npcId, npcLocation, selectable)
 
-        val selectable = data.questStatuses.entries.mapNotNull { (questId, status) ->
-            if (status != QuestStatus.IN_PROGRESS) return@mapNotNull null
-            val quest = getQuest(questId) ?: return@mapNotNull null
-            val progress = data.questProgress[questId] ?: 0
-            quest.takeIf { it.canHandleNpcDialogue(npcId, progress) }
-        }.sortedWith(compareBy<QuestBase>({ it.type.ordinal }, { it.order }, { it.id }))
-
-        preferredNpcQuests[player.uniqueId]?.let { preferred ->
-            val quest = selectable.firstOrNull { it.id == preferred.questId && preferred.npcId == npcId }
-            if (quest != null) {
-                return quest.onNpcDialogue(player, npcId, data.questProgress[quest.id] ?: 0)
-            }
-            preferredNpcQuests.remove(player.uniqueId, preferred)
-        }
-
-        if (selectable.size > 1) {
-            showNpcQuestSelection(player, npcId, selectable)
-            return true
-        }
-        if (selectable.size == 1) {
-            val quest = selectable.first()
-            return quest.onNpcDialogue(player, npcId, data.questProgress[quest.id] ?: 0)
-        }
-
+        preferredNpcQuests.remove(player.uniqueId)
+        // 兼容尚未声明 NPC/阶段的旧任务；新任务使用 QuestBase.npcDialogue 自动参与冲突选择。
         for ((questId, status) in data.questStatuses) {
             if (status == QuestStatus.IN_PROGRESS) {
                 val quest = getQuest(questId) ?: continue
-                val currentProgress = data.questProgress[questId] ?: 0
-                if (quest.onNpcDialogue(player, npcId, currentProgress)) {
-                    return true
-                }
+                if (plugin.npcModule.manager.compatibleIds(npcId).any { quest.onNpcDialogue(player, it, data.questProgress[questId] ?: 0) }) return true
             }
         }
         return false
     }
 
-    private fun showNpcQuestSelection(player: Player, npcId: String, quests: List<QuestBase>) {
+    /** 所有任务共用：单任务直接推进，多任务先选择；候选变化后废弃原优先项。 */
+    private fun resolveNpcTaskConflict(player: Player, npcId: String, npcLocation: Location, selectable: Map<String, NpcTaskChoice>): Boolean {
+        preferredNpcQuests[player.uniqueId]?.let { preferred ->
+            if (preferred.npcId == npcId && preferred.questId in selectable && preferred.choices == selectable.keys) {
+                return selectable.getValue(preferred.questId).execute()
+            }
+            preferredNpcQuests.remove(player.uniqueId, preferred)
+        }
+
+        if (selectable.size > 1) {
+            showNpcQuestSelection(player, npcId, npcLocation, selectable)
+            return true
+        }
+        if (selectable.size == 1) {
+            return selectable.values.first().execute()
+        }
+
+        return false
+    }
+
+    private fun npcDialogueChoices(player: Player, npcId: String): Map<String, NpcTaskChoice> {
+        val choices = LinkedHashMap<String, NpcTaskChoice>()
+        for ((sourceId, source) in npcTaskSources) {
+            for (choice in source(player, npcId)) {
+                val key = "$sourceId:${choice.id}"
+                check(choices.put(key, choice) == null) { "NPC 任务候选重复：$key" }
+            }
+        }
+        return choices
+    }
+
+    private fun showNpcQuestSelection(player: Player, npcId: String, npcLocation: Location, quests: Map<String, NpcTaskChoice>) {
         val token = UUID.randomUUID().toString()
         pendingNpcSelections[player.uniqueId] = PendingNpcSelection(
             token,
             npcId,
-            quests.mapTo(LinkedHashSet()) { it.id },
+            npcLocation.clone(),
+            quests.keys.toSet(),
             System.currentTimeMillis() + NPC_SELECTION_TIMEOUT_MILLIS
         )
 
         player.sendMessage("§e[系统] §f检测到此NPC有多个任务，请点击优先进行的任务。")
         var options = Component.empty()
-        quests.forEach { quest ->
-            val option = legacySerializer.deserialize("§e${quest.title}")
-                .clickEvent(ClickEvent.runCommand("/$NPC_SELECTION_COMMAND $token ${quest.id}"))
+        quests.forEach { (questId, choice) ->
+            val option = legacySerializer.deserialize("§e${choice.title}")
+                .clickEvent(ClickEvent.runCommand("/$NPC_SELECTION_COMMAND $token $questId"))
                 .hoverEvent(HoverEvent.showText(legacySerializer.deserialize("§a点击优先进行此任务")))
             options = options.append(option).append(Component.space())
         }
@@ -237,6 +274,11 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
             player.sendMessage("§c[系统] 该任务选择已经超时，请重新左键NPC。")
             return
         }
+        if (player.world != pending.npcLocation.world || player.location.distanceSquared(pending.npcLocation) > 36.0) {
+            pendingNpcSelections.remove(player.uniqueId, pending)
+            player.sendMessage("§c[系统] 请回到该 NPC 附近重新左键选择任务。")
+            return
+        }
 
         val questId = parts[2]
         if (questId !in pending.questIds) {
@@ -244,20 +286,17 @@ class QuestManager(private val plugin: Hjh_database) : Listener {
             return
         }
 
-        val data = plugin.playerManager.getPlayerData(player)
-        val quest = getQuest(questId)
-        val progress = data?.questProgress?.get(questId) ?: 0
-        if (data == null || quest == null || data.questStatuses[questId] != QuestStatus.IN_PROGRESS ||
-            !quest.canHandleNpcDialogue(pending.npcId, progress)
-        ) {
+        val choices = npcDialogueChoices(player, pending.npcId)
+        val choice = choices[questId]
+        if (choice == null) {
             pendingNpcSelections.remove(player.uniqueId, pending)
             player.sendMessage("§c[系统] 该任务当前已无法在此NPC处进行。")
             return
         }
 
         pendingNpcSelections.remove(player.uniqueId, pending)
-        preferredNpcQuests[player.uniqueId] = PreferredNpcQuest(pending.npcId, questId)
-        quest.onNpcDialogue(player, pending.npcId, progress)
+        preferredNpcQuests[player.uniqueId] = PreferredNpcQuest(pending.npcId, questId, choices.keys.toSet())
+        choice.execute()
     }
 
     @EventHandler

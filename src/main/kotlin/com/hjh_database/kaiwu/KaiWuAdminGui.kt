@@ -155,7 +155,7 @@ class KaiWuAdminGui(
         lore += drops
         lore += ""
         lore += "§7采集耗时: §f${format(node.timeSeconds)} 秒"
-        lore += "§7精力消耗: §f${format(node.energyCost)}"
+        lore += "§7精力消耗: §f每开采 1 秒消耗 1 点"
         lore += "§7开物经验: §f${node.exp}"
         lore += "§7需求等级: §f${node.reqLevel}"
         lore += "§7枯竭时间: §f${node.depletedSec} 秒"

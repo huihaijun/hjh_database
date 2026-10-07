@@ -67,7 +67,7 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
     }
 
     private fun trigger(player: Player, pData: PlayerData) {
-        val damage = pData.attack * 2.0
+        val damage = pData.attack * 2.5
         val dir = player.location.direction.clone()
         dir.y = 0.0
         if (dir.length() < 0.001) return
@@ -91,7 +91,7 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
             val speedPerStep = 1.0
 
             override fun run() {
-                if (!player.isOnline || step > maxSteps) {
+                if (!plugin.elementCrystalManager.masterySupport.active(player) || player.world != world || step > maxSteps) {
                     cancel()
                     return
                 }
@@ -135,7 +135,7 @@ class GoldMasteryWarrior(private val plugin: Hjh_database) {
 
                         if (lateralDist <= 1.2 && abs(forwardDist) <= 0.8) {
                             hitMonsters.add(entity.uniqueId)
-                            magicDamage(player, entity, damage)
+                            plugin.elementCrystalManager.masterySupport.physical(player, entity, damage)
                             // 受击粒子
                             entity.world.spawnParticle(Particle.CRIT, entity.location.add(0.0, entity.height * 0.5, 0.0), 10, 0.2, 0.2, 0.2, 0.1)
                         }

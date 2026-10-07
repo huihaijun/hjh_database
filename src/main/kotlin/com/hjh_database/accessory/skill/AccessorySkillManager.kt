@@ -33,6 +33,8 @@ import org.bukkit.event.entity.EntityPotionEffectEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot // 銆愭柊澧炲鍏ャ€戠敤浜庡垽鏂富鍓墜
@@ -133,7 +135,8 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     // 鑾峰彇鐜╁韬笂鎵€鏈夌敓鏁堟Ы浣嶇殑鐗╁搧 (楗板搧鏍?+ 鍓墜 + 蹇嵎鏍?
     private fun getActiveAccessories(player: Player): List<Pair<ItemStack, String>> {
         val list = mutableListOf<Pair<ItemStack, String>>()
-        val contents = plugin.accessoryManager.getAccessoryContents(player)
+        val contents = if (player.openInventory.title == plugin.accessoryManager.INVENTORY_TITLE)
+            player.openInventory.topInventory.contents else plugin.accessoryManager.getAccessoryContents(player)
         if (contents != null) {
             for (i in contents.indices) {
                 contents[i]?.let { list.add(it to "accessory_$i") }
@@ -336,6 +339,7 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
     }
 
     fun onElementFormationCast(player: Player, data: PlayerData) {
+        updateFormationYuan(player, data, consume = false)
         val activeItems = getActiveAccessories(player)
 
         for ((item, slotKey) in activeItems) {
@@ -498,43 +502,79 @@ class AccessorySkillManager(private val plugin: Hjh_database) : Listener {
         }
     }
 
-    /**
-     * 渚涘厓绱犳妧鑳借皟鐢細妫€鏌ョ帺瀹跺綋鍓嶆槸鍚︽縺娲讳簡鍥炴祦绫婚グ鍝侊紝濡傛灉婵€娲讳簡锛岃繑鍥炲畠鐨勫叿浣撳疄渚嬪拰鏁版嵁
-     */
-    fun getActiveRefluxData(player: Player): Pair<BaseRefluxSkill, CrystalData>? {
-        // 濡傛灉鐜╁鏍规湰娌″紑鍚姸鎬侊紝鐩存帴杩斿洖 null锛岃妭鐪佹€ц兘
-        if (!BaseRefluxSkill.isRefluxActive(player)) return null
-
-        val pData = plugin.playerManager.getPlayerData(player) ?: return null
-        val activeItems = getActiveAccessories(player) // 浣跨敤浣犱箣鍓嶅啓濂界殑鑾峰彇鐢熸晥楗板搧鐨勬柟娉?
-
-        for ((item, slotKey) in activeItems) {
-            val meta = item.itemMeta ?: continue
-            val baihuArtifact = plugin.baihuDzManager.getArtifactDataFromItem(item)
-            val cData = if (baihuArtifact != null) {
-                plugin.baihuDzManager.toCrystalData(baihuArtifact)
-            } else {
-                val cid = meta.persistentDataContainer.get(crystalKey, PersistentDataType.STRING) ?: continue
-                plugin.playerManager.crystalManager.loadedCrystals[cid] ?: continue
-            }
-
-            // 妫€鏌ヨ繖涓グ鍝佹槸鍚﹀湪婵€娲讳綅缃紝骞朵笖婊¤冻鐜╁绛夌骇/鑱屼笟瑕佹眰
-            val active = if (baihuArtifact != null) {
-                plugin.baihuDzManager.isArtifactActiveForSkill(player, item, baihuArtifact, slotKey)
-            } else {
-                plugin.playerManager.crystalManager.isActive(cData, pData, slotKey, player, item)
-            }
-            if (active) {
-                val targetId = cData.skillId ?: cData.id
-                val skillClass = skills[targetId]
-
-                // 濡傛灉杩欎釜楗板搧鏄洖娴佺被楗板搧锛屽氨鎶婂畠鐨勫疄渚嬪拰鏁版嵁杩斿洖鍥炲幓锛?
-                if (skillClass is BaseRefluxSkill) {
-                    return Pair(skillClass, cData)
-                }
-            }
+    private fun findActiveYuanAccessory(player: Player, data: PlayerData): Triple<Array<ItemStack?>, Int, CrystalData>? {
+        if (player.isDead) return null
+        val openMenu = player.openInventory.title == plugin.accessoryManager.INVENTORY_TITLE
+        val contents = if (openMenu) player.openInventory.topInventory.contents
+            else plugin.accessoryManager.getAccessoryContents(player) ?: return null
+        for (i in contents.indices) {
+            val item = contents[i] ?: continue
+            val cid = item.itemMeta?.persistentDataContainer?.get(crystalKey, PersistentDataType.STRING) ?: continue
+            val crystalData = plugin.playerManager.crystalManager.loadedCrystals[cid] ?: continue
+            if (skills[crystalData.skillId ?: cid] !is BaseRefluxSkill) continue
+            val slotKey = "accessory_$i"
+            if (!plugin.playerManager.crystalManager.isActive(crystalData, data, slotKey, player, item)) continue
+            return Triple(contents, i, crystalData)
         }
         return null
+    }
+
+    fun getAvailableYuan(player: Player): Int {
+        val data = plugin.playerManager.getPlayerData(player) ?: return 0
+        val (contents, slot, crystalData) = findActiveYuanAccessory(player, data) ?: return 0
+        val skill = skills[crystalData.skillId ?: crystalData.id] as? BaseRefluxSkill ?: return 0
+        return skill.getStoredYuan(contents[slot] ?: return 0, crystalData)
+    }
+
+    fun consumeSuguiYuan(player: Player, data: PlayerData): Boolean =
+        updateFormationYuan(player, data, consume = true)
+
+    /** 产元和溯归扣元统一写回饰品本身，查询可用元时不修改任何状态。 */
+    private fun updateFormationYuan(player: Player, data: PlayerData, consume: Boolean): Boolean {
+        val (contents, slot, crystalData) = findActiveYuanAccessory(player, data) ?: return false
+        val item = contents[slot] ?: return false
+        val skill = skills[crystalData.skillId ?: crystalData.id] as? BaseRefluxSkill ?: return false
+        if (consume) {
+            if (!skill.consumeSuguiYuan(item, crystalData)) return false
+        } else {
+            skill.onFormationCast(item, crystalData)
+        }
+        plugin.playerManager.crystalManager.updateCrystalLore(item, crystalData, data, "accessory_$slot")
+        contents[slot] = item
+        if (player.openInventory.title == plugin.accessoryManager.INVENTORY_TITLE) {
+            player.openInventory.topInventory.setItem(slot, item)
+        } else {
+            plugin.accessoryManager.saveAccessoryContents(player, contents)
+        }
+        return true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onYuanDeposit(event: InventoryClickEvent) {
+        if (event.click != ClickType.RIGHT) return
+        val player = event.whoClicked as? Player ?: return
+        val inventory = event.clickedInventory ?: return
+        val inAccessoryMenu = event.view.title == plugin.accessoryManager.INVENTORY_TITLE && inventory == event.view.topInventory
+        if (inventory != player.inventory && !inAccessoryMenu) return
+        val item = event.currentItem ?: return
+        if (item.amount != 1) return
+        val cid = item.itemMeta?.persistentDataContainer?.get(crystalKey, PersistentDataType.STRING) ?: return
+        val crystalData = plugin.playerManager.crystalManager.loadedCrystals[cid] ?: return
+        val skill = skills[crystalData.skillId ?: cid] as? BaseRefluxSkill ?: return
+        val elements = event.cursor
+        if (!skill.depositElements(player, item, elements, crystalData)) return
+        event.isCancelled = true
+        val data = plugin.playerManager.getPlayerData(player)
+        if (data != null) {
+            val slotKey = if (inAccessoryMenu) "accessory_${event.slot}" else when (event.slot) {
+                in 0..8 -> "hotbar_${event.slot}"
+                40 -> "offhand"
+                else -> "none"
+            }
+            plugin.playerManager.crystalManager.updateCrystalLore(item, crystalData, data, slotKey)
+        }
+        event.currentItem = item
+        event.setCursor(if (elements.amount <= 0) null else elements)
     }
 
     private fun findActiveSkill(player: Player, requestedSkillId: String): Pair<BaseAccessorySkill, CrystalData>? {

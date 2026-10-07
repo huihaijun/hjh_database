@@ -14,14 +14,14 @@ import kotlin.random.Random
 class MuChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
 
     override fun cast(player: Player, data: PlayerData, config: ConfigurationSection?): Boolean {
-        val zfStr = data.zfStr
+        val casterMaxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
 
         // 读取配置中的参数，做兜底处理
         val radius = config?.getDouble("radius", 5.0) ?: 5.0
         val durationSeconds = config?.getInt("duration", 5) ?: 5
-        val healMultiplier = config?.getDouble("heal_multiplier", 0.5) ?: 0.5
+        val healRatio = config?.getDouble("caster_max_health_ratio", 0.08) ?: 0.08
 
-        val healAmount = zfStr * healMultiplier
+        val healAmount = casterMaxHealth * healRatio
 
         // 播放施法音效
         player.world.playSound(player.location, Sound.WEATHER_RAIN, 1.0f, 1.0f)
@@ -47,7 +47,7 @@ class MuChunYuSpell(private val plugin: Hjh_database) : MedicalSpell {
                 }
 
                 // --- 治疗效果结算 (每 20 ticks 执行一次，即每秒1次) ---
-                if (ticksCount % 20 == 0) {
+                if (ticksCount > 0 && ticksCount % 20 == 0) {
                     // 播放清脆的治疗提示音
                     player.world.playSound(centerLoc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 1.2f)
 

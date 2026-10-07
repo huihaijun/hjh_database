@@ -76,6 +76,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin kw <list|reload|setlevel|setenergy> - 开物术管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin farm <get|info|reload|player> - 灵田管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin buqian <info|reset> <玩家> - 卜算管理")
+            sender.sendMessage("§e/hjhadmin bounty <info|reset|rank|exp> <玩家> [数值] - 查询或调整赏金数据")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin title <list|give|take|display|reload> - 称号管理")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin shengong <玩家> <秒数> - 设置神族贡品到达时间")
             sender.sendMessage(ChatColor.YELLOW.toString() + "/hjhadmin damagetest - 获取受伤测试仪")
@@ -112,6 +113,9 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
 
         if (subCommand == "buqian") {
             return plugin.busuanManager.handleAdmin(sender, args.drop(1))
+        }
+        if (subCommand == "bounty") {
+            return plugin.bountyManager.handleAdmin(sender, args.drop(1))
         }
 
         if (subCommand == "title" || subCommand == "称号") {
@@ -207,6 +211,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
         // === reload (重载) ===
         if (subCommand == "reload") {
             plugin.reloadConfig()
+            plugin.bountyManager.reload()
             plugin.passiveSubtitleManager.reload()
             moneyAdminGui.reload()
             plugin.menuManager.reload()
@@ -1203,7 +1208,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
                 "medical", "quest", "gennpc", "alchemy", "spawner",
                 "status", "gettp", "getarrayblock", "chonghua","dungeon","getwarehouse","openwarehouse",
                 "getrebirthblock", "getelementcrystalblock",
-                "medicaltest", "kw", "baihudz", "farm", "buqian", "title", "shengong", "damagetest", "money", "dz"
+                "medicaltest", "kw", "baihudz", "farm", "buqian", "bounty", "title", "shengong", "damagetest", "money", "dz"
             )
             return rootCommands.filter { it.startsWith(args[0].lowercase()) }
         }
@@ -1245,6 +1250,7 @@ class AdminCommand(private val plugin: Hjh_database) : CommandExecutor, TabCompl
             }
             "farm" -> return plugin.farmingManager.tabComplete(args.drop(1))
             "buqian" -> return plugin.busuanManager.tabComplete(args.drop(1))
+            "bounty" -> return plugin.bountyManager.tabComplete(args.drop(1))
             "baihudz" -> {
                 if (args.size == 2) return listOf("station", "reload", "give").filter { it.startsWith(args[1].lowercase()) }
                 if (args.size == 3 && args[1].equals("give", true)) {

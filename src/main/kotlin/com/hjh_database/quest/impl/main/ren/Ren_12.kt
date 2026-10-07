@@ -59,6 +59,10 @@ class Ren_12 : QuestBase("main_ren_12", "[人族主线]尘封旧案", QuestType.
 
     override fun checkComplete(progress: Int): Boolean = false
 
+    override fun canHandleNpcDialogue(npcId: String, currentProgress: Int): Boolean =
+        (npcId == StoryNpcs.REN_LIGONGGONG.id && currentProgress == 0) ||
+            (npcId == StoryNpcs.RENHUANGXUANYUANSHI.id && currentProgress == 1)
+
     override fun onNpcDialogue(player: Player, npcId: String, currentProgress: Int): Boolean = when {
         npcId == StoryNpcs.REN_LIGONGGONG.id && currentProgress == 0 -> handleLiGonggong(player)
         npcId == StoryNpcs.RENHUANGXUANYUANSHI.id && currentProgress == 1 -> handleEmperor(player)

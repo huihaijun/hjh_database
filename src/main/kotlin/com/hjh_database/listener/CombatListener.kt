@@ -1,10 +1,12 @@
 package com.hjh_database.listener
 
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
+import org.bukkit.event.server.PluginDisableEvent
+import java.util.concurrent.atomic.AtomicLong
 import com.hjh_database.Hjh_database
 import com.hjh_database.accessory.element.ElementCrystalDamageDealtEvent
 import com.hjh_database.accessory.element.ElementCrystalDamageTakenEvent
 import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
-import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
 import com.hjh_database.command.TestMobCommand
 import com.hjh_database.spawner.MobFactory
 import com.hjh_database.spawner.MobRegistry
@@ -73,6 +75,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             EntityDamageEvent.DamageCause.CONTACT, EntityDamageEvent.DamageCause.SUFFOCATION,
             EntityDamageEvent.DamageCause.FALL, EntityDamageEvent.DamageCause.FIRE,
             EntityDamageEvent.DamageCause.FIRE_TICK, EntityDamageEvent.DamageCause.LAVA,
+            EntityDamageEvent.DamageCause.CAMPFIRE,
             EntityDamageEvent.DamageCause.DROWNING, EntityDamageEvent.DamageCause.STARVATION,
             EntityDamageEvent.DamageCause.CRAMMING, EntityDamageEvent.DamageCause.HOT_FLOOR
         )
@@ -86,6 +89,79 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             EntityDamageEvent.DamageCause.VOID, EntityDamageEvent.DamageCause.SUICIDE,
             EntityDamageEvent.DamageCause.STARVATION
         )
+    }
+
+    // 保留旧键以恢复热重载前玉如意留下的临时无敌帧设置。
+    private val noDamageOriginalMaximumKey = NamespacedKey(plugin, "sanbaoyuruyi_original_max_no_damage_ticks")
+    private val noDamageRestoreTokenKey = NamespacedKey(plugin, "sanbaoyuruyi_no_damage_restore_token")
+    private val noDamageRestoreSequence = AtomicLong()
+
+    init {
+        restoreInterruptedNoDamageFrameOverrides()
+    }
+
+    /** 在原版无敌帧裁剪前处理直接普攻；技能、箭矢和横扫不从这里触发。 */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onWarriorChargedAttackPre(event: PrePlayerAttackEntityEvent) {
+        val victim = event.attacked as? LivingEntity ?: return
+        val attacker = event.player
+        val data = plugin.playerManager.getData(attacker.uniqueId)
+        val qualifies = event.willAttack() && victim !is Player && victim.isValid && !victim.isDead &&
+            victim.scoreboardTags.contains("panling") && victim.scoreboardTags.contains("monster") &&
+            data?.job == 0 && attacker.attackCooldown >= 0.9f &&
+            plugin.equipmentActivationManager.resolveHeldWeapon(attacker, data) != null
+        if (qualifies) {
+            temporarilyDisableNoDamageFrames(victim)
+        } else if (victim.persistentDataContainer.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+            // 同 tick 后续不符合条件的普攻，先恢复正常无敌帧设置。
+            restoreNoDamageFrameOverride(victim)
+        }
+    }
+
+    @EventHandler
+    fun onDisable(event: PluginDisableEvent) {
+        if (event.plugin == plugin) restoreInterruptedNoDamageFrameOverrides()
+    }
+
+    private fun temporarilyDisableNoDamageFrames(target: LivingEntity) {
+        val pdc = target.persistentDataContainer
+        if (!pdc.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+            pdc.set(noDamageOriginalMaximumKey, PersistentDataType.INTEGER, target.maximumNoDamageTicks)
+        }
+        val token = noDamageRestoreSequence.incrementAndGet()
+        pdc.set(noDamageRestoreTokenKey, PersistentDataType.LONG, token)
+        target.maximumNoDamageTicks = 0
+        target.noDamageTicks = 0
+
+        val targetId = target.uniqueId
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            val current = Bukkit.getEntity(targetId) as? LivingEntity ?: return@Runnable
+            val currentToken = current.persistentDataContainer
+                .get(noDamageRestoreTokenKey, PersistentDataType.LONG)
+            if (currentToken == token) restoreNoDamageFrameOverride(current)
+        })
+    }
+
+    private fun restoreNoDamageFrameOverride(target: LivingEntity) {
+        val pdc = target.persistentDataContainer
+        val originalMaximum = pdc.get(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)
+        if (originalMaximum != null) target.maximumNoDamageTicks = originalMaximum.coerceAtLeast(0)
+        target.noDamageTicks = 0
+        pdc.remove(noDamageOriginalMaximumKey)
+        pdc.remove(noDamageRestoreTokenKey)
+    }
+
+    /** 防止恰好在这一 tick 热重载时，把怪物的 maximumNoDamageTicks 永久留在0。 */
+    private fun restoreInterruptedNoDamageFrameOverrides() {
+        Bukkit.getWorlds().forEach { world ->
+            world.loadedChunks.forEach { chunk ->
+                chunk.entities.filterIsInstance<LivingEntity>().forEach { entity ->
+                    if (entity.persistentDataContainer.has(noDamageOriginalMaximumKey, PersistentDataType.INTEGER)) {
+                        restoreNoDamageFrameOverride(entity)
+                    }
+                }
+            }
+        }
     }
 
     // === 主伤害处理逻辑 ===
@@ -255,17 +331,6 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             val calculationEvent = CombatDamageCalculationEvent(damageSource, entity, damage)
             plugin.server.pluginManager.callEvent(calculationEvent)
             damage = calculationEvent.damage
-            val vulnerableUntil = entity.getMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA)
-                .firstOrNull { it.owningPlugin == plugin }
-                ?.asLong()
-            if (vulnerableUntil != null) {
-                if (vulnerableUntil > System.currentTimeMillis()) {
-                    damage *= DuhuozhuSkill.VULNERABLE_MULTIPLIER
-                } else {
-                    entity.removeMetadata(DuhuozhuSkill.VULNERABLE_UNTIL_METADATA, plugin)
-                }
-            }
-
             val bingQingUntil = entity.getMetadata(BingQingYuSpell.VULNERABILITY_UNTIL_METADATA)
                 .firstOrNull { it.owningPlugin == plugin }
                 ?.asLong()
@@ -350,7 +415,7 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
             }
         } else null
 
-        if (attackerPlayer != null) {
+        if (attackerPlayer != null && !entity.hasMetadata(com.hjh_database.accessory.element.MasterySupport.GENERATED)) {
             if (entity is LivingEntity) {
                 val isNormalAttack = activeWeaponId != null &&
                     damage > 0.0 &&
@@ -365,7 +430,8 @@ class CombatListener(private val plugin: Hjh_database) : Listener {
                     isNormalAttack,
                     isArrowHit,
                     damager as? AbstractArrow,
-                    damage
+                    damage,
+                    event
                 )
                 plugin.server.pluginManager.callEvent(crystalEvent)
                 damage = crystalEvent.damage

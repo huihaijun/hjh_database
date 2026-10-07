@@ -132,10 +132,15 @@ class BaihuDzRecipeListGui(
     fun onClick(event: InventoryClickEvent) {
         if (event.inventory != inv) return
         event.isCancelled = true
-        when (event.slot) {
+        if (event.rawSlot !in 0 until inv.size) return
+        when (event.rawSlot) {
             45 -> {
-                player.closeInventory()
-                BaihuDzCategoryGui(plugin, player, manageMode).open()
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (player.openInventory.topInventory == inv) {
+                        if (manageMode) player.closeInventory()
+                        BaihuDzCategoryGui(plugin, player, manageMode).open()
+                    }
+                })
             }
             49 -> {
                 if (!manageMode) return
@@ -155,8 +160,12 @@ class BaihuDzRecipeListGui(
                     }
                     return
                 }
-                player.closeInventory()
-                BaihuDzRecipePreviewGui(plugin, player, category, recipeId, manageMode).open()
+                val recipe = plugin.baihuDzManager.getRecipe(category, recipeId) ?: return
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (player.openInventory.topInventory == inv) {
+                        BaihuDzCraftingGui(plugin, player, category, recipe, manageMode).open()
+                    }
+                })
             }
         }
     }

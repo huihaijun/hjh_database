@@ -238,15 +238,28 @@ class BaihuDzManager(private val plugin: Hjh_database) {
     fun getDataFromItem(item: ItemStack?): BaihuEquipmentData? {
         val meta = item?.itemMeta ?: return null
         val weaponId = meta.persistentDataContainer.get(weaponKey, PersistentDataType.STRING)
-        if (weaponId != null) return weapons[weaponId]
+        if (weaponId != null) return getWeaponDataFromItem(item)
         val artifactId = meta.persistentDataContainer.get(artifactKey, PersistentDataType.STRING)
         if (artifactId != null) return artifacts[artifactId]
         return null
     }
 
     fun getWeaponDataFromItem(item: ItemStack?): BaihuWeaponData? {
-        val id = item?.itemMeta?.persistentDataContainer?.get(weaponKey, PersistentDataType.STRING) ?: return null
-        return weapons[id]
+        val meta = item?.itemMeta ?: return null
+        val pdc = meta.persistentDataContainer
+        val oldId = pdc.get(weaponKey, PersistentDataType.STRING) ?: return null
+        val id = if (oldId == "duhuozhu") "hugukuzhang" else oldId
+        val data = weapons[id] ?: return null
+        if (id != oldId) {
+            // 旧物品在被读取时迁移 ID，保留已有耐久，不扫描背包或数据库。
+            pdc.set(weaponKey, PersistentDataType.STRING, id)
+            pdc.set(resourceKey, PersistentDataType.STRING, id)
+            meta.setDisplayName(color(data.display))
+            if (data.customModelData > 0) meta.setCustomModelData(data.customModelData)
+            item.itemMeta = meta
+            updateWeaponLore(item, data, null)
+        }
+        return data
     }
 
     fun getArtifactDataFromItem(item: ItemStack?): BaihuArtifactData? {

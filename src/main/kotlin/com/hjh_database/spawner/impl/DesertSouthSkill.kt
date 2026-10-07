@@ -15,6 +15,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.PlayerToggleSneakEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.persistence.PersistentDataType
 import java.util.concurrent.ThreadLocalRandom
 
@@ -27,6 +28,8 @@ object DesertSouthSkill : Listener {
 
     private lateinit var plugin: Hjh_database
     private val SNEAKS_KEY by lazy { NamespacedKey(plugin, "desert_south_sneaks") }
+    private data class BurnCycle(var lastFireTicks: Int, var valid: Boolean = true)
+    private val burnCycles = mutableMapOf<java.util.UUID, BurnCycle>()
 
     /**
      * 在插件主类 (onEnable) 中调用此方法进行初始化
@@ -61,6 +64,8 @@ object DesertSouthSkill : Listener {
         // 3. 提示
         player.sendMessage("§c你被焱砂之火点燃了……")
         player.playSound(player.location, Sound.ENTITY_BLAZE_SHOOT, 1f, 1f)
+        burnCycles[player.uniqueId] = BurnCycle(player.fireTicks)
+        plugin.bountyManager.onDesertFireStarted(player)
     }
 
     fun isAffected(player: Player): Boolean =
@@ -83,22 +88,32 @@ object DesertSouthSkill : Listener {
     private fun startGlobalMonitorTask() {
         Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
             for (player in Bukkit.getOnlinePlayers()) {
-                if (player.isDead) continue
+                if (player.isDead) {
+                    finishCycle(player, false)
+                    continue
+                }
 
                 val pdc = player.persistentDataContainer
                 if (pdc.has(SNEAKS_KEY, PersistentDataType.INTEGER)) {
+                    val cycle = burnCycles[player.uniqueId]
+                    if (player.isInWater || player.hasPotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE)) {
+                        cycle?.valid = false
+                    }
 
                     // 【判定灭火】只要火灭了（跳水、药水时间到、原版灭火），就移除烙印
                     if (player.fireTicks <= 0) {
                         pdc.remove(SNEAKS_KEY)
+                        // 在同一个燃烧监视器中识别从最后一 tick 自然烧尽，避免两个定时器的先后顺序造成漏记。
+                        finishCycle(player, cycle?.valid == true && cycle.lastFireTicks == 1)
                         continue
                     }
+                    cycle?.lastFireTicks = player.fireTicks
 
                     // 每秒 (20 ticks) 触发一次伤害
                     if (player.ticksLived % 20 == 0) {
                         applyCustomFireDamage(player)
                     }
-                }
+                } else finishCycle(player, false)
             }
         }, 0L, 1L)
     }
@@ -140,6 +155,7 @@ object DesertSouthSkill : Listener {
 
         if (nextValue <= 0) {
             // 成功灭火
+            finishCycle(player, false)
             pdc.remove(SNEAKS_KEY)
             player.fireTicks = 0
             player.sendMessage("§a你通过剧烈的翻滚扑灭了身上的火焰！")
@@ -150,6 +166,15 @@ object DesertSouthSkill : Listener {
             player.playSound(player.location, Sound.ITEM_ARMOR_EQUIP_LEATHER, 0.5f, 2.0f)
         }
     }
+
+    private fun finishCycle(player: Player, completed: Boolean) {
+        if (burnCycles.remove(player.uniqueId) != null) {
+            plugin.bountyManager.onDesertFireFinished(player, completed)
+        }
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) = finishCycle(event.player, false)
 
     private const val NORMAL_FIRE_TICKS = 120
     private const val ZHAN_FIRE_TICKS = 60

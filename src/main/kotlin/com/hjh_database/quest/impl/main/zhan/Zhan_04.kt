@@ -29,7 +29,9 @@ class Zhan_04 : QuestBase("main_zhan_4", "[战神族主线]炼丹补给", QuestT
         "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f拿好了就听我说，冶药不难，就几步。",
         "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f丹药分§e初级§f、§e中级§f、§e高级§f三品。冶药法等级越高，能炼的品级越高。高级丹药只有§d医师§f能炼，没那份济世的心，光有手艺也白搭。",
         "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f操作很简单：走到炼药锅前，伸手一碰，界面自开。选好丹药和品级，药锅会跟你共鸣，锅面上浮出所需材料的影子。照着影子把材料丢进去，材料齐了丹药自会凝成，落进你行囊里。共鸣期间别跑太远，断了也不打紧，材料不损，回来重开便是。",
-        "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f还有一桩，记牢了——丹药炼出来就能吃，见效快，这是好事。可§c是药三分毒§f，服下后体内会生出§c药丹疾病§f，一段时间内排拒其他丹药的药力。药丹疾病没消，再好的药也灌不进去。越是猛烈的丹药，这病拖得越久。日后跟人动手，吃药§c掐准时机§f，别傻乎乎地连灌。",
+        "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f还有一桩，记牢了——丹药见效快，可吃过后会生出§c药丹疾病§f，暂时排拒同类药力。丹药分§e归元§f、§e助势§f、§e飞丹§f，别给我混着认。",
+        "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f同类丹药，换名字、换品级都没用。愈合丹和回灵丹都是§e归元§f，吃过一个，归元类的药丹疾病没消，另一个也灌不进去。",
+        "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f不同类别互不影响，归元的没消，还能用助势或飞丹；但那一类要是也有药丹疾病，照样得等。上阵前把药分清，吃药§c掐准时机§f，别到了要命的时候，才发现手里这一颗还用不了。",
         "§e[${StoryNpcs.ZHAN_LIANDAN.displayName}§e] §f冶药锅就在我手边，你随便挑一口，炼好了直接回去找族长。他应该会收走一部分送医疗室，剩下的你自己留着，日后出去用得上。"
     )
 

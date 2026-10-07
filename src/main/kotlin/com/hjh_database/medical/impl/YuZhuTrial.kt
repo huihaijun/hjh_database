@@ -465,7 +465,8 @@ class YuZhuTrial(
         phase = Phase.ENDED
         cleanUp()
         player.teleport(returnLocation)
-        player.sendMessage("§a雨竹 §f: §a愿你往后行医济世，心有清音，手有春风；纵经风雨，也总有天光相随。")
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
+        player.sendMessage("§a雨竹 §f: §a曲终，山魅的戾气也终于平息。你已懂得以清音护生，这卷§d降天光§a便化入你的灵智。愿你往后行医济世，心有清音，手有春风。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -484,7 +485,6 @@ class YuZhuTrial(
                 }
             })
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
@@ -493,8 +493,8 @@ class YuZhuTrial(
         phase = Phase.ENDED
         cleanUp()
         if (player.isOnline && !player.isDead) player.teleport(returnLocation)
-        if (shouldMessage) player.sendMessage("§c雨竹的医术试炼失败！")
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        if (shouldMessage) player.sendMessage("§a雨竹 §f: §7曲中尚有错拍，山魅的躁意未散。卷轴你且收好，我会先安抚已封住的山魅；下次少带一些，听清节拍，我们再合奏一回。")
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

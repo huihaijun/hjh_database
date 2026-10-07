@@ -158,7 +158,7 @@ class pokongfuSkill : WeaponSkill, Listener {
         }
 
         val maxHealth = killer.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-        killer.health = min(maxHealth, killer.health + HEAL_PER_KILL)
+        plugin.elementCrystalManager.reworkedMastery.heal(killer, HEAL_PER_KILL)
     }
 
     @EventHandler

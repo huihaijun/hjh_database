@@ -30,6 +30,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
         val data: PlayerData,
         val multiplier: Double,
         val tick: Int = org.bukkit.Bukkit.getCurrentTick(),
+        var suguiReadyAtNanos: Long = Long.MAX_VALUE,
         var element: ItemStack? = null,
         var restored: Double = 0.0,
         var baseMana: Double = 0.0
@@ -60,15 +61,18 @@ class ElementZfManager(private val plugin: Hjh_database) {
         val receipt = returnReceipts[player.uniqueId]?.get(type) ?: return SuguiReadiness.UNAVAILABLE
         if (!isOnCooldown(player, type) || receipt.data !== data || player.isDead) return SuguiReadiness.UNAVAILABLE
         if (receipt.tick == org.bukkit.Bukkit.getCurrentTick()) return SuguiReadiness.SAME_TICK
+        // 沿用静默拦截分支：施法成功后 150ms 内不扣灵力、不返还元素，HUD 也不显示可用。
+        if (System.nanoTime() < receipt.suguiReadyAtNanos) return SuguiReadiness.SAME_TICK
         val item = receipt.element ?: return SuguiReadiness.UNAVAILABLE
         val furnace = plugin.playerManager.weaponManager.checkActiveWeapon(player, player.inventory.itemInOffHand, 40)
         val inventory = player.inventory
+        val debit = receipt.restored + receipt.baseMana * receipt.multiplier
         return suguiReadiness(
             validReceipt = true,
             sameTick = false,
             activeFurnace = data.job == 2 && furnace?.reqJob == 2 && getActiveFurnaceRarity(player) != null,
-            availableMana = data.lingli,
-            debit = receipt.restored + receipt.baseMana * receipt.multiplier,
+            availableMana = if (plugin.accessorySkillManager.getAvailableYuan(player) > 0) debit else data.lingli,
+            debit = debit,
             canStoreElement = inventory.firstEmpty() != -1 || inventory.storageContents.any {
                 it != null && it.isSimilar(item) && it.amount < minOf(it.maxStackSize, inventory.maxStackSize)
             }
@@ -106,10 +110,12 @@ class ElementZfManager(private val plugin: Hjh_database) {
         val item = receipt.element ?: return false
         val inventory = player.inventory
         receipts.remove(type) // 先撤销资格，确保同次施法至多返还一枚。
-        data.lingli -= debit
+        val usedYuan = plugin.accessorySkillManager.consumeSuguiYuan(player, data)
+        if (!usedYuan) data.lingli -= debit
         inventory.addItem(item.clone())
         plugin.databaseManager.queuePlayerSave(data)
-        player.sendActionBar("§6§l【溯归】发动 本次阵法不消耗元素")
+        player.sendActionBar(if (usedYuan) "§6§l【溯归】发动 消耗1元替代灵力，本次阵法不消耗元素"
+            else "§6§l【溯归】发动 本次阵法不消耗元素")
         playSuguiFeedback(player)
         return true
     }
@@ -310,6 +316,7 @@ class ElementZfManager(private val plugin: Hjh_database) {
             plugin.accessorySkillManager.completeElementFormationCast(player, accessoryPlan, true)
             plugin.accessorySkillManager.onElementFormationCast(player, data)
             if (receipt.element != null && receipt.baseMana > 0.0 && isOnCooldown(player, type)) {
+                receipt.suguiReadyAtNanos = System.nanoTime() + 150_000_000L
                 returnReceipts.getOrPut(player.uniqueId) { mutableMapOf() }[type] = receipt
             }
 

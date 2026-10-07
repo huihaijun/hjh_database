@@ -86,6 +86,7 @@ import com.hjh_database.quest.impl.side.ren.Side_Ren_01
 
 object QuestRegistry {
     fun registerAll(manager: QuestManager) {
+        manager.register(com.hjh_database.quest.impl.side.Side_Bounty_Registration())
         // === 人族主线 ===
         manager.register(Ren_01())
         manager.register(Ren_02())

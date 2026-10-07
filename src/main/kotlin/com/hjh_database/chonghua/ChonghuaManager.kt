@@ -65,6 +65,12 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
 
     fun getPlacedWaypointId(location: Location): String? = placedCheckins[location]
 
+    fun unlockWaypointForRepair(player: Player, waypointId: String): Boolean {
+        val data = getChonghuaData(player) ?: return false
+        if (data.unlockedWaypoints.add(waypointId)) saveDataAsync(data)
+        return true
+    }
+
     fun isPlacedCrystal(location: Location): Boolean = placedCrystals.containsKey(location)
 
     // 监听玩家进服：异步读取数据库，防止卡线程
@@ -383,6 +389,13 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
         if (e.action != Action.RIGHT_CLICK_BLOCK) return
         val loc = e.clickedBlock?.location ?: return
 
+        placedCheckins[loc]?.let { waypointId ->
+            if (plugin.bountyManager.handleRepairCheckin(e.player, waypointId)) {
+                e.isCancelled = true
+                return
+            }
+        }
+
         // 仙族证明右键打卡点时只进行仙族绑定，不顺带解锁普通重华晶传送点。
         if (placedCheckins.containsKey(loc) &&
             plugin.raceModule.getResourceId(e.player.inventory.itemInMainHand) ==
@@ -494,6 +507,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                 return
             }
 
+            if (plugin.bountyManager.blocksRepairEastTravel(player, wpId)) return
+
             // 2. 检查是否在冷却中
             val now = System.currentTimeMillis()
             val lastTime = chonghuaData.waypointCooldowns[wpId] ?: 0L
@@ -503,6 +518,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                 player.playSound(player.location, org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 1.0f)
                 return
             }
+
+            if (plugin.bountyManager.blockBountyTeleport(player)) return
 
             // 3. 关闭 GUI，准备传送
             player.closeInventory()
@@ -536,6 +553,8 @@ class ChonghuaManager(private val plugin: Hjh_database) : Listener {
                     // 满 100 tick (5秒)，执行最终传送
                     if (ticksPassed >= 100) {
                         cancel() // 停止计时器
+
+                        if (plugin.bountyManager.blocksRepairEastTravel(player, wpId)) return
 
                         // 执行传送
                         player.teleport(wp.targetLoc)

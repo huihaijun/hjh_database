@@ -7,6 +7,7 @@ import com.hjh_database.baihu_dz.skill.BaihuWeaponSkill
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillManager
 import com.hjh_database.baihu_dz.skill.BaihuWeaponSkillResult
 import com.hjh_database.data.PlayerData
+import com.hjh_database.listener.CombatListener
 import org.bukkit.ChatColor
 import org.bukkit.Color
 import org.bukkit.Particle
@@ -35,7 +36,7 @@ class CiguheirenSkill(
     private val plugin: Hjh_database,
     private val manager: BaihuWeaponSkillManager
 ) : BaihuWeaponSkill {
-    private data class PendingSecond(val expireAt: Long, val durabilityRestored: Boolean)
+    private data class PendingSecond(val expireAt: Long)
     private data class DashShieldState(
         val amount: Double,
         val generation: Long,
@@ -72,7 +73,7 @@ class CiguheirenSkill(
         if (pending != null) {
             pendingSecond.remove(player.uniqueId)
             if (now <= pending.expireAt) {
-                castSecond(player, data, item, weaponData, config, pending.durabilityRestored)
+                castSecond(player, data, config)
                 return BaihuWeaponSkillResult.success(
                     consumeDurability = false,
                     startCooldown = true,
@@ -83,7 +84,7 @@ class CiguheirenSkill(
             return BaihuWeaponSkillResult.FAIL
         }
 
-        castFirst(player, data, item, weaponData, config)
+        castFirst(player, data, item, config)
         return BaihuWeaponSkillResult.success(
             consumeDurability = true,
             startCooldown = false,
@@ -109,17 +110,13 @@ class CiguheirenSkill(
         player: Player,
         data: PlayerData,
         item: ItemStack,
-        weaponData: BaihuWeaponData,
         config: ConfigurationSection
     ) {
         val range = config.getDouble("sweep_range", 6.0)
-        val damage = data.attack * config.getDouble("sweep_damage_multiplier", 3.3)
-        var killedAny = false
+        val damage = data.attack * config.getDouble("sweep_damage_multiplier", 1.1)
         val hitCount = sweepTargets(player, range).count { target ->
-            val wasAlive = !target.isDead && target.health > 0.0
             damageTarget(player, target, damage, armorPiercing = false)
             grantSweepShield(player, config)
-            if (wasAlive && (target.isDead || target.health <= 0.0)) killedAny = true
             true
         }
 
@@ -127,20 +124,13 @@ class CiguheirenSkill(
         player.world.playSound(player.location, Sound.ITEM_TRIDENT_THROW, 0.45f, 1.7f)
         spawnSweepBladeWave(player, range)
 
-        if (killedAny) {
-            // 主动技能的耐久在 castActive 返回后才扣除，因此延后一刻恢复，保证结算顺序正确。
-            plugin.server.scheduler.runTaskLater(plugin, Runnable {
-                restoreKillDurability(player, item, weaponData, config)
-            }, 1L)
-        }
-
         config.getString("message")?.takeIf { it.isNotBlank() }?.let {
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', it))
         }
 
         val windowTicks = (config.getDouble("second_window", 3.0) * 20.0).toLong().coerceAtLeast(1L)
         val expireAt = System.currentTimeMillis() + windowTicks * 50L
-        pendingSecond[player.uniqueId] = PendingSecond(expireAt, killedAny)
+        pendingSecond[player.uniqueId] = PendingSecond(expireAt)
         object : BukkitRunnable() {
             override fun run() {
                 val pending = pendingSecond[player.uniqueId] ?: return
@@ -161,13 +151,10 @@ class CiguheirenSkill(
     private fun castSecond(
         player: Player,
         data: PlayerData,
-        item: ItemStack,
-        weaponData: BaihuWeaponData,
-        config: ConfigurationSection,
-        durabilityAlreadyRestored: Boolean
+        config: ConfigurationSection
     ) {
         val direction = getHorizontalDirection(player)
-        val damage = data.attack * config.getDouble("dash_damage_multiplier", 3.5)
+        val damage = data.attack * config.getDouble("dash_damage_multiplier", 1.5)
         val damaged = mutableSetOf<UUID>()
         val start = player.location.clone()
         val distance = config.getDouble("dash_distance", 7.0)
@@ -176,13 +163,12 @@ class CiguheirenSkill(
         val stepUpVelocity = config.getDouble("step_up_velocity", 0.42)
         val dashToken = System.nanoTime()
         activeDashTokens[player.uniqueId] = dashToken
+        healFromDash(player, config)
 
         player.world.playSound(player.location, Sound.ITEM_TRIDENT_RIPTIDE_1, 0.55f, 1.65f)
         player.world.playSound(player.location, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.55f, 1.75f)
         object : BukkitRunnable() {
             private var ticks = 0
-            private var durabilityRestored = durabilityAlreadyRestored
-            private var totalHealing = 0.0
 
             override fun run() {
                 if (!player.isOnline || player.isDead) {
@@ -200,13 +186,7 @@ class CiguheirenSkill(
                 spawnDashTrail(player)
                 dashTargets(player).forEach { target ->
                     if (damaged.add(target.uniqueId)) {
-                        val wasAlive = !target.isDead && target.health > 0.0
                         damageTarget(player, target, damage, armorPiercing = true)
-                        totalHealing += healFromDashHit(player, config, totalHealing)
-                        if (!durabilityRestored && wasAlive && (target.isDead || target.health <= 0.0)) {
-                            restoreKillDurability(player, item, weaponData, config)
-                            durabilityRestored = true
-                        }
                     }
                 }
 
@@ -220,12 +200,13 @@ class CiguheirenSkill(
     }
 
     private fun grantSweepShield(player: Player, config: ConfigurationSection) {
-        val perTarget = config.getDouble("sweep_shield_per_target", 10.0).coerceAtLeast(0.0)
-        val maximum = config.getDouble("sweep_shield_max", 50.0).coerceAtLeast(0.0)
+        val perTarget = config.getDouble("sweep_shield_per_target", 5.0).coerceAtLeast(0.0)
+        val maximum = config.getDouble("sweep_shield_max", 20.0).coerceAtLeast(0.0)
         if (perTarget <= 0.0 || maximum <= 0.0) return
 
         val durationTicks = (config.getDouble("sweep_shield_duration", 20.0) * 20.0).toLong().coerceAtLeast(1L)
-        val current = min(player.absorptionAmount, maximum)
+        val previousAmount = player.absorptionAmount
+        val current = min(previousAmount, maximum)
         val amount = min(maximum, current + perTarget)
         val generation = System.nanoTime()
         val amplifier = (ceil(amount / 4.0).toInt() - 1).coerceAtLeast(0)
@@ -237,7 +218,7 @@ class CiguheirenSkill(
         if (ownsPotionEffect) {
             player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, durationTicks.toInt(), amplifier, false, true, true), true)
         }
-        player.absorptionAmount = max(player.absorptionAmount, amount)
+        player.absorptionAmount = max(previousAmount, amount)
         dashShields[player.uniqueId] = DashShieldState(amount, generation, amplifier, ownsPotionEffect)
 
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
@@ -257,33 +238,15 @@ class CiguheirenSkill(
         }, durationTicks)
     }
 
-    private fun healFromDashHit(player: Player, config: ConfigurationSection, alreadyHealed: Double): Double {
-        val maximum = config.getDouble("dash_heal_max", 20.0).coerceAtLeast(0.0)
-        val perTarget = config.getDouble("dash_heal_per_target", 5.0).coerceAtLeast(0.0)
-        val requested = min(perTarget, (maximum - alreadyHealed).coerceAtLeast(0.0))
-        if (requested <= 0.0 || player.isDead) return 0.0
+    private fun healFromDash(player: Player, config: ConfigurationSection) {
+        val requested = config.getDouble("dash_heal", 8.0).coerceAtLeast(0.0)
+        if (requested <= 0.0 || player.isDead) return
 
-        val maxHealth = player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: player.maxHealth
         val before = player.health
-        player.health = min(maxHealth, before + requested)
+        plugin.elementCrystalManager.reworkedMastery.heal(player, requested)
         val healed = player.health - before
         if (healed > 0.0) {
             player.world.spawnParticle(Particle.HEART, player.location.clone().add(0.0, 1.1, 0.0), 2, 0.25, 0.25, 0.25, 0.0)
-        }
-        return healed
-    }
-
-    private fun restoreKillDurability(
-        player: Player,
-        item: ItemStack,
-        weaponData: BaihuWeaponData,
-        config: ConfigurationSection
-    ) {
-        val restoreAmount = config.getInt("kill_durability_restore", 15).coerceAtLeast(0)
-        val restored = plugin.baihuDzManager.restoreDurability(player, item, weaponData, restoreAmount)
-        if (restored > 0) {
-            player.sendMessage("§a[刺骨黑刃] 击杀怪物恢复了 §f$restored §a点虎瘴耐久。")
-            player.playSound(player.location, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.5f, 1.65f)
         }
     }
 
@@ -352,7 +315,7 @@ class CiguheirenSkill(
     private fun damageTarget(player: Player, target: LivingEntity, amount: Double, armorPiercing: Boolean) {
         BaihuEquipmentDamageTag.markTarget(plugin, target)
         target.setMetadata("hjh_physical_skill", FixedMetadataValue(plugin, true))
-        if (armorPiercing) target.setMetadata("hjh_magic_damage", FixedMetadataValue(plugin, true))
+        if (armorPiercing) target.setMetadata(CombatListener.PHYSICAL_ARMOR_PENETRATION_METADATA, FixedMetadataValue(plugin, 0.5))
         target.noDamageTicks = 0
         try {
             target.damage(amount, player)
@@ -360,8 +323,8 @@ class CiguheirenSkill(
             if (target.hasMetadata("hjh_physical_skill")) {
                 target.removeMetadata("hjh_physical_skill", plugin)
             }
-            if (armorPiercing && target.hasMetadata("hjh_magic_damage")) {
-                target.removeMetadata("hjh_magic_damage", plugin)
+            if (armorPiercing && target.hasMetadata(CombatListener.PHYSICAL_ARMOR_PENETRATION_METADATA)) {
+                target.removeMetadata(CombatListener.PHYSICAL_ARMOR_PENETRATION_METADATA, plugin)
             }
             BaihuEquipmentDamageTag.clearTarget(plugin, target)
             target.noDamageTicks = 0

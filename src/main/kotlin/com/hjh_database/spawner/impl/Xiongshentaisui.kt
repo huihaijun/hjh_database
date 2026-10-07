@@ -1,6 +1,7 @@
 package com.hjh_database.spawner.impl
 
 import com.hjh_database.Hjh_database
+import com.hjh_database.accessory.element.ElementCrystalArmorCalculationEvent
 import org.bukkit.Color
 import org.bukkit.GameMode
 import org.bukkit.Location
@@ -42,12 +43,40 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     companion object {
         const val PLAYER_DEBUFF_METADATA = "hjh_xiongshentaisui_quicksand_player"
         const val BOSS_BUFF_METADATA = "hjh_xiongshentaisui_quicksand_boss"
+        private const val BOSS_POISON_METADATA = "hjh_xiongshentaisui_poisoned_sand"
         private const val QUICKSAND_DAMAGE_METADATA = "hjh_xiongshentaisui_quicksand_damage"
         private const val QUICKSAND_SPEED_KEY = "xiongshentaisui_quicksand::speed_percent"
         private const val QUICKSAND_RADIUS = 7.0
         private const val QUICKSAND_COUNT = 3
         private const val SAFE_CENTER_SEARCH_RADIUS = 8
         private const val CACTUS_CLEARANCE = 2
+        private val instances = mutableMapOf<UUID, Xiongshentaisui>()
+
+        fun poisonQuicksand(location: Location, owner: UUID, token: String): Boolean {
+            val target = instances.values.filter { !it.disposed && it.boss.isValid && !it.boss.isDead }
+                .flatMap { skill -> skill.activeCircles.filter { it.contains(location) }.map { skill to it } }
+                .minByOrNull { (_, circle) -> circle.center.distanceSquared(location) } ?: return false
+            val (skill, circle) = target
+            if (circle.poisonOwner != null) return false
+            circle.poisonOwner = owner
+            circle.poisonToken = token
+            skill.playPoisoningEffects(circle)
+            skill.updateBossPoison()
+            return true
+        }
+
+        fun clearPoison(owner: UUID, token: String) {
+            for (skill in instances.values.toList()) {
+                var changed = false
+                for (circle in skill.activeCircles) {
+                    if (circle.poisonOwner != owner || circle.poisonToken != token) continue
+                    circle.poisonOwner = null
+                    circle.poisonToken = null
+                    changed = true
+                }
+                if (changed) skill.updateBossPoison()
+            }
+        }
 
         private val MAGIC_CAUSES = EnumSet.of(
             EntityDamageEvent.DamageCause.MAGIC,
@@ -63,7 +92,12 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         )
     }
 
-    private data class QuicksandCircle(val center: Location, val radius: Double) {
+    private data class QuicksandCircle(
+        val center: Location,
+        val radius: Double,
+        var poisonOwner: UUID? = null,
+        var poisonToken: String? = null
+    ) {
         fun contains(location: Location): Boolean {
             if (location.world != center.world) return false
             if (abs(location.y - center.y) > 5.0) return false
@@ -81,8 +115,10 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     private val fieldTicks = 6 * 20
     private val armorKey = NamespacedKey(plugin, "hjh_mob_armor")
     private var disposed = false
+    private var activeCircles: List<QuicksandCircle> = emptyList()
 
     init {
+        instances[boss.uniqueId] = this
         plugin.server.pluginManager.registerEvents(this, plugin)
         applyPassiveSkill()
         BossTargetingUtil.start(plugin, boss, radius = 48.0, chaseSpeed = 0.18, minChaseDistance = 5.0) {
@@ -154,6 +190,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     }
 
     private fun activateQuicksand(circles: List<QuicksandCircle>) {
+        activeCircles = circles
         freezeBoss(false)
         boss.world.playSound(boss.location, Sound.BLOCK_SAND_BREAK, 1.6f, 0.55f)
         val warnedPlayers = mutableSetOf<UUID>()
@@ -355,9 +392,44 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         }
     }
 
+    private fun playPoisoningEffects(circle: QuicksandCircle) {
+        val world = boss.world
+        val center = circle.center.clone().add(0.0, 0.35, 0.0)
+        val dust = Particle.DustOptions(Color.fromRGB(96, 200, 58), 1.7f)
+        world.spawnParticle(Particle.DUST, center, 70, 1.2, 0.6, 1.2, 0.0, dust)
+        world.spawnParticle(Particle.SMOKE, center, 20, 0.8, 0.4, 0.8, 0.03)
+        world.playSound(center, Sound.BLOCK_BREWING_STAND_BREW, 1.2f, 0.7f)
+        world.playSound(center, Sound.BLOCK_FIRE_EXTINGUISH, 0.8f, 0.65f)
+
+        object : BukkitRunnable() {
+            private var step = 0
+
+            override fun run() {
+                if (disposed || boss.isDead || !boss.isValid || circle !in activeCircles || circle.poisonOwner == null) {
+                    cancel()
+                    return
+                }
+                step++
+                val radius = circle.radius * step / 7.0
+                for (i in 0 until 32) {
+                    val angle = 2.0 * Math.PI * i / 32
+                    val point = center.clone().add(cos(angle) * radius, step * 0.04, sin(angle) * radius)
+                    world.spawnParticle(Particle.DUST, point, 2, 0.15, 0.15, 0.15, 0.0, dust)
+                    if (i % 4 == 0) world.spawnParticle(Particle.SMOKE, point, 1, 0.05, 0.1, 0.05, 0.02)
+                }
+                if (step >= 7) cancel()
+            }
+        }.runTaskTimer(plugin, 0L, 2L)
+    }
+
     private fun drawActiveFields(circles: List<QuicksandCircle>) {
         circles.forEach { circle ->
-            drawCircle(circle, Particle.BLOCK)
+            drawCircle(circle, if (circle.poisonOwner == null) Particle.BLOCK else Particle.DUST)
+
+            if (circle.poisonOwner != null) {
+                boss.world.spawnParticle(Particle.DUST, circle.center.clone().add(0.0, 0.5, 0.0),
+                    18, 2.5, 0.4, 2.5, 0.0, Particle.DustOptions(Color.fromRGB(64, 160, 56), 1.4f))
+            }
 
             boss.world.spawnParticle(
                 Particle.BLOCK,
@@ -397,7 +469,8 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
                     Particle.DUST,
                     loc,
                     1, 0.0, 0.0, 0.0, 0.0,
-                    Particle.DustOptions(Color.fromRGB(215, 158, 67), 1.35f)
+                    Particle.DustOptions(if (circle.poisonOwner == null) Color.fromRGB(215, 158, 67)
+                        else Color.fromRGB(64, 160, 56), 1.35f)
                 )
             } else {
                 boss.world.spawnParticle(
@@ -432,11 +505,16 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
 
         if (!ignoresArmor(event.cause)) {
             val victim = event.entity
-            if (victim == boss && boss.hasMetadata(BOSS_BUFF_METADATA)) {
+            if (victim == boss && boss.hasMetadata(BOSS_BUFF_METADATA) && !boss.hasMetadata(BOSS_POISON_METADATA)) {
                 val armor = boss.persistentDataContainer.get(armorKey, PersistentDataType.DOUBLE) ?: 0.0
                 event.damage *= armorChangeMultiplier(armor, 1.3)
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    fun onArmorCalculation(event: ElementCrystalArmorCalculationEvent) {
+        if (event.victim == boss && boss.hasMetadata(BOSS_POISON_METADATA)) event.armor *= 0.2
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -466,6 +544,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     }
 
     private fun updateFieldEffects(circles: List<QuicksandCircle>, warnedPlayers: MutableSet<UUID>, fieldAgeTicks: Int) {
+        updateBossPoison()
         val currentlyAffected = mutableSetOf<UUID>()
 
         boss.world.players
@@ -506,6 +585,37 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
         }
     }
 
+    private fun updateBossPoison() {
+        if (disposed || boss.isDead || !boss.isValid) {
+            clearBossPoison()
+            return
+        }
+        var poisoned = false
+        for (circle in activeCircles) {
+            val owner = circle.poisonOwner ?: continue
+            val token = circle.poisonToken ?: continue
+            if (!plugin.bountyManager.isTaisuiPoisonActive(owner, token)) {
+                circle.poisonOwner = null
+                circle.poisonToken = null
+                continue
+            }
+            if (!circle.contains(boss.location)) continue
+            plugin.bountyManager.onTaisuiPoisoned(owner, token, boss.uniqueId)
+            if (circle.poisonOwner == owner && circle.poisonToken == token) poisoned = true
+        }
+        if (poisoned) {
+            boss.setMetadata(BOSS_POISON_METADATA, FixedMetadataValue(plugin, true))
+            boss.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 10, 2, true, false, true))
+        } else clearBossPoison()
+    }
+
+    private fun clearBossPoison() {
+        if (!boss.hasMetadata(BOSS_POISON_METADATA)) return
+        boss.removeMetadata(BOSS_POISON_METADATA, plugin)
+        val slow = boss.getPotionEffect(PotionEffectType.SLOWNESS)
+        if (slow?.amplifier == 2 && slow.duration <= 10) boss.removePotionEffect(PotionEffectType.SLOWNESS)
+    }
+
     private fun damagePlayerInQuicksand(player: Player) {
         if (!player.isValidPlayer()) return
 
@@ -528,6 +638,8 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     }
 
     private fun cleanupAllEffects() {
+        activeCircles = emptyList()
+        clearBossPoison()
         affectedPlayers.toList().forEach { uuid ->
             plugin.server.getPlayer(uuid)?.let { removePlayerEffect(it) }
         }
@@ -556,6 +668,7 @@ class Xiongshentaisui(private val plugin: Hjh_database, private val boss: Living
     private fun dispose() {
         if (disposed) return
         disposed = true
+        instances.remove(boss.uniqueId)
         cleanupAllEffects()
         HandlerList.unregisterAll(this)
     }

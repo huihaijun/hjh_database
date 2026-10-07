@@ -183,6 +183,7 @@ class PlayerManager(private val plugin: Hjh_database) {
 
     private fun tryAutoAcceptLevelQuests(player: Player, data: PlayerData) {
         val questIds = listOf(
+            "side_bounty_registration",
             "side_warrior_shield_book",
             "side_archer_quiver_book",
             "side_warlock_backflow_book",
@@ -381,7 +382,6 @@ class PlayerManager(private val plugin: Hjh_database) {
             baseZfStr *= (1.0 + bonuses["zf_str_percent"]!!)
         }
         data.zfStr += baseZfStr
-
 
         // --- 鎶ょ敳 ---
         data.armor += bonuses.getOrDefault("armor", 0.0)

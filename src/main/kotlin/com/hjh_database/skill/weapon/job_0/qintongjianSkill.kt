@@ -15,6 +15,8 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -51,7 +53,7 @@ class qintongjianSkill : WeaponSkill, Listener {
         manager?.registerToggle(player, "qintongjian") // 注册到管理器，防止切武器
 
         val armorBonus = config.getDouble("armor_bonus", 25.0)
-        val speedMalus = config.getDouble("speed_malus_percent", 0.25)
+        val speedMalus = config.getDouble("speed_malus_percent", 0.35)
         val messageOn = config.getString("message_on", "&e&l[御守] &f进入防御姿态！护甲UP，移速DOWN")
 
         // === 新架构：直接写入临时属性 Map ===
@@ -69,6 +71,10 @@ class qintongjianSkill : WeaponSkill, Listener {
         // 4. ★★★ 核心：调用 updateStats 刷新属性 ★★★
         // 这一步会自动重新计算所有属性（包括护甲、移速），并同步给原版客户端
         pluginMain.playerManager.updateStats(player)
+
+        // 仅进入防御姿态时给予护盾，退出姿态不触发。
+        player.addPotionEffect(PotionEffect(PotionEffectType.ABSORPTION, 8 * 20, 1))
+        player.absorptionAmount = maxOf(player.absorptionAmount, 8.0)
 
         // 5. 特效与提示
         player.world.playSound(player.location, Sound.ITEM_ARMOR_EQUIP_IRON, 1f, 0.5f)

@@ -14,7 +14,8 @@ class ElementCrystalDamageDealtEvent(
     val isNormalAttack: Boolean,
     val isArrowHit: Boolean,
     val arrow: AbstractArrow?,
-    var damage: Double
+    var damage: Double,
+    val damageEvent: EntityDamageEvent? = null
 ) : Event() {
     override fun getHandlers(): HandlerList = HANDLERS
 

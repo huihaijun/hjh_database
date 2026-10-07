@@ -101,7 +101,7 @@ class BingQingYuSpell(private val plugin: Hjh_database) : MedicalSpell {
         }
 
         // 冰清域易伤使用独立 metadata。重复施放只刷新该效果的持续时间，
-        // 不会覆盖毒火烛、夺魂丹等其他来源的易伤标记。
+        // 不会覆盖夺魂丹等其他来源的易伤标记。
         if (vulnerability > 0.0 && vulnerabilityDuration > 0.0) {
             val radiusSquared = radius * radius
             for (entity in nearbyEntities) {

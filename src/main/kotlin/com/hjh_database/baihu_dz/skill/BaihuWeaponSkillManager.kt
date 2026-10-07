@@ -6,7 +6,7 @@ import com.hjh_database.client.ItemCooldownVisual
 import com.hjh_database.baihu_dz.BaihuWeaponData
 import com.hjh_database.baihu_dz.skill.impl.AnhuishinuSkill
 import com.hjh_database.baihu_dz.skill.impl.CiguheirenSkill
-import com.hjh_database.baihu_dz.skill.impl.DuhuozhuSkill
+import com.hjh_database.baihu_dz.skill.impl.HugukuzhangSkill
 import com.hjh_database.data.PlayerData
 import com.hjh_database.spawner.impl.NorthWetnessSkill
 import net.md_5.bungee.api.ChatMessageType
@@ -19,6 +19,7 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent
@@ -51,7 +52,7 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
         if (!rootDir.exists()) rootDir.mkdirs()
         copyIfMissing("baihu_dz/weapon_skills/ciguheiren.yml")
         copyIfMissing("baihu_dz/weapon_skills/anhuishinu.yml")
-        copyIfMissing("baihu_dz/weapon_skills/duhuozhu.yml")
+        copyIfMissing("baihu_dz/weapon_skills/hugukuzhang.yml")
         loadSkillFiles(rootDir)
     }
 
@@ -77,7 +78,7 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
     private fun registerSkills() {
         skillRegistry["ciguheiren"] = CiguheirenSkill(plugin, this)
         skillRegistry["anhuishinu"] = AnhuishinuSkill(plugin)
-        skillRegistry["duhuozhu"] = DuhuozhuSkill(plugin)
+        skillRegistry["hugukuzhang"] = HugukuzhangSkill(plugin)
     }
 
     fun tryCastSkill(player: Player, item: ItemStack, projectile: Entity?) {
@@ -186,6 +187,10 @@ class BaihuWeaponSkillManager(private val plugin: Hjh_database) {
 
     fun onProjectileDamage(event: EntityDamageByEntityEvent) {
         (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.onProjectileDamage(event)
+    }
+
+    fun onMobDeath(event: EntityDeathEvent) {
+        (skillRegistry["anhuishinu"] as? AnhuishinuSkill)?.onMobDeath(event)
     }
 
     fun handleCrossbowLoad(event: EntityLoadCrossbowEvent): Boolean {

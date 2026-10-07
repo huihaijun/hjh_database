@@ -342,8 +342,9 @@ class WenQuanKeZhanTrial(
         phase = Phase.ENDED
         cleanUp()
         removeCaoyaoGuan()
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
 
-        player.sendMessage("§a温泉客栈老板 §f: §a好！五趟药浴全成了！这门医术归您了！")
+        player.sendMessage("§a温泉客栈老板 §f: §a五趟药浴全成了，客人们总算能安稳养病！您送来的补给也解了客栈之急。这卷§9回春愈§a便传入您的灵智，往后救人时，可别忘了今日的火候与分寸。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -364,7 +365,6 @@ class WenQuanKeZhanTrial(
             })
         }
 
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
@@ -375,9 +375,9 @@ class WenQuanKeZhanTrial(
         removeCaoyaoGuan()
 
         if (shouldMessage) {
-            player.sendMessage("§c温泉客栈的医术试炼失败！")
+            player.sendMessage("§a温泉客栈老板 §f: §7药浴没调成，咱们再来便是。卷轴您留着，这回剩下的补给我先收拾好；下次少带一些，仔细记住紫烟的先后。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

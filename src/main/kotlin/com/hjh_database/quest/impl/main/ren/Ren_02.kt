@@ -55,15 +55,16 @@ class Ren_02 : QuestBase("main_ren_2", "[人族主线]坚韧试炼", QuestType.M
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f在这片大陆上，人人都受天地灵气祝福，可以用自己的双手——",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f动用属于自身的那份“气”，来与万物共鸣，采其精华。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f村长说，这叫§b“开物术”§f。",
-        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f你只要把目光聚在你想采的东西上，轻轻一点——",
+        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f你只要把目光聚在你想采的东西上，用§b右手§f轻轻一点——",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f就能引动周围的灵气，帮你把它“请”出来。",
-        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f不过记住，施展的时候要专注，别乱跑。要是中途分心，不仅会中断，还白白浪费你的精力和时间。",
+        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f不过记住，施展的时候别乱跑。要是离开开始施术的位置超过§b四格§f，开采就会中断，已经花掉的精力也不会回来。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f万物有灵，不只咱们人，这些能采的东西也一样。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f开采前仔细看：要是它冒出淡淡的§a绿光§f，就是§a“富饶”§f状态——这时下手，又快又丰厚。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f要是光变得§e暗黄§f，就是“枯竭”啦。这时候也能采，但会费时费力，还可能……什么都采不到。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f要是连黄光都没了，只剩下§7灰蒙蒙§f一片——那就说明它正在休养，暂时不能采了。",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f别急，等它休息好了，绿光自然会回来的。",
-        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f对了，每次施展开物术，都会消耗你的§b精力§f。不过精力会随着时间§b慢慢回复§f，而且开物术每提升一级，精力上限都会提高，§b开采速度也会增加§f",
+        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f对了，开物术可不是采完才算账哦！§b每开采一秒，就消耗一点精力§f。开物术每提升一级，精力上限都会提高，开采也会更快，同样的东西就越省精力。消耗掉的精力，过一阵子会自行回满。",
+        "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f要是怪物来捣乱，挨打不会直接中断，但会损失§c当前进度§f。一级损失一半，二、三、四级分别损失四成、三成、两成，§b五级以后只损失一成§f。每§b两秒§f最多损失一次，补回这些进度也得继续花精力，可别光顾着采呀！",
         "§e[${StoryNpcs.REN_xiaoli.displayName}§e] §f……嗯，看来你都听明白了。来，试试看吧！就对着这汪泉水用开物术——山泉恢复得很快，不用担心采坏！"
     )
 
@@ -129,10 +130,10 @@ class Ren_02 : QuestBase("main_ren_2", "[人族主线]坚韧试炼", QuestType.M
                         player.sendMessage("§e[系统] 你将引荐信交给了村长。")
                         player.playSound(player.location, Sound.ENTITY_ITEM_BREAK, 1f, 1f)
                         talkProgress[player.uniqueId] = index + 1
-                        player.sendMessage("§a[任务] -> (村长正在阅读信件，请点击左键继续)")
+                        player.sendMessage("§a[任务] -> （村长正在阅读信件，请用左手轻触村长，继续交谈）")
                         return true
                     } else {
-                        player.sendMessage("§c[任务] -> 请将【小仁的引荐信】拿在主手，然后点击村长。")
+                        player.sendMessage("§c[任务] -> 请手持【小仁的引荐信】，用左手轻触村长，与他交谈。")
                         return true
                     }
                 }

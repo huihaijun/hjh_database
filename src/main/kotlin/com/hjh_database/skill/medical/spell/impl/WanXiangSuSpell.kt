@@ -60,7 +60,9 @@ class WanXiangSuSpell(private val plugin: Hjh_database) : MedicalSpell {
             plugin.medicalSpellManager.applyMedicalHeal(player, target, healAmount, "wanxiangsu")
 
             // 2. 生命恢复 II
-            target.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, durationTicks.toInt(), 1, false, false, true))
+            plugin.elementCrystalManager.reworkedMastery.withMedicalHealingSource {
+                target.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, durationTicks.toInt(), 1, false, false, true))
+            }
 
             target.world.spawnParticle(Particle.HAPPY_VILLAGER, target.location.clone().add(0.0, 1.0, 0.0), 30, 0.5, 0.5, 0.5, 0.0)
 

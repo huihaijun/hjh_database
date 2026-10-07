@@ -21,6 +21,8 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
 
     /** 术士精进技能管理器 */
     val warlockMastery = WarlockMasterySkills(plugin)
+    val masterySupport = MasterySupport(plugin)
+    val reworkedMastery = ReworkedMasterySkills(plugin)
 
     /** 医师精进技能管理器 */
     val medicalMastery = MedicalMasterySkills(plugin)
@@ -70,6 +72,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
     }
 
     fun resetPlayerData(player: Player): ElementCrystalData {
+        reworkedMastery.cleanup(player.uniqueId)
         val data = ElementCrystalData(player.uniqueId, player.name)
         cache[player.uniqueId] = data
         warriorMastery.cleanup(player.uniqueId)
@@ -321,9 +324,8 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
                                     cancel()
                                     return
                                 }
-                                val newHp = (player.health + healPerTick).coerceAtMost(player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)!!.value)
-                                player.health = newHp
-                                pData.currentHealth = newHp
+                                reworkedMastery.heal(player, healPerTick)
+                                pData.currentHealth = player.health
                                 player.world.spawnParticle(org.bukkit.Particle.HAPPY_VILLAGER, player.location.add(0.0, 1.0, 0.0), 8, 0.3, 0.5, 0.3, 0.1)
                                 ticksRun++
                                 if (ticksRun >= 3) {
@@ -347,7 +349,7 @@ class ElementCrystalManager(private val plugin: Hjh_database) : Listener {
         if (skillType == "formation") {
             val pData = plugin.playerManager.getPlayerData(player)
             if (pData?.job == 2) {
-                warlockMastery.onFormationCast(player, eData, pData)
+                // 精进吸灵由阵法最初落点的施法事件触发，不使用玩家位置。
             }
         }
 

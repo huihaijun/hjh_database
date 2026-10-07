@@ -305,8 +305,9 @@ class ZhuanYuanShangXianTrial(
         phase = Phase.ENDED
         cleanUp()
         removeShuazi()
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
 
-        player.sendMessage("§a感谢道友相助，这门【冥想】，正适合心细严谨的你！")
+        player.sendMessage("§d篆元上仙 §f: §a尘垢已去，碑文重现。道友既寻回文献，又能静心拂尘，已悟得凝神之要。这卷§9冥想§a便化入你的灵智，愿你行医之时，心定而神明。")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -327,7 +328,6 @@ class ZhuanYuanShangXianTrial(
             })
         }
 
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     override fun fail() {
@@ -338,9 +338,9 @@ class ZhuanYuanShangXianTrial(
         removeShuazi()
 
         if (shouldMessage) {
-            player.sendMessage("§c篆元上仙的医术试炼失败！")
+            player.sendMessage("§d篆元上仙 §f: §7碑上尘垢尚未尽除，道友不必灰心。卷轴仍归你保管，我会先整理已有文献；下次只需再补一部分，静心来过。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

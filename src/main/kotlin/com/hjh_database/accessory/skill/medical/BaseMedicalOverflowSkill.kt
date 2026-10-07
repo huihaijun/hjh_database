@@ -385,6 +385,7 @@ abstract class BaseMedicalOverflowSkill(plugin: Hjh_database) : BaseAccessorySki
 
     private fun healTarget(target: Player, amount: Double): Double {
         val maxHealth = target.getAttribute(Attribute.MAX_HEALTH)?.value ?: return 0.0
+        // 饰品鸟治疗不属于医术治疗，不享受花环的治疗加成。
         val actualHeal = amount.coerceAtMost(maxHealth - target.health).coerceAtLeast(0.0)
         if (actualHeal > 0.0) {
             target.health = (target.health + actualHeal).coerceAtMost(maxHealth)

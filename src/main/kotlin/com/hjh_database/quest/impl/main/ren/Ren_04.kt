@@ -70,9 +70,9 @@ class Ren_04 : QuestBase("main_ren_4", "[人族主线]初识丹道", QuestType.M
         "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f此时，将对应的材料投入锅中即可。若材料无误，丹药即成，自动收入你的行囊。",
         "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f需注意的是，共鸣期间不可离锅过远，否则会中断炼制。但放心，材料不会损耗，你可重新开始。",
         "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f对了，还有一事需谨记。丹药炼成后即可服用，见效迅速，此乃一大便利。",
-        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f然而，是药三分毒。服下丹药后，你会进入一种名为【药丹疾病】的状态。",
-        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f此疾期间，你体内会排斥其他丹药的药力。只要【药丹疾病】未消，便无法再服下任何其他丹药。",
-        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f此状态持续时间长短，依丹药效力而定。越是高级猛烈的丹药，【药丹疾病】便持续越久，有时甚至可达半分钟！日后在外冒险，服用丹药时定要注意时机！",
+        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f然而，是药三分毒。服下丹药后，你会进入一种名为【药丹疾病】的状态。丹药有【归元】【助势】【飞丹】之别，此疾只会暂时排斥同类丹药的药力。",
+        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f同类丹药，无论名称或品级如何，都须等这段药丹疾病消退后才能再服。譬如愈合丹与回灵丹都属【归元】，服过其中一种，归元之疾未消，另一种也不能服用。",
+        "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f不同类别的药丹疾病互不影响，归元之疾尚在，并不妨碍使用助势或飞丹；但若那一类自身的药丹疾病未消，也须等候。此疾消退快慢因丹药而异，日后在外冒险，定要分清药类，掐准服药的时机。",
         "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f来，这是“新手疗愈丹”的丹方与材料。此丹方简单，无需用到那些妖族的肮脏内丹——说来可恨，他们虽可憎，其内丹却是疗伤良药。近来妖族内丹稀少，这初级丹药正好用不上。",
         "§e[${StoryNpcs.REN_ALCHEMIST.displayName}§e] §f你且去试试手，炼成五颗，交给村长。他会明白，你已经准备好离开峡谷，为人族的未来而战了。"
     )

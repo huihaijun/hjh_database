@@ -260,8 +260,9 @@ class WangYuanWaiTrial(
         phase = Phase.ENDED
         consumeOneFromMainHand()
         cleanUp()
+        if (!plugin.medicalTrialManager.completeTrial(player, trialId)) return
 
-        player.sendMessage("§a大恩不言谢，大侠！这门医术你且收下，我这就回去救我老娘！")
+        player.sendMessage("§a王员外 §f: §a灵芝尚有生机，我娘有救了！你替我寻回货物，又护住这株救命药，§9冰清愈§a的法门便以卷轴为凭传入你的灵智。大恩不言谢！")
         player.playSound(player.location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f)
 
         val data = plugin.playerManager.getPlayerData(player)
@@ -282,7 +283,6 @@ class WangYuanWaiTrial(
             })
         }
 
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
     }
 
     private fun failByHighTemperature() {
@@ -292,9 +292,9 @@ class WangYuanWaiTrial(
         cleanUp()
         if (player.isOnline) {
             player.sendMessage("§c千年灵芝因高温死去，已化作灰烬消失了……")
-            player.sendMessage("§7医术试炼失败……")
+            player.sendMessage("§a王员外 §f: §7灵芝终究没能撑过这阵热浪……卷轴你收好，我再凑些货物做路资。下回来，你少补一些，我们再寻一株。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun fail() {
@@ -304,9 +304,9 @@ class WangYuanWaiTrial(
         removeOneLingzhiFromInventory()
         cleanUp()
         if (shouldMessage) {
-            player.sendMessage("§c医术试炼失败！")
+            player.sendMessage("§a王员外 §f: §7这一趟未能救回灵芝，也不能怪你。卷轴还在，医术传承的约定不改；我会分担些路资，待你准备好了再来。")
         }
-        plugin.medicalTrialManager.activeTrials.remove(player.uniqueId)
+        plugin.medicalTrialManager.failTrial(player, trialId)
     }
 
     override fun cleanUp() {

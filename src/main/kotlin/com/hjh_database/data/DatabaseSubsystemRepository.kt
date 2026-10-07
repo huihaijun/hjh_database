@@ -1,6 +1,7 @@
 package com.hjh_database.data
 
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.hjh_database.Hjh_database
 import com.hjh_database.dz.data.DzPlayerData
 import com.hjh_database.quest.core.QuestStatus
@@ -161,12 +162,14 @@ internal class DatabaseSubsystemRepository(
         val sql = """
             INSERT INTO player_alchemy (
                 uuid, player_name, alchemy_level, alchemy_exp, pill_sickness_end,
-                juezhang_pill_sickness_end, qushi_pill_sickness_end, jiedu_pill_sickness_end
+                juezhang_pill_sickness_end, qushi_pill_sickness_end, jiedu_pill_sickness_end,
+                category_sickness_ends
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(uuid) DO UPDATE SET
                 player_name=?, alchemy_level=?, alchemy_exp=?, pill_sickness_end=?,
-                juezhang_pill_sickness_end=?, qushi_pill_sickness_end=?, jiedu_pill_sickness_end=?
+                juezhang_pill_sickness_end=?, qushi_pill_sickness_end=?, jiedu_pill_sickness_end=?,
+                category_sickness_ends=?
         """.trimIndent()
 
         try {
@@ -180,13 +183,17 @@ internal class DatabaseSubsystemRepository(
                 ps.setLong(7, data.qushiPillSicknessEnd)
                 ps.setLong(8, data.jieduPillSicknessEnd)
 
-                ps.setString(9, data.playerName)
-                ps.setInt(10, data.alchemyLevel)
-                ps.setInt(11, data.alchemyExp)
-                ps.setLong(12, data.pillSicknessEnd)
-                ps.setLong(13, data.juezhangPillSicknessEnd)
-                ps.setLong(14, data.qushiPillSicknessEnd)
-                ps.setLong(15, data.jieduPillSicknessEnd)
+                val categorySicknessJson = Gson().toJson(data.pillCategorySicknessEnds)
+                ps.setString(9, categorySicknessJson)
+
+                ps.setString(10, data.playerName)
+                ps.setInt(11, data.alchemyLevel)
+                ps.setInt(12, data.alchemyExp)
+                ps.setLong(13, data.pillSicknessEnd)
+                ps.setLong(14, data.juezhangPillSicknessEnd)
+                ps.setLong(15, data.qushiPillSicknessEnd)
+                ps.setLong(16, data.jieduPillSicknessEnd)
+                ps.setString(17, categorySicknessJson)
 
                 ps.executeUpdate()
             }
@@ -199,7 +206,7 @@ internal class DatabaseSubsystemRepository(
     fun loadAlchemyData(conn: Connection, data: PlayerData) {
         val sql = """
             SELECT alchemy_level, alchemy_exp, pill_sickness_end, juezhang_pill_sickness_end,
-                   qushi_pill_sickness_end, jiedu_pill_sickness_end
+                   qushi_pill_sickness_end, jiedu_pill_sickness_end, category_sickness_ends
             FROM player_alchemy
             WHERE uuid = ?
         """.trimIndent()
@@ -214,6 +221,12 @@ internal class DatabaseSubsystemRepository(
                         data.juezhangPillSicknessEnd = rs.getLong("juezhang_pill_sickness_end")
                         data.qushiPillSicknessEnd = rs.getLong("qushi_pill_sickness_end")
                         data.jieduPillSicknessEnd = rs.getLong("jiedu_pill_sickness_end")
+                        val categorySicknessJson = rs.getString("category_sickness_ends")
+                        if (!categorySicknessJson.isNullOrBlank() && categorySicknessJson != "null") {
+                            val type = object : TypeToken<Map<String, Long>>() {}.type
+                            val categorySicknessEnds: Map<String, Long> = Gson().fromJson(categorySicknessJson, type)
+                            data.pillCategorySicknessEnds.putAll(categorySicknessEnds)
+                        }
                     }
                 }
             }
@@ -455,7 +468,7 @@ internal class DatabaseSubsystemRepository(
     // ----------------- MedicalTrials 医术试炼表 -----------------
     // 读取玩家已完成的医术试炼列表 (命名改为 load 以保持一致，传入 conn 避免死锁)
     fun loadCompletedMedicalTrials(conn: Connection, data: PlayerData) { // 注意：这里不需要 return set 了，直接修改 data
-        val sql = "SELECT completed_trials FROM player_medicaltest WHERE uuid = ?"
+        val sql = "SELECT completed_trials, failed_attempts FROM player_medicaltest WHERE uuid = ?"
         try {
             conn.prepareStatement(sql).use { ps ->
                 ps.setString(1, data.uuid.toString())
@@ -466,6 +479,12 @@ internal class DatabaseSubsystemRepository(
                             val list = Gson().fromJson(json, Array<String>::class.java)
                             // 把解析出来的数据存入 PlayerData
                             data.completedMedicalTrials.addAll(list)
+                        }
+                        val failuresJson = rs.getString("failed_attempts")
+                        if (!failuresJson.isNullOrBlank() && failuresJson != "null") {
+                            val type = object : TypeToken<Map<String, Int>>() {}.type
+                            val failures: Map<String, Int> = Gson().fromJson(failuresJson, type)
+                            data.medicalTrialFailures.putAll(failures.mapValues { it.value.coerceIn(0, 3) })
                         }
                     }
                 }
@@ -478,21 +497,24 @@ internal class DatabaseSubsystemRepository(
     // 保存玩家的医术试炼完成状态 (命名改为 save 以保持一致，传入 conn 避免死锁)
     fun saveCompletedMedicalTrials(conn: Connection, data: PlayerData) {
         val sql = """
-            INSERT INTO player_medicaltest (uuid, player_name, completed_trials) 
-            VALUES (?, ?, ?) 
-            ON CONFLICT(uuid) DO UPDATE SET player_name = ?, completed_trials = ?
+            INSERT INTO player_medicaltest (uuid, player_name, completed_trials, failed_attempts)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(uuid) DO UPDATE SET player_name = ?, completed_trials = ?, failed_attempts = ?
         """.trimIndent()
 
         try {
             conn.prepareStatement(sql).use { ps ->
                 // 直接从 data 中获取需要存的数据
                 val json = Gson().toJson(data.completedMedicalTrials)
+                val failuresJson = Gson().toJson(data.medicalTrialFailures)
                 ps.setString(1, data.uuid.toString())
                 ps.setString(2, data.playerName)
                 ps.setString(3, json)
 
-                ps.setString(4, data.playerName)
-                ps.setString(5, json)
+                ps.setString(4, failuresJson)
+                ps.setString(5, data.playerName)
+                ps.setString(6, json)
+                ps.setString(7, failuresJson)
                 ps.executeUpdate()
             }
         } catch (e: Exception) {

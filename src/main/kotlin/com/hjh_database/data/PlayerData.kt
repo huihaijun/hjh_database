@@ -194,15 +194,16 @@ class PlayerData(val uuid: UUID, val playerName: String) {
     // @Transient
     val activePills: MutableList<com.hjh_database.alchemy.data.ActivePill> = java.util.ArrayList()
 
-    // 药毒结束时间戳
+    // 无分类丹药的药丹疾病结束时间戳，兼容旧版存储。
     var pillSicknessEnd: Long = 0
 
-    // 绝瘴丹使用独立药毒，不与常规丹药互相阻断。
+    // 保留旧版绝瘴丹独立计时字段，供已有数据读写。
     var juezhangPillSicknessEnd: Long = 0
 
-    // 祛湿丹与解毒丸各自使用独立药毒。
+    // 祛湿丹与高级解毒丸各自使用独立药丹疾病。
     var qushiPillSicknessEnd: Long = 0
     var jieduPillSicknessEnd: Long = 0
+    val pillCategorySicknessEnds: MutableMap<String, Long> = HashMap()
 
     val alchemyMaxExp: Int
         get() = alchemyLevel * 50
@@ -232,6 +233,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
         pillSicknessEnd = reducedSicknessEnd(pillSicknessEnd, now, remainingMultiplier)
         juezhangPillSicknessEnd = reducedSicknessEnd(juezhangPillSicknessEnd, now, remainingMultiplier)
         qushiPillSicknessEnd = reducedSicknessEnd(qushiPillSicknessEnd, now, remainingMultiplier)
+        pillCategorySicknessEnds.replaceAll { _, end -> reducedSicknessEnd(end, now, remainingMultiplier) }
     }
 
     private fun reducedSicknessEnd(end: Long, now: Long, remainingMultiplier: Double): Long {
@@ -241,6 +243,7 @@ class PlayerData(val uuid: UUID, val playerName: String) {
 
     // ----------------- 医术试炼 -----------------
     var completedMedicalTrials: MutableSet<String> = HashSet()
+    val medicalTrialFailures: MutableMap<String, Int> = HashMap()
 
     /**
      * 每秒调用的心跳函数 (由 AlchemyManager 驱动)
